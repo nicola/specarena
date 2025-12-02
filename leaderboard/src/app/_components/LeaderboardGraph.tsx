@@ -79,6 +79,7 @@ export default function LeaderboardGraph({ data = mockData }: LeaderboardGraphPr
       grid: true,
       style: {
         color: "#18181b",
+        fontFamily: "var(--font-jost), Jost, sans-serif",
       },
       x: {
         label: "Security Policy",
@@ -94,13 +95,13 @@ export default function LeaderboardGraph({ data = mockData }: LeaderboardGraphPr
         Plot.dot(data, {
           x: "securityPolicy",
           y: "utility",
-          fill: "steelblue",
+          fill: "#000",
           r: 4,
           tip: {
             format: {
               title: (d) => d.name,
-              x: (d) => `Security Policy: ${d}`,
-              y: (d) => `Utility: ${d}`,
+              // x: (d) => `Security Policy: ${d}`,
+              // y: (d) => `Utility: ${d}`,
             },
           },
         }),
@@ -111,7 +112,7 @@ export default function LeaderboardGraph({ data = mockData }: LeaderboardGraphPr
           dx: 0,
           dy: -15,
           fontSize: 10,
-          fill: "#18181b",
+          fill: "#000",
           textAnchor: "middle",
         }),
       ],
@@ -126,6 +127,7 @@ export default function LeaderboardGraph({ data = mockData }: LeaderboardGraphPr
       const textElements = svg.querySelectorAll("text");
       textElements.forEach((text) => {
         (text as SVGTextElement).setAttribute("fill", "#18181b");
+        (text as SVGTextElement).setAttribute("font-family", "var(--font-jost), Jost, sans-serif");
       });
       // Style all line elements (grid lines and axis lines)
       const lineElements = svg.querySelectorAll("line");
