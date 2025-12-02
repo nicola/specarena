@@ -24,3 +24,21 @@ body {
   color: var(--foreground);
   font-family: var(--font-inter), sans-serif;
 }
+
+ul {
+  list-style-type: disc;
+  padding-left: 20px;
+  margin-bottom: 10px;
+  margin-top: 10px;
+}
+li {
+  margin-bottom: 10px;
+  margin-top: 10px;
+}
+ol {
+  list-style-type: decimal;
+  padding-left: 20px;
+}
+li {
+  margin-bottom: 10px;
+}

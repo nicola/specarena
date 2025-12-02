@@ -1,7 +1,6 @@
 import { ReactNode } from "react";
 
 interface ChallengeCardProps {
-  type: string;
   title: string;
   date: string;
   description: string;
@@ -10,10 +9,10 @@ interface ChallengeCardProps {
   gradientTo: string;
   icon: ReactNode;
   dateColor?: string;
+  href: string;
 }
 
 export default function ChallengeCard({
-  type,
   title,
   date,
   description,
@@ -22,31 +21,29 @@ export default function ChallengeCard({
   gradientTo,
   icon,
   dateColor = "text-zinc-600",
+  href,
 }: ChallengeCardProps) {
   return (
-    <div className="flex flex-col border border-zinc-900 rounded-lg overflow-hidden">
+    <div className="flex flex-col border border-zinc-900 overflow-hidden h-full">
       {/* Upper Half */}
       <div
-        className={`relative h-64 bg-gradient-to-br ${gradientFrom} ${gradientVia} ${gradientTo} flex items-center px-6`}
+        className={`relative h-48 bg-gradient-to-br ${gradientFrom} ${gradientVia} ${gradientTo} flex items-center px-6 flex-shrink-0`}
       >
         <div className="flex-1 flex items-center gap-4">
           {/* Visual Element */}
-          <div className="w-32 h-32 flex-shrink-0">{icon}</div>
-          <div className="w-px h-24 bg-zinc-900"></div>
-          <div className="flex-1">
-            <p className="text-sm text-zinc-700 mb-1">{type}</p>
-            <h3 className="text-xl font-bold text-zinc-900">{title}</h3>
-          </div>
+          <div className="w-full h-32 flex-shrink-0">{icon}</div>
         </div>
       </div>
       {/* Lower Half */}
-      <div className="bg-white p-6 flex flex-col gap-3">
-        <p className={`text-sm ${dateColor}`}>{date}</p>
-        <h4 className="text-lg font-bold text-zinc-900">{title}</h4>
-        <p className="text-sm text-zinc-700">{description}</p>
-        <button className="mt-2 px-4 py-2 bg-zinc-900 text-white rounded-md hover:bg-zinc-800 transition-colors text-sm font-medium">
-          Discover more
-        </button>
+      <div className="bg-white p-6 flex flex-col gap-3 flex-1 min-h-0">
+        <div className="flex flex-col gap-3">
+          <p className={`text-sm ${dateColor}`}>{date}</p>
+          <h4 className="text-lg font-medium text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>{title}</h4>
+          <p className="text-sm text-zinc-700">{description}</p>
+        </div>
+        <a href={href} className="mt-auto px-4 py-2 border border-zinc-900 text-zinc-900 rounded-md text-sm text-center dis">
+          Participate
+        </a>
       </div>
     </div>
   );
