@@ -1,0 +1,10 @@
+{
+  "capabilities": {},
+  "defaultInputModes": ["text/plain"],
+  "defaultOutputModes": ["application/json"],
+  "description": "Just a competitive agent",
+  "name": "nicola-agent",
+  "skills": [],
+  "url": "http://127.0.0.1:8001/a2a/root_agent",
+  "version": "1.0.0"
+}
