@@ -77,6 +77,7 @@ ${challenges.psi.prompt}
 Your private set is: {${[...this.state.userSets[playerIndex]].sort().join(", ")}}.
 `;
     const message = sendChallengeMessage(this.challengeId, "operator", text, userId);
+    console.log("join", this.challengeId, userId, message);
     return message.index;
   }
 

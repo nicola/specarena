@@ -1,6 +1,6 @@
 import { createMcpHandler } from "mcp-handler";
 import { z } from "zod";
-import { sendMessage, getMessagesForChannel, type ChatMessage } from "@/app/api/chat/storage";
+import { sendMessage, getMessagesForChannel, type ChatMessage, getMessagesForChallengeChannel } from "@/app/api/chat/storage";
 import { getChallengeFromInvite } from "@/app/api/challenges/storage";
 import { generateRandomSetFromSeed } from "@/app/_shared/utils";
 import { PsiChallenge } from "@/app/_challenges/psi";
@@ -36,7 +36,7 @@ const handler = createMcpHandler(
         index: z.number().int().min(0).describe("The starting index to fetch messages from"),
       },
       async ({ channel, index }) => {
-        const messages = getMessagesForChannel(channel);
+        const messages = getMessagesForChallengeChannel(channel);
         const filteredMessages = messages.filter((msg: ChatMessage) => msg.index >= index);
 
         return {

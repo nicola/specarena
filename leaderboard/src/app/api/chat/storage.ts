@@ -24,6 +24,11 @@ export function getNextIndex(channel: string): number {
   return next;
 }
 
+export function getMessagesForChallengeChannel(challengeId: string): ChatMessage[] {
+  console.log("getMessagesForChallengeChannel", "challenge_" + challengeId, messagesByChannel.get("challenge_" + challengeId));
+  return messagesByChannel.get("challenge_" + challengeId) || [];
+}
+
 export function getMessagesForChannel(channel: string): ChatMessage[] {
   return messagesByChannel.get(channel) || [];
 }

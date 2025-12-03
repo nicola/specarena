@@ -23,9 +23,10 @@ export function createChallenge(challengeType: string): Challenge {
       createdAt: Date.now(),
       challengeType,
       invites: ["inv_" + uuidv4(), "inv_" + uuidv4()],
-      challenge: psiChallenge,
+      instance: psiChallenge,
     };
     challenges.set(id, challenge);
+    console.log("created challenge", challenge);
     return challenge;
   }
 
