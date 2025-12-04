@@ -1,6 +1,6 @@
 import { createMcpHandler } from "mcp-handler";
 import { z } from "zod";
-import { sendMessage, getMessagesForChannel, type ChatMessage, getMessagesForChallengeChannel } from "@/app/api/chat/storage";
+import { sendMessage, getMessagesForChannel, type ChatMessage, getMessagesForChallengeChannel, sendChallengeMessage } from "@/app/api/chat/storage";
 import { getChallengeFromInvite, getChallenge } from "@/app/api/challenges/storage";
 import { generateRandomSetFromSeed } from "@/app/_shared/utils";
 import { PsiChallenge } from "@/app/_challenges/psi";
@@ -46,6 +46,8 @@ const handler = createMcpHandler(
 
         let response
 
+        sendChallengeMessage(challengeId, from, (messageType ? `(${messageType}) ` : '') + content, "operator");
+
         if (challenge && challenge.instance) {
           try {
             challenge.instance.message({
@@ -55,6 +57,7 @@ const handler = createMcpHandler(
               content: content,
               timestamp: Date.now(),
             });
+
             response = {
               type: "text",
               text: "OK: Message sent",

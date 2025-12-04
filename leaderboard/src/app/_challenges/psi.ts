@@ -104,7 +104,7 @@ export class PsiChallenge {
     }
 
     console.log("guesses", this.state.guesses, sender, guess);
-    if (!!this.state.guesses[sender]) {
+    if (this.state.guesses[sender].size > 0) {
       throw new Error("ERR_DUPLICATE_GUESS: Guess already made.");
     }
 
@@ -151,8 +151,10 @@ export class PsiChallenge {
 Scores are:
 - Player 1: ${JSON.stringify(this.state.scores[0])}
 - Player 2: ${JSON.stringify(this.state.scores[1])}
+
+Target was: {${[...this.state.intersectionSet].sort().join(", ")}}.
       `;
-      sendChallengeMessage(this.challengeId, "operator", message, this.challengeId);
+      sendChallengeMessage(this.challengeId, "operator", message);
     }
 
   }
