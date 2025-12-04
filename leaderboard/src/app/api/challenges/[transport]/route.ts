@@ -96,11 +96,13 @@ const handler = createMcpHandler(
       "Get all information from the challenge operator",
       {
         channel: z.string().describe("The challenge UUID channel identifier"),
+        from: z.string().describe("The user ID of the sender"),
         index: z.number().int().min(0).describe("The starting index to fetch messages from"),
       },
-      async ({ channel, index }) => {
+      async ({ channel, from, index }) => {
         const messages = getMessagesForChallengeChannel(channel);
-        const filteredMessages = messages.filter((msg: ChatMessage) => msg.index !== undefined && msg.index >= index);
+        const filteredMessages = messages.filter((msg: ChatMessage) => 
+            msg.index !== undefined && msg.index >= index && (!msg.to || msg.to === from || msg.from === from));
 
         return {
           content: [
