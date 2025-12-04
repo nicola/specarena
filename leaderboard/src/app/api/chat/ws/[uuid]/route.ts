@@ -1,6 +1,10 @@
 import { NextRequest } from "next/server";
 import { subscribeToChannel, getMessagesForChannel } from "../../storage";
 
+// Force dynamic rendering and Node.js runtime for SSE
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ uuid: string }> }
@@ -26,7 +30,7 @@ export async function GET(
         unsubscribe();
         try {
           controller.close();
-        } catch (error) {
+        } catch {
           // Connection already closed
         }
       });
@@ -35,7 +39,7 @@ export async function GET(
       const keepAliveInterval = setInterval(() => {
         try {
           controller.enqueue(new TextEncoder().encode(`: ping\n\n`));
-        } catch (error) {
+        } catch {
           clearInterval(keepAliveInterval);
           unsubscribe();
         }
@@ -54,6 +58,11 @@ export async function GET(
       'Cache-Control': 'no-cache, no-transform',
       'Connection': 'keep-alive',
       'X-Accel-Buffering': 'no', // Disable buffering for nginx
+      'X-Content-Type-Options': 'nosniff',
+      // CORS headers for cross-origin support (if needed)
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET',
+      'Access-Control-Allow-Headers': 'Cache-Control',
     },
   });
 }

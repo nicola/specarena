@@ -2,6 +2,10 @@ import { createMcpHandler } from "mcp-handler";
 import { z } from "zod";
 import { sendMessage, getMessagesForChannel, type ChatMessage } from "../storage";
 
+// Force dynamic rendering and Node.js runtime for MCP
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 const handler = createMcpHandler(
   (server) => {
     server.tool(

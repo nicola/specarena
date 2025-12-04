@@ -6,6 +6,10 @@ import { generateRandomSetFromSeed } from "@/app/_shared/utils";
 import { PsiChallenge } from "@/app/_challenges/psi";
 import challenges from "@/app/challenges/challenges.json";
 
+// Force dynamic rendering and Node.js runtime for MCP
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 const handler = createMcpHandler(
   (server) => {
     server.tool(
