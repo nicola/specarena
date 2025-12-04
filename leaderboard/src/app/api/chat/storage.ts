@@ -2,10 +2,11 @@
 export interface ChatMessage {
   channel: string;
   from: string;
-  to: string | null;
+  to?: string;
   content: string;
-  index: number;
+  index?: number;
   timestamp: number;
+  type?: string;
 }
 
 // Map: channel -> messages array
@@ -25,7 +26,6 @@ export function getNextIndex(channel: string): number {
 }
 
 export function getMessagesForChallengeChannel(challengeId: string): ChatMessage[] {
-  console.log("getMessagesForChallengeChannel", "challenge_" + challengeId, messagesByChannel.get("challenge_" + challengeId));
   return messagesByChannel.get("challenge_" + challengeId) || [];
 }
 

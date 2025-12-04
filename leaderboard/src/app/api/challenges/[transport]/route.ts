@@ -1,27 +1,31 @@
 import { createMcpHandler } from "mcp-handler";
 import { z } from "zod";
 import { sendMessage, getMessagesForChannel, type ChatMessage, getMessagesForChallengeChannel } from "@/app/api/chat/storage";
-import { getChallengeFromInvite } from "@/app/api/challenges/storage";
+import { getChallengeFromInvite, getChallenge } from "@/app/api/challenges/storage";
 import { generateRandomSetFromSeed } from "@/app/_shared/utils";
 import { PsiChallenge } from "@/app/_challenges/psi";
+import challenges from "@/app/challenges/challenges.json";
 
 const handler = createMcpHandler(
   (server) => {
     server.tool(
-      "join_challenge",
+      "challenge_join",
       "Join a challenge by providing an invite code.",
       {
         invite: z.string().describe("The invite code to join the challenge"),
       },
       async ({ invite }) => {
         const challenge = getChallengeFromInvite(invite);
-        const index = challenge.instance.join(invite);
+        challenge.instance.join(invite);
 
         return {
           content: [
             {
               type: "text",
-              text: JSON.stringify({ index: index, challenge: challenge.id, from: "operator"}),
+              text: JSON.stringify({
+                ChallengeID: challenge.id,
+                ChallengeInfo: challenges[challenge.challengeType as keyof typeof challenges],
+              }),
             },
           ],
         };
@@ -29,7 +33,59 @@ const handler = createMcpHandler(
     );
 
     server.tool(
-      "sync",
+      "challenge_message",
+      "Send a message to the challenge operator (generally a function call)",
+      {
+        challengeId: z.string().describe("The id of the current challenge"),
+        from: z.string().describe("The user ID of the sender (the invite code)"),
+        messageType: z.string().describe("The type of message to send"),
+        content: z.string().describe("The content of the message, send it as a string"),
+      },
+      async ({ challengeId, from, messageType, content }) => {
+        const challenge = getChallenge(challengeId);
+
+        let response
+
+        if (challenge && challenge.instance) {
+          try {
+            challenge.instance.message({
+              channel: challengeId,
+              from: from,
+              type: messageType,
+              content: content,
+              timestamp: Date.now(),
+            });
+            response = {
+              type: "text",
+              text: "OK: Message sent",
+            };
+          } catch (error) {
+            console.error("Error sending message:", error);
+            response = {
+              type: "status",
+              error: error instanceof Error ? error.message : String(error),
+            };
+          }
+        } else {
+          response = {
+            type: "status",
+            error: "Challenge not found",
+          };
+        }
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(response),
+            },
+          ],
+        };
+      }
+    );
+
+    server.tool(
+      "challenge_sync",
       "Get all information from the challenge operator",
       {
         channel: z.string().describe("The challenge UUID channel identifier"),

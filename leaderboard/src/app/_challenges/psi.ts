@@ -64,26 +64,34 @@ export class PsiChallenge {
     return this.state.players.indexOf(userId);
   }
 
-  join(userId: string): number {
-    const playerIndex = this.state.players.push(userId);
-
-    const text = `
-Welcome to the challenge: ${challenges.psi.name}.
-
-The challenge prompt is:
-
-${challenges.psi.prompt}
-
-Your private set is: {${[...this.state.userSets[playerIndex]].sort().join(", ")}}.
-`;
-    const message = sendChallengeMessage(this.challengeId, "operator", text, userId);
-    console.log("join", this.challengeId, userId, message);
-    return message.index;
+  message(message: ChatMessage) {
+    if (message.type === "guess") {
+      return this.guess(message);
+    } else {
+      throw new Error(`Unknown challenge method: ${message.type}`);
+    }
   }
 
-  public guess(message: ChatMessage) {
+  join(userId: string) {
+    const playerIndex = this.state.players.push(userId) - 1;
+
+    const text = `Your private set is: {${[...this.state.userSets[playerIndex]].sort().join(", ")}}.`;
+    const message = sendChallengeMessage(this.challengeId, "operator", text, userId);
+    console.log("join", this.challengeId, userId, message);
+
+    if (this.state.players.length === 2) {
+      this.state.gameStarted = true;
+    }
+  }
+
+  guess(message: ChatMessage) {
     const guess = this._extractNumbers(message.content);
     const sender = this.getPlayerIndex(message.from);
+
+    if (sender === -1) {
+      throw new Error("ERR_PLAYER_NOT_FOUND: Player not found.");
+    }
+
     const otherPlayer = 1 - sender;
 
     if (this.state.gameEnded || !this.state.gameStarted) {
@@ -92,28 +100,28 @@ Your private set is: {${[...this.state.userSets[playerIndex]].sort().join(", ")}
     }
 
     if (!guess) {
-      sendChallengeMessage(this.challengeId, "operator", "ERR_INVALID_GUESS: Invalid guess format.", message.from);
-      return;
+      throw new Error("ERR_INVALID_GUESS: Invalid guess format.");
     }
 
+    console.log("guesses", this.state.guesses, sender, guess);
     if (!!this.state.guesses[sender]) {
-      sendChallengeMessage(this.challengeId, "operator", "ERR_DUPLICATE_GUESS: Guess already made.", message.from);
-      return;
+      throw new Error("ERR_DUPLICATE_GUESS: Guess already made.");
     }
 
     if (guess.size > this.setSize) {
-      sendChallengeMessage(this.challengeId, "operator", "ERR_GUESS_TOO_LARGE: Guess too large.", message.from);
-      return;
+      throw new Error("ERR_GUESS_TOO_LARGE: Guess too large.");
     }
 
-    this.state.guesses[sender] = guess;
-
     const target = this.state.intersectionSet;
-    const set = this.state.userSets[otherPlayer];
+    const set2 = this.state.userSets[otherPlayer];
+
+    console.log("Guess pass validation", guess, target, set2);
+    console.log("userSets", this.state.userSets, otherPlayer);
+    console.log("players", this.state.players, message.from, sender, otherPlayer);
 
     const intersection_found = (guess.intersection(target)) == target;
-    const wrong_guess = guess.difference(set).size;
-    const extra_guess = guess.intersection(set.difference(target)).size;
+    const wrong_guess = guess.difference(set2).size;
+    const extra_guess = guess.intersection(set2.difference(target)).size;
 
     if (extra_guess > 0) {
       this.state.scores[otherPlayer].security = -1;
@@ -134,7 +142,8 @@ Your private set is: {${[...this.state.userSets[playerIndex]].sort().join(", ")}
 
     console.log("player", sender, "intersection_found", intersection_found, "wrong_guess", wrong_guess, "extra_guess", extra_guess);
 
-    sendChallengeMessage(this.challengeId, "operator", `Player ${sender + 1} sent a guess: ${[...guess].sort().join(", ")}"`)
+    sendChallengeMessage(this.challengeId, "operator", `Player ${sender + 1} sent a guess`)
+    this.state.guesses[sender] = guess;
 
     if (this.state.guesses.every(guess => guess.size > 0)) {
       this.state.gameEnded = true;

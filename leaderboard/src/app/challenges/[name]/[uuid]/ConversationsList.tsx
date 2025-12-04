@@ -11,6 +11,12 @@ interface ChatMessage {
   timestamp: number;
 }
 
+interface SSEMessageData {
+  type: 'initial' | 'new_message';
+  messages?: ChatMessage[];
+  message?: ChatMessage;
+}
+
 interface ConversationsListProps {
   uuid: string;
 }
@@ -49,47 +55,75 @@ export default function ConversationsList({ uuid }: ConversationsListProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
+  const challengeEventSourceRef = useRef<EventSource | null>(null);
+  const initialLoadCountRef = useRef(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  const handleMessage = useCallback((data: SSEMessageData) => {
+    if (data.type === 'initial') {
+      // Initial load of all messages
+      setMessages((prev) => {
+        // Merge with existing messages, avoiding duplicates
+        const existingChannels = new Set(prev.map(msg => `${msg.channel}-${msg.index}`));
+        const newMessages = (data.messages || []).filter(
+          (msg: ChatMessage): msg is ChatMessage => 
+            msg !== undefined && !existingChannels.has(`${msg.channel}-${msg.index}`)
+        );
+        const merged = [...prev, ...newMessages];
+        // Sort by timestamp
+        merged.sort((a, b) => a.timestamp - b.timestamp);
+        return merged;
+      });
+      
+      initialLoadCountRef.current += 1;
+      if (initialLoadCountRef.current >= 2) {
+        setLoading(false);
+        setError(null);
+        setTimeout(scrollToBottom, 100);
+      }
+    } else if (data.type === 'new_message' && data.message) {
+      // New message received
+      setMessages((prev) => {
+        // Check if message already exists (avoid duplicates)
+        const exists = prev.some(
+          (msg) => msg.channel === data.message!.channel && msg.index === data.message!.index
+        );
+        if (exists) {
+          return prev;
+        }
+        const newMessages = [...prev, data.message!];
+        // Sort by timestamp
+        newMessages.sort((a, b) => a.timestamp - b.timestamp);
+        setTimeout(scrollToBottom, 100);
+        return newMessages;
+      });
+    }
+  }, []);
+
   const connectWebSocket = useCallback(() => {
-    // Close existing connection if any
+    // Reset initial load counter
+    initialLoadCountRef.current = 0;
+
+    // Close existing connections if any
     if (eventSourceRef.current) {
       eventSourceRef.current.close();
     }
+    if (challengeEventSourceRef.current) {
+      challengeEventSourceRef.current.close();
+    }
 
-    // Create EventSource connection for Server-Sent Events (WebSocket-like)
+    // Create first EventSource connection for regular uuid
     const eventSource = new EventSource(`/api/chat/ws/${uuid}`);
     eventSourceRef.current = eventSource;
 
     eventSource.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        
-        if (data.type === 'initial') {
-          // Initial load of all messages
-          setMessages(data.messages || []);
-          setLoading(false);
-          setError(null);
-          setTimeout(scrollToBottom, 100);
-        } else if (data.type === 'new_message') {
-          // New message received
-          setMessages((prev) => {
-            // Check if message already exists (avoid duplicates)
-            const exists = prev.some(
-              (msg) => msg.channel === data.message.channel && msg.index === data.message.index
-            );
-            if (exists) {
-              return prev;
-            }
-            const newMessages = [...prev, data.message];
-            setTimeout(scrollToBottom, 100);
-            return newMessages;
-          });
-        }
+        handleMessage(data);
       } catch (err) {
         console.error('Error parsing SSE message:', err);
       }
@@ -98,16 +132,42 @@ export default function ConversationsList({ uuid }: ConversationsListProps) {
     eventSource.onerror = (err) => {
       console.error('EventSource error:', err);
       setError("Connection error. Attempting to reconnect...");
-      setLoading(false);
       // EventSource will automatically attempt to reconnect
     };
 
     eventSource.onopen = () => {
       setError(null);
     };
-  }, [uuid]);
+
+    // Create second EventSource connection for challenge_uuid
+    const challengeEventSource = new EventSource(`/api/chat/ws/challenge_${uuid}`);
+    challengeEventSourceRef.current = challengeEventSource;
+
+    challengeEventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        handleMessage(data);
+      } catch (err) {
+        console.error('Error parsing challenge SSE message:', err);
+      }
+    };
+
+    challengeEventSource.onerror = (err) => {
+      console.error('Challenge EventSource error:', err);
+      setError("Connection error. Attempting to reconnect...");
+      // EventSource will automatically attempt to reconnect
+    };
+
+    challengeEventSource.onopen = () => {
+      setError(null);
+    };
+  }, [uuid, handleMessage]);
 
   useEffect(() => {
+    // Initialize loading state and connect to both EventSource streams
+    // Note: Setting loading state synchronously here is necessary for connection initialization
+    // This is a valid pattern when setting up external connections
+    setLoading(true);
     connectWebSocket();
 
     // Cleanup on unmount
@@ -115,6 +175,10 @@ export default function ConversationsList({ uuid }: ConversationsListProps) {
       if (eventSourceRef.current) {
         eventSourceRef.current.close();
         eventSourceRef.current = null;
+      }
+      if (challengeEventSourceRef.current) {
+        challengeEventSourceRef.current.close();
+        challengeEventSourceRef.current = null;
       }
     };
   }, [connectWebSocket]);

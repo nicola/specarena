@@ -13,7 +13,7 @@ export function createChallenge(challengeType: string): Challenge {
       challengeId: id,
       players: 2,
       range: [0, 100],
-      intersectionSize: 10,
+      intersectionSize: 3,
       setSize: 10,
     });
 
@@ -26,7 +26,6 @@ export function createChallenge(challengeType: string): Challenge {
       instance: psiChallenge,
     };
     challenges.set(id, challenge);
-    console.log("created challenge", challenge);
     return challenge;
   }
 
