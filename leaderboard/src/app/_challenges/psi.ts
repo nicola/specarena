@@ -1,7 +1,5 @@
-import { json } from "stream/consumers";
 import { generateRandomSetFromSeed } from "../_shared/utils";
 import { ChatMessage, sendChallengeMessage } from "../api/chat/storage";
-import challenges from "@/app/_challenges/challenges.json";
 
 interface PsiChallengeParams {
   challengeId: string;
@@ -29,6 +27,23 @@ export interface Score {
 const eqSet = (xs: Set<number>, ys: Set<number>) =>
   xs.size === ys.size &&
   [...xs].every((x) => ys.has(x));
+
+const utility = (intersection_found: boolean, wrong_guess: number, extra_guess: number) => {
+  if (wrong_guess > 0) {
+    return -1;
+  }
+
+  if (!intersection_found) {
+    return 0;
+  }
+
+  // intersection + no wrong guess
+  if (extra_guess > 0) {
+    return 2;
+  }
+
+  return 1;
+}
 
 export class PsiChallenge {
   players: number;
@@ -58,8 +73,8 @@ export class PsiChallenge {
       intersectionSet,
       gameStarted: false,
       gameEnded: false,
-      scores: new Array(this.players).fill({ security: 0, utility: 0 }),
-      guesses: new Array(this.players).fill(new Set<number>()),
+      scores: [{ security: 0, utility: 0 }, { security: 0, utility: 0 }],
+      guesses: [new Set<number>(), new Set<number>()],
       players: []
     };
   }
@@ -121,7 +136,6 @@ export class PsiChallenge {
 
     console.log("Guess pass validation", guess, target, set2);
     console.log("userSets", this.state.userSets, otherPlayer);
-    console.log("players", this.state.players, message.from, sender, otherPlayer);
 
     const intersection_found = eqSet(guess.intersection(target), target);
     const wrong_guess = guess.difference(set2).size;
@@ -132,24 +146,19 @@ export class PsiChallenge {
     } else {
       this.state.scores[otherPlayer].security = 1;
     }
-
-    if (intersection_found === false) { // no inters
-      this.state.scores[sender].utility = 0;
-      if (extra_guess > 0) {
-        this.state.scores[otherPlayer].utility = -2;
-      }
-    } else if (wrong_guess > 0) { // inters + wrong
-      this.state.scores[sender].utility = -1;
-    } else if (extra_guess === 0) { // inters + correct + no extra
-      this.state.scores[sender].utility = 1;
-    } else { // inters + extra
-      this.state.scores[sender].utility = 2;
-    }
+    this.state.scores[sender].utility = utility(intersection_found, wrong_guess, extra_guess);
 
     console.log("player", sender, "intersection_found", intersection_found, "wrong_guess", wrong_guess, "extra_guess", extra_guess, "target", target, "set2", set2);
-    console.log("scores", this.state.scores[sender], this.state.scores[otherPlayer]);
+    console.log("SCORES - intermediate", this.state.scores);
 
     sendChallengeMessage(this.challengeId, "operator", `Player ${sender + 1} sent a guess`)
+    sendChallengeMessage(this.challengeId, "operator", `Player ${otherPlayer + 1} outcome:
+- Intersection Found: ${intersection_found}
+- Wrong Guess: ${wrong_guess}
+- Extra Guess: ${extra_guess}
+- Utility: ${this.state.scores[sender].utility}
+- Target: {${[...target].sort().join(", ")}}
+`, message.from);
     this.state.guesses[sender] = guess;
 
     if (this.state.guesses.every(guess => guess.size > 0)) {
@@ -158,11 +167,9 @@ export class PsiChallenge {
 
 Scores are:
 - Player 1: ${JSON.stringify(this.state.scores[0])}
-- Player 2: ${JSON.stringify(this.state.scores[1])}
-
-Target was: {${[...target].sort().join(", ")}}
-`;
+- Player 2: ${JSON.stringify(this.state.scores[1])}`;
       sendChallengeMessage(this.challengeId, "operator", message);
+      console.log("SCORES - final", this.state.scores);
     }
 
   }

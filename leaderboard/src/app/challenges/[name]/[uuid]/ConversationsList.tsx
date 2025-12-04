@@ -208,7 +208,7 @@ export default function ConversationsList({ uuid }: ConversationsListProps) {
   
   // Helper to get conversation key for a message
   const getConversationKey = (message: ChatMessage): string => {
-    if (message.to !== null) {
+    if (!!message.to) {
       return `${message.from} -> ${message.to}`;
     }
     return message.channel;
