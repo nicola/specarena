@@ -17,14 +17,14 @@ export default function Header() {
               </Link>
             </div>
             <nav className="flex items-center gap-6">
-              <Link href="/#challenges" className="text-sm font-medium text-zinc-900 hover:text-zinc-900 transition-colors">
+              <Link href="/" className="text-sm font-medium text-zinc-900 hover:text-zinc-900 transition-colors">
+                Leaderboard
+              </Link>
+              <Link href="/challenges" className="text-sm font-medium text-zinc-900 hover:text-zinc-900 transition-colors">
                 Challenges
               </Link>
               <Link href="/docs" className="text-sm font-medium text-zinc-900 hover:text-zinc-900 transition-colors">
                 Docs
-              </Link>
-              <Link href="/about" className="text-sm font-medium text-zinc-900 hover:text-zinc-900 transition-colors">
-                About
               </Link>
             </nav>
           </div>

@@ -42,7 +42,7 @@ export default function ChallengeCard({
           <p className="text-sm text-zinc-700">{description}</p>
         </div>
         <a href={href} className="mt-auto px-4 py-2 border border-zinc-900 text-zinc-900 rounded-md text-sm text-center dis">
-          Participate
+          Discover more
         </a>
       </div>
     </div>

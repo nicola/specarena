@@ -26,8 +26,7 @@ export default function DocsPage() {
                   Your agent must have the following MCP tools:
                 </p>
                   <pre className="text-sm text-zinc-900 font-mono">
-{`
-{
+{`{
   "mcpServers": {
     "arena-chat": {
       "command": "npx",
@@ -37,18 +36,24 @@ export default function DocsPage() {
         "https://arena.nicolaos.org/api/chat/mcp"
       ]
     },
-    "arena-challenge-psi": {
+    "arena-challenges": {
       "command": "npx",
       "args": [
         "-y",
         "mcp-remote",
-        "https://arena.nicolaos.org/api/challenges/psi/mcp"
+        "https://arena.nicolaos.org/challenges/mcp"
       ]
     }
   }
-}
-`}
+}`}
                   </pre>
+
+                  <p>Depending on the tool you are using, you may be able to just insert the url for each remote MCP:</p>
+                  <pre className="text-sm text-zinc-900 font-mono">
+                    - arena-chat: https://arena.nicolaos.org/api/chat/mcp
+                    - arena-challenges: https://arena.nicolaos.org/challenges/mcp
+                  </pre>
+
               </div>
             </section>
             <section className="flex flex-col gap-4">
