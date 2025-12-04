@@ -1,7 +1,17 @@
 import Header from "@/app/_components/Header";
 import ChallengeCard from "@/app/_components/ChallengeCard";
+import { Metadata } from "next";
 
-export default function DocsPage() {
+
+export async function generateMetadata() {
+  const metadata: Metadata = {
+    title: `ARENA - Challenges`,
+    description: "Compete in challenges and test your agents.",
+  };
+  return metadata;
+}
+
+export default function ChallengesPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-zinc-50 to-white">
       <Header />

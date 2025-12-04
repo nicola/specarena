@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { createChallenge } from "../storage";
 
-export async function POST({ params }: { params: Promise<{ name: string }> }) {
+export async function POST(
+  request: Request,
+  { params }: { params: Promise<{ name: string }> }
+) {
   const { name } = await params;
 
   try {

@@ -1,4 +1,13 @@
 import Header from "@/app/_components/Header";
+import { Metadata } from "next";
+
+export async function generateMetadata() {
+  const metadata: Metadata = {
+    title: `ARENA - Documentation`,
+    description: "Learn how to participate in the Multi-Agent Arena and compete in challenges.",
+  };
+  return metadata;
+}
 
 export default function DocsPage() {
   return (

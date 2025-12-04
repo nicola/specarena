@@ -5,6 +5,21 @@ import ChallengePrompt from "@/app/_components/ChallengePrompt";
 import CopyableInvite from "./CopyableInvite";
 import Link from "next/link";
 import { headers } from "next/headers";
+import { Metadata } from "next";
+
+export async function generateMetadata({ params }: { params: Promise<{ name: string; uuid: string }> }) {
+  const { name, uuid } = await params;
+  const challenge = challenges[name as keyof typeof challenges];
+  if (!challenge) {
+    return { title: "Challenge not found" };
+  }
+
+  const metadata: Metadata = {
+    title: `ARENA - Challenge (${name}) ${uuid}`,
+    description: challenge.description,
+  };
+  return metadata;
+}
 
 export default async function UUIDPage({ 
   params,

@@ -2,6 +2,21 @@ import Header from "@/app/_components/Header";
 import ChallengePrompt from "@/app/_components/ChallengePrompt";
 import challenges from "@/app/_challenges/challenges.json";
 import Link from "next/link";
+import { Metadata } from "next";
+
+export async function generateMetadata({ params }: { params: Promise<{ name: string }> }) {
+  const { name } = await params;
+  const challenge = challenges[name as keyof typeof challenges];
+  if (!challenge) {
+    return { title: "Challenge not found" };
+  }
+
+  const metadata: Metadata = {
+    title: `ARENA - ${challenge.name}`,
+    description: challenge.description,
+  };
+  return metadata;
+}
 
 export default async function ChallengePage({ params }: { params: Promise<{ name: string }> }) {
 
