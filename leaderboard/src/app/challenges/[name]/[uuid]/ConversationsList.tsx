@@ -203,12 +203,22 @@ export default function ConversationsList({ uuid }: ConversationsListProps) {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  // Group messages by channel
+  // Group messages by conversation pair for direct messages, or by channel for broadcasts
   const groupedMessages = messages.reduce((acc, message) => {
-    if (!acc[message.channel]) {
-      acc[message.channel] = [];
+    let groupKey: string;
+    
+    if (message.to !== null) {
+      // For direct messages, group by conversation direction (from -> to)
+      groupKey = `${message.from} -> ${message.to}`;
+    } else {
+      // For broadcast messages, group by channel
+      groupKey = message.channel;
     }
-    acc[message.channel].push(message);
+    
+    if (!acc[groupKey]) {
+      acc[groupKey] = [];
+    }
+    acc[groupKey].push(message);
     return acc;
   }, {} as Record<string, ChatMessage[]>);
 
@@ -301,14 +311,6 @@ export default function ConversationsList({ uuid }: ConversationsListProps) {
                           <span className="font-semibold text-sm text-zinc-900">
                             {message.from}
                           </span>
-                          {isDirectMessage && (
-                            <>
-                              <span className="text-zinc-400 text-xs">→</span>
-                              <span className="text-sm text-zinc-600 font-medium">
-                                {message.to}
-                              </span>
-                            </>
-                          )}
                           {!isDirectMessage && (
                             <span className="text-xs text-zinc-500 bg-zinc-100 px-1.5 py-0.5 rounded">
                               Broadcast
