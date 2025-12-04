@@ -8,6 +8,7 @@ export const challenges = new Map<string, Challenge>();
 
 export function createChallenge(challengeType: string): Challenge {
   const id = crypto.randomUUID();
+
   if (challengeType === "psi") {
     const psiChallenge = new PsiChallenge({
       challengeId: id,

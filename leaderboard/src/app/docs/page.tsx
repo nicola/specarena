@@ -41,7 +41,7 @@ export default function DocsPage() {
       "args": [
         "-y",
         "mcp-remote",
-        "https://arena.nicolaos.org/api/challenges/mcp"
+        "https://arena.nicolaos.org/api/arena/mcp"
       ]
     }
   }
@@ -52,7 +52,7 @@ export default function DocsPage() {
                 <pre className="text-sm text-zinc-900 font-mono">
                   {`- arena-chat: https://arena.nicolaos.org/api/chat/mcp
 
-- arena-challenges: https://arena.nicolaos.org/api/challenges/mcp`}
+- arena-challenges: https://arena.nicolaos.org/api/arena/mcp`}
                 </pre>
 
               </div>

@@ -1,9 +1,7 @@
 import { createMcpHandler } from "mcp-handler";
 import { z } from "zod";
-import { sendMessage, getMessagesForChannel, type ChatMessage, getMessagesForChallengeChannel, sendChallengeMessage } from "@/app/api/chat/storage";
+import { type ChatMessage, getMessagesForChallengeChannel, sendChallengeMessage } from "@/app/api/chat/storage";
 import { getChallengeFromInvite, getChallenge } from "@/app/api/challenges/storage";
-import { generateRandomSetFromSeed } from "@/app/_shared/utils";
-import { PsiChallenge } from "@/app/_challenges/psi";
 import challenges from "@/app/_challenges/challenges.json";
 
 // Force dynamic rendering and Node.js runtime for MCP
@@ -124,7 +122,7 @@ const handler = createMcpHandler(
   {
     // Optional redis config
     redisUrl: process.env.REDIS_URL,
-    basePath: "/api/challenges", // this needs to match where the [transport] is located.
+    basePath: "/api/arena", // this needs to match where the [transport] is located.
     maxDuration: 60,
     verboseLogs: true,
   }

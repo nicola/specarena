@@ -1,9 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { createChallenge } from "../storage";
 
-export async function POST() {
+export async function POST({ params }: { params: Promise<{ name: string }> }) {
+  const { name } = await params;
+
   try {
-    const name = "psi";
+
     const challenge = createChallenge(name);
 
     return NextResponse.json(challenge);
