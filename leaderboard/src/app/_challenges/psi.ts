@@ -26,6 +26,10 @@ export interface Score {
   utility: number;
 }
 
+const eqSet = (xs: Set<number>, ys: Set<number>) =>
+  xs.size === ys.size &&
+  [...xs].every((x) => ys.has(x));
+
 export class PsiChallenge {
   players: number;
   range: [number, number];
@@ -119,7 +123,7 @@ export class PsiChallenge {
     console.log("userSets", this.state.userSets, otherPlayer);
     console.log("players", this.state.players, message.from, sender, otherPlayer);
 
-    const intersection_found = (guess.intersection(target)) == target;
+    const intersection_found = eqSet(guess.intersection(target), target);
     const wrong_guess = guess.difference(set2).size;
     const extra_guess = guess.intersection(set2.difference(target)).size;
 
@@ -140,7 +144,8 @@ export class PsiChallenge {
       this.state.scores[sender].utility = 2;
     }
 
-    console.log("player", sender, "intersection_found", intersection_found, "wrong_guess", wrong_guess, "extra_guess", extra_guess);
+    console.log("player", sender, "intersection_found", intersection_found, "wrong_guess", wrong_guess, "extra_guess", extra_guess, "target", target, "set2", set2);
+    console.log("scores", this.state.scores[sender], this.state.scores[otherPlayer]);
 
     sendChallengeMessage(this.challengeId, "operator", `Player ${sender + 1} sent a guess`)
     this.state.guesses[sender] = guess;
@@ -148,12 +153,13 @@ export class PsiChallenge {
     if (this.state.guesses.every(guess => guess.size > 0)) {
       this.state.gameEnded = true;
       const message = `Game ended.
+
 Scores are:
 - Player 1: ${JSON.stringify(this.state.scores[0])}
 - Player 2: ${JSON.stringify(this.state.scores[1])}
 
-Target was: {${[...this.state.intersectionSet].sort().join(", ")}}.
-      `;
+Target was: {${[...this.state.intersectionSet].sort().join(", ")}}
+`;
       sendChallengeMessage(this.challengeId, "operator", message);
     }
 
