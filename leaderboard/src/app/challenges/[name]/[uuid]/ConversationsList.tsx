@@ -203,24 +203,16 @@ export default function ConversationsList({ uuid }: ConversationsListProps) {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  // Group messages by conversation pair for direct messages, or by channel for broadcasts
-  const groupedMessages = messages.reduce((acc, message) => {
-    let groupKey: string;
-    
+  // Sort messages chronologically
+  const sortedMessages = [...messages].sort((a, b) => a.timestamp - b.timestamp);
+  
+  // Helper to get conversation key for a message
+  const getConversationKey = (message: ChatMessage): string => {
     if (message.to !== null) {
-      // For direct messages, group by conversation direction (from -> to)
-      groupKey = `${message.from} -> ${message.to}`;
-    } else {
-      // For broadcast messages, group by channel
-      groupKey = message.channel;
+      return `${message.from} -> ${message.to}`;
     }
-    
-    if (!acc[groupKey]) {
-      acc[groupKey] = [];
-    }
-    acc[groupKey].push(message);
-    return acc;
-  }, {} as Record<string, ChatMessage[]>);
+    return message.channel;
+  };
 
   if (loading && messages.length === 0) {
     return (
@@ -271,72 +263,83 @@ export default function ConversationsList({ uuid }: ConversationsListProps) {
 
       {/* Messages Container */}
       <div className="flex-1 overflow-y-auto space-y-6 pr-2">
-        {Object.entries(groupedMessages).map(([channel, channelMessages]) => (
-          <div key={channel} className="space-y-4">
-            {/* Channel Header */}
-            <div className="sticky top-0 bg-white/95 backdrop-blur-sm py-2 z-10">
-              <div className="flex items-center gap-2">
-                <div className="h-px flex-1 bg-zinc-200"></div>
-                <span className="text-xs font-medium text-zinc-500 px-2">
-                  {channel}
-                </span>
-                <div className="h-px flex-1 bg-zinc-200"></div>
+        {sortedMessages.map((message, idx) => {
+          const prevMessage = idx > 0 ? sortedMessages[idx - 1] : null;
+          const currentConversation = getConversationKey(message);
+          const prevConversation = prevMessage ? getConversationKey(prevMessage) : null;
+          const conversationChanged = currentConversation !== prevConversation;
+          
+          // Show sender if it's the first message, conversation changed, or sender changed within same conversation
+          const showSender = idx === 0 || 
+            conversationChanged || 
+            (prevMessage && prevMessage.from !== message.from);
+          
+          const isDirectMessage = message.to !== null;
+          const isPrivateMessage = message.to === "operator" || (message.from === "operator" && message.to !== null);
+          
+          return (
+            <div key={`${message.channel}-${message.index}`}>
+              {/* Conversation Header - show when conversation changes */}
+              {conversationChanged && (
+                <div className="sticky top-0 bg-white/95 backdrop-blur-sm py-2 z-10 mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="h-px flex-1 bg-zinc-200"></div>
+                    <span className="text-xs font-medium text-zinc-500 px-2">
+                      {currentConversation}
+                    </span>
+                    <div className="h-px flex-1 bg-zinc-200"></div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Message */}
+              <div className={`flex gap-3 group ${showSender ? 'mt-4' : 'mt-1'}`}>
+                {/* Avatar */}
+                {showSender ? (
+                  <div className={`flex-shrink-0 w-8 h-8 rounded-full ${getAvatarColor(message.from)} flex items-center justify-center text-white text-xs font-semibold`}>
+                    {getInitials(message.from)}
+                  </div>
+                ) : (
+                  <div className="w-8"></div>
+                )}
+
+                {/* Message Content */}
+                <div className="flex-1 min-w-0">
+                  {showSender && (
+                    <div className="flex items-baseline gap-2 mb-1">
+                      <span className="font-semibold text-sm text-zinc-900">
+                        {message.from}
+                      </span>
+                      {!isDirectMessage && (
+                        <span className="text-xs text-zinc-500 bg-zinc-100 px-1.5 py-0.5 rounded">
+                          Broadcast
+                        </span>
+                      )}
+                      <span className="text-xs text-zinc-400 ml-auto">
+                        {formatTimestamp(message.timestamp)}
+                      </span>
+                    </div>
+                  )}
+                  
+                  {/* Chat Bubble */}
+                  <div className={`inline-block max-w-[85%] rounded-2xl px-4 py-2.5 ${
+                    isPrivateMessage
+                      ? showSender 
+                        ? 'bg-zinc-400 text-zinc-100' 
+                        : 'bg-zinc-400 text-zinc-100'
+                      : showSender 
+                        ? 'bg-zinc-100 text-zinc-900' 
+                        : 'bg-zinc-100 text-zinc-800'
+                  }`}>
+                    <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">
+                      {message.content}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
-
-            {/* Messages in this channel */}
-            <div className="space-y-3 pl-1">
-              {channelMessages.map((message, idx) => {
-                const showSender = idx === 0 || channelMessages[idx - 1].from !== message.from;
-                const isDirectMessage = message.to !== null;
-                
-                return (
-                  <div
-                    key={`${message.channel}-${message.index}`}
-                    className={`flex gap-3 group ${showSender ? 'mt-4' : 'mt-1'}`}
-                  >
-                    {/* Avatar */}
-                    {showSender ? (
-                      <div className={`flex-shrink-0 w-8 h-8 rounded-full ${getAvatarColor(message.from)} flex items-center justify-center text-white text-xs font-semibold`}>
-                        {getInitials(message.from)}
-                      </div>
-                    ) : (
-                      <div className="w-8"></div>
-                    )}
-
-                    {/* Message Content */}
-                    <div className="flex-1 min-w-0">
-                      {showSender && (
-                        <div className="flex items-baseline gap-2 mb-1">
-                          <span className="font-semibold text-sm text-zinc-900">
-                            {message.from}
-                          </span>
-                          {!isDirectMessage && (
-                            <span className="text-xs text-zinc-500 bg-zinc-100 px-1.5 py-0.5 rounded">
-                              Broadcast
-                            </span>
-                          )}
-                          <span className="text-xs text-zinc-400 ml-auto">
-                            {formatTimestamp(message.timestamp)}
-                          </span>
-                        </div>
-                      )}
-                      
-                      {/* Chat Bubble */}
-                      <div className={`inline-block max-w-[85%] rounded-2xl px-4 py-2.5 ${
-                        showSender ? 'bg-zinc-100 text-zinc-900' : 'bg-zinc-50 text-zinc-800'
-                      }`}>
-                        <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">
-                          {message.content}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        ))}
+          );
+        })}
         <div ref={messagesEndRef} />
       </div>
     </div>
