@@ -1,5 +1,5 @@
 import Header from "@/app/_components/Header";
-import challenges from "../../challenges.json";
+import challenges from "@/app/_challenges/challenges.json"; 
 import ConversationsList from "./ConversationsList";
 import ChallengePrompt from "@/app/_components/ChallengePrompt";
 import CopyableInvite from "./CopyableInvite";

@@ -1,7 +1,7 @@
 import { json } from "stream/consumers";
 import { generateRandomSetFromSeed } from "../_shared/utils";
 import { ChatMessage, sendChallengeMessage } from "../api/chat/storage";
-import challenges from "../challenges/challenges.json";
+import challenges from "@/app/_challenges/challenges.json";
 
 interface PsiChallengeParams {
   challengeId: string;

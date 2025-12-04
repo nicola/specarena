@@ -1,6 +1,6 @@
 import Header from "@/app/_components/Header";
 import ChallengePrompt from "@/app/_components/ChallengePrompt";
-import challenges from "../challenges.json";
+import challenges from "@/app/_challenges/challenges.json";
 import Link from "next/link";
 
 export default async function ChallengePage({ params }: { params: Promise<{ name: string }> }) {
