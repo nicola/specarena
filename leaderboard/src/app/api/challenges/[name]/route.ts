@@ -1,5 +1,28 @@
 import { NextResponse } from "next/server";
-import { createChallenge } from "../storage";
+import { createChallenge, getChallengesByType } from "../storage";
+
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ name: string }> }
+) {
+  const { name } = await params;
+
+  try {
+    // Get all challenges for this challenge type
+    const challengesList = getChallengesByType(name);
+
+    return NextResponse.json({
+      challenges: challengesList,
+      count: challengesList.length,
+    });
+  } catch (error) {
+    console.error("Error fetching challenges:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch challenges" },
+      { status: 500 }
+    );
+  }
+}
 
 export async function POST(
   request: Request,

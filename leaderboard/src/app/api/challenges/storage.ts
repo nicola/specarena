@@ -46,3 +46,9 @@ export function getChallenge(challengeId: string): Challenge | undefined {
   return challenges.get(challengeId);
 }
 
+export function getChallengesByType(challengeType: string): Challenge[] {
+  return Array.from(challenges.values())
+    .filter(c => c.challengeType === challengeType)
+    .sort((a, b) => b.createdAt - a.createdAt); // Sort by newest first
+}
+

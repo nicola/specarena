@@ -1,8 +1,10 @@
 import Header from "@/app/_components/Header";
 import ChallengePrompt from "@/app/_components/ChallengePrompt";
+import ChallengesList from "@/app/_components/ChallengesList";
 import challenges from "@/app/_challenges/challenges.json";
 import Link from "next/link";
 import { Metadata } from "next";
+import { headers } from "next/headers";
 
 export async function generateMetadata({ params }: { params: Promise<{ name: string }> }) {
   const { name } = await params;
@@ -25,6 +27,25 @@ export default async function ChallengePage({ params }: { params: Promise<{ name
   const challenge = challenges[name as keyof typeof challenges];
   if (!challenge) {
     return <div>Challenge {name} not found</div>;
+  }
+
+  // Fetch all challenges for this challenge type from the API
+  let challengesList: Array<{ id: string; name: string; createdAt: number; challengeType: string; invites: string[] }> = [];
+  try {
+    const headersList = await headers();
+    const host = headersList.get("host") || "";
+    const protocol = headersList.get("x-forwarded-proto") || "http";
+    const baseUrl = `${protocol}://${host}`;
+    
+    const response = await fetch(`${baseUrl}/api/challenges/${name}`, {
+      cache: 'no-store', // Always fetch fresh data
+    });
+    if (response.ok) {
+      const data = await response.json();
+      challengesList = data.challenges || [];
+    }
+  } catch (error) {
+    console.error("Error fetching challenges:", error);
   }
 
   return (
@@ -51,6 +72,9 @@ export default async function ChallengePage({ params }: { params: Promise<{ name
         </div>
         {/* Leaderboard Graph */}
         <ChallengePrompt prompt={challenge.prompt} />
+
+        {/* Challenges List */}
+        <ChallengesList challenges={challengesList} challengeType={name} />
       </section>
 
     </div>
