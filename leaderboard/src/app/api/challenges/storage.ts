@@ -13,7 +13,7 @@ export function createChallenge(challengeType: string): Challenge {
     const psiChallenge = new PsiChallenge({
       challengeId: id,
       players: 2,
-      range: [0, 100],
+      range: [100, 900],
       intersectionSize: 3,
       setSize: 10,
     });
