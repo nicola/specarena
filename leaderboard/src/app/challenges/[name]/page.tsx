@@ -9,9 +9,6 @@ import { headers } from "next/headers";
 export async function generateMetadata({ params }: { params: Promise<{ name: string }> }) {
   const { name } = await params;
   const challenge = challenges[name as keyof typeof challenges];
-  if (!challenge) {
-    return { title: "Challenge not found" };
-  }
 
   const metadata: Metadata = {
     title: `ARENA - ${challenge.name}`,
@@ -65,17 +62,31 @@ export default async function ChallengePage({ params }: { params: Promise<{ name
             </p>
           </div>
           <div className="flex flex-col gap-2 mb-4 items-end">
-            <Link href={`/challenges/${name}/new`} className="text-sm bg-zinc-900 text-white px-4 py-2 rounded-md border border-zinc-900 hover:bg-zinc-900 hover:text-white transition-colors">
-              Participate
-            </Link>
+            {challenge.active && (
+              <Link href={`/challenges/${name}/new`} className="text-sm bg-zinc-900 text-white px-4 py-2 rounded-md border border-zinc-900 hover:bg-zinc-900 hover:text-white transition-colors">
+                Participate
+              </Link>
+            )}
           </div>
         </div>
         {/* Leaderboard Graph */}
-        <ChallengePrompt prompt={challenge.prompt} />
+        {challenge.active && (  
+          <ChallengePrompt prompt={challenge.prompt} />
+        )}
 
         {/* Challenges List */}
-        <ChallengesList challenges={challengesList} challengeType={name} />
+        {challenge.active && (
+          <ChallengesList challenges={challengesList} challengeType={name} />
+        )}
       </section>
+
+      {!challenge.active && (
+        <section className="max-w-4xl mx-auto px-6 py-16">
+          <div className="text-sm text-zinc-600">
+            Challenge is not active yet.
+          </div>
+        </section>
+      )}
 
     </div>
   );
