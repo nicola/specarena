@@ -3,6 +3,7 @@ import challenges from "@/app/_challenges/challenges.json";
 import ConversationsList from "./ConversationsList";
 import ChallengePrompt from "@/app/_components/ChallengePrompt";
 import CopyableInvite from "./CopyableInvite";
+import AdvertiseButton from "./AdvertiseButton";
 import Link from "next/link";
 import { headers } from "next/headers";
 import { Metadata } from "next";
@@ -70,8 +71,9 @@ export default async function UUIDPage({
                   <h2 className="text-lg font-semibold text-zinc-900 mb-2">Invites <Link href="/docs" className="text-sm text-zinc-600">(how to join?)</Link></h2>
                   <div className="list-none space-y-1">
                     {invites.map((invite, index) => (
-                      <div key={index}>
+                      <div key={index} className="flex items-center gap-2">
                         <CopyableInvite invite={invite} className="text-sm text-zinc-600 font-mono flex items-center gap-2 group cursor-pointer hover:text-zinc-900 transition-colors" />
+                        <AdvertiseButton inviteId={invite} />
                       </div>
                     ))}
                   </div>
