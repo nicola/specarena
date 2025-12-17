@@ -34,13 +34,51 @@ export function createChallenge(challengeType: string): Challenge {
 
 }
 
-export function getChallengeFromInvite(invite: string): Challenge {
+export enum ChallengeError {
+  NOT_FOUND = 'NOT_FOUND',
+  INVITE_ALREADY_USED = 'INVITE_ALREADY_USED',
+}
+
+function isInviteFree(challenge: Challenge, invite: string): boolean {
+  return !challenge.instance?.state?.players?.includes(invite);
+}
+
+export type Result<T, E = ChallengeError> =
+  | { success: true; data: T }
+  | { success: false; error: E; message: string };
+
+  
+export function filterValidInvites(invites: string[]): string[] {
+  return []
+}
+
+export function getInvite(invite: string): Result<Challenge> {
+  const result = getChallengeFromInvite(invite);
+  if (!result.success) {
+    return result;
+  }
+  if (!isInviteFree(result.data, invite)) {
+    return {
+      success: false,
+      error: ChallengeError.INVITE_ALREADY_USED,
+      message: `Invite already used: ${invite}`
+    };
+  }
+  return result;
+}
+
+export function getChallengeFromInvite(invite: string): Result<Challenge> {
   const challenge = Array.from(challenges.values()).find((challenge) => challenge.invites.includes(invite));
   if (challenge) {
-    return challenge;
+    return { success: true, data: challenge };
   }
-  throw new Error(`Challenge not found for invite: ${invite}`);
+  return {
+    success: false,
+    error: ChallengeError.NOT_FOUND,
+    message: `Challenge not found for invite: ${invite}`
+  };
 }
+
 
 export function getChallenge(challengeId: string): Challenge | undefined {
   return challenges.get(challengeId);
