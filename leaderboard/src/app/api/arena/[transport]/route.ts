@@ -17,7 +17,19 @@ const handler = createMcpHandler(
         invite: z.string().describe("The invite code to join the challenge"),
       },
       async ({ invite }) => {
-        const challenge = getChallengeFromInvite(invite);
+        const result = getChallengeFromInvite(invite);
+
+        if (!result.success) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify({ error: result.message }),
+              },
+            ],
+          };
+        }
+        const challenge = result.data;
         challenge.instance.join(invite);
 
         return {

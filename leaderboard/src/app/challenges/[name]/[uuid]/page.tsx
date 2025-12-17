@@ -64,7 +64,7 @@ export default async function UUIDPage({
             <div>
               <h2 className="text-lg font-semibold text-zinc-900 mb-2">Session ID</h2>
               <div className="text-sm text-zinc-600 font-mono">
-                <CopyableInvite invite={uuid} copyText={`${origin}/challenges/${name}/${uuid}`} className="text-sm text-zinc-600 font-mono flex items-center gap-2 group cursor-pointer hover:text-zinc-900 transition-colors" />
+                <CopyableInvite invite={uuid} copyText={`${origin}/challenges/${name}/${uuid}`} className="text-sm text-zinc-600 font-mono flex items-center gap-2 group cursor-pointer hover:text-zinc-900 transition-colors" showButton={false} />
               </div>
               {invites && invites.length > 0 && (
                 <div className="mt-4">

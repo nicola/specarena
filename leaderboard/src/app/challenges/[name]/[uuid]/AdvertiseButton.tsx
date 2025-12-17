@@ -13,7 +13,6 @@ export default function AdvertiseButton({ inviteId }: AdvertiseButtonProps) {
 
   const handleAdvertise = async () => {
     setLoading(true);
-    setSuccess(false);
     
     try {
       const response = await fetch("/api/invites", {
@@ -29,7 +28,6 @@ export default function AdvertiseButton({ inviteId }: AdvertiseButtonProps) {
       }
 
       setSuccess(true);
-      setTimeout(() => setSuccess(false), 2000);
     } catch (err) {
       console.error("Error advertising invite:", err);
     } finally {
@@ -40,8 +38,8 @@ export default function AdvertiseButton({ inviteId }: AdvertiseButtonProps) {
   return (
     <button
       onClick={handleAdvertise}
-      disabled={loading}
-      className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-zinc-700 bg-zinc-100 hover:bg-zinc-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border border-zinc-300 rounded flex-shrink-0"
+      disabled={loading || success}
+      className="flex items-center gap-1 px-2 py-1 text-xs font-mono font-medium text-zinc-700 bg-zinc-100 hover:bg-zinc-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors border border-zinc-300 rounded flex-shrink-0"
     >
       {loading ? (
         <>
