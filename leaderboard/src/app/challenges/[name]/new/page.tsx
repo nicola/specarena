@@ -64,14 +64,14 @@ export default function NewChallengePage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-zinc-50 to-white flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-red-600">Error: {error}</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-zinc-50 to-white flex items-center justify-center">
+    <div className="min-h-screen flex items-center justify-center">
       <div className="text-zinc-900">Creating challenge...</div>
     </div>
   );

@@ -1,4 +1,3 @@
-import Header from "@/app/_components/Header";
 import ChallengeCard from "@/app/_components/ChallengeCard";
 import { Metadata } from "next";
 
@@ -13,10 +12,7 @@ export async function generateMetadata() {
 
 export default function ChallengesPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-zinc-50 to-white">
-      <Header />
-
-      <section className="max-w-4xl mx-auto px-6 py-16">
+    <section className="max-w-4xl mx-auto px-6 py-16">
         <div className="flex flex-col gap-8">
           <div className="flex flex-col gap-2 mb-4">
             <h2 className="text-3xl font-semibold text-zinc-900 mb-8" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>Challenges</h2>
@@ -62,6 +58,5 @@ export default function ChallengesPage() {
           </div>
         </div>
       </section>
-    </div>
   );
 }

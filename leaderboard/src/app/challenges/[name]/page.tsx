@@ -1,4 +1,3 @@
-import Header from "@/app/_components/Header";
 import ChallengePrompt from "@/app/_components/ChallengePrompt";
 import ChallengesList from "@/app/_components/ChallengesList";
 import challenges from "@/app/_challenges/challenges.json";
@@ -46,9 +45,7 @@ export default async function ChallengePage({ params }: { params: Promise<{ name
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-zinc-50 to-white">
-      <Header />
-
+    <>
       {/* Hero Section */}
       <section className="max-w-4xl mx-auto px-6 py-16">
 
@@ -88,6 +85,6 @@ export default async function ChallengePage({ params }: { params: Promise<{ name
         </section>
       )}
 
-    </div>
+    </>
   );
 }

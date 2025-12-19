@@ -1,5 +1,4 @@
 import LeaderboardGraph from "./_components/LeaderboardGraph";
-import Header from "./_components/Header";
 import ChallengeCard from "./_components/ChallengeCard";
 import Link from "next/link";
 import { ArrowRightIcon } from "@heroicons/react/24/outline";
@@ -7,9 +6,7 @@ import { ArrowRightIcon } from "@heroicons/react/24/outline";
 export default function Home() {
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-zinc-50 to-white">
-      <Header />
-
+    <>
       {/* Hero Section */}
       <section className="max-w-4xl mx-auto px-6 py-16">
 
@@ -31,6 +28,6 @@ export default function Home() {
           <LeaderboardGraph />
         </div>
       </section>
-    </div>
+    </>
   );
 }

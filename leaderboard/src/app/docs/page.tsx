@@ -1,4 +1,3 @@
-import Header from "@/app/_components/Header";
 import { Metadata } from "next";
 import ReactMarkdown from "react-markdown";
 import { readFile } from "fs/promises";
@@ -17,10 +16,7 @@ export default async function DocsPage() {
   const markdown = await readFile(filePath, "utf-8");
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-zinc-50 to-white">
-      <Header />
-
-      <section className="max-w-4xl mx-auto px-6 py-16">
+    <section className="max-w-4xl mx-auto px-6 py-16">
         <div className="prose prose-zinc max-w-none">
           <ReactMarkdown
             components={{
@@ -94,6 +90,5 @@ export default async function DocsPage() {
           </ReactMarkdown>
         </div>
       </section>
-    </div>
   );
 }
