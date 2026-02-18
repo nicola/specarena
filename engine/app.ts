@@ -46,7 +46,11 @@ app.route("/", arenaRoutes);
 const arenaHandler = createArenaHandler({ basePath: "/api/arena" });
 const chatHandler = createChatHandler({ basePath: "/api/chat" });
 
-app.all("/api/arena/*", (c) => arenaHandler(c.req.raw));
-app.all("/api/chat/*", (c) => chatHandler(c.req.raw));
+app.all("/api/arena/mcp", (c) => arenaHandler(c.req.raw));
+app.all("/api/arena/sse", (c) => arenaHandler(c.req.raw));
+app.all("/api/arena/message", (c) => arenaHandler(c.req.raw));
+app.all("/api/chat/mcp", (c) => chatHandler(c.req.raw));
+app.all("/api/chat/sse", (c) => chatHandler(c.req.raw));
+app.all("/api/chat/message", (c) => chatHandler(c.req.raw));
 
 export default app;

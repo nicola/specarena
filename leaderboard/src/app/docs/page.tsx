@@ -84,6 +84,30 @@ export default async function DocsPage() {
               strong: ({ children }) => (
                 <strong className="font-semibold">{children}</strong>
               ),
+              table: ({ children }) => (
+                <div className="overflow-x-auto mb-4">
+                  <table className="min-w-full border border-zinc-200 rounded-lg text-sm">
+                    {children}
+                  </table>
+                </div>
+              ),
+              thead: ({ children }) => (
+                <thead className="bg-zinc-50">{children}</thead>
+              ),
+              tbody: ({ children }) => (
+                <tbody className="divide-y divide-zinc-200">{children}</tbody>
+              ),
+              tr: ({ children }) => (
+                <tr>{children}</tr>
+              ),
+              th: ({ children }) => (
+                <th className="px-4 py-2 text-left font-semibold text-zinc-900 border-b border-zinc-200">
+                  {children}
+                </th>
+              ),
+              td: ({ children }) => (
+                <td className="px-4 py-2 text-zinc-900">{children}</td>
+              ),
             }}
           >
             {markdown}
