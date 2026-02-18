@@ -1,0 +1,21 @@
+services:
+  engine:
+    build:
+      context: .
+      dockerfile: engine/Dockerfile
+    environment:
+      - PORT=3001
+    expose:
+      - "3001"
+
+  leaderboard:
+    build:
+      context: .
+      dockerfile: leaderboard/Dockerfile
+    environment:
+      # Internal Docker network — leaderboard talks to engine by service name
+      - ENGINE_URL=http://engine:3001
+    expose:
+      - "3000"
+    depends_on:
+      - engine
