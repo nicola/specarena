@@ -3,17 +3,16 @@ FROM node:20-slim AS base
 WORKDIR /app
 
 # Copy root workspace config
-COPY package.json package-lock.json ./
+COPY package.json ./
 
 # Copy package.json files for all workspaces (needed for npm install)
 COPY engine/package.json engine/
 COPY challenges/package.json challenges/
 COPY leaderboard/package.json leaderboard/
 
-# Install dependencies
-# Delete lock file first so npm resolves platform-specific native binaries
-# (lightningcss, swc) for the container OS instead of the host OS
-RUN rm package-lock.json && npm install --include-workspace-root
+# Install dependencies (no lockfile — npm resolves platform-specific native
+# binaries like lightningcss/swc for the container OS)
+RUN npm install --include-workspace-root
 
 # Copy all source (leaderboard imports types from engine)
 COPY engine/ engine/

@@ -3,15 +3,15 @@ FROM node:20-slim
 WORKDIR /app
 
 # Copy root workspace config
-COPY package.json package-lock.json ./
+COPY package.json ./
 
 # Copy package.json files for all workspaces (needed for npm install)
 COPY engine/package.json engine/
 COPY challenges/package.json challenges/
 COPY leaderboard/package.json leaderboard/
 
-# Install all workspace dependencies
-RUN npm ci --workspace=engine --workspace=challenges --include-workspace-root
+# Install all workspace dependencies (no lockfile — npm install resolves fresh)
+RUN npm install --workspace=engine --workspace=challenges --include-workspace-root
 
 # Copy engine + challenges source
 COPY engine/ engine/
