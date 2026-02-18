@@ -10,15 +10,19 @@ COPY engine/package.json engine/
 COPY challenges/package.json challenges/
 COPY leaderboard/package.json leaderboard/
 
-# Install all workspace dependencies
-RUN npm ci --include-workspace-root
+# Install dependencies
+# Delete lock file first so npm resolves platform-specific native binaries
+# (lightningcss, swc) for the container OS instead of the host OS
+RUN rm package-lock.json && npm install --include-workspace-root
 
 # Copy all source (leaderboard imports types from engine)
 COPY engine/ engine/
 COPY challenges/ challenges/
 COPY leaderboard/ leaderboard/
 
-# Build Next.js (standalone output for smaller image)
+# Build Next.js — set ENGINE_URL for rewrites (baked into routes-manifest.json)
+ARG ENGINE_URL=http://engine:3001
+ENV ENGINE_URL=${ENGINE_URL}
 RUN npm run build --workspace=leaderboard
 
 # --- Production stage ---
@@ -28,7 +32,7 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Copy built output + dependencies
+# Copy built output + node_modules + source (needed for next start with rewrites)
 COPY --from=base /app/package.json ./
 COPY --from=base /app/node_modules ./node_modules
 COPY --from=base /app/leaderboard ./leaderboard
