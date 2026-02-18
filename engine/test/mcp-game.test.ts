@@ -175,7 +175,7 @@ describe("PSI game via MCP protocol", () => {
       messageType: "guess",
       content: [...intersection].join(", "),
     });
-    assert.equal(guess1.text, "OK: Message sent");
+    assert.equal(guess1.ok, "Message sent");
     assert.equal(instance.instance.state.gameEnded, false);
 
     // 10. Player 2 guesses exact intersection

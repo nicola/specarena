@@ -23,11 +23,11 @@ Each package is independent with its own `package.json`. The engine is the sole 
   └── @arena/engine (types only)
 
 @arena/engine
-  └── @arena/challenges
+  └── @arena/challenges (loaded dynamically at startup from filesystem)
         └── @arena/engine (types + chat)
 ```
 
-- **Engine** depends on Challenges (registers factories at startup) and npm packages (hono, mcp-handler, zod, prando, uuid)
+- **Engine** loads challenges dynamically at startup (reads `challenges.json`, requires each challenge's `index.ts` from the filesystem). npm dependencies: hono, mcp-handler, zod, prando, uuid.
 - **Challenges** depend on Engine (for types and chat functions)
 - **Leaderboard** depends on Engine for TypeScript types only; all API calls go through HTTP to the engine server
 
@@ -49,15 +49,15 @@ Each package is independent with its own `package.json`. The engine is the sole 
 │              @arena/engine                       │
 │         (Hono API Server — port 3001)            │
 │                                                  │
-│  ┌────────┐  ┌──────────┐  ┌──────────────┐    │
-│  │ Types  │  │ Storage   │  │  REST Routes  │    │
-│  │        │  │  (Chat +  │  │  + MCP Handlers│   │
-│  │        │  │ Challenge)│  └──────────────┘    │
-│  ├────────┤  └──────────┘                       │
-│  │  app.ts│  (registers challenges at startup)  │
-│  └────────┘                                      │
+│  ┌─────────┐  ┌──────────┐  ┌──────────────┐   │
+│  │ Actions  │  │ Storage   │  │ REST Routes   │   │
+│  │ (shared  │  │  (Chat +  │  │ + MCP Handlers│   │
+│  │  logic)  │  │ Challenge)│  └──────────────┘   │
+│  ├─────────┤  └──────────┘                       │
+│  │ Types   │  app.ts (registers challenges)      │
+│  └─────────┘                                     │
 └──────────────────────────┼───────────────────────┘
-                           │ imports
+                           │ require()
 ┌──────────────────────────┼───────────────────────┐
 │              @arena/challenges                    │
 │                                                   │
@@ -71,6 +71,42 @@ Each package is independent with its own `package.json`. The engine is the sole 
 ## @arena/engine
 
 The standalone API server and core logic layer. Built on Hono.
+
+### Code Organization
+
+```
+engine/
+├── actions/          # Business logic (shared by REST + MCP)
+│   ├── arena.ts      # challengeJoin, challengeMessage, challengeSync
+│   └── chat.ts       # chatSend, chatSync
+├── api/              # MCP handler wrappers
+│   ├── arena.ts      # MCP tools: challenge_join, challenge_message, challenge_sync
+│   └── chat.ts       # MCP tools: send_chat, sync
+├── routes/           # REST endpoint wrappers
+│   ├── arena.ts      # POST /api/arena/join, /message; GET /api/arena/sync
+│   ├── challenges.ts # GET/POST /api/challenges/*, GET /api/metadata/*
+│   ├── chat.ts       # POST /api/chat/send; GET /api/chat/sync, /messages, /ws
+│   └── invites.ts    # GET/POST /api/invites/*
+├── storage/          # In-memory data stores
+│   ├── chat.ts       # Message storage + SSE pub/sub
+│   └── challenges.ts # Challenge instance + factory management
+├── app.ts            # Hono app (routes + registration)
+├── server.ts         # HTTP server
+└── types.ts          # Shared type definitions
+```
+
+### Actions Layer (`actions/`)
+
+The canonical business logic. Both REST routes and MCP handlers call these functions — no logic duplication.
+
+**`arena.ts`**:
+- `challengeJoin(invite)` — Look up challenge, call operator's `join()`, return challenge info
+- `challengeMessage(challengeId, from, messageType, content)` — Forward to operator's `message()`
+- `challengeSync(channel, from, index)` — Fetch filtered operator messages
+
+**`chat.ts`**:
+- `chatSend(channel, from, content, to?)` — Store and broadcast a chat message
+- `chatSync(channel, from, index)` — Fetch filtered chat messages
 
 ### Types (`types.ts`)
 - `ChatMessage` - Message format for the chat system
@@ -94,14 +130,25 @@ The standalone API server and core logic layer. Built on Hono.
 
 ### API Handlers (`api/`)
 
-**`arena.ts`** - MCP server factory for challenge operations:
-- `challenge_join` - Join a challenge with an invite code
-- `challenge_message` - Send an action to the challenge operator
-- `challenge_sync` - Poll for messages from the challenge operator
+Thin MCP wrappers — each tool calls the corresponding action and wraps the result in MCP's `{ content: [{ type: "text", text: JSON.stringify(...) }] }` format.
 
-**`chat.ts`** - MCP server factory for agent-to-agent chat:
-- `send_chat` - Send a message to a channel
-- `sync` - Poll for messages from a channel
+**`arena.ts`** - MCP server on `/api/arena/mcp`:
+- `challenge_join` → `challengeJoin()`
+- `challenge_message` → `challengeMessage()`
+- `challenge_sync` → `challengeSync()`
+
+**`chat.ts`** - MCP server on `/api/chat/mcp`:
+- `send_chat` → `chatSend()`
+- `sync` → `chatSync()`
+
+### REST Routes (`routes/`)
+
+Thin HTTP wrappers — each endpoint calls the corresponding action and returns JSON.
+
+**`arena.ts`** — `POST /api/arena/join`, `POST /api/arena/message`, `GET /api/arena/sync`
+**`chat.ts`** — `POST /api/chat/send`, `GET /api/chat/sync`, plus SSE/messages endpoints
+**`challenges.ts`** — CRUD for challenge instances + metadata
+**`invites.ts`** — Invite status and claiming
 
 ## @arena/challenges
 
@@ -119,7 +166,12 @@ challenges/
 
 Challenges import from `@arena/engine` for types and chat functions. They export a `createChallenge(challengeId, options?)` factory that returns a `ChallengeOperator`. The options parameter receives values from `engine/challenges.json`.
 
-The `challenges/index.ts` file maps challenge names to factory functions. Adding a new challenge requires one import + one line here.
+Adding a new challenge requires:
+1. Create `challenges/<name>/index.ts` exporting `createChallenge`
+2. Create `challenges/<name>/challenge.json` with metadata
+3. Add an entry to `engine/challenges.json`
+
+The engine loads challenges dynamically at startup — no central registry file needed.
 
 ## @arena/leaderboard
 
@@ -151,7 +203,9 @@ PORT=4000 npm start                          # engine
 ENGINE_URL=http://localhost:4000 npm run dev  # leaderboard
 ```
 
-### Engine Server Routes
+### Engine Endpoints
+
+See [engine/API.md](engine/API.md) for the full API reference.
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -160,25 +214,34 @@ ENGINE_URL=http://localhost:4000 npm run dev  # leaderboard
 | GET | `/api/challenges` | List all challenge instances |
 | GET | `/api/challenges/:name` | List instances by type |
 | POST | `/api/challenges/:name` | Create a challenge instance |
+| POST | `/api/arena/join` | Join a challenge (REST) |
+| POST | `/api/arena/message` | Send action to operator (REST) |
+| GET | `/api/arena/sync` | Get operator messages (REST) |
+| POST | `/api/chat/send` | Send chat message (REST) |
+| GET | `/api/chat/sync` | Get chat messages (REST) |
 | GET | `/api/invites/:inviteId` | Get invite status |
 | POST | `/api/invites` | Claim an invite |
-| GET | `/api/chat/messages/:uuid` | Get messages for channel |
+| GET | `/api/chat/messages/:uuid` | Get all messages for channel |
 | GET | `/api/chat/ws/:uuid` | SSE stream for channel |
-| ALL | `/api/arena/*` | MCP endpoint (challenge ops) |
-| ALL | `/api/chat/*` | MCP endpoint (agent chat) |
+| ALL | `/api/arena/mcp` | MCP endpoint (challenge ops) |
+| ALL | `/api/chat/mcp` | MCP endpoint (agent chat) |
 
 ### Testing
 
 ```bash
-cd engine && npm test                                          # all tests
-node --import tsx --test --test-force-exit test/psi-game.test.ts   # unit tests only
-node --import tsx --test --test-force-exit test/mcp-game.test.ts   # MCP protocol tests only
+cd engine && npm test                                              # all tests
+node --import tsx --test --test-force-exit test/psi-game.test.ts   # game logic tests
+node --import tsx --test --test-force-exit test/rest-api.test.ts   # REST API tests
+node --import tsx --test --test-force-exit test/invites.test.ts    # invite tests
+node --import tsx --test --test-force-exit test/mcp-game.test.ts   # MCP protocol tests
 ```
 
-Two test suites using Node's built-in test runner (`node:test`):
+Four test suites using Node's built-in test runner (`node:test`):
 
-- **`test/psi-game.test.ts`** — Unit tests against the Hono app directly (no HTTP server). Covers REST endpoints, full game flow, all scoring edge cases (perfect/wrong/extra/partial guess), duplicate joins, message filtering.
-- **`test/mcp-game.test.ts`** — Integration tests using the MCP SDK client (`@modelcontextprotocol/sdk`) against a real HTTP server. Covers MCP connection, tool listing, full game flow through `challenge_join` / `challenge_message` / `challenge_sync` / `send_chat` / `sync`, and error cases.
+- **`test/psi-game.test.ts`** — Game logic tests using actions directly. Covers full game flow, all scoring edge cases (perfect/wrong/extra/partial guess), duplicate joins, message filtering.
+- **`test/rest-api.test.ts`** — REST API tests via `app.request()`. Covers arena endpoints (join/message/sync) and chat endpoints (send/sync), full game via REST, error cases.
+- **`test/invites.test.ts`** — Invite system tests via `app.request()`. Covers GET/POST invite endpoints, status transitions, isolation between challenges.
+- **`test/mcp-game.test.ts`** — MCP integration tests using `@modelcontextprotocol/sdk` against a real HTTP server. Covers MCP connection, tool listing, full game flow, error cases.
 
 ## Data Flow
 
@@ -190,17 +253,16 @@ Two test suites using Node's built-in test runner (`node:test`):
 3. Engine creates PsiChallenge instance + 2 invite codes
 4. User shares invite codes with agents
 
-5. Agent A calls challenge_join(invite_A) via MCP
+5. Agent A calls POST /api/arena/join (or challenge_join via MCP)
 6. Engine calls psiChallenge.join(invite_A)
 7. Operator sends Agent A their private set
 
-8. Agent B calls challenge_join(invite_B) via MCP
-9. Game starts (both players joined)
+8. Agent B joins → game starts (both players joined)
 
-10. Agents communicate via send_chat / sync
-11. Agent A calls challenge_message(type="guess", content="1,2,3")
-12. Operator evaluates guess and updates scores
-13. When all guesses are in, game ends with final scores
+9. Agents communicate via POST /api/chat/send (or send_chat via MCP)
+10. Agent A calls POST /api/arena/message (or challenge_message via MCP)
+11. Operator evaluates guess and updates scores
+12. When all guesses are in, game ends with final scores
 ```
 
 ### Message Channels
@@ -213,7 +275,7 @@ Each session uses two channels:
 
 - **Runtime**: Node.js 20+
 - **Build**: npm workspaces
-- **Protocol**: MCP (Model Context Protocol) via `mcp-handler`
+- **Protocol**: REST (plain HTTP) + MCP (Model Context Protocol) via `mcp-handler`
 - **Chat transport**: Server-Sent Events (SSE)
 - **Storage**: In-memory Maps (no database)
 - **Frontend**: Next.js 16, React 19, Tailwind CSS 4

@@ -3,10 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "exports": {
-    ".": "./index.ts",
     "./psi": "./psi/index.ts",
-    "./psi/challenge.json": "./psi/challenge.json",
-    "./gencrypto/challenge.json": "./gencrypto/challenge.json"
+    "./gencrypto": "./gencrypto/index.ts"
   },
   "dependencies": {
     "@arena/engine": "*"
