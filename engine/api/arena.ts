@@ -1,7 +1,6 @@
 import { createMcpHandler } from "mcp-handler";
 import { z } from "zod";
-import { type ChatMessage, getMessagesForChallengeChannel, sendChallengeMessage } from "../storage/chat";
-import { getChallengeFromInvite, getChallenge, getChallengeMetadata } from "../storage/challenges";
+import { challengeJoin, challengeMessage, challengeSync } from "../actions/arena";
 
 export function createArenaHandler(options: { redisUrl?: string; basePath?: string } = {}) {
   return createMcpHandler(
@@ -12,36 +11,9 @@ export function createArenaHandler(options: { redisUrl?: string; basePath?: stri
         {
           invite: z.string().describe("The invite code to join the challenge"),
         },
-        async ({ invite }) => {
-          const result = getChallengeFromInvite(invite);
-
-          if (!result.success) {
-            return {
-              content: [
-                {
-                  type: "text",
-                  text: JSON.stringify({ error: result.message }),
-                },
-              ],
-            };
-          }
-          const challenge = result.data;
-          challenge.instance.join(invite);
-
-          const metadata = getChallengeMetadata(challenge.challengeType);
-
-          return {
-            content: [
-              {
-                type: "text",
-                text: JSON.stringify({
-                  ChallengeID: challenge.id,
-                  ChallengeInfo: metadata,
-                }),
-              },
-            ],
-          };
-        }
+        async ({ invite }) => ({
+          content: [{ type: "text", text: JSON.stringify(challengeJoin(invite)) }],
+        })
       );
 
       server.tool(
@@ -53,50 +25,9 @@ export function createArenaHandler(options: { redisUrl?: string; basePath?: stri
           messageType: z.string().describe("The type of message to send"),
           content: z.string().describe("The content of the message, send it as a string"),
         },
-        async ({ challengeId, from, messageType, content }) => {
-          const challenge = getChallenge(challengeId);
-
-          let response;
-
-          sendChallengeMessage(challengeId, from, (messageType ? `(${messageType}) ` : '') + content, "operator");
-
-          if (challenge && challenge.instance) {
-            try {
-              challenge.instance.message({
-                channel: challengeId,
-                from: from,
-                type: messageType,
-                content: content,
-                timestamp: Date.now(),
-              });
-
-              response = {
-                type: "text",
-                text: "OK: Message sent",
-              };
-            } catch (error) {
-              console.error("Error sending message:", error);
-              response = {
-                type: "status",
-                error: error instanceof Error ? error.message : String(error),
-              };
-            }
-          } else {
-            response = {
-              type: "status",
-              error: "Challenge not found",
-            };
-          }
-
-          return {
-            content: [
-              {
-                type: "text",
-                text: JSON.stringify(response),
-              },
-            ],
-          };
-        }
+        async ({ challengeId, from, messageType, content }) => ({
+          content: [{ type: "text", text: JSON.stringify(challengeMessage(challengeId, from, messageType, content)) }],
+        })
       );
 
       server.tool(
@@ -107,28 +38,12 @@ export function createArenaHandler(options: { redisUrl?: string; basePath?: stri
           from: z.string().describe("The user ID of the sender"),
           index: z.number().int().min(0).describe("The starting index to fetch messages from"),
         },
-        async ({ channel, from, index }) => {
-          const messages = getMessagesForChallengeChannel(channel);
-          const filteredMessages = messages.filter((msg: ChatMessage) =>
-            msg.index !== undefined && msg.index >= index && (!msg.to || msg.to === from || msg.from === from));
-
-          return {
-            content: [
-              {
-                type: "text",
-                text: JSON.stringify({
-                  messages: filteredMessages,
-                  count: filteredMessages.length,
-                }),
-              },
-            ],
-          };
-        }
+        async ({ channel, from, index }) => ({
+          content: [{ type: "text", text: JSON.stringify(challengeSync(channel, from, index)) }],
+        })
       );
     },
-    {
-      // Optional server options
-    },
+    {},
     {
       redisUrl: options.redisUrl || process.env.REDIS_URL,
       basePath: options.basePath || "/api/arena",

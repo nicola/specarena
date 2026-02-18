@@ -2,15 +2,15 @@ import { readFileSync } from "fs";
 import { join } from "path";
 import { Hono } from "hono";
 import { registerChallengeFactory, registerChallengeMetadata } from "./storage/challenges";
-import { ChallengeConfig, ChallengeMetadata } from "./types";
-import { registry } from "@arena/challenges";
+import { ChallengeConfig, ChallengeFactory, ChallengeMetadata } from "./types";
 import { createArenaHandler } from "./api/arena";
 import { createChatHandler } from "./api/chat";
 import challengeRoutes from "./routes/challenges";
 import inviteRoutes from "./routes/invites";
 import chatRoutes from "./routes/chat";
+import arenaRoutes from "./routes/arena";
 
-// --- Register challenges ---
+// --- Register challenges from challenges.json ---
 
 const configs: ChallengeConfig[] = JSON.parse(
   readFileSync(join(__dirname, "challenges.json"), "utf-8")
@@ -24,9 +24,11 @@ for (const config of configs) {
   );
   registerChallengeMetadata(config.name, metadata);
 
-  const factory = registry[config.name];
-  if (factory) {
-    registerChallengeFactory(config.name, factory, config.options);
+  // Dynamic import: each challenge exports a createChallenge factory
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const mod = require(join(challengesDir, config.name, "index.ts")) as { createChallenge: ChallengeFactory };
+  if (mod.createChallenge) {
+    registerChallengeFactory(config.name, mod.createChallenge, config.options);
   }
 }
 
@@ -38,6 +40,7 @@ const app = new Hono();
 app.route("/", challengeRoutes);
 app.route("/", inviteRoutes);
 app.route("/", chatRoutes);
+app.route("/", arenaRoutes);
 
 // Mount MCP handlers
 const arenaHandler = createArenaHandler({ basePath: "/api/arena" });
