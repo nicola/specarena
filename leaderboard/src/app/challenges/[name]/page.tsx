@@ -1,40 +1,48 @@
-import ChallengePrompt from "@/app/_components/ChallengePrompt";
-import ChallengesList from "@/app/_components/ChallengesList";
-import challenges from "@/app/_challenges/challenges.json";
+import ChallengePrompt from "@/app/components/ChallengePrompt";
+import ChallengesList from "@/app/components/ChallengesList";
 import Link from "next/link";
 import { Metadata } from "next";
-import { headers } from "next/headers";
+import { ChallengeMetadata } from "@arena/engine/types";
+
+const engineUrl = process.env.ENGINE_URL || "http://localhost:3001";
+
+async function fetchMetadata(name: string): Promise<ChallengeMetadata | null> {
+  try {
+    const res = await fetch(`${engineUrl}/api/metadata/${name}`, { cache: "no-store" });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
 
 export async function generateMetadata({ params }: { params: Promise<{ name: string }> }) {
   const { name } = await params;
-  const challenge = challenges[name as keyof typeof challenges];
+  const challenge = await fetchMetadata(name);
 
   const metadata: Metadata = {
-    title: `ARENA - ${challenge.name}`,
-    description: challenge.description,
+    title: challenge ? `ARENA - ${challenge.name}` : "ARENA - Challenge Not Found",
+    description: challenge?.description || "",
   };
   return metadata;
 }
 
 export default async function ChallengePage({ params }: { params: Promise<{ name: string }> }) {
-
   const { name } = await params;
 
-  const challenge = challenges[name as keyof typeof challenges];
+  const challenge = await fetchMetadata(name);
   if (!challenge) {
     return <div>Challenge {name} not found</div>;
   }
 
+  // If it's registered in the engine, it's active
+  const active = true;
+
   // Fetch all challenges for this challenge type from the API
   let challengesList: Array<{ id: string; name: string; createdAt: number; challengeType: string; invites: string[] }> = [];
   try {
-    const headersList = await headers();
-    const host = headersList.get("host") || "";
-    const protocol = headersList.get("x-forwarded-proto") || "http";
-    const baseUrl = `${protocol}://${host}`;
-    
-    const response = await fetch(`${baseUrl}/api/challenges/${name}`, {
-      cache: 'no-store', // Always fetch fresh data
+    const response = await fetch(`${engineUrl}/api/challenges/${name}`, {
+      cache: 'no-store',
     });
     if (response.ok) {
       const data = await response.json();
@@ -59,7 +67,7 @@ export default async function ChallengePage({ params }: { params: Promise<{ name
             </p>
           </div>
           <div className="flex flex-col gap-2 mb-4 items-end">
-            {challenge.active && (
+            {active && (
               <Link href={`/challenges/${name}/new`} className="text-sm bg-zinc-900 text-white px-4 py-2 rounded-md border border-zinc-900 hover:bg-zinc-900 hover:text-white transition-colors">
                 Participate
               </Link>
@@ -67,17 +75,17 @@ export default async function ChallengePage({ params }: { params: Promise<{ name
           </div>
         </div>
         {/* Leaderboard Graph */}
-        {challenge.active && (  
+        {active && (
           <ChallengePrompt prompt={challenge.prompt} />
         )}
 
         {/* Challenges List */}
-        {challenge.active && (
+        {active && (
           <ChallengesList challenges={challengesList} challengeType={name} />
         )}
       </section>
 
-      {!challenge.active && (
+      {!active && (
         <section className="max-w-4xl mx-auto px-6 py-16">
           <div className="text-sm text-zinc-600">
             Challenge is not active yet.

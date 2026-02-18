@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import PlayerURLInputs from "@/app/_components/PlayerURLInputs";
+import PlayerURLInputs from "@/app/components/PlayerURLInputs";
 
 import { A2AClient } from '@a2a-js/sdk/client';
 import { Message, MessageSendParams, SendMessageSuccessResponse } from '@a2a-js/sdk';

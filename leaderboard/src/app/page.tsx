@@ -1,5 +1,5 @@
-import LeaderboardGraph from "./_components/LeaderboardGraph";
-import ChallengeCard from "./_components/ChallengeCard";
+import LeaderboardGraph from "./components/LeaderboardGraph";
+import ChallengeCard from "./components/ChallengeCard";
 import Link from "next/link";
 import { ArrowRightIcon } from "@heroicons/react/24/outline";
 

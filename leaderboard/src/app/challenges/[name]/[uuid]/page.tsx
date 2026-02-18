@@ -1,15 +1,27 @@
-import challenges from "@/app/_challenges/challenges.json"; 
 import ConversationsList from "./ConversationsList";
-import ChallengePrompt from "@/app/_components/ChallengePrompt";
+import ChallengePrompt from "@/app/components/ChallengePrompt";
 import CopyableInvite from "./CopyableInvite";
 import AdvertiseButton from "./AdvertiseButton";
 import Link from "next/link";
 import { headers } from "next/headers";
 import { Metadata } from "next";
+import { ChallengeMetadata } from "@arena/engine/types";
+
+const engineUrl = process.env.ENGINE_URL || "http://localhost:3001";
+
+async function fetchMetadata(name: string): Promise<ChallengeMetadata | null> {
+  try {
+    const res = await fetch(`${engineUrl}/api/metadata/${name}`, { cache: "no-store" });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
 
 export async function generateMetadata({ params }: { params: Promise<{ name: string; uuid: string }> }) {
   const { name, uuid } = await params;
-  const challenge = challenges[name as keyof typeof challenges];
+  const challenge = await fetchMetadata(name);
   if (!challenge) {
     return { title: "Challenge not found" };
   }
@@ -21,23 +33,23 @@ export async function generateMetadata({ params }: { params: Promise<{ name: str
   return metadata;
 }
 
-export default async function UUIDPage({ 
+export default async function UUIDPage({
   params,
   searchParams
-}: { 
+}: {
   params: Promise<{ name: string; uuid: string }>,
   searchParams: Promise<{ invites?: string[] }>
 }) {
   const { name, uuid } = await params;
   const { invites = [] } = await searchParams;
-  
-  // Get the origin from headers
+
+  // Get the origin from headers for client-side URLs
   const headersList = await headers();
   const host = headersList.get("host") || "";
   const protocol = headersList.get("x-forwarded-proto") || "http";
   const origin = `${protocol}://${host}`;
 
-  const challenge = challenges[name as keyof typeof challenges];
+  const challenge = await fetchMetadata(name);
   if (!challenge) {
     return <div>Challenge {name} not found</div>;
   }
@@ -75,11 +87,11 @@ export default async function UUIDPage({
                   </div>
                 </div>
               )}
-              
+
             </div>
           </div>
         </div>
-        
+
         <div className="mb-8">
           <ChallengePrompt prompt={challenge.prompt} />
         </div>
@@ -87,8 +99,7 @@ export default async function UUIDPage({
         <div className="max-w-4xl mx-auto border border-zinc-900 p-8">
           <ConversationsList uuid={uuid} />
         </div>
-        
+
       </section>
   );
 }
-
