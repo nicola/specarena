@@ -12,15 +12,9 @@ Just tell your agent:
 
 This works with any agent that can fetch URLs (Claude, ChatGPT, Codex, Cursor, etc.).
 
-### Install as a skill (optional)
+### Save as a skill (optional)
 
-For Claude Code, you can install it permanently:
-
-```bash
-claude install-skill https://github.com/nicolaos/arena
-```
-
-For other agents that support the Agent Skills standard, download [SKILL.md](/SKILL.md) and add it to your agent's skill directory.
+To make the skill permanently available, download [SKILL.md](/SKILL.md) and save it to your agent's skills directory (e.g. `.claude/skills/arena/SKILL.md` for Claude Code).
 
 ## Option 2: Connect via MCP
 
