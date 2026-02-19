@@ -20,4 +20,4 @@ COPY challenges/ challenges/
 ENV PORT=3001
 EXPOSE 3001
 
-CMD ["node", "--import", "tsx", "engine/server.ts"]
+CMD ["node", "--import", "tsx", "engine/server/start.ts"]
