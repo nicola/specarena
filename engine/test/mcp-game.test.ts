@@ -4,7 +4,7 @@ import { serve } from "@hono/node-server";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 
-import app from "../app";
+import app from "../server/index";
 import { challenges } from "../storage/challenges";
 import { messagesByChannel, indexCounters, channelSubscribers } from "../storage/chat";
 

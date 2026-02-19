@@ -1,7 +1,7 @@
 import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 
-import app from "../app";
+import app from "../server/index";
 import { challenges } from "../storage/challenges";
 import { messagesByChannel, indexCounters, channelSubscribers } from "../storage/chat";
 

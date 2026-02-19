@@ -1,6 +1,6 @@
 import { createMcpHandler } from "mcp-handler";
 import { z } from "zod";
-import { chatSend, chatSync } from "../actions/chat";
+import { chatSend, chatSync } from "../../actions/chat";
 
 export function createChatHandler(options: { redisUrl?: string; basePath?: string } = {}) {
   return createMcpHandler(

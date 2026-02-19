@@ -1,6 +1,6 @@
 import { Hono } from "hono";
-import { getInvite, ChallengeError } from "../storage/challenges";
-import { sendMessage } from "../storage/chat";
+import { getInvite, ChallengeError } from "../../storage/challenges";
+import { sendMessage } from "../../storage/chat";
 
 const app = new Hono();
 

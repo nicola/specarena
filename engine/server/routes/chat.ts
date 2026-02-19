@@ -1,6 +1,6 @@
 import { Hono } from "hono";
-import { getMessagesForChannel, subscribeToChannel } from "../storage/chat";
-import { chatSend, chatSync } from "../actions/chat";
+import { getMessagesForChannel, subscribeToChannel } from "../../storage/chat";
+import { chatSend, chatSync } from "../../actions/chat";
 
 const app = new Hono();
 

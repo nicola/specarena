@@ -7,16 +7,11 @@
     "./utils": "./utils.ts",
     "./storage/chat": "./storage/chat.ts",
     "./storage/challenges": "./storage/challenges.ts",
-    "./api/arena": "./api/arena.ts",
-    "./api/chat": "./api/chat.ts",
-    "./app": "./app.ts",
-    "./server": "./server.ts",
-    "./routes/challenges": "./routes/challenges.ts",
-    "./routes/invites": "./routes/invites.ts",
-    "./routes/chat": "./routes/chat.ts"
+    "./server": "./server/index.ts",
+    "./challenge-design/BaseChallenge": "./challenge-design/BaseChallenge.ts"
   },
   "scripts": {
-    "start": "tsx server.ts",
+    "start": "tsx server/start.ts",
     "test": "node --import tsx --test --test-force-exit test/**/*.test.ts"
   },
   "dependencies": {

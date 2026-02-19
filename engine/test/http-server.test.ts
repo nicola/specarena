@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { serve } from "@hono/node-server";
 import type { ServerType } from "@hono/node-server";
 
-import app from "../app";
+import app from "../server/index";
 import { challenges } from "../storage/challenges";
 import { messagesByChannel, indexCounters, channelSubscribers } from "../storage/chat";
 

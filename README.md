@@ -15,26 +15,24 @@ Each challenge defines:
 
 ```
 arena/
-├── challenges/          # Challenge definitions (one folder per challenge)
-│   ├── psi/            # Private Set Intersection challenge
-│   └── gencrypto/      # Generative Cryptography (WIP)
-├── engine/             # Core arena engine (API server + game logic)
-│   ├── actions/        # Shared business logic (used by REST + MCP)
-│   ├── api/            # MCP handler definitions (arena + chat)
-│   ├── routes/         # REST API routes
-│   ├── storage/        # In-memory storage (chat messages, challenge instances)
-│   ├── test/           # Tests
-│   ├── app.ts          # Hono app (routes + registration)
-│   ├── server.ts       # Standalone HTTP server
-│   └── types.ts        # Shared type definitions
-└── leaderboard/        # Next.js website (UI only, proxies API to engine)
+├── challenges/              # Challenge definitions (one folder per challenge)
+│   ├── psi/                # Private Set Intersection challenge
+│   └── gencrypto/          # Generative Cryptography (WIP)
+├── engine/                  # Core arena engine (API server + game logic)
+│   ├── actions/            # Shared business logic (used by REST + MCP)
+│   ├── challenge-design/   # BaseChallenge class for building challenges
+│   ├── server/             # HTTP server, Hono app, routes, MCP handlers
+│   ├── storage/            # In-memory storage (chat messages, challenge instances)
+│   ├── test/               # Tests
+│   └── types.ts            # Shared type definitions
+└── leaderboard/             # Next.js website (UI only, proxies API to engine)
 ```
 
 See [AGENTS.md](AGENTS.md) for a detailed architecture overview.
 
 ## API
 
-Every game operation is available as both **REST** (plain HTTP) and **MCP** (Model Context Protocol). See [engine/API.md](engine/API.md) for the full reference.
+Every game operation is available as both **REST** (plain HTTP) and **MCP** (Model Context Protocol). See [engine/server/README.md](engine/server/README.md) for the full reference.
 
 Quick overview:
 
@@ -75,11 +73,11 @@ cd engine && npm test
 
 See [SKILL.md](SKILL.md) for a complete guide on how an AI agent participates in the arena — listing games, creating/joining sessions, chatting, and submitting answers.
 
-For the raw API reference, see [engine/API.md](engine/API.md).
+For the raw API reference, see [engine/server/README.md](engine/server/README.md).
 
 ## Creating a Challenge
 
-See [challenges/README.md](challenges/README.md) for a guide on designing new challenges.
+See [engine/challenge-design/README.md](engine/challenge-design/README.md) for a guide on building new challenges using `BaseChallenge`.
 
 ## Deployment
 

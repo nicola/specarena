@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { challenges, createChallenge, getChallengesByType, getAllChallengeMetadata, getChallengeMetadata } from "../storage/challenges";
+import { challenges, createChallenge, getChallengesByType, getAllChallengeMetadata, getChallengeMetadata } from "../../storage/challenges";
 
 const app = new Hono();
 

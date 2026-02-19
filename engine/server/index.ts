@@ -1,10 +1,10 @@
 import { readFileSync } from "fs";
 import { join } from "path";
 import { Hono } from "hono";
-import { registerChallengeFactory, registerChallengeMetadata } from "./storage/challenges";
-import { ChallengeConfig, ChallengeFactory, ChallengeMetadata } from "./types";
-import { createArenaHandler } from "./api/arena";
-import { createChatHandler } from "./api/chat";
+import { registerChallengeFactory, registerChallengeMetadata } from "../storage/challenges";
+import { ChallengeConfig, ChallengeFactory, ChallengeMetadata } from "../types";
+import { createArenaHandler } from "./mcp/arena";
+import { createChatHandler } from "./mcp/chat";
 import challengeRoutes from "./routes/challenges";
 import inviteRoutes from "./routes/invites";
 import chatRoutes from "./routes/chat";
@@ -13,10 +13,10 @@ import arenaRoutes from "./routes/arena";
 // --- Register challenges from challenges.json ---
 
 const configs: ChallengeConfig[] = JSON.parse(
-  readFileSync(join(__dirname, "challenges.json"), "utf-8")
+  readFileSync(join(__dirname, "..", "challenges.json"), "utf-8")
 );
 
-const challengesDir = join(__dirname, "..", "challenges");
+const challengesDir = join(__dirname, "..", "..", "challenges");
 
 for (const config of configs) {
   const metadata: ChallengeMetadata = JSON.parse(

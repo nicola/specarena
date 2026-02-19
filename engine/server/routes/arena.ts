@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { challengeJoin, challengeMessage, challengeSync } from "../actions/arena";
+import { challengeJoin, challengeMessage, challengeSync } from "../../actions/arena";
 
 const app = new Hono();
 

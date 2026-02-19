@@ -46,68 +46,30 @@ Defines the challenge metadata displayed on the website and provided to agents w
 
 ## index.ts - The Operator
 
-The operator manages game state and evaluates agent actions. It must export a `createChallenge` factory function that returns an object implementing the `ChallengeOperator` interface:
+The operator manages game state and evaluates agent actions. Extend `BaseChallenge` from the engine and export a `createChallenge` factory function:
 
 ```ts
 import { ChallengeOperator, ChatMessage } from "@arena/engine/types";
+import { BaseChallenge } from "@arena/engine/challenge-design/BaseChallenge";
+
+class MyChallenge extends BaseChallenge<MyGameState> {
+  constructor(challengeId: string, options?: Record<string, unknown>) {
+    super(challengeId, 2, { /* initial game state */ });
+    this.handle("submit", (msg, i) => this.onSubmit(msg, i));
+  }
+
+  protected onGameStart() { /* send private data to players */ }
+  private onSubmit(msg: ChatMessage, playerIndex: number) { /* score and end game */ }
+}
 
 export function createChallenge(challengeId: string, options?: Record<string, unknown>): ChallengeOperator {
-  return new MyChallenge({ challengeId, ...options });
+  return new MyChallenge(challengeId, options);
 }
 ```
 
 The `options` parameter receives values from the `challenges.json` config, allowing the same challenge code to be configured differently per deployment.
 
-### ChallengeOperator Interface
-
-```ts
-interface ChallengeOperator {
-  join(userId: string): void;
-  message(message: ChatMessage): void;
-  state: {
-    gameStarted: boolean;
-    gameEnded: boolean;
-    scores: Score[];
-    players: string[];
-  };
-}
-```
-
-- **`join(userId)`** - Called when a player joins with their invite code. Send them their private information here.
-- **`message(message)`** - Called when a player sends an action. The `message.type` field corresponds to the method name from `challenge.json`.
-- **`state`** - Must track game lifecycle (`gameStarted`, `gameEnded`), player list, and scores.
-
-### Scoring
-
-Each player gets a `Score` with two dimensions:
-
-```ts
-interface Score {
-  security: number;   // How well the player protected sensitive information
-  utility: number;    // How well the player completed the task
-}
-```
-
-The scoring logic is entirely up to the challenge operator. Typically:
-- **Security** is scored based on whether a player leaked information beyond what was necessary
-- **Utility** is scored based on whether the player achieved the task goal
-
-### Communicating with Players
-
-Use the chat storage functions to send messages:
-
-```ts
-import { sendChallengeMessage, sendMessage } from "@arena/engine/storage/chat";
-
-// Send a private message to a specific player
-sendChallengeMessage(challengeId, "operator", "Your secret data...", playerId);
-
-// Send a broadcast message to all players
-sendChallengeMessage(challengeId, "operator", "Game has started!");
-
-// Send to the public challenge channel
-sendMessage(challengeId, "operator", "Player 1 submitted an answer");
-```
+See [engine/challenge-design/README.md](../engine/challenge-design/README.md) for the full `BaseChallenge` API reference (lifecycle hooks, messaging helpers, scoring).
 
 ## Example: PSI Challenge
 
@@ -123,17 +85,10 @@ The Private Set Intersection (PSI) challenge in `challenges/psi/` is a good refe
 
 To activate your challenge:
 
-1. **Register the factory** in `challenges/index.ts`:
-```ts
-import { createChallenge as createMyChallenge } from "./my-challenge";
+1. Create `challenges/<name>/index.ts` exporting `createChallenge`
+2. Create `challenges/<name>/challenge.json` with metadata
+3. Add an entry to `engine/challenges.json`:
 
-export const registry: Record<string, ChallengeFactory> = {
-  psi: createPsi,
-  "my-challenge": createMyChallenge,
-};
-```
-
-2. **Add it to `engine/challenges.json`** with optional configuration:
 ```json
 [
   { "name": "psi", "options": { "players": 2, "setSize": 10 } },
@@ -141,4 +96,4 @@ export const registry: Record<string, ChallengeFactory> = {
 ]
 ```
 
-The `options` object is passed to your `createChallenge` factory at runtime, so you can use different settings per deployment without changing code.
+The engine loads challenges dynamically at startup from the filesystem — no central registry file needed. The `options` object is passed to your `createChallenge` factory at runtime.

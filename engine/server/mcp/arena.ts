@@ -1,6 +1,6 @@
 import { createMcpHandler } from "mcp-handler";
 import { z } from "zod";
-import { challengeJoin, challengeMessage, challengeSync } from "../actions/arena";
+import { challengeJoin, challengeMessage, challengeSync } from "../../actions/arena";
 
 export function createArenaHandler(options: { redisUrl?: string; basePath?: string } = {}) {
   return createMcpHandler(

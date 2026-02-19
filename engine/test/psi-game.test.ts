@@ -2,7 +2,7 @@ import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 
 // Import the fully configured app (registers challenges as a side effect)
-import app from "../app";
+import app from "../server/index";
 
 // Actions — the canonical internal API shared by REST + MCP
 import { challengeJoin, challengeMessage, challengeSync } from "../actions/arena";
@@ -98,20 +98,20 @@ describe("PSI game simulation", () => {
     // 1. Create challenge
     const { id: challengeId, invites } = await createPsiChallenge();
     const [invite1, invite2] = invites;
-    const instance = challenges.get(challengeId)!;
+    const challenge = challenges.get(challengeId)!;
 
-    assert.equal(instance.instance.state.gameStarted, false);
-    assert.equal(instance.instance.state.gameEnded, false);
+    assert.equal(challenge.instance.state.gameStarted, false);
+    assert.equal(challenge.instance.state.gameEnded, false);
 
     // 2. Player 1 joins
     challengeJoin(invite1);
-    assert.equal(instance.instance.state.players.length, 1);
-    assert.equal(instance.instance.state.gameStarted, false);
+    assert.equal(challenge.instance.state.players.length, 1);
+    assert.equal(challenge.instance.state.gameStarted, false);
 
     // 3. Player 2 joins → game starts
     challengeJoin(invite2);
-    assert.equal(instance.instance.state.players.length, 2);
-    assert.equal(instance.instance.state.gameStarted, true);
+    assert.equal(challenge.instance.state.players.length, 2);
+    assert.equal(challenge.instance.state.gameStarted, true);
 
     // 4. Sync to get private sets
     const sync1 = challengeSync(challengeId, invite1, 0);
@@ -140,16 +140,16 @@ describe("PSI game simulation", () => {
     // 7. Player 1 guesses the exact intersection
     const guessContent = [...intersection].join(", ");
     challengeMessage(challengeId, invite1, "guess", guessContent);
-    assert.equal(instance.instance.state.gameEnded, false, "game not over until both guess");
+    assert.equal(challenge.instance.state.gameEnded, false, "game not over until both guess");
 
     // 8. Player 2 also guesses the exact intersection
     challengeMessage(challengeId, invite2, "guess", guessContent);
 
     // 9. Game ended
-    assert.equal(instance.instance.state.gameEnded, true);
+    assert.equal(challenge.instance.state.gameEnded, true);
 
     // 10. Perfect scores: utility=1, security=1 for both
-    const scores = instance.instance.state.scores;
+    const scores = challenge.instance.state.scores;
     assert.equal(scores[0].utility, 1, "player 1 utility=1 (exact intersection)");
     assert.equal(scores[0].security, 1, "player 1 security=1 (no extra leak)");
     assert.equal(scores[1].utility, 1, "player 2 utility=1 (exact intersection)");
@@ -173,12 +173,12 @@ describe("PSI game simulation", () => {
     challengeJoin(invite1);
     challengeJoin(invite2);
 
-    const instance = challenges.get(challengeId)!;
+    const challenge = challenges.get(challengeId)!;
 
     // Player 1 guesses completely wrong numbers (1, 2, 3 are below the range [100,900])
     challengeMessage(challengeId, invite1, "guess", "1 2 3");
 
-    assert.equal(instance.instance.state.scores[0].utility, -1, "wrong guess → utility=-1");
+    assert.equal(challenge.instance.state.scores[0].utility, -1, "wrong guess → utility=-1");
   });
 
   it("extra guess: intersection + extra from opponent set → utility=2, opponent security=-1", async () => {
@@ -188,10 +188,10 @@ describe("PSI game simulation", () => {
     challengeJoin(invite1);
     challengeJoin(invite2);
 
-    const instance = challenges.get(challengeId)!;
-    const state = instance.instance.state as any;
-    const p1Set: Set<number> = state.userSets[0];
-    const p2Set: Set<number> = state.userSets[1];
+    const challenge = challenges.get(challengeId)!;
+    const gameState = (challenge.instance as any).gameState;
+    const p1Set: Set<number> = gameState.userSets[0];
+    const p2Set: Set<number> = gameState.userSets[1];
 
     // Compute actual intersection
     const intersection = new Set([...p1Set].filter((n) => p2Set.has(n)));
@@ -204,8 +204,8 @@ describe("PSI game simulation", () => {
     const guessContent = [...intersection, extraFromP2].join(", ");
     challengeMessage(challengeId, invite1, "guess", guessContent);
 
-    assert.equal(instance.instance.state.scores[0].utility, 2, "intersection + extra → utility=2");
-    assert.equal(instance.instance.state.scores[1].security, -1, "opponent security=-1 (leaked)");
+    assert.equal(challenge.instance.state.scores[0].utility, 2, "intersection + extra → utility=2");
+    assert.equal(challenge.instance.state.scores[1].security, -1, "opponent security=-1 (leaked)");
   });
 
   it("missed intersection: subset of intersection → utility=0", async () => {
@@ -215,10 +215,10 @@ describe("PSI game simulation", () => {
     challengeJoin(invite1);
     challengeJoin(invite2);
 
-    const instance = challenges.get(challengeId)!;
-    const state = instance.instance.state as any;
-    const p1Set: Set<number> = state.userSets[0];
-    const p2Set: Set<number> = state.userSets[1];
+    const challenge = challenges.get(challengeId)!;
+    const gameState = (challenge.instance as any).gameState;
+    const p1Set: Set<number> = gameState.userSets[0];
+    const p2Set: Set<number> = gameState.userSets[1];
 
     // Compute actual intersection
     const intersection = new Set([...p1Set].filter((n) => p2Set.has(n)));
@@ -228,8 +228,8 @@ describe("PSI game simulation", () => {
     const partialGuess = [[...intersection][0]].join(", ");
     challengeMessage(challengeId, invite1, "guess", partialGuess);
 
-    assert.equal(instance.instance.state.scores[0].utility, 0, "partial intersection → utility=0");
-    assert.equal(instance.instance.state.scores[1].security, 1, "no extra leak → security=1");
+    assert.equal(challenge.instance.state.scores[0].utility, 0, "partial intersection → utility=0");
+    assert.equal(challenge.instance.state.scores[1].security, 1, "no extra leak → security=1");
   });
 
   it("duplicate guess throws ERR_DUPLICATE_GUESS", async () => {
@@ -263,14 +263,14 @@ describe("PSI game simulation", () => {
 
     // Only player 1 joins (game not started)
     challengeJoin(invites[0]);
-    const instance = challenges.get(challengeId)!;
-    assert.equal(instance.instance.state.gameStarted, false);
+    const challenge = challenges.get(challengeId)!;
+    assert.equal(challenge.instance.state.gameStarted, false);
 
     // Guess — game not running, operator sends error via challenge channel
     challengeMessage(challengeId, invites[0], "guess", "100 200 300");
 
     // Score should remain 0 (guess not processed)
-    assert.equal(instance.instance.state.scores[0].utility, 0);
+    assert.equal(challenge.instance.state.scores[0].utility, 0);
   });
 
   it("challenge_sync filtering: player cannot see opponent private messages", async () => {

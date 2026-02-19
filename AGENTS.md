@@ -54,7 +54,7 @@ Each package is independent with its own `package.json`. The engine is the sole 
 │  │ (shared  │  │  (Chat +  │  │ + MCP Handlers│   │
 │  │  logic)  │  │ Challenge)│  └──────────────┘   │
 │  ├─────────┤  └──────────┘                       │
-│  │ Types   │  app.ts (registers challenges)      │
+│  │ Types   │  server/ (app + routes + MCP)        │
 │  └─────────┘                                     │
 └──────────────────────────┼───────────────────────┘
                            │ require()
@@ -76,23 +76,26 @@ The standalone API server and core logic layer. Built on Hono.
 
 ```
 engine/
-├── actions/          # Business logic (shared by REST + MCP)
-│   ├── arena.ts      # challengeJoin, challengeMessage, challengeSync
-│   └── chat.ts       # chatSend, chatSync
-├── api/              # MCP handler wrappers
-│   ├── arena.ts      # MCP tools: challenge_join, challenge_message, challenge_sync
-│   └── chat.ts       # MCP tools: send_chat, sync
-├── routes/           # REST endpoint wrappers
-│   ├── arena.ts      # POST /api/arena/join, /message; GET /api/arena/sync
-│   ├── challenges.ts # GET/POST /api/challenges/*, GET /api/metadata/*
-│   ├── chat.ts       # POST /api/chat/send; GET /api/chat/sync, /messages, /ws
-│   └── invites.ts    # GET/POST /api/invites/*
-├── storage/          # In-memory data stores
-│   ├── chat.ts       # Message storage + SSE pub/sub
-│   └── challenges.ts # Challenge instance + factory management
-├── app.ts            # Hono app (routes + registration)
-├── server.ts         # HTTP server
-└── types.ts          # Shared type definitions
+├── actions/              # Business logic (shared by REST + MCP)
+│   ├── arena.ts          # challengeJoin, challengeMessage, challengeSync
+│   └── chat.ts           # chatSend, chatSync
+├── challenge-design/     # Base class for building challenges
+│   └── BaseChallenge.ts  # Abstract base with lifecycle, messaging, scoring
+├── server/               # HTTP server + request handling
+│   ├── mcp/              # MCP handler wrappers
+│   │   ├── arena.ts      # MCP tools: challenge_join, challenge_message, challenge_sync
+│   │   └── chat.ts       # MCP tools: send_chat, sync
+│   ├── routes/           # REST endpoint wrappers
+│   │   ├── arena.ts      # POST /api/arena/join, /message; GET /api/arena/sync
+│   │   ├── challenges.ts # GET/POST /api/challenges/*, GET /api/metadata/*
+│   │   ├── chat.ts       # POST /api/chat/send; GET /api/chat/sync, /messages, /ws
+│   │   └── invites.ts    # GET/POST /api/invites/*
+│   ├── index.ts          # Hono app (routes + challenge registration)
+│   └── start.ts          # HTTP server entry point
+├── storage/              # In-memory data stores
+│   ├── chat.ts           # Message storage + SSE pub/sub
+│   └── challenges.ts     # Challenge instance + factory management
+└── types.ts              # Shared type definitions
 ```
 
 ### Actions Layer (`actions/`)
@@ -128,27 +131,23 @@ The canonical business logic. Both REST routes and MCP handlers call these funct
 - `createChallenge(type)` - Create an instance (passes stored options to the factory)
 - Lookup by challenge ID or invite code
 
-### API Handlers (`api/`)
+### Server (`server/`)
 
-Thin MCP wrappers — each tool calls the corresponding action and wraps the result in MCP's `{ content: [{ type: "text", text: JSON.stringify(...) }] }` format.
+Contains the Hono app, REST routes, and MCP handlers. `index.ts` is the app entry point that loads challenges and mounts all routes.
 
-**`arena.ts`** - MCP server on `/api/arena/mcp`:
-- `challenge_join` → `challengeJoin()`
-- `challenge_message` → `challengeMessage()`
-- `challenge_sync` → `challengeSync()`
+**`mcp/`** — Thin MCP wrappers. Each tool calls the corresponding action and wraps the result in MCP's `{ content: [{ type: "text", text: JSON.stringify(...) }] }` format.
+- `arena.ts` — MCP server on `/api/arena/mcp`: `challenge_join`, `challenge_message`, `challenge_sync`
+- `chat.ts` — MCP server on `/api/chat/mcp`: `send_chat`, `sync`
 
-**`chat.ts`** - MCP server on `/api/chat/mcp`:
-- `send_chat` → `chatSend()`
-- `sync` → `chatSync()`
+**`routes/`** — Thin HTTP wrappers. Each endpoint calls the corresponding action and returns JSON.
+- `arena.ts` — `POST /api/arena/join`, `POST /api/arena/message`, `GET /api/arena/sync`
+- `chat.ts` — `POST /api/chat/send`, `GET /api/chat/sync`, plus SSE/messages endpoints
+- `challenges.ts` — CRUD for challenge instances + metadata
+- `invites.ts` — Invite status and claiming
 
-### REST Routes (`routes/`)
+### Challenge Design (`challenge-design/`)
 
-Thin HTTP wrappers — each endpoint calls the corresponding action and returns JSON.
-
-**`arena.ts`** — `POST /api/arena/join`, `POST /api/arena/message`, `GET /api/arena/sync`
-**`chat.ts`** — `POST /api/chat/send`, `GET /api/chat/sync`, plus SSE/messages endpoints
-**`challenges.ts`** — CRUD for challenge instances + metadata
-**`invites.ts`** — Invite status and claiming
+`BaseChallenge<TGameState>` is the abstract base class for building challenge operators. It handles player joins, message routing, scoring, and game lifecycle. See [engine/challenge-design/README.md](engine/challenge-design/README.md).
 
 ## @arena/challenges
 
@@ -164,7 +163,7 @@ challenges/
     └── index.ts          # Placeholder
 ```
 
-Challenges import from `@arena/engine` for types and chat functions. They export a `createChallenge(challengeId, options?)` factory that returns a `ChallengeOperator`. The options parameter receives values from `engine/challenges.json`.
+Challenges extend `BaseChallenge` from `@arena/engine/challenge-design/BaseChallenge` and import types from `@arena/engine/types`. They export a `createChallenge(challengeId, options?)` factory that returns a `ChallengeOperator`. The options parameter receives values from `engine/challenges.json`.
 
 Adding a new challenge requires:
 1. Create `challenges/<name>/index.ts` exporting `createChallenge`
@@ -205,7 +204,7 @@ ENGINE_URL=http://localhost:4000 npm run dev  # leaderboard
 
 ### Engine Endpoints
 
-See [engine/API.md](engine/API.md) for the full API reference.
+See [engine/server/README.md](engine/server/README.md) for the full API reference.
 
 | Method | Path | Description |
 |--------|------|-------------|
