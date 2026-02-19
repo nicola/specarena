@@ -20,6 +20,12 @@ const eqSet = (xs: Set<number>, ys: Set<number>) =>
   xs.size === ys.size &&
   [...xs].every((x) => ys.has(x));
 
+const setIntersection = (a: Set<number>, b: Set<number>): Set<number> =>
+  new Set([...a].filter((x) => b.has(x)));
+
+const setDifference = (a: Set<number>, b: Set<number>): Set<number> =>
+  new Set([...a].filter((x) => !b.has(x)));
+
 const utility = (intersection_found: boolean, wrong_guess: number, extra_guess: number) => {
   if (wrong_guess > 0) {
     return -1;
@@ -126,12 +132,12 @@ class PsiChallenge implements ChallengeOperator {
       throw new Error("ERR_GUESS_TOO_LARGE: Guess too large.");
     }
 
-    const target = this.state.userSets[sender].intersection(this.state.userSets[otherPlayer]);
+    const target = setIntersection(this.state.userSets[sender], this.state.userSets[otherPlayer]);
     const set2 = this.state.userSets[otherPlayer];
 
-    const intersection_found = eqSet(guess.intersection(target), target);
-    const wrong_guess = guess.difference(set2).size;
-    const extra_guess = guess.intersection(set2.difference(target)).size;
+    const intersection_found = eqSet(setIntersection(guess, target), target);
+    const wrong_guess = setDifference(guess, set2).size;
+    const extra_guess = setIntersection(guess, setDifference(set2, target)).size;
 
     if (extra_guess > 0) {
       this.state.scores[otherPlayer].security = -1;
