@@ -36,6 +36,15 @@ for (const config of configs) {
 
 const app = new Hono();
 
+// Global error handler — catches malformed JSON, unexpected throws, etc.
+app.onError((err, c) => {
+  if (err.message.includes("JSON")) {
+    return c.json({ error: "Invalid JSON in request body" }, 400);
+  }
+  console.error("Unhandled error:", err);
+  return c.json({ error: err.message }, 500);
+});
+
 // Mount REST routes
 app.route("/", challengeRoutes);
 app.route("/", inviteRoutes);
