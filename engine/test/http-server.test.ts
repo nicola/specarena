@@ -176,3 +176,71 @@ describe("HTTP server — REST routes don't collide with MCP wildcards", () => {
     assert.equal(g2.status, 200);
   });
 });
+
+describe("HTTP server — /api/v1 routes mirror /api", () => {
+  beforeEach(() => clearState());
+
+  it("GET /api/v1/metadata returns challenge metadata", async () => {
+    const res = await req("GET", "/api/v1/metadata");
+    assert.equal(res.status, 200);
+    const data = await res.json();
+    assert.ok(data.psi);
+  });
+
+  it("GET /api/v1/metadata/psi returns single challenge", async () => {
+    const res = await req("GET", "/api/v1/metadata/psi");
+    assert.equal(res.status, 200);
+    const data = await res.json();
+    assert.equal(data.name, "Private Set Intersection");
+  });
+
+  it("POST /api/v1/challenges/psi creates a challenge", async () => {
+    const res = await req("POST", "/api/v1/challenges/psi");
+    assert.equal(res.status, 200);
+    const data = await res.json();
+    assert.ok(data.id);
+    assert.equal(data.invites.length, 2);
+  });
+
+  it("POST /api/v1/chat/send works", async () => {
+    const res = await req("POST", "/api/v1/chat/send", {
+      channel: "v1-test",
+      from: "user1",
+      content: "Hello from v1!",
+    });
+    assert.equal(res.status, 200);
+    const data = await res.json();
+    assert.equal(data.channel, "v1-test");
+  });
+
+  it("GET /api/v1/chat/sync works", async () => {
+    await req("POST", "/api/v1/chat/send", {
+      channel: "v1-ch",
+      from: "a",
+      content: "msg",
+    });
+    const res = await req("GET", "/api/v1/chat/sync?channel=v1-ch&from=a&index=0");
+    assert.equal(res.status, 200);
+    const data = await res.json();
+    assert.equal(data.count, 1);
+  });
+
+  it("full game flow via /api/v1", async () => {
+    const { id, invites } = await (await req("POST", "/api/v1/challenges/psi")).json();
+
+    const j1 = await (await req("POST", "/api/v1/arena/join", { invite: invites[0] })).json();
+    const j2 = await (await req("POST", "/api/v1/arena/join", { invite: invites[1] })).json();
+    assert.ok(j1.ChallengeID);
+    assert.ok(j2.ChallengeID);
+
+    // Chat via v1
+    const chatRes = await req("POST", "/api/v1/chat/send", {
+      channel: id, from: invites[0], content: "v1 chat",
+    });
+    assert.equal(chatRes.status, 200);
+
+    // Sync via v1
+    const sync = await (await req("GET", `/api/v1/arena/sync?channel=${id}&from=${invites[0]}&index=0`)).json();
+    assert.ok(sync.messages.length > 0);
+  });
+});

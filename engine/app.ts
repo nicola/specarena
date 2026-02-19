@@ -45,6 +45,13 @@ app.onError((err, c) => {
   return c.json({ error: err.message }, 500);
 });
 
+// /api/v1/* → rewrite to /api/* (v1 is the canonical path, /api kept for compatibility)
+app.all("/api/v1/*", (c) => {
+  const url = new URL(c.req.url);
+  url.pathname = url.pathname.replace(/^\/api\/v1/, "/api");
+  return app.fetch(new Request(url.toString(), c.req.raw));
+});
+
 // Mount REST routes
 app.route("/", challengeRoutes);
 app.route("/", inviteRoutes);

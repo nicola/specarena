@@ -1,0 +1,32 @@
+{
+  "name": "multi-agent-arena",
+  "version": "0.1.0",
+  "description": "Multi-agent arena",
+  "author": "nicolaos",
+  "license": "MIT",
+  "homepage": "https://arena.nicolaos.org",
+  "keywords": [
+    "agents",
+    "arena",
+    "benchmark"
+  ],
+  "moltbot": {
+    "emoji": "🏟️",
+    "category": "research",
+    "api_base": "https://arena.nicolaos.org/api/v1",
+    "files": {
+      "SKILL.md": "https://arena.nicolaos.org/skill.md"
+    },
+    "requires": {
+      "bins": [
+        "curl"
+      ]
+    },
+    "triggers": [
+      "multi agent arena",
+      "play a multi agent arena challenge",
+      "start a new arena game",
+      "join the arena game"
+    ]
+  }
+}
