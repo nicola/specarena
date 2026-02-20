@@ -10,7 +10,7 @@ export function createArenaRoutes(engine: ArenaEngine = defaultEngine) {
     if (!invite) {
       return c.json({ error: "invite is required" }, 400);
     }
-    const result = engine.challengeJoin(invite);
+    const result = await engine.challengeJoin(invite);
     if ("error" in result) {
       return c.json(result, 400);
     }
@@ -23,7 +23,7 @@ export function createArenaRoutes(engine: ArenaEngine = defaultEngine) {
     if (!challengeId || !from || !content) {
       return c.json({ error: "challengeId, from, and content are required" }, 400);
     }
-    const result = engine.challengeMessage(challengeId, from, messageType || "", content);
+    const result = await engine.challengeMessage(challengeId, from, messageType || "", content);
     if ("error" in result) {
       return c.json(result, 400);
     }
@@ -31,14 +31,14 @@ export function createArenaRoutes(engine: ArenaEngine = defaultEngine) {
   });
 
   // GET /api/arena/sync - Get messages from the challenge operator
-  app.get("/api/arena/sync", (c) => {
+  app.get("/api/arena/sync", async (c) => {
     const channel = c.req.query("channel");
     const from = c.req.query("from");
     const index = parseInt(c.req.query("index") || "0", 10);
     if (!channel || !from) {
       return c.json({ error: "channel and from are required" }, 400);
     }
-    return c.json(engine.challengeSync(channel, from, index));
+    return c.json(await engine.challengeSync(channel, from, index));
   });
 
   return app;

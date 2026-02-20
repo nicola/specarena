@@ -20,16 +20,16 @@ export function createChallengeRoutes(engine: ArenaEngine = defaultEngine) {
   });
 
   // GET /api/challenges - list all challenges
-  app.get("/api/challenges", (c) => {
-    const challengesList = Array.from(engine.challenges.values());
+  app.get("/api/challenges", async (c) => {
+    const challengesList = await engine.listChallenges();
     return c.json({ challenges: challengesList, count: challengesList.length });
   });
 
   // GET /api/challenges/:name - list by type
-  app.get("/api/challenges/:name", (c) => {
+  app.get("/api/challenges/:name", async (c) => {
     const name = c.req.param("name");
     try {
-      const challengesList = engine.getChallengesByType(name);
+      const challengesList = await engine.getChallengesByType(name);
       return c.json({ challenges: challengesList, count: challengesList.length });
     } catch (error) {
       console.error("Error fetching challenges:", error);
@@ -38,10 +38,10 @@ export function createChallengeRoutes(engine: ArenaEngine = defaultEngine) {
   });
 
   // POST /api/challenges/:name - create challenge
-  app.post("/api/challenges/:name", (c) => {
+  app.post("/api/challenges/:name", async (c) => {
     const name = c.req.param("name");
     try {
-      const challenge = engine.createChallenge(name);
+      const challenge = await engine.createChallenge(name);
       return c.json(challenge);
     } catch (error) {
       console.error("Error creating challenge:", error);

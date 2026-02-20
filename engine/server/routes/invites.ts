@@ -6,9 +6,9 @@ export function createInviteRoutes(engine: ArenaEngine = defaultEngine) {
   const app = new Hono();
 
   // GET /api/invites/:inviteId - get invite status
-  app.get("/api/invites/:inviteId", (c) => {
+  app.get("/api/invites/:inviteId", async (c) => {
     const inviteId = c.req.param("inviteId");
-    const result = engine.getInvite(inviteId);
+    const result = await engine.getInvite(inviteId);
 
     if (!result.success) {
       if (result.error === ChallengeError.NOT_FOUND) {
@@ -32,13 +32,13 @@ export function createInviteRoutes(engine: ArenaEngine = defaultEngine) {
       return c.json({ error: "inviteId is required" }, 400);
     }
 
-    const result = engine.getInvite(inviteId);
+    const result = await engine.getInvite(inviteId);
     if (!result.success) {
       const status = result.error === ChallengeError.NOT_FOUND ? 404 : 409;
       return c.json({ error: result.message }, status);
     }
 
-    engine.sendMessage("invites", "operator", `${inviteId}`);
+    await engine.chat.sendMessage("invites", "operator", `${inviteId}`);
 
     return c.json({ success: true });
   });

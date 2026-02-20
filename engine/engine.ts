@@ -4,129 +4,36 @@ import {
   ChallengeError,
   ChallengeFactory,
   ChallengeMetadata,
-  ChatMessage,
   Result,
 } from "./types";
-
-export interface EngineStorage {
-  messagesByChannel?: Map<string, ChatMessage[]>;
-  indexCounters?: Map<string, number>;
-  channelSubscribers?: Map<string, Set<ReadableStreamDefaultController>>;
-  challenges?: Map<string, Challenge>;
-  challengeFactories?: Map<string, ChallengeFactory>;
-  challengeOptions?: Map<string, Record<string, unknown>>;
-  challengeMetadataMap?: Map<string, ChallengeMetadata>;
-}
+import { ChatEngine, createChatEngine } from "./chat/ChatEngine";
+import { ArenaStorageAdapter, InMemoryArenaStorageAdapter } from "./storage/InMemoryArenaStorageAdapter";
 
 export interface EngineOptions {
-  storage?: EngineStorage;
+  storageAdapter?: ArenaStorageAdapter;
+  chatEngine?: ChatEngine;
 }
 
 export class ArenaEngine {
-  readonly messagesByChannel: Map<string, ChatMessage[]>;
-  readonly indexCounters: Map<string, number>;
-  readonly channelSubscribers: Map<string, Set<ReadableStreamDefaultController>>;
-  readonly challenges: Map<string, Challenge>;
+  private readonly storageAdapter: ArenaStorageAdapter;
   private readonly challengeFactories: Map<string, ChallengeFactory>;
   private readonly challengeOptions: Map<string, Record<string, unknown>>;
   private readonly challengeMetadataMap: Map<string, ChallengeMetadata>;
+  readonly chat: ChatEngine;
 
   constructor(options: EngineOptions = {}) {
-    const storage = options.storage ?? {};
-    this.messagesByChannel = storage.messagesByChannel ?? new Map<string, ChatMessage[]>();
-    this.indexCounters = storage.indexCounters ?? new Map<string, number>();
-    this.channelSubscribers = storage.channelSubscribers ?? new Map<string, Set<ReadableStreamDefaultController>>();
-    this.challenges = storage.challenges ?? new Map<string, Challenge>();
-    this.challengeFactories = storage.challengeFactories ?? new Map<string, ChallengeFactory>();
-    this.challengeOptions = storage.challengeOptions ?? new Map<string, Record<string, unknown>>();
-    this.challengeMetadataMap = storage.challengeMetadataMap ?? new Map<string, ChallengeMetadata>();
+    this.storageAdapter = options.storageAdapter ?? new InMemoryArenaStorageAdapter();
+    this.challengeFactories = new Map<string, ChallengeFactory>();
+    this.challengeOptions = new Map<string, Record<string, unknown>>();
+    this.challengeMetadataMap = new Map<string, ChallengeMetadata>();
+    this.chat = options.chatEngine ?? createChatEngine();
   }
 
-  clearRuntimeState(): void {
-    this.challenges.clear();
-    this.messagesByChannel.clear();
-    this.indexCounters.clear();
-    this.channelSubscribers.clear();
-  }
-
-  getNextIndex(channel: string): number {
-    const current = this.indexCounters.get(channel) ?? 0;
-    const next = current + 1;
-    this.indexCounters.set(channel, next);
-    return next;
-  }
-
-  getMessagesForChallengeChannel(challengeId: string): ChatMessage[] {
-    return this.messagesByChannel.get(`challenge_${challengeId}`) ?? [];
-  }
-
-  getMessagesForChannel(channel: string): ChatMessage[] {
-    return this.messagesByChannel.get(channel) ?? [];
-  }
-
-  subscribeToChannel(channel: string, controller: ReadableStreamDefaultController): () => void {
-    if (!this.channelSubscribers.has(channel)) {
-      this.channelSubscribers.set(channel, new Set());
-    }
-    this.channelSubscribers.get(channel)!.add(controller);
-
-    return () => {
-      const subscribers = this.channelSubscribers.get(channel);
-      if (!subscribers) {
-        return;
-      }
-      subscribers.delete(controller);
-      if (subscribers.size === 0) {
-        this.channelSubscribers.delete(channel);
-      }
-    };
-  }
-
-  notifyChannelSubscribers(channel: string, message: ChatMessage): void {
-    const subscribers = this.channelSubscribers.get(channel);
-    if (!subscribers) {
-      return;
-    }
-
-    const data = JSON.stringify({ type: "new_message", message });
-    const messageToSend = `data: ${data}\n\n`;
-    const deadConnections: ReadableStreamDefaultController[] = [];
-
-    subscribers.forEach((controller) => {
-      try {
-        controller.enqueue(new TextEncoder().encode(messageToSend));
-      } catch {
-        deadConnections.push(controller);
-      }
-    });
-
-    deadConnections.forEach((controller) => subscribers.delete(controller));
-    if (subscribers.size === 0) {
-      this.channelSubscribers.delete(channel);
-    }
-  }
-
-  sendChallengeMessage(challengeId: string, from: string, content: string, to?: string | null): ChatMessage {
-    return this.sendMessage(`challenge_${challengeId}`, from, content, to);
-  }
-
-  sendMessage(channel: string, from: string, content: string, to?: string | null): ChatMessage {
-    const index = this.getNextIndex(channel);
-    const message: ChatMessage = {
-      channel,
-      from,
-      to,
-      content: content || "",
-      index,
-      timestamp: Date.now(),
-    };
-
-    if (!this.messagesByChannel.has(channel)) {
-      this.messagesByChannel.set(channel, []);
-    }
-    this.messagesByChannel.get(channel)!.push(message);
-    this.notifyChannelSubscribers(channel, message);
-    return message;
+  async clearRuntimeState(): Promise<void> {
+    await Promise.all([
+      this.storageAdapter.clearRuntimeState(),
+      this.chat.clearRuntimeState(),
+    ]);
   }
 
   registerChallengeFactory(type: string, factory: ChallengeFactory, options?: Record<string, unknown>): void {
@@ -148,7 +55,11 @@ export class ArenaEngine {
     return Object.fromEntries(this.challengeMetadataMap);
   }
 
-  createChallenge(challengeType: string): Challenge {
+  async listChallenges(): Promise<Challenge[]> {
+    return this.storageAdapter.listChallenges();
+  }
+
+  async createChallenge(challengeType: string): Promise<Challenge> {
     const id = crypto.randomUUID();
     const factory = this.challengeFactories.get(challengeType);
 
@@ -159,8 +70,8 @@ export class ArenaEngine {
     const options = this.challengeOptions.get(challengeType);
     const instance = factory(id, options, {
       messaging: {
-        sendMessage: this.sendMessage.bind(this),
-        sendChallengeMessage: this.sendChallengeMessage.bind(this),
+        sendMessage: this.chat.sendMessage.bind(this.chat),
+        sendChallengeMessage: this.chat.sendChallengeMessage.bind(this.chat),
       },
     });
 
@@ -173,7 +84,7 @@ export class ArenaEngine {
       instance,
     };
 
-    this.challenges.set(id, challenge);
+    await this.storageAdapter.setChallenge(challenge);
     return challenge;
   }
 
@@ -185,8 +96,8 @@ export class ArenaEngine {
     return [];
   }
 
-  getInvite(invite: string): Result<Challenge> {
-    const result = this.getChallengeFromInvite(invite);
+  async getInvite(invite: string): Promise<Result<Challenge>> {
+    const result = await this.getChallengeFromInvite(invite);
     if (!result.success) {
       return result;
     }
@@ -200,8 +111,9 @@ export class ArenaEngine {
     return result;
   }
 
-  getChallengeFromInvite(invite: string): Result<Challenge> {
-    const challenge = Array.from(this.challenges.values()).find((c) => c.invites.includes(invite));
+  async getChallengeFromInvite(invite: string): Promise<Result<Challenge>> {
+    const challenge = (await this.storageAdapter.listChallenges())
+      .find((c) => c.invites.includes(invite));
     if (challenge) {
       return { success: true, data: challenge };
     }
@@ -212,13 +124,13 @@ export class ArenaEngine {
     };
   }
 
-  getChallenge(challengeId: string): Challenge | undefined {
-    return this.challenges.get(challengeId);
+  async getChallenge(challengeId: string): Promise<Challenge | undefined> {
+    return this.storageAdapter.getChallenge(challengeId);
   }
 
-  getChallengesByType(challengeType: string): Challenge[] {
+  async getChallengesByType(challengeType: string): Promise<Challenge[]> {
     const tenMinutesAgo = Date.now() - 10 * 60 * 1000;
-    return Array.from(this.challenges.values())
+    return (await this.storageAdapter.listChallenges())
       .filter((c) => c.challengeType === challengeType)
       .filter((c) => {
         const gameStarted = c.instance?.state?.gameStarted ?? false;
@@ -228,8 +140,14 @@ export class ArenaEngine {
       .sort((a, b) => b.createdAt - a.createdAt);
   }
 
-  challengeJoin(invite: string) {
-    const result = this.getChallengeFromInvite(invite);
+  private async flushOperatorMessages(challenge: Challenge): Promise<void> {
+    if (challenge.instance.flushMessaging) {
+      await challenge.instance.flushMessaging();
+    }
+  }
+
+  async challengeJoin(invite: string) {
+    const result = await this.getChallengeFromInvite(invite);
 
     if (!result.success) {
       return { error: result.message };
@@ -237,10 +155,16 @@ export class ArenaEngine {
 
     const challenge = result.data;
 
+    let joinError: string | undefined;
     try {
       challenge.instance.join(invite);
     } catch (error) {
-      return { error: error instanceof Error ? error.message : String(error) };
+      joinError = error instanceof Error ? error.message : String(error);
+    }
+
+    await this.flushOperatorMessages(challenge);
+    if (joinError) {
+      return { error: joinError };
     }
 
     const metadata = this.getChallengeMetadata(challenge.challengeType);
@@ -250,10 +174,10 @@ export class ArenaEngine {
     };
   }
 
-  challengeMessage(challengeId: string, from: string, messageType: string, content: string) {
-    const challenge = this.getChallenge(challengeId);
+  async challengeMessage(challengeId: string, from: string, messageType: string, content: string) {
+    const challenge = await this.getChallenge(challengeId);
 
-    this.sendChallengeMessage(challengeId, from, (messageType ? `(${messageType}) ` : "") + content, "operator");
+    await this.chat.sendChallengeMessage(challengeId, from, (messageType ? `(${messageType}) ` : "") + content, "operator");
 
     if (!challenge || !challenge.instance) {
       return { error: "Challenge not found" };
@@ -267,34 +191,18 @@ export class ArenaEngine {
         content,
         timestamp: Date.now(),
       });
+      await this.flushOperatorMessages(challenge);
       return { ok: "Message sent" };
     } catch (error) {
+      await this.flushOperatorMessages(challenge);
       return { error: error instanceof Error ? error.message : String(error) };
     }
   }
 
-  challengeSync(channel: string, from: string, index: number) {
-    const messages = this.getMessagesForChallengeChannel(channel);
-    const filteredMessages = messages.filter((msg: ChatMessage) =>
-      msg.index !== undefined && msg.index >= index && (!msg.to || msg.to === from || msg.from === from)
-    );
-
-    return {
-      messages: filteredMessages,
-      count: filteredMessages.length,
-    };
-  }
-
-  chatSend(channel: string, from: string, content: string, to?: string | null) {
-    const message = this.sendMessage(channel, from, content, to);
-    return { index: message.index, channel, from, to: to ?? null };
-  }
-
-  chatSync(channel: string, from: string, index: number) {
-    const messages = this.getMessagesForChannel(channel);
-    const filteredMessages = messages.filter((msg: ChatMessage) =>
-      msg.index !== undefined && msg.index >= index && (!msg.to || msg.to === from || msg.from === from)
-    );
+  async challengeSync(channel: string, from: string, index: number) {
+    const messages = await this.chat.getMessagesForChallengeChannel(channel);
+    const filteredMessages = messages.filter((msg) =>
+      msg.index !== undefined && msg.index >= index && (!msg.to || msg.to === from || msg.from === from));
 
     return {
       messages: filteredMessages,
@@ -308,4 +216,6 @@ export function createEngine(options: EngineOptions = {}): ArenaEngine {
 }
 
 export const defaultEngine = createEngine();
-
+export { ChatEngine, createChatEngine, defaultChatEngine } from "./chat/ChatEngine";
+export { ArenaStorageAdapter, InMemoryArenaStorageAdapter } from "./storage/InMemoryArenaStorageAdapter";
+export { ChatStorageAdapter, InMemoryChatStorageAdapter } from "./storage/InMemoryChatStorageAdapter";

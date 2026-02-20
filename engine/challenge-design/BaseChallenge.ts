@@ -7,6 +7,7 @@ export abstract class BaseChallenge<TGameState = {}> implements ChallengeOperato
   protected messaging: ChallengeMessaging;
   state: ChallengeOperatorState;
   gameState: TGameState;
+  private pendingMessages = new Set<Promise<unknown>>();
 
   private handlers = new Map<string, (msg: ChatMessage, playerIndex: number) => void>();
 
@@ -14,9 +15,9 @@ export abstract class BaseChallenge<TGameState = {}> implements ChallengeOperato
     this.challengeId = challengeId;
     this.playerCount = playerCount;
     this.messaging = messaging ?? {
-      sendMessage: (channel, from, content, to) => defaultEngine.sendMessage(channel, from, content, to),
+      sendMessage: (channel, from, content, to) => defaultEngine.chat.sendMessage(channel, from, content, to),
       sendChallengeMessage: (challengeId, from, content, to) =>
-        defaultEngine.sendChallengeMessage(challengeId, from, content, to),
+        defaultEngine.chat.sendChallengeMessage(challengeId, from, content, to),
     };
     this.state = {
       gameStarted: false,
@@ -76,15 +77,27 @@ export abstract class BaseChallenge<TGameState = {}> implements ChallengeOperato
   // --- Messaging helpers ---
 
   protected send(content: string, to?: string): void {
-    this.messaging.sendChallengeMessage(this.challengeId, "operator", content, to);
+    this.enqueueMessage(this.messaging.sendChallengeMessage(this.challengeId, "operator", content, to));
   }
 
   protected broadcast(content: string): void {
-    this.messaging.sendChallengeMessage(this.challengeId, "operator", content);
+    this.enqueueMessage(this.messaging.sendChallengeMessage(this.challengeId, "operator", content));
   }
 
   protected sendPublic(content: string): void {
-    this.messaging.sendMessage(this.challengeId, "operator", content);
+    this.enqueueMessage(this.messaging.sendMessage(this.challengeId, "operator", content));
+  }
+
+  async flushMessaging(): Promise<void> {
+    await Promise.all(Array.from(this.pendingMessages));
+  }
+
+  private enqueueMessage(send: Promise<unknown>): void {
+    const pending = send;
+    this.pendingMessages.add(pending);
+    void pending.finally(() => {
+      this.pendingMessages.delete(pending);
+    });
   }
 
   // --- Game lifecycle ---

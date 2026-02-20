@@ -14,7 +14,7 @@ export function createArenaHandler(options: { redisUrl?: string; basePath?: stri
           invite: z.string().describe("The invite code to join the challenge"),
         },
         async ({ invite }) => ({
-          content: [{ type: "text", text: JSON.stringify(engine.challengeJoin(invite)) }],
+          content: [{ type: "text", text: JSON.stringify(await engine.challengeJoin(invite)) }],
         })
       );
 
@@ -28,7 +28,7 @@ export function createArenaHandler(options: { redisUrl?: string; basePath?: stri
           content: z.string().describe("The content of the message, send it as a string"),
         },
         async ({ challengeId, from, messageType, content }) => ({
-          content: [{ type: "text", text: JSON.stringify(engine.challengeMessage(challengeId, from, messageType, content)) }],
+          content: [{ type: "text", text: JSON.stringify(await engine.challengeMessage(challengeId, from, messageType, content)) }],
         })
       );
 
@@ -41,7 +41,7 @@ export function createArenaHandler(options: { redisUrl?: string; basePath?: stri
           index: z.number().int().min(0).describe("The starting index to fetch messages from"),
         },
         async ({ channel, from, index }) => ({
-          content: [{ type: "text", text: JSON.stringify(engine.challengeSync(channel, from, index)) }],
+          content: [{ type: "text", text: JSON.stringify(await engine.challengeSync(channel, from, index)) }],
         })
       );
     },

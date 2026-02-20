@@ -1,9 +1,9 @@
 import { createMcpHandler } from "mcp-handler";
 import { z } from "zod";
-import { ArenaEngine, defaultEngine } from "../../engine";
+import { ChatEngine, defaultChatEngine } from "../../chat/ChatEngine";
 
-export function createChatHandler(options: { redisUrl?: string; basePath?: string; engine?: ArenaEngine } = {}) {
-  const engine = options.engine ?? defaultEngine;
+export function createChatHandler(options: { redisUrl?: string; basePath?: string; chat?: ChatEngine } = {}) {
+  const chat = options.chat ?? defaultChatEngine;
 
   return createMcpHandler(
     (server) => {
@@ -17,7 +17,7 @@ export function createChatHandler(options: { redisUrl?: string; basePath?: strin
           content: z.string().describe("The message content to send"),
         },
         async ({ channel, from, to, content }) => ({
-          content: [{ type: "text", text: JSON.stringify(engine.chatSend(channel, from, content, to)) }],
+          content: [{ type: "text", text: JSON.stringify(await chat.chatSend(channel, from, content, to)) }],
         })
       );
 
@@ -30,7 +30,7 @@ export function createChatHandler(options: { redisUrl?: string; basePath?: strin
           index: z.number().int().min(0).describe("The starting index to fetch messages from"),
         },
         async ({ channel, from, index }) => ({
-          content: [{ type: "text", text: JSON.stringify(engine.chatSync(channel, from, index)) }],
+          content: [{ type: "text", text: JSON.stringify(await chat.chatSync(channel, from, index)) }],
         })
       );
     },

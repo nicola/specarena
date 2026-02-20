@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { createEngine } from "@arena/engine/engine";
+import { createEngine, InMemoryArenaStorageAdapter } from "@arena/engine/engine";
 import { createApp } from "@arena/engine/server";
 import { ChallengeMetadata } from "@arena/engine/types";
 import { createChallenge } from "./index";
@@ -29,19 +29,19 @@ function parseSet(content: string): Set<number> {
 }
 
 describe("PSI challenge with isolated engine instances", () => {
-  it("runs a full game directly through engine actions", () => {
+  it("runs a full game directly through engine actions", async () => {
     const engine = createPsiEngine();
-    const challenge = engine.createChallenge("psi");
+    const challenge = await engine.createChallenge("psi");
     const [invite1, invite2] = challenge.invites;
 
-    const join1 = engine.challengeJoin(invite1);
-    const join2 = engine.challengeJoin(invite2);
+    const join1 = await engine.challengeJoin(invite1);
+    const join2 = await engine.challengeJoin(invite2);
     assert.equal(join1.ChallengeID, challenge.id);
     assert.equal(join2.ChallengeID, challenge.id);
     assert.equal(challenge.instance.state.gameStarted, true);
 
-    const sync1 = engine.challengeSync(challenge.id, invite1, 0);
-    const sync2 = engine.challengeSync(challenge.id, invite2, 0);
+    const sync1 = await engine.challengeSync(challenge.id, invite1, 0);
+    const sync2 = await engine.challengeSync(challenge.id, invite2, 0);
     const p1SetMsg = sync1.messages.find((m) => m.to === invite1 && m.content.includes("Your private set"));
     const p2SetMsg = sync2.messages.find((m) => m.to === invite2 && m.content.includes("Your private set"));
     assert.ok(p1SetMsg);
@@ -53,8 +53,8 @@ describe("PSI challenge with isolated engine instances", () => {
     assert.ok(intersection.length > 0);
 
     const guess = intersection.join(", ");
-    const result1 = engine.challengeMessage(challenge.id, invite1, "guess", guess);
-    const result2 = engine.challengeMessage(challenge.id, invite2, "guess", guess);
+    const result1 = await engine.challengeMessage(challenge.id, invite1, "guess", guess);
+    const result2 = await engine.challengeMessage(challenge.id, invite2, "guess", guess);
     assert.equal(result1.ok, "Message sent");
     assert.equal(result2.ok, "Message sent");
     assert.equal(challenge.instance.state.gameEnded, true);
@@ -64,34 +64,33 @@ describe("PSI challenge with isolated engine instances", () => {
     assert.equal(challenge.instance.state.scores[1].security, 1);
   });
 
-  it("keeps challenge and chat storage isolated between engine instances", () => {
+  it("keeps challenge and chat storage isolated between engine instances", async () => {
     const engineA = createPsiEngine();
     const engineB = createPsiEngine();
 
-    const challengeA = engineA.createChallenge("psi");
+    const challengeA = await engineA.createChallenge("psi");
     const [inviteA] = challengeA.invites;
 
-    assert.equal(engineB.challenges.size, 0);
-    assert.equal(engineB.messagesByChannel.size, 0);
+    assert.equal((await engineB.listChallenges()).length, 0);
+    assert.equal((await engineB.chat.getMessagesForChallengeChannel(challengeA.id)).length, 0);
 
-    engineA.challengeJoin(inviteA);
-    assert.equal(engineA.challenges.size, 1);
-    assert.equal(engineA.messagesByChannel.has(`challenge_${challengeA.id}`), true);
-    assert.equal(engineB.challenges.size, 0);
-    assert.equal(engineB.messagesByChannel.size, 0);
+    await engineA.challengeJoin(inviteA);
+    assert.equal((await engineA.listChallenges()).length, 1);
+    assert.ok((await engineA.chat.getMessagesForChallengeChannel(challengeA.id)).length > 0);
+    assert.equal((await engineB.listChallenges()).length, 0);
+    assert.equal((await engineB.chat.getMessagesForChallengeChannel(challengeA.id)).length, 0);
   });
 
-  it("accepts injected temporary storage in createEngine()", () => {
-    const temporaryMessages = new Map<string, any[]>();
-    const engine = createEngine({ storage: { messagesByChannel: temporaryMessages } });
+  it("accepts injected storage adapter in createEngine()", async () => {
+    const engine = createEngine({ storageAdapter: new InMemoryArenaStorageAdapter() });
     engine.registerChallengeFactory("psi", createChallenge);
     engine.registerChallengeMetadata("psi", PSI_METADATA);
 
-    const challenge = engine.createChallenge("psi");
-    engine.challengeJoin(challenge.invites[0]);
+    const challenge = await engine.createChallenge("psi");
+    await engine.challengeJoin(challenge.invites[0]);
 
-    assert.equal(engine.messagesByChannel, temporaryMessages);
-    assert.equal(temporaryMessages.has(`challenge_${challenge.id}`), true);
+    assert.equal((await engine.listChallenges()).length, 1);
+    assert.ok((await engine.chat.getMessagesForChallengeChannel(challenge.id)).length > 0);
   });
 
   it("lets server routes run against an injected engine instance", async () => {
@@ -100,6 +99,6 @@ describe("PSI challenge with isolated engine instances", () => {
 
     const response = await app.request("/api/challenges/psi", { method: "POST" });
     assert.equal(response.status, 200);
-    assert.equal(engine.challenges.size, 1);
+    assert.equal((await engine.listChallenges()).length, 1);
   });
 });

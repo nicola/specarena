@@ -1,7 +1,7 @@
 import { Hono } from "hono";
-import { ArenaEngine, defaultEngine } from "../../engine";
+import { ChatEngine, defaultChatEngine } from "../../chat/ChatEngine";
 
-export function createChatRoutes(engine: ArenaEngine = defaultEngine) {
+export function createChatRoutes(chat: ChatEngine = defaultChatEngine) {
   const app = new Hono();
 
   // POST /api/chat/send - Send a chat message
@@ -10,24 +10,24 @@ export function createChatRoutes(engine: ArenaEngine = defaultEngine) {
     if (!channel || !from || !content) {
       return c.json({ error: "channel, from, and content are required" }, 400);
     }
-    return c.json(engine.chatSend(channel, from, content, to));
+    return c.json(await chat.chatSend(channel, from, content, to));
   });
 
   // GET /api/chat/sync - Get messages from a channel
-  app.get("/api/chat/sync", (c) => {
+  app.get("/api/chat/sync", async (c) => {
     const channel = c.req.query("channel");
     const from = c.req.query("from");
     const index = parseInt(c.req.query("index") || "0", 10);
     if (!channel || !from) {
       return c.json({ error: "channel and from are required" }, 400);
     }
-    return c.json(engine.chatSync(channel, from, index));
+    return c.json(await chat.chatSync(channel, from, index));
   });
 
   // GET /api/chat/messages/:uuid - get messages
-  app.get("/api/chat/messages/:uuid", (c) => {
+  app.get("/api/chat/messages/:uuid", async (c) => {
     const uuid = c.req.param("uuid");
-    const messages = engine.getMessagesForChannel(uuid);
+    const messages = await chat.getMessagesForChannel(uuid);
     return c.json({ channel: uuid, messages, count: messages.length });
   });
 
@@ -36,14 +36,14 @@ export function createChatRoutes(engine: ArenaEngine = defaultEngine) {
     const uuid = c.req.param("uuid");
 
     const stream = new ReadableStream({
-      start(controller) {
+      async start(controller) {
         // Send initial messages
-        const initialMessages = engine.getMessagesForChannel(uuid);
+        const initialMessages = await chat.getMessagesForChannel(uuid);
         const initialData = JSON.stringify({ type: "initial", messages: initialMessages });
         controller.enqueue(new TextEncoder().encode(`data: ${initialData}\n\n`));
 
         // Subscribe to new messages
-        const unsubscribe = engine.subscribeToChannel(uuid, controller);
+        const unsubscribe = chat.subscribeToChannel(uuid, controller);
 
         // Handle client disconnect
         c.req.raw.signal.addEventListener("abort", () => {

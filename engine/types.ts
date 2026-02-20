@@ -23,6 +23,7 @@ export interface ChallengeOperatorState {
 export interface ChallengeOperator {
   join(userId: string): void;
   message(message: ChatMessage): void;
+  flushMessaging?(): Promise<void>;
   state: ChallengeOperatorState;
 }
 
@@ -60,8 +61,8 @@ export interface ChallengeConfig {
 }
 
 export interface ChallengeMessaging {
-  sendMessage: (channel: string, from: string, content: string, to?: string | null) => ChatMessage;
-  sendChallengeMessage: (challengeId: string, from: string, content: string, to?: string | null) => ChatMessage;
+  sendMessage: (channel: string, from: string, content: string, to?: string | null) => Promise<ChatMessage>;
+  sendChallengeMessage: (challengeId: string, from: string, content: string, to?: string | null) => Promise<ChatMessage>;
 }
 
 export interface ChallengeFactoryContext {
