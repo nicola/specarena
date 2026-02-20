@@ -1,5 +1,5 @@
 import { generateRandomSetFromSeed } from "@arena/engine/utils";
-import { ChatMessage, ChallengeOperator } from "@arena/engine/types";
+import { ChallengeFactoryContext, ChatMessage, ChallengeMessaging, ChallengeOperator } from "@arena/engine/types";
 import { BaseChallenge } from "@arena/engine/challenge-design/BaseChallenge";
 
 export interface PsiChallengeParams {
@@ -44,13 +44,13 @@ interface PsiGameState {
 }
 
 class PsiChallenge extends BaseChallenge<PsiGameState> {
-  constructor(params: PsiChallengeParams) {
+  constructor(params: PsiChallengeParams, messaging?: ChallengeMessaging) {
     const { userSets, intersectionSet } = userSetsFromParams(params);
     super(params.challengeId, params.players, {
       userSets,
       intersectionSet,
       guesses: Array.from({ length: params.players }, () => new Set<number>()),
-    });
+    }, messaging);
 
     this.handle("guess", (msg, playerIndex) => this.onGuess(msg, playerIndex));
   }
@@ -149,10 +149,14 @@ const DEFAULT_CONFIG = {
   setSize: 10,
 };
 
-export function createChallenge(challengeId: string, options?: Record<string, unknown>): ChallengeOperator {
+export function createChallenge(
+  challengeId: string,
+  options?: Record<string, unknown>,
+  context?: ChallengeFactoryContext
+): ChallengeOperator {
   return new PsiChallenge({
     challengeId,
     ...DEFAULT_CONFIG,
     ...options,
-  } as PsiChallengeParams);
+  } as PsiChallengeParams, context?.messaging);
 }

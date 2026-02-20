@@ -59,7 +59,20 @@ export interface ChallengeConfig {
   options?: Record<string, unknown>;
 }
 
-export type ChallengeFactory = (challengeId: string, options?: Record<string, unknown>) => ChallengeOperator;
+export interface ChallengeMessaging {
+  sendMessage: (channel: string, from: string, content: string, to?: string | null) => ChatMessage;
+  sendChallengeMessage: (challengeId: string, from: string, content: string, to?: string | null) => ChatMessage;
+}
+
+export interface ChallengeFactoryContext {
+  messaging: ChallengeMessaging;
+}
+
+export type ChallengeFactory = (
+  challengeId: string,
+  options?: Record<string, unknown>,
+  context?: ChallengeFactoryContext
+) => ChallengeOperator;
 
 export type Result<T, E = ChallengeError> =
   | { success: true; data: T }

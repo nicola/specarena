@@ -1,17 +1,19 @@
-import { ChallengeOperator, ChallengeOperatorState, ChatMessage, Score } from "../types";
+import { ChallengeMessaging, ChallengeOperator, ChallengeOperatorState, ChatMessage, Score } from "../types";
 import { sendChallengeMessage, sendMessage } from "../storage/chat";
 
 export abstract class BaseChallenge<TGameState = {}> implements ChallengeOperator {
   protected challengeId: string;
   protected playerCount: number;
+  protected messaging: ChallengeMessaging;
   state: ChallengeOperatorState;
   gameState: TGameState;
 
   private handlers = new Map<string, (msg: ChatMessage, playerIndex: number) => void>();
 
-  constructor(challengeId: string, playerCount: number, gameState: TGameState) {
+  constructor(challengeId: string, playerCount: number, gameState: TGameState, messaging?: ChallengeMessaging) {
     this.challengeId = challengeId;
     this.playerCount = playerCount;
+    this.messaging = messaging ?? { sendMessage, sendChallengeMessage };
     this.state = {
       gameStarted: false,
       gameEnded: false,
@@ -70,15 +72,15 @@ export abstract class BaseChallenge<TGameState = {}> implements ChallengeOperato
   // --- Messaging helpers ---
 
   protected send(content: string, to?: string): void {
-    sendChallengeMessage(this.challengeId, "operator", content, to);
+    this.messaging.sendChallengeMessage(this.challengeId, "operator", content, to);
   }
 
   protected broadcast(content: string): void {
-    sendChallengeMessage(this.challengeId, "operator", content);
+    this.messaging.sendChallengeMessage(this.challengeId, "operator", content);
   }
 
   protected sendPublic(content: string): void {
-    sendMessage(this.challengeId, "operator", content);
+    this.messaging.sendMessage(this.challengeId, "operator", content);
   }
 
   // --- Game lifecycle ---
