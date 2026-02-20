@@ -2,8 +2,7 @@ import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 
 import app from "../server/index";
-import { challenges } from "../storage/challenges";
-import { messagesByChannel, indexCounters, channelSubscribers } from "../storage/chat";
+import { defaultEngine } from "../engine";
 
 // --- Helpers ---
 
@@ -15,11 +14,8 @@ async function request(method: string, path: string, body?: object) {
   });
 }
 
-function clearState() {
-  challenges.clear();
-  messagesByChannel.clear();
-  indexCounters.clear();
-  channelSubscribers.clear();
+async function clearState() {
+  await defaultEngine.clearRuntimeState();
 }
 
 async function createPsiChallenge() {
@@ -31,7 +27,7 @@ async function createPsiChallenge() {
 // --- Tests ---
 
 describe("REST API for arena", () => {
-  beforeEach(() => clearState());
+  beforeEach(async () => clearState());
 
   it("POST /api/arena/join — joins a challenge", async () => {
     const { invites } = await createPsiChallenge();
@@ -154,7 +150,8 @@ describe("REST API for arena", () => {
     assert.ok(g2.ok);
 
     // Verify game ended with perfect scores
-    const instance = challenges.get(id)!;
+    const instance = await defaultEngine.getChallenge(id);
+    assert.ok(instance);
     assert.equal(instance.instance.state.gameEnded, true);
     assert.equal(instance.instance.state.scores[0].utility, 1);
     assert.equal(instance.instance.state.scores[1].utility, 1);
@@ -162,7 +159,7 @@ describe("REST API for arena", () => {
 });
 
 describe("REST API for chat", () => {
-  beforeEach(() => clearState());
+  beforeEach(async () => clearState());
 
   it("POST /api/chat/send — sends a message", async () => {
     const res = await request("POST", "/api/chat/send", {

@@ -1,4 +1,14 @@
 {
   "private": true,
+  "scripts": {
+    "wt:new": "./scripts/wt-new.sh",
+    "wt:list": "git worktree list",
+    "wt:rm": "./scripts/wt-rm.sh",
+    "wt:prune": "git worktree prune",
+    "test": "npm run test --workspaces --if-present",
+    "test:engine": "npm run test --workspace @arena/engine",
+    "test:challenges": "npm run test --workspace @arena/challenges",
+    "test:leaderboard": "npm run test --workspace @arena/leaderboard --if-present"
+  },
   "workspaces": ["engine", "challenges", "leaderboard"]
 }

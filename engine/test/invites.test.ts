@@ -2,8 +2,7 @@ import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 
 import app from "../server/index";
-import { challenges } from "../storage/challenges";
-import { messagesByChannel, indexCounters, channelSubscribers } from "../storage/chat";
+import { defaultEngine } from "../engine";
 
 // --- Helpers ---
 
@@ -15,11 +14,8 @@ async function request(method: string, path: string, body?: object) {
   });
 }
 
-function clearState() {
-  challenges.clear();
-  messagesByChannel.clear();
-  indexCounters.clear();
-  channelSubscribers.clear();
+async function clearState() {
+  await defaultEngine.clearRuntimeState();
 }
 
 async function createPsiChallenge() {
@@ -31,8 +27,8 @@ async function createPsiChallenge() {
 // --- Tests ---
 
 describe("Invites REST API", () => {
-  beforeEach(() => {
-    clearState();
+  beforeEach(async () => {
+    await clearState();
   });
 
   // -- GET /api/invites/:inviteId --
@@ -61,8 +57,9 @@ describe("Invites REST API", () => {
     const { id, invites } = await createPsiChallenge();
 
     // Join with the invite (claims it)
-    const challenge = challenges.get(id)!;
-    challenge.instance.join(invites[0]);
+    const challenge = await defaultEngine.getChallenge(id);
+    assert.ok(challenge);
+    await challenge.instance.join(invites[0]);
 
     const res = await request("GET", `/api/invites/${invites[0]}`);
     assert.equal(res.status, 409);
@@ -75,8 +72,9 @@ describe("Invites REST API", () => {
     const { id, invites } = await createPsiChallenge();
 
     // Claim first invite
-    const challenge = challenges.get(id)!;
-    challenge.instance.join(invites[0]);
+    const challenge = await defaultEngine.getChallenge(id);
+    assert.ok(challenge);
+    await challenge.instance.join(invites[0]);
 
     // First invite → 409
     const res1 = await request("GET", `/api/invites/${invites[0]}`);
@@ -119,8 +117,9 @@ describe("Invites REST API", () => {
     const { id, invites } = await createPsiChallenge();
 
     // Claim the invite first
-    const challenge = challenges.get(id)!;
-    challenge.instance.join(invites[0]);
+    const challenge = await defaultEngine.getChallenge(id);
+    assert.ok(challenge);
+    await challenge.instance.join(invites[0]);
 
     const res = await request("POST", "/api/invites", { inviteId: invites[0] });
     assert.equal(res.status, 409);
@@ -155,7 +154,8 @@ describe("Invites REST API", () => {
 
   it("both invites can be checked and claimed independently", async () => {
     const { id, invites } = await createPsiChallenge();
-    const challenge = challenges.get(id)!;
+    const challenge = await defaultEngine.getChallenge(id);
+    assert.ok(challenge);
 
     // Both valid initially
     const r1 = await request("GET", `/api/invites/${invites[0]}`);
@@ -164,7 +164,7 @@ describe("Invites REST API", () => {
     assert.equal(r2.status, 200);
 
     // Claim first
-    challenge.instance.join(invites[0]);
+    await challenge.instance.join(invites[0]);
 
     // First → 409, second → 200
     const r3 = await request("GET", `/api/invites/${invites[0]}`);
@@ -173,7 +173,7 @@ describe("Invites REST API", () => {
     assert.equal(r4.status, 200);
 
     // Claim second
-    challenge.instance.join(invites[1]);
+    await challenge.instance.join(invites[1]);
 
     // Both → 409
     const r5 = await request("GET", `/api/invites/${invites[0]}`);

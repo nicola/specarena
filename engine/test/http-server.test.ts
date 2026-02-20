@@ -4,8 +4,7 @@ import { serve } from "@hono/node-server";
 import type { ServerType } from "@hono/node-server";
 
 import app from "../server/index";
-import { challenges } from "../storage/challenges";
-import { messagesByChannel, indexCounters, channelSubscribers } from "../storage/chat";
+import { defaultEngine } from "../engine";
 
 // Test against a real HTTP server to catch routing issues that app.request() misses.
 // app.request() dispatches in-process and may not match wildcard routes the same way
@@ -22,11 +21,8 @@ async function req(method: string, path: string, body?: object) {
   });
 }
 
-function clearState() {
-  challenges.clear();
-  messagesByChannel.clear();
-  indexCounters.clear();
-  channelSubscribers.clear();
+async function clearState() {
+  await defaultEngine.clearRuntimeState();
 }
 
 before(async () => {
@@ -43,7 +39,7 @@ after(() => {
 });
 
 describe("HTTP server — REST routes don't collide with MCP wildcards", () => {
-  beforeEach(() => clearState());
+  beforeEach(async () => clearState());
 
   it("POST /api/chat/send returns 200, not 500", async () => {
     const res = await req("POST", "/api/chat/send", {
@@ -178,7 +174,7 @@ describe("HTTP server — REST routes don't collide with MCP wildcards", () => {
 });
 
 describe("HTTP server — /api/v1 routes mirror /api", () => {
-  beforeEach(() => clearState());
+  beforeEach(async () => clearState());
 
   it("GET /api/v1/metadata returns challenge metadata", async () => {
     const res = await req("GET", "/api/v1/metadata");

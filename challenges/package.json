@@ -2,6 +2,10 @@
   "name": "@arena/challenges",
   "version": "0.1.0",
   "private": true,
+  "scripts": {
+    "test": "node --import tsx --test --test-force-exit ./**/*.test.ts",
+    "test:psi": "node --import tsx --test --test-force-exit ./psi/**/*.test.ts"
+  },
   "exports": {
 
     "./psi": "./psi/index.ts",

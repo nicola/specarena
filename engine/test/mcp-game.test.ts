@@ -5,19 +5,15 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 
 import app from "../server/index";
-import { challenges } from "../storage/challenges";
-import { messagesByChannel, indexCounters, channelSubscribers } from "../storage/chat";
+import { defaultEngine } from "../engine";
 
 // --- Setup ---
 
 let baseUrl: string;
 let server: ReturnType<typeof serve>;
 
-function clearState() {
-  challenges.clear();
-  messagesByChannel.clear();
-  indexCounters.clear();
-  channelSubscribers.clear();
+async function clearState() {
+  await defaultEngine.clearRuntimeState();
 }
 
 /** Create a connected MCP client for the arena endpoint */
@@ -71,8 +67,8 @@ after(() => {
 // --- Tests ---
 
 describe("PSI game via MCP protocol", () => {
-  beforeEach(() => {
-    clearState();
+  beforeEach(async () => {
+    await clearState();
   });
 
   it("MCP client connects and lists tools", async () => {
@@ -101,7 +97,8 @@ describe("PSI game via MCP protocol", () => {
     assert.equal(join1.ChallengeID, challengeId);
     assert.equal(join1.ChallengeInfo.name, "Private Set Intersection");
 
-    const instance = challenges.get(challengeId)!;
+    const instance = await defaultEngine.getChallenge(challengeId);
+    assert.ok(instance);
     assert.equal(instance.instance.state.gameStarted, false);
 
     // 3. Player 2 joins → game starts

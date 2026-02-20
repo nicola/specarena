@@ -1,5 +1,5 @@
 import { generateRandomSetFromSeed } from "@arena/engine/utils";
-import { ChatMessage, ChallengeOperator } from "@arena/engine/types";
+import { ChallengeFactoryContext, ChatMessage, ChallengeMessaging, ChallengeOperator } from "@arena/engine/types";
 import { BaseChallenge } from "@arena/engine/challenge-design/BaseChallenge";
 
 export interface PsiChallengeParams {
@@ -44,23 +44,23 @@ interface PsiGameState {
 }
 
 class PsiChallenge extends BaseChallenge<PsiGameState> {
-  constructor(params: PsiChallengeParams) {
+  constructor(params: PsiChallengeParams, messaging?: ChallengeMessaging) {
     const { userSets, intersectionSet } = userSetsFromParams(params);
     super(params.challengeId, params.players, {
       userSets,
       intersectionSet,
       guesses: Array.from({ length: params.players }, () => new Set<number>()),
-    });
+    }, messaging);
 
     this.handle("guess", (msg, playerIndex) => this.onGuess(msg, playerIndex));
   }
 
-  protected onPlayerJoin(playerId: string, playerIndex: number) {
+  protected async onPlayerJoin(playerId: string, playerIndex: number): Promise<void> {
     const text = `Your private set is: {${[...this.gameState.userSets[playerIndex]].sort().join(", ")}}.`;
-    this.send(text, playerId);
+    await this.send(text, playerId);
   }
 
-  private onGuess(message: ChatMessage, sender: number) {
+  private async onGuess(message: ChatMessage, sender: number): Promise<void> {
     const guess = this._extractNumbers(message.content);
     const otherPlayer = 1 - sender;
 
@@ -90,8 +90,8 @@ class PsiChallenge extends BaseChallenge<PsiGameState> {
     }
     this.state.scores[sender].utility = utility(intersection_found, wrong_guess, extra_guess);
 
-    this.sendPublic(`Player ${message.from} sent a guess`);
-    this.send(`Player ${otherPlayer + 1} outcome:
+    await this.broadcast(`Player ${message.from} sent a guess`);
+    await this.send(`Player ${otherPlayer + 1} outcome:
 - Intersection Found: ${intersection_found}
 - Wrong Guess: ${wrong_guess}
 - Extra Guess: ${extra_guess}
@@ -101,7 +101,7 @@ class PsiChallenge extends BaseChallenge<PsiGameState> {
     this.gameState.guesses[sender] = guess;
 
     if (this.gameState.guesses.every(guess => guess.size > 0)) {
-      this.endGame();
+      await this.endGame();
     }
   }
 
@@ -149,10 +149,14 @@ const DEFAULT_CONFIG = {
   setSize: 10,
 };
 
-export function createChallenge(challengeId: string, options?: Record<string, unknown>): ChallengeOperator {
+export function createChallenge(
+  challengeId: string,
+  options?: Record<string, unknown>,
+  context?: ChallengeFactoryContext
+): ChallengeOperator {
   return new PsiChallenge({
     challengeId,
     ...DEFAULT_CONFIG,
     ...options,
-  } as PsiChallengeParams);
+  } as PsiChallengeParams, context?.messaging);
 }

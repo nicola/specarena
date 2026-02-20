@@ -1,45 +1,49 @@
 import { Hono } from "hono";
-import { getInvite, ChallengeError } from "../../storage/challenges";
-import { sendMessage } from "../../storage/chat";
+import { ArenaEngine, defaultEngine } from "../../engine";
+import { ChallengeError } from "../../types";
 
-const app = new Hono();
+export function createInviteRoutes(engine: ArenaEngine = defaultEngine) {
+  const app = new Hono();
 
-// GET /api/invites/:inviteId - get invite status
-app.get("/api/invites/:inviteId", (c) => {
-  const inviteId = c.req.param("inviteId");
-  const result = getInvite(inviteId);
+  // GET /api/invites/:inviteId - get invite status
+  app.get("/api/invites/:inviteId", async (c) => {
+    const inviteId = c.req.param("inviteId");
+    const result = await engine.getInvite(inviteId);
 
-  if (!result.success) {
-    if (result.error === ChallengeError.NOT_FOUND) {
-      return c.json({ error: result.message }, 404);
+    if (!result.success) {
+      if (result.error === ChallengeError.NOT_FOUND) {
+        return c.json({ error: result.message }, 404);
+      }
+      if (result.error === ChallengeError.INVITE_ALREADY_USED) {
+        return c.json({ error: result.message }, 409);
+      }
+      return c.json({ error: result.message }, 500);
     }
-    if (result.error === ChallengeError.INVITE_ALREADY_USED) {
-      return c.json({ error: result.message }, 409);
+
+    return c.json(result.data);
+  });
+
+  // POST /api/invites - claim invite
+  app.post("/api/invites", async (c) => {
+    const body = await c.req.json();
+    const { inviteId } = body;
+
+    if (!inviteId) {
+      return c.json({ error: "inviteId is required" }, 400);
     }
-    return c.json({ error: result.message }, 500);
-  }
 
-  return c.json(result.data);
-});
+    const result = await engine.getInvite(inviteId);
+    if (!result.success) {
+      const status = result.error === ChallengeError.NOT_FOUND ? 404 : 409;
+      return c.json({ error: result.message }, status);
+    }
 
-// POST /api/invites - claim invite
-app.post("/api/invites", async (c) => {
-  const body = await c.req.json();
-  const { inviteId } = body;
+    await engine.chat.sendMessage("invites", "operator", `${inviteId}`);
 
-  if (!inviteId) {
-    return c.json({ error: "inviteId is required" }, 400);
-  }
+    return c.json({ success: true });
+  });
 
-  const result = getInvite(inviteId);
-  if (!result.success) {
-    const status = result.error === ChallengeError.NOT_FOUND ? 404 : 409;
-    return c.json({ error: result.message }, status);
-  }
+  return app;
+}
 
-  sendMessage("invites", "operator", `${inviteId}`);
-
-  return c.json({ success: true });
-});
-
-export default app;
+export default createInviteRoutes();

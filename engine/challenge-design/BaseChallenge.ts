@@ -1,17 +1,28 @@
-import { ChallengeOperator, ChallengeOperatorState, ChatMessage, Score } from "../types";
-import { sendChallengeMessage, sendMessage } from "../storage/chat";
+import { ChallengeMessaging, ChallengeOperator, ChallengeOperatorState, ChatMessage, Score } from "../types";
+import { defaultChatEngine } from "../chat/ChatEngine";
 
+// BaseChallenge provides the shared "operator runtime" used by challenge
+// implementations:
+// - player lifecycle (join -> game start)
+// - method dispatch (`message` -> registered handler)
+// - canonical score/game state bookkeeping
+// - operator messaging primitives backed by ChatEngine/ChallengeMessaging
+//
+// Challenge authors are expected to focus on game-specific logic by:
+// 1) overriding hooks (`onPlayerJoin`, `onGameStart`)
+// 2) registering handlers via `handle("method", handler)`
 export abstract class BaseChallenge<TGameState = {}> implements ChallengeOperator {
   protected challengeId: string;
   protected playerCount: number;
+  protected messaging: ChallengeMessaging;
   state: ChallengeOperatorState;
   gameState: TGameState;
+  private handlers = new Map<string, (msg: ChatMessage, playerIndex: number) => void | Promise<void>>();
 
-  private handlers = new Map<string, (msg: ChatMessage, playerIndex: number) => void>();
-
-  constructor(challengeId: string, playerCount: number, gameState: TGameState) {
+  constructor(challengeId: string, playerCount: number, gameState: TGameState, messaging?: ChallengeMessaging) {
     this.challengeId = challengeId;
     this.playerCount = playerCount;
+    this.messaging = messaging ?? defaultChatEngine;
     this.state = {
       gameStarted: false,
       gameEnded: false,
@@ -23,23 +34,27 @@ export abstract class BaseChallenge<TGameState = {}> implements ChallengeOperato
 
   // --- Public interface (ChallengeOperator) ---
 
-  join(userId: string): void {
+  // Admission flow used by the engine when a player joins with an invite.
+  // Once playerCount is reached, the game transitions to started.
+  async join(userId: string): Promise<void> {
     if (this.state.players.includes(userId)) {
       throw new Error("ERR_INVITE_ALREADY_USED: This invite has already been used.");
     }
 
     const playerIndex = this.state.players.push(userId) - 1;
-    this.onPlayerJoin(userId, playerIndex);
+    await this.onPlayerJoin(userId, playerIndex);
 
     if (this.state.players.length === this.playerCount) {
       this.state.gameStarted = true;
-      this.onGameStart();
+      await this.onGameStart();
     }
   }
 
-  message(message: ChatMessage): void {
+  // Single entrypoint for challenge actions. Routes by message.type to the
+  // handler registered with `handle(...)`.
+  async message(message: ChatMessage): Promise<void> {
     if (this.state.gameEnded || !this.state.gameStarted) {
-      this.send("ERR_GAME_NOT_RUNNING: Game not running.", message.from);
+      await this.send("ERR_GAME_NOT_RUNNING: Game not running.", message.from);
       return;
     }
 
@@ -53,41 +68,42 @@ export abstract class BaseChallenge<TGameState = {}> implements ChallengeOperato
       throw new Error(`Unknown challenge method: ${message.type}`);
     }
 
-    handler(message, playerIndex);
+    await handler(message, playerIndex);
   }
 
   // --- Lifecycle hooks for subclasses ---
 
-  protected onPlayerJoin(_playerId: string, _playerIndex: number): void {}
-  protected onGameStart(): void {}
+  protected onPlayerJoin(_playerId: string, _playerIndex: number): void | Promise<void> {}
+  protected onGameStart(): void | Promise<void> {}
 
   // --- Registration ---
 
-  protected handle(type: string, handler: (msg: ChatMessage, playerIndex: number) => void): void {
+  // Register a game-specific method handler (e.g. "guess", "submit").
+  protected handle(type: string, handler: (msg: ChatMessage, playerIndex: number) => void | Promise<void>): void {
     this.handlers.set(type, handler);
   }
 
   // --- Messaging helpers ---
 
-  protected send(content: string, to?: string): void {
-    sendChallengeMessage(this.challengeId, "operator", content, to);
+  // Private operator message to a single player on the challenge channel.
+  protected async send(content: string, to?: string): Promise<void> {
+    await this.messaging.sendChallengeMessage(this.challengeId, "operator", content, to);
   }
 
-  protected broadcast(content: string): void {
-    sendChallengeMessage(this.challengeId, "operator", content);
-  }
-
-  protected sendPublic(content: string): void {
-    sendMessage(this.challengeId, "operator", content);
+  // Broadcast operator message to all players on the challenge channel.
+  protected async broadcast(content: string): Promise<void> {
+    await this.messaging.sendChallengeMessage(this.challengeId, "operator", content);
   }
 
   // --- Game lifecycle ---
 
-  protected endGame(): void {
+  // Standard game-finalization helper used by challenges after scoring.
+  // It marks the game ended and emits a canonical score summary.
+  protected async endGame(): Promise<void> {
     this.state.gameEnded = true;
     const lines = this.state.scores.map(
       (s, i) => `- Player ${i + 1}: ${JSON.stringify(s)}`
     );
-    this.broadcast(`Game ended.\n\nScores are:\n${lines.join("\n")}`);
+    await this.broadcast(`Game ended.\n\nScores are:\n${lines.join("\n")}`);
   }
 }

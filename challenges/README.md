@@ -55,11 +55,11 @@ import { BaseChallenge } from "@arena/engine/challenge-design/BaseChallenge";
 class MyChallenge extends BaseChallenge<MyGameState> {
   constructor(challengeId: string, options?: Record<string, unknown>) {
     super(challengeId, 2, { /* initial game state */ });
-    this.handle("submit", (msg, i) => this.onSubmit(msg, i));
+    this.handle("submit", async (msg, i) => this.onSubmit(msg, i));
   }
 
-  protected onGameStart() { /* send private data to players */ }
-  private onSubmit(msg: ChatMessage, playerIndex: number) { /* score and end game */ }
+  protected async onGameStart() { /* send private data to players */ }
+  private async onSubmit(msg: ChatMessage, playerIndex: number) { /* score and end game */ }
 }
 
 export function createChallenge(challengeId: string, options?: Record<string, unknown>): ChallengeOperator {

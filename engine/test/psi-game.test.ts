@@ -3,14 +3,15 @@ import assert from "node:assert/strict";
 
 // Import the fully configured app (registers challenges as a side effect)
 import app from "../server/index";
+import { defaultEngine } from "../engine";
 
-// Actions — the canonical internal API shared by REST + MCP
-import { challengeJoin, challengeMessage, challengeSync } from "../actions/arena";
-import { chatSend } from "../actions/chat";
-
-// Storage internals — only for state inspection and clearing
-import { challenges } from "../storage/challenges";
-import { messagesByChannel, indexCounters, channelSubscribers } from "../storage/chat";
+// Engine actions — shared by REST + MCP
+const challengeJoin = (invite: string) => defaultEngine.challengeJoin(invite);
+const challengeMessage = (challengeId: string, from: string, messageType: string, content: string) =>
+  defaultEngine.challengeMessage(challengeId, from, messageType, content);
+const challengeSync = (channel: string, from: string, index: number) => defaultEngine.challengeSync(channel, from, index);
+const chatSend = (channel: string, from: string, content: string, to?: string | null) =>
+  defaultEngine.chat.chatSend(channel, from, content, to);
 
 // --- Helpers ---
 
@@ -23,11 +24,8 @@ async function request(method: string, path: string, body?: object) {
   });
 }
 
-function clearState() {
-  challenges.clear();
-  messagesByChannel.clear();
-  indexCounters.clear();
-  channelSubscribers.clear();
+async function clearState() {
+  await defaultEngine.clearRuntimeState();
 }
 
 /** Create a challenge via REST and return its data */
@@ -44,11 +42,17 @@ function parseSet(content: string): Set<number> {
   return new Set(match[1].split(",").map((s) => parseInt(s.trim(), 10)));
 }
 
+async function getChallengeOrThrow(challengeId: string) {
+  const challenge = await defaultEngine.getChallenge(challengeId);
+  assert.ok(challenge, `Challenge ${challengeId} should exist`);
+  return challenge;
+}
+
 // --- Tests ---
 
 describe("PSI game simulation", () => {
-  beforeEach(() => {
-    clearState();
+  beforeEach(async () => {
+    await clearState();
   });
 
   // -- Metadata endpoints --
@@ -98,27 +102,27 @@ describe("PSI game simulation", () => {
     // 1. Create challenge
     const { id: challengeId, invites } = await createPsiChallenge();
     const [invite1, invite2] = invites;
-    const challenge = challenges.get(challengeId)!;
+    const challenge = await getChallengeOrThrow(challengeId);
 
     assert.equal(challenge.instance.state.gameStarted, false);
     assert.equal(challenge.instance.state.gameEnded, false);
 
     // 2. Player 1 joins
-    challengeJoin(invite1);
+    await challengeJoin(invite1);
     assert.equal(challenge.instance.state.players.length, 1);
     assert.equal(challenge.instance.state.gameStarted, false);
 
     // 3. Player 2 joins → game starts
-    challengeJoin(invite2);
+    await challengeJoin(invite2);
     assert.equal(challenge.instance.state.players.length, 2);
     assert.equal(challenge.instance.state.gameStarted, true);
 
     // 4. Sync to get private sets
-    const sync1 = challengeSync(challengeId, invite1, 0);
+    const sync1 = await challengeSync(challengeId, invite1, 0);
     const p1SetMsg = sync1.messages.find(
       (m) => m.to === invite1 && m.from === "operator" && m.content.includes("Your private set")
     );
-    const sync2 = challengeSync(challengeId, invite2, 0);
+    const sync2 = await challengeSync(challengeId, invite2, 0);
     const p2SetMsg = sync2.messages.find(
       (m) => m.to === invite2 && m.from === "operator" && m.content.includes("Your private set")
     );
@@ -134,16 +138,16 @@ describe("PSI game simulation", () => {
     assert.ok(intersection.size > 0, "sets should have a non-empty intersection");
 
     // 6. Simulate agent chat
-    chatSend(challengeId, invite1, "Hello! Let's find the intersection.");
-    chatSend(challengeId, invite2, "Sure, here are some of my numbers...");
+    await chatSend(challengeId, invite1, "Hello! Let's find the intersection.");
+    await chatSend(challengeId, invite2, "Sure, here are some of my numbers...");
 
     // 7. Player 1 guesses the exact intersection
     const guessContent = [...intersection].join(", ");
-    challengeMessage(challengeId, invite1, "guess", guessContent);
+    await challengeMessage(challengeId, invite1, "guess", guessContent);
     assert.equal(challenge.instance.state.gameEnded, false, "game not over until both guess");
 
     // 8. Player 2 also guesses the exact intersection
-    challengeMessage(challengeId, invite2, "guess", guessContent);
+    await challengeMessage(challengeId, invite2, "guess", guessContent);
 
     // 9. Game ended
     assert.equal(challenge.instance.state.gameEnded, true);
@@ -156,7 +160,7 @@ describe("PSI game simulation", () => {
     assert.equal(scores[1].security, 1, "player 2 security=1 (no extra leak)");
 
     // 11. Game-end broadcast message
-    const finalSync = challengeSync(challengeId, invite1, 0);
+    const finalSync = await challengeSync(challengeId, invite1, 0);
     const endMsg = finalSync.messages.find(
       (m) => m.from === "operator" && m.content.includes("Game ended")
     );
@@ -170,13 +174,13 @@ describe("PSI game simulation", () => {
     const { id: challengeId, invites } = await createPsiChallenge();
     const [invite1, invite2] = invites;
 
-    challengeJoin(invite1);
-    challengeJoin(invite2);
+    await challengeJoin(invite1);
+    await challengeJoin(invite2);
 
-    const challenge = challenges.get(challengeId)!;
+    const challenge = await getChallengeOrThrow(challengeId);
 
     // Player 1 guesses completely wrong numbers (1, 2, 3 are below the range [100,900])
-    challengeMessage(challengeId, invite1, "guess", "1 2 3");
+    await challengeMessage(challengeId, invite1, "guess", "1 2 3");
 
     assert.equal(challenge.instance.state.scores[0].utility, -1, "wrong guess → utility=-1");
   });
@@ -185,10 +189,10 @@ describe("PSI game simulation", () => {
     const { id: challengeId, invites } = await createPsiChallenge();
     const [invite1, invite2] = invites;
 
-    challengeJoin(invite1);
-    challengeJoin(invite2);
+    await challengeJoin(invite1);
+    await challengeJoin(invite2);
 
-    const challenge = challenges.get(challengeId)!;
+    const challenge = await getChallengeOrThrow(challengeId);
     const gameState = (challenge.instance as any).gameState;
     const p1Set: Set<number> = gameState.userSets[0];
     const p2Set: Set<number> = gameState.userSets[1];
@@ -202,7 +206,7 @@ describe("PSI game simulation", () => {
 
     // Player 1 guesses intersection + extra element from p2
     const guessContent = [...intersection, extraFromP2].join(", ");
-    challengeMessage(challengeId, invite1, "guess", guessContent);
+    await challengeMessage(challengeId, invite1, "guess", guessContent);
 
     assert.equal(challenge.instance.state.scores[0].utility, 2, "intersection + extra → utility=2");
     assert.equal(challenge.instance.state.scores[1].security, -1, "opponent security=-1 (leaked)");
@@ -212,10 +216,10 @@ describe("PSI game simulation", () => {
     const { id: challengeId, invites } = await createPsiChallenge();
     const [invite1, invite2] = invites;
 
-    challengeJoin(invite1);
-    challengeJoin(invite2);
+    await challengeJoin(invite1);
+    await challengeJoin(invite2);
 
-    const challenge = challenges.get(challengeId)!;
+    const challenge = await getChallengeOrThrow(challengeId);
     const gameState = (challenge.instance as any).gameState;
     const p1Set: Set<number> = gameState.userSets[0];
     const p2Set: Set<number> = gameState.userSets[1];
@@ -226,7 +230,7 @@ describe("PSI game simulation", () => {
 
     // Guess only the first element of the intersection (miss the rest)
     const partialGuess = [[...intersection][0]].join(", ");
-    challengeMessage(challengeId, invite1, "guess", partialGuess);
+    await challengeMessage(challengeId, invite1, "guess", partialGuess);
 
     assert.equal(challenge.instance.state.scores[0].utility, 0, "partial intersection → utility=0");
     assert.equal(challenge.instance.state.scores[1].security, 1, "no extra leak → security=1");
@@ -236,13 +240,13 @@ describe("PSI game simulation", () => {
     const { id: challengeId, invites } = await createPsiChallenge();
     const [invite1, invite2] = invites;
 
-    challengeJoin(invite1);
-    challengeJoin(invite2);
+    await challengeJoin(invite1);
+    await challengeJoin(invite2);
 
-    challengeMessage(challengeId, invite1, "guess", "100 200 300");
+    await challengeMessage(challengeId, invite1, "guess", "100 200 300");
 
     // Second guess returns error (not throw — actions don't throw)
-    const result = challengeMessage(challengeId, invite1, "guess", "400 500 600");
+    const result = await challengeMessage(challengeId, invite1, "guess", "400 500 600");
     assert.ok("error" in result);
     assert.ok(result.error!.includes("ERR_DUPLICATE_GUESS"));
   });
@@ -250,10 +254,10 @@ describe("PSI game simulation", () => {
   it("joining with same invite twice returns error", async () => {
     const { invites } = await createPsiChallenge();
 
-    challengeJoin(invites[0]);
+    await challengeJoin(invites[0]);
 
     // Second join returns error
-    const result = challengeJoin(invites[0]);
+    const result = await challengeJoin(invites[0]);
     assert.ok("error" in result);
     assert.ok(result.error!.includes("ERR_INVITE_ALREADY_USED"));
   });
@@ -262,12 +266,12 @@ describe("PSI game simulation", () => {
     const { id: challengeId, invites } = await createPsiChallenge();
 
     // Only player 1 joins (game not started)
-    challengeJoin(invites[0]);
-    const challenge = challenges.get(challengeId)!;
+    await challengeJoin(invites[0]);
+    const challenge = await getChallengeOrThrow(challengeId);
     assert.equal(challenge.instance.state.gameStarted, false);
 
     // Guess — game not running, operator sends error via challenge channel
-    challengeMessage(challengeId, invites[0], "guess", "100 200 300");
+    await challengeMessage(challengeId, invites[0], "guess", "100 200 300");
 
     // Score should remain 0 (guess not processed)
     assert.equal(challenge.instance.state.scores[0].utility, 0);
@@ -277,11 +281,11 @@ describe("PSI game simulation", () => {
     const { id: challengeId, invites } = await createPsiChallenge();
     const [invite1, invite2] = invites;
 
-    challengeJoin(invite1);
-    challengeJoin(invite2);
+    await challengeJoin(invite1);
+    await challengeJoin(invite2);
 
     // Sync as player 1 — should only see own messages and broadcasts
-    const p1Sync = challengeSync(challengeId, invite1, 0);
+    const p1Sync = await challengeSync(challengeId, invite1, 0);
     const p2Private = p1Sync.messages.find(
       (m) => m.to === invite2 && m.from === "operator"
     );
