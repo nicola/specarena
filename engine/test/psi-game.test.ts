@@ -3,10 +3,15 @@ import assert from "node:assert/strict";
 
 // Import the fully configured app (registers challenges as a side effect)
 import app from "../server/index";
+import { defaultEngine } from "../engine";
 
-// Actions — the canonical internal API shared by REST + MCP
-import { challengeJoin, challengeMessage, challengeSync } from "../actions/arena";
-import { chatSend } from "../actions/chat";
+// Engine actions — shared by REST + MCP
+const challengeJoin = (invite: string) => defaultEngine.challengeJoin(invite);
+const challengeMessage = (challengeId: string, from: string, messageType: string, content: string) =>
+  defaultEngine.challengeMessage(challengeId, from, messageType, content);
+const challengeSync = (channel: string, from: string, index: number) => defaultEngine.challengeSync(channel, from, index);
+const chatSend = (channel: string, from: string, content: string, to?: string | null) =>
+  defaultEngine.chatSend(channel, from, content, to);
 
 // Storage internals — only for state inspection and clearing
 import { challenges } from "../storage/challenges";
