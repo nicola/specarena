@@ -1,5 +1,5 @@
 import { ChallengeMessaging, ChallengeOperator, ChallengeOperatorState, ChatMessage, Score } from "../types";
-import { defaultEngine } from "../engine";
+import { defaultChatEngine } from "../chat/ChatEngine";
 
 export abstract class BaseChallenge<TGameState = {}> implements ChallengeOperator {
   protected challengeId: string;
@@ -15,9 +15,9 @@ export abstract class BaseChallenge<TGameState = {}> implements ChallengeOperato
     this.challengeId = challengeId;
     this.playerCount = playerCount;
     this.messaging = messaging ?? {
-      sendMessage: (channel, from, content, to) => defaultEngine.chat.sendMessage(channel, from, content, to),
+      sendMessage: (channel, from, content, to) => defaultChatEngine.sendMessage(channel, from, content, to),
       sendChallengeMessage: (challengeId, from, content, to) =>
-        defaultEngine.chat.sendChallengeMessage(challengeId, from, content, to),
+        defaultChatEngine.sendChallengeMessage(challengeId, from, content, to),
     };
     this.state = {
       gameStarted: false,
@@ -77,27 +77,31 @@ export abstract class BaseChallenge<TGameState = {}> implements ChallengeOperato
   // --- Messaging helpers ---
 
   protected send(content: string, to?: string): void {
-    this.enqueueMessage(this.messaging.sendChallengeMessage(this.challengeId, "operator", content, to));
-  }
-
-  protected broadcast(content: string): void {
-    this.enqueueMessage(this.messaging.sendChallengeMessage(this.challengeId, "operator", content));
-  }
-
-  protected sendPublic(content: string): void {
-    this.enqueueMessage(this.messaging.sendMessage(this.challengeId, "operator", content));
-  }
-
-  async flushMessaging(): Promise<void> {
-    await Promise.all(Array.from(this.pendingMessages));
-  }
-
-  private enqueueMessage(send: Promise<unknown>): void {
-    const pending = send;
+    const pending = this.messaging.sendChallengeMessage(this.challengeId, "operator", content, to);
     this.pendingMessages.add(pending);
     void pending.finally(() => {
       this.pendingMessages.delete(pending);
     });
+  }
+
+  protected broadcast(content: string): void {
+    const pending = this.messaging.sendChallengeMessage(this.challengeId, "operator", content);
+    this.pendingMessages.add(pending);
+    void pending.finally(() => {
+      this.pendingMessages.delete(pending);
+    });
+  }
+
+  protected sendPublic(content: string): void {
+    const pending = this.messaging.sendMessage(this.challengeId, "operator", content);
+    this.pendingMessages.add(pending);
+    void pending.finally(() => {
+      this.pendingMessages.delete(pending);
+    });
+  }
+
+  async flushMessaging(): Promise<void> {
+    await Promise.all(Array.from(this.pendingMessages));
   }
 
   // --- Game lifecycle ---
