@@ -14,8 +14,10 @@ const chatSend = (channel: string, from: string, content: string, to?: string | 
   defaultEngine.chatSend(channel, from, content, to);
 
 // Storage internals — only for state inspection and clearing
-import { challenges } from "../storage/challenges";
-import { messagesByChannel, indexCounters, channelSubscribers } from "../storage/chat";
+const challenges = defaultEngine.challenges;
+const messagesByChannel = defaultEngine.messagesByChannel;
+const indexCounters = defaultEngine.indexCounters;
+const channelSubscribers = defaultEngine.channelSubscribers;
 
 // --- Helpers ---
 

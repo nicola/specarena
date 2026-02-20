@@ -1,5 +1,5 @@
 import { ChallengeMessaging, ChallengeOperator, ChallengeOperatorState, ChatMessage, Score } from "../types";
-import { sendChallengeMessage, sendMessage } from "../storage/chat";
+import { defaultEngine } from "../engine";
 
 export abstract class BaseChallenge<TGameState = {}> implements ChallengeOperator {
   protected challengeId: string;
@@ -13,7 +13,11 @@ export abstract class BaseChallenge<TGameState = {}> implements ChallengeOperato
   constructor(challengeId: string, playerCount: number, gameState: TGameState, messaging?: ChallengeMessaging) {
     this.challengeId = challengeId;
     this.playerCount = playerCount;
-    this.messaging = messaging ?? { sendMessage, sendChallengeMessage };
+    this.messaging = messaging ?? {
+      sendMessage: (channel, from, content, to) => defaultEngine.sendMessage(channel, from, content, to),
+      sendChallengeMessage: (challengeId, from, content, to) =>
+        defaultEngine.sendChallengeMessage(challengeId, from, content, to),
+    };
     this.state = {
       gameStarted: false,
       gameEnded: false,

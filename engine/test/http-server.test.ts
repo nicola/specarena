@@ -4,8 +4,12 @@ import { serve } from "@hono/node-server";
 import type { ServerType } from "@hono/node-server";
 
 import app from "../server/index";
-import { challenges } from "../storage/challenges";
-import { messagesByChannel, indexCounters, channelSubscribers } from "../storage/chat";
+import { defaultEngine } from "../engine";
+
+const challenges = defaultEngine.challenges;
+const messagesByChannel = defaultEngine.messagesByChannel;
+const indexCounters = defaultEngine.indexCounters;
+const channelSubscribers = defaultEngine.channelSubscribers;
 
 // Test against a real HTTP server to catch routing issues that app.request() misses.
 // app.request() dispatches in-process and may not match wildcard routes the same way

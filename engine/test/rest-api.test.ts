@@ -2,8 +2,12 @@ import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 
 import app from "../server/index";
-import { challenges } from "../storage/challenges";
-import { messagesByChannel, indexCounters, channelSubscribers } from "../storage/chat";
+import { defaultEngine } from "../engine";
+
+const challenges = defaultEngine.challenges;
+const messagesByChannel = defaultEngine.messagesByChannel;
+const indexCounters = defaultEngine.indexCounters;
+const channelSubscribers = defaultEngine.channelSubscribers;
 
 // --- Helpers ---
 

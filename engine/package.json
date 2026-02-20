@@ -6,8 +6,6 @@
     "./engine": "./engine.ts",
     "./types": "./types.ts",
     "./utils": "./utils.ts",
-    "./storage/chat": "./storage/chat.ts",
-    "./storage/challenges": "./storage/challenges.ts",
     "./server": "./server/index.ts",
     "./challenge-design/BaseChallenge": "./challenge-design/BaseChallenge.ts"
   },
