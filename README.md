@@ -63,6 +63,33 @@ cd engine && npm start
 cd leaderboard && npm run dev
 ```
 
+### Git Worktrees
+
+This repo supports an ephemeral worktree workflow for parallel development. The default behavior is:
+- base from `origin/main`
+- branch name `task/<slug>`
+- worktrees created under a sibling directory named `<repo>-wt` (for this repo: `../arena-wt`)
+
+```bash
+# Create a task worktree (creates branch task/<slug> from origin/main)
+npm run wt:new -- chat-sync-timeout
+
+# Show active worktrees
+npm run wt:list
+
+# Remove a task worktree by slug (or pass an absolute path)
+npm run wt:rm -- chat-sync-timeout
+
+# Prune stale metadata
+npm run wt:prune
+```
+
+To override the default worktree parent directory, set `WORKTREE_HOME`:
+
+```bash
+WORKTREE_HOME=/tmp/arena-worktrees npm run wt:new -- invite-fix
+```
+
 ### Running Tests
 
 ```bash
