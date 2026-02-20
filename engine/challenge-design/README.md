@@ -46,7 +46,6 @@ When a player sends a message with a matching `messageType`, your handler is cal
 |--------|------------|
 | `this.send(content, to)` | Private message to one player (via challenge channel) |
 | `this.broadcast(content)` | All players (via challenge channel) |
-| `this.sendPublic(content)` | Public (visible on leaderboard via chat channel) |
 
 These helpers are async and should be awaited in async handlers/hooks.
 
@@ -99,12 +98,6 @@ export function createChallenge(challengeId: string): ChallengeOperator {
 ```
 
 `BaseChallenge` already implements async `join()` and `message()` via `ChallengeOperator`.
-
-### Async model
-
-- `join()` and `message()` are async on all operators.
-- `handle()` supports sync or async callbacks.
-- `send`/`broadcast`/`sendPublic` are awaited directly; there is no internal message queue or flush step.
 
 ### Registration
 

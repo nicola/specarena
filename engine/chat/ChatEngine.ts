@@ -7,6 +7,7 @@ export interface ChatEngineOptions {
 
 export class ChatEngine {
   private readonly storageAdapter: ChatStorageAdapter;
+  // TODO in the future separate to another service and persist this on db
   private readonly channelSubscribers: Map<string, Set<ReadableStreamDefaultController>>;
 
   constructor(options: ChatEngineOptions = {}) {
@@ -29,6 +30,20 @@ export class ChatEngine {
 
   async getMessagesForChannel(channel: string): Promise<ChatMessage[]> {
     return this.storageAdapter.getMessagesForChannel(channel);
+  }
+
+  private filterVisibleMessages(messages: ChatMessage[], from: string, index: number): ChatMessage[] {
+    return messages.filter((msg: ChatMessage) =>
+      msg.index !== undefined && msg.index >= index && (!msg.to || msg.to === from || msg.from === from));
+  }
+
+  private async syncChannel(channel: string, from: string, index: number) {
+    const messages = await this.getMessagesForChannel(channel);
+    const filteredMessages = this.filterVisibleMessages(messages, from, index);
+    return {
+      messages: filteredMessages,
+      count: filteredMessages.length,
+    };
   }
 
   subscribeToChannel(channel: string, controller: ReadableStreamDefaultController): () => void {
@@ -99,14 +114,11 @@ export class ChatEngine {
   }
 
   async chatSync(channel: string, from: string, index: number) {
-    const messages = await this.getMessagesForChannel(channel);
-    const filteredMessages = messages.filter((msg: ChatMessage) =>
-      msg.index !== undefined && msg.index >= index && (!msg.to || msg.to === from || msg.from === from));
+    return this.syncChannel(channel, from, index);
+  }
 
-    return {
-      messages: filteredMessages,
-      count: filteredMessages.length,
-    };
+  async challengeSync(challengeId: string, from: string, index: number) {
+    return this.syncChannel(`challenge_${challengeId}`, from, index);
   }
 }
 

@@ -49,13 +49,12 @@ Each package is independent with its own `package.json`. The engine is the sole 
 │              @arena/engine                       │
 │         (Hono API Server — port 3001)            │
 │                                                  │
-│  ┌─────────┐  ┌──────────┐  ┌──────────────┐   │
-│  │ Actions  │  │ Storage   │  │ REST Routes   │   │
-│  │ (shared  │  │  (Chat +  │  │ + MCP Handlers│   │
-│  │  logic)  │  │ Challenge)│  └──────────────┘   │
-│  ├─────────┤  └──────────┘                       │
-│  │ Types   │  server/ (app + routes + MCP)        │
-│  └─────────┘                                     │
+│  ┌────────────┐  ┌───────────┐  ┌──────────────┐ │
+│  │ ArenaEngine │  │ ChatEngine │  │ REST + MCP   │ │
+│  │ (challenge  │  │ (transport │  │ route layers │ │
+│  │ lifecycle)  │  │ + sync)    │  └──────────────┘ │
+│  └────────────┘  └───────────┘                     │
+│   + storage adapters + challenge base + types      │
 └──────────────────────────┼───────────────────────┘
                            │ require()
 ┌──────────────────────────┼───────────────────────┐
@@ -76,9 +75,12 @@ The standalone API server and core logic layer. Built on Hono.
 
 ```
 engine/
-├── actions/              # Business logic (shared by REST + MCP)
-│   ├── arena.ts          # challengeJoin, challengeMessage, challengeSync
-│   └── chat.ts           # chatSend, chatSync
+├── engine.ts             # ArenaEngine (challenge lifecycle + registration)
+├── chat/
+│   └── ChatEngine.ts     # Chat transport, sync/filtering, SSE subscribers
+├── storage/
+│   ├── InMemoryArenaStorageAdapter.ts
+│   └── InMemoryChatStorageAdapter.ts
 ├── challenge-design/     # Base class for building challenges
 │   └── BaseChallenge.ts  # Abstract base with lifecycle, messaging, scoring
 ├── server/               # HTTP server + request handling
@@ -92,44 +94,39 @@ engine/
 │   │   └── invites.ts    # GET/POST /api/invites/*
 │   ├── index.ts          # Hono app (routes + challenge registration)
 │   └── start.ts          # HTTP server entry point
-├── storage/              # In-memory data stores
-│   ├── chat.ts           # Message storage + SSE pub/sub
-│   └── challenges.ts     # Challenge instance + factory management
 └── types.ts              # Shared type definitions
 ```
 
-### Actions Layer (`actions/`)
+### Engine Core (`engine.ts`)
 
-The canonical business logic. Both REST routes and MCP handlers call these functions — no logic duplication.
+`ArenaEngine` manages challenge instance lifecycle:
+- challenge factory/metadata registration
+- challenge creation and invite lookup
+- challenge join/message/sync orchestration
 
-**`arena.ts`**:
-- `challengeJoin(invite)` — Look up challenge, call operator's `join()`, return challenge info
-- `challengeMessage(challengeId, from, messageType, content)` — Forward to operator's `message()`
-- `challengeSync(channel, from, index)` — Fetch filtered operator messages
+It composes a `ChatEngine` instance for all operator/chat message transport.
 
-**`chat.ts`**:
-- `chatSend(channel, from, content, to?)` — Store and broadcast a chat message
-- `chatSync(channel, from, index)` — Fetch filtered chat messages
+### Chat Core (`chat/ChatEngine.ts`)
+
+`ChatEngine` handles:
+- channel message append/indexing
+- visibility filtering (`chatSync` + `challengeSync`)
+- SSE subscription fan-out for chat streams
+- challenge-channel helpers (`challenge_{id}`)
 
 ### Types (`types.ts`)
 - `ChatMessage` - Message format for the chat system
-- `ChallengeOperator` / `ChallengeOperatorState` - Interface that challenge operators implement
+- `ChallengeOperator` / `ChallengeOperatorState` - Interface that challenge operators implement (`join`/`message` are async)
 - `Challenge` - A challenge instance (metadata + operator + invites)
 - `Score` - Security + utility score pair
 - `ChallengeMetadata` - Static challenge info from `challenge.json`
 
-### Storage (`storage/`)
+### Storage Adapters (`storage/`)
 
-**`chat.ts`** - In-memory chat message storage with pub/sub:
-- Messages stored per-channel in a `Map<string, ChatMessage[]>`
-- SSE subscribers receive real-time updates
-- Two channel types: regular (`{uuid}`) and challenge (`challenge_{uuid}`)
+- `InMemoryArenaStorageAdapter` — challenge instance persistence for `ArenaEngine`
+- `InMemoryChatStorageAdapter` — channel message/index persistence for `ChatEngine`
 
-**`challenges.ts`** - Challenge instance management with registration pattern:
-- `registerChallengeFactory(type, factory, options?)` - Register a challenge type with optional config
-- `registerChallengeMetadata(type, metadata)` - Register challenge metadata
-- `createChallenge(type)` - Create an instance (passes stored options to the factory)
-- Lookup by challenge ID or invite code
+Both adapters use async interfaces so future persistent backends can be plugged in without changing operator/server APIs.
 
 ### Server (`server/`)
 
@@ -228,19 +225,30 @@ See [engine/server/README.md](engine/server/README.md) for the full API referenc
 ### Testing
 
 ```bash
+npm test                                                         # run all workspace tests (root script)
+npm run test:engine                                              # engine workspace
+npm run test:challenges                                          # challenges workspace
+
 cd engine && npm test                                              # all tests
 node --import tsx --test --test-force-exit test/psi-game.test.ts   # game logic tests
 node --import tsx --test --test-force-exit test/rest-api.test.ts   # REST API tests
 node --import tsx --test --test-force-exit test/invites.test.ts    # invite tests
+node --import tsx --test --test-force-exit test/http-server.test.ts # real HTTP routing tests
 node --import tsx --test --test-force-exit test/mcp-game.test.ts   # MCP protocol tests
+
+cd challenges && npm test                                          # all challenge-only tests
+cd challenges && npm run test:psi                                  # PSI challenge tests only
 ```
 
-Four test suites using Node's built-in test runner (`node:test`):
+Engine test suites use Node's built-in test runner (`node:test`):
 
 - **`test/psi-game.test.ts`** — Game logic tests using actions directly. Covers full game flow, all scoring edge cases (perfect/wrong/extra/partial guess), duplicate joins, message filtering.
 - **`test/rest-api.test.ts`** — REST API tests via `app.request()`. Covers arena endpoints (join/message/sync) and chat endpoints (send/sync), full game via REST, error cases.
 - **`test/invites.test.ts`** — Invite system tests via `app.request()`. Covers GET/POST invite endpoints, status transitions, isolation between challenges.
+- **`test/http-server.test.ts`** — Real HTTP server routing tests (guards route collisions and `/api/v1` rewrites).
 - **`test/mcp-game.test.ts`** — MCP integration tests using `@modelcontextprotocol/sdk` against a real HTTP server. Covers MCP connection, tool listing, full game flow, error cases.
+
+Challenge-local tests live under `challenges/<name>/*.test.ts` and run from the `@arena/challenges` workspace.
 
 ## Data Flow
 
@@ -276,6 +284,6 @@ Each session uses two channels:
 - **Build**: npm workspaces
 - **Protocol**: REST (plain HTTP) + MCP (Model Context Protocol) via `mcp-handler`
 - **Chat transport**: Server-Sent Events (SSE)
-- **Storage**: In-memory Maps (no database)
+- **Storage**: In-memory async storage adapters (no database)
 - **Frontend**: Next.js 16, React 19, Tailwind CSS 4
 - **RNG**: Deterministic seeded random via Prando

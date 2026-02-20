@@ -90,7 +90,7 @@ class PsiChallenge extends BaseChallenge<PsiGameState> {
     }
     this.state.scores[sender].utility = utility(intersection_found, wrong_guess, extra_guess);
 
-    await this.sendPublic(`Player ${message.from} sent a guess`);
+    await this.broadcast(`Player ${message.from} sent a guess`);
     await this.send(`Player ${otherPlayer + 1} outcome:
 - Intersection Found: ${intersection_found}
 - Wrong Guess: ${wrong_guess}

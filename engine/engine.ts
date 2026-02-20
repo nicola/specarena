@@ -69,10 +69,7 @@ export class ArenaEngine {
 
     const options = this.challengeOptions.get(challengeType);
     const instance = factory(id, options, {
-      messaging: {
-        sendMessage: this.chat.sendMessage.bind(this.chat),
-        sendChallengeMessage: this.chat.sendChallengeMessage.bind(this.chat),
-      },
+      messaging: this.chat,
     });
 
     const challenge: Challenge = {
@@ -191,14 +188,7 @@ export class ArenaEngine {
   }
 
   async challengeSync(channel: string, from: string, index: number) {
-    const messages = await this.chat.getMessagesForChallengeChannel(channel);
-    const filteredMessages = messages.filter((msg) =>
-      msg.index !== undefined && msg.index >= index && (!msg.to || msg.to === from || msg.from === from));
-
-    return {
-      messages: filteredMessages,
-      count: filteredMessages.length,
-    };
+    return this.chat.challengeSync(channel, from, index);
   }
 }
 
