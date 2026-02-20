@@ -21,9 +21,8 @@ export interface ChallengeOperatorState {
 }
 
 export interface ChallengeOperator {
-  join(userId: string): void;
-  message(message: ChatMessage): void;
-  flushMessaging?(): Promise<void>;
+  join(userId: string): Promise<void>;
+  message(message: ChatMessage): Promise<void>;
   state: ChallengeOperatorState;
 }
 

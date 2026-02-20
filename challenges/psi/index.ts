@@ -55,12 +55,12 @@ class PsiChallenge extends BaseChallenge<PsiGameState> {
     this.handle("guess", (msg, playerIndex) => this.onGuess(msg, playerIndex));
   }
 
-  protected onPlayerJoin(playerId: string, playerIndex: number) {
+  protected async onPlayerJoin(playerId: string, playerIndex: number): Promise<void> {
     const text = `Your private set is: {${[...this.gameState.userSets[playerIndex]].sort().join(", ")}}.`;
-    this.send(text, playerId);
+    await this.send(text, playerId);
   }
 
-  private onGuess(message: ChatMessage, sender: number) {
+  private async onGuess(message: ChatMessage, sender: number): Promise<void> {
     const guess = this._extractNumbers(message.content);
     const otherPlayer = 1 - sender;
 
@@ -90,8 +90,8 @@ class PsiChallenge extends BaseChallenge<PsiGameState> {
     }
     this.state.scores[sender].utility = utility(intersection_found, wrong_guess, extra_guess);
 
-    this.sendPublic(`Player ${message.from} sent a guess`);
-    this.send(`Player ${otherPlayer + 1} outcome:
+    await this.sendPublic(`Player ${message.from} sent a guess`);
+    await this.send(`Player ${otherPlayer + 1} outcome:
 - Intersection Found: ${intersection_found}
 - Wrong Guess: ${wrong_guess}
 - Extra Guess: ${extra_guess}
@@ -101,7 +101,7 @@ class PsiChallenge extends BaseChallenge<PsiGameState> {
     this.gameState.guesses[sender] = guess;
 
     if (this.gameState.guesses.every(guess => guess.size > 0)) {
-      this.endGame();
+      await this.endGame();
     }
   }
 

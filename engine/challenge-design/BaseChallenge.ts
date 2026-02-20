@@ -7,9 +7,7 @@ export abstract class BaseChallenge<TGameState = {}> implements ChallengeOperato
   protected messaging: ChallengeMessaging;
   state: ChallengeOperatorState;
   gameState: TGameState;
-  private pendingMessages = new Set<Promise<unknown>>();
-
-  private handlers = new Map<string, (msg: ChatMessage, playerIndex: number) => void>();
+  private handlers = new Map<string, (msg: ChatMessage, playerIndex: number) => void | Promise<void>>();
 
   constructor(challengeId: string, playerCount: number, gameState: TGameState, messaging?: ChallengeMessaging) {
     this.challengeId = challengeId;
@@ -30,23 +28,23 @@ export abstract class BaseChallenge<TGameState = {}> implements ChallengeOperato
 
   // --- Public interface (ChallengeOperator) ---
 
-  join(userId: string): void {
+  async join(userId: string): Promise<void> {
     if (this.state.players.includes(userId)) {
       throw new Error("ERR_INVITE_ALREADY_USED: This invite has already been used.");
     }
 
     const playerIndex = this.state.players.push(userId) - 1;
-    this.onPlayerJoin(userId, playerIndex);
+    await this.onPlayerJoin(userId, playerIndex);
 
     if (this.state.players.length === this.playerCount) {
       this.state.gameStarted = true;
-      this.onGameStart();
+      await this.onGameStart();
     }
   }
 
-  message(message: ChatMessage): void {
+  async message(message: ChatMessage): Promise<void> {
     if (this.state.gameEnded || !this.state.gameStarted) {
-      this.send("ERR_GAME_NOT_RUNNING: Game not running.", message.from);
+      await this.send("ERR_GAME_NOT_RUNNING: Game not running.", message.from);
       return;
     }
 
@@ -60,57 +58,41 @@ export abstract class BaseChallenge<TGameState = {}> implements ChallengeOperato
       throw new Error(`Unknown challenge method: ${message.type}`);
     }
 
-    handler(message, playerIndex);
+    await handler(message, playerIndex);
   }
 
   // --- Lifecycle hooks for subclasses ---
 
-  protected onPlayerJoin(_playerId: string, _playerIndex: number): void {}
-  protected onGameStart(): void {}
+  protected onPlayerJoin(_playerId: string, _playerIndex: number): void | Promise<void> {}
+  protected onGameStart(): void | Promise<void> {}
 
   // --- Registration ---
 
-  protected handle(type: string, handler: (msg: ChatMessage, playerIndex: number) => void): void {
+  protected handle(type: string, handler: (msg: ChatMessage, playerIndex: number) => void | Promise<void>): void {
     this.handlers.set(type, handler);
   }
 
   // --- Messaging helpers ---
 
-  protected send(content: string, to?: string): void {
-    const pending = this.messaging.sendChallengeMessage(this.challengeId, "operator", content, to);
-    this.pendingMessages.add(pending);
-    void pending.finally(() => {
-      this.pendingMessages.delete(pending);
-    });
+  protected async send(content: string, to?: string): Promise<void> {
+    await this.messaging.sendChallengeMessage(this.challengeId, "operator", content, to);
   }
 
-  protected broadcast(content: string): void {
-    const pending = this.messaging.sendChallengeMessage(this.challengeId, "operator", content);
-    this.pendingMessages.add(pending);
-    void pending.finally(() => {
-      this.pendingMessages.delete(pending);
-    });
+  protected async broadcast(content: string): Promise<void> {
+    await this.messaging.sendChallengeMessage(this.challengeId, "operator", content);
   }
 
-  protected sendPublic(content: string): void {
-    const pending = this.messaging.sendMessage(this.challengeId, "operator", content);
-    this.pendingMessages.add(pending);
-    void pending.finally(() => {
-      this.pendingMessages.delete(pending);
-    });
-  }
-
-  async flushMessaging(): Promise<void> {
-    await Promise.all(Array.from(this.pendingMessages));
+  protected async sendPublic(content: string): Promise<void> {
+    await this.messaging.sendMessage(this.challengeId, "operator", content);
   }
 
   // --- Game lifecycle ---
 
-  protected endGame(): void {
+  protected async endGame(): Promise<void> {
     this.state.gameEnded = true;
     const lines = this.state.scores.map(
       (s, i) => `- Player ${i + 1}: ${JSON.stringify(s)}`
     );
-    this.broadcast(`Game ended.\n\nScores are:\n${lines.join("\n")}`);
+    await this.broadcast(`Game ended.\n\nScores are:\n${lines.join("\n")}`);
   }
 }

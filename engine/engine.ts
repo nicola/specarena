@@ -140,12 +140,6 @@ export class ArenaEngine {
       .sort((a, b) => b.createdAt - a.createdAt);
   }
 
-  private async flushOperatorMessages(challenge: Challenge): Promise<void> {
-    if (challenge.instance.flushMessaging) {
-      await challenge.instance.flushMessaging();
-    }
-  }
-
   async challengeJoin(invite: string) {
     const result = await this.getChallengeFromInvite(invite);
 
@@ -157,12 +151,11 @@ export class ArenaEngine {
 
     let joinError: string | undefined;
     try {
-      challenge.instance.join(invite);
+      await challenge.instance.join(invite);
     } catch (error) {
       joinError = error instanceof Error ? error.message : String(error);
     }
 
-    await this.flushOperatorMessages(challenge);
     if (joinError) {
       return { error: joinError };
     }
@@ -184,17 +177,15 @@ export class ArenaEngine {
     }
 
     try {
-      challenge.instance.message({
+      await challenge.instance.message({
         channel: challengeId,
         from,
         type: messageType,
         content,
         timestamp: Date.now(),
       });
-      await this.flushOperatorMessages(challenge);
       return { ok: "Message sent" };
     } catch (error) {
-      await this.flushOperatorMessages(challenge);
       return { error: error instanceof Error ? error.message : String(error) };
     }
   }
