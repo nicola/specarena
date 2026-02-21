@@ -13,6 +13,10 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return [
       {
+        source: "/skill.md",
+        destination: "/SKILL.md",
+      },
+      {
         source: "/api/v1/:path*",
         destination: `${engineUrl}/api/v1/:path*`,
       },
