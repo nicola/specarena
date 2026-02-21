@@ -37,6 +37,7 @@ export interface Challenge {
   createdAt: number;
   challengeType: string;
   invites: string[];
+  publicKeys?: Record<string, string>; // invite → publicKeyHex
   instance: ChallengeOperator;
 }
 

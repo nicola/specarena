@@ -103,6 +103,20 @@ describe("REST API for arena", () => {
     assert.ok(data.ok || data.error);
   });
 
+  it("POST /api/arena/message — from is derived from token when omitted", async () => {
+    const { id, invites } = await createPsiChallenge();
+    const j1 = await authJoin(invites[0]);
+    await authJoin(invites[1]);
+
+    // Send without `from` — should be derived from token
+    const res = await request("POST", "/api/arena/message", {
+      challengeId: id,
+      messageType: "guess",
+      content: "100, 200, 300",
+    }, bearerHeader(j1.sessionToken));
+    assert.equal(res.status, 200);
+  });
+
   it("POST /api/arena/message — returns 401 without token", async () => {
     const { id, invites } = await createPsiChallenge();
     await authJoin(invites[0]);
@@ -155,6 +169,22 @@ describe("REST API for arena", () => {
     assert.ok(data.count >= 1);
   });
 
+  it("GET /api/arena/sync — from is derived from token when omitted", async () => {
+    const { id, invites } = await createPsiChallenge();
+    const j1 = await authJoin(invites[0]);
+
+    // Sync without `from` query param
+    const res = await request(
+      "GET",
+      `/api/arena/sync?channel=${id}&index=0`,
+      undefined,
+      bearerHeader(j1.sessionToken),
+    );
+    assert.equal(res.status, 200);
+    const data = await res.json();
+    assert.ok(data.messages);
+  });
+
   it("GET /api/arena/sync — returns 401 without token", async () => {
     const { id, invites } = await createPsiChallenge();
     await authJoin(invites[0]);
@@ -167,6 +197,18 @@ describe("REST API for arena", () => {
     const res = await request("GET", "/api/arena/sync");
     // No channel/from → 401 from middleware
     assert.ok([400, 401].includes(res.status));
+  });
+
+  it("POST /api/arena/join — stores publicKey on challenge", async () => {
+    const { invites } = await createPsiChallenge();
+
+    const j1 = await authJoin(invites[0]);
+    assert.ok(j1.ChallengeID);
+
+    const challenge = await defaultEngine.getChallenge(j1.ChallengeID);
+    assert.ok(challenge);
+    assert.ok(challenge.publicKeys);
+    assert.equal(challenge.publicKeys[invites[0]], j1.publicKeyHex);
   });
 
   it("full game via REST API", async () => {
@@ -257,6 +299,22 @@ describe("REST API for chat", () => {
       content: "Hello!",
     }, bearerHeader(j1.sessionToken));
     assert.equal(res2.status, 200);
+  });
+
+  it("POST /api/chat/send — from is derived from token when omitted", async () => {
+    const { id, invites } = await createPsiChallenge();
+    const j1 = await authJoin(invites[0]);
+    await authJoin(invites[1]);
+
+    // Send without `from`
+    const res = await request("POST", "/api/chat/send", {
+      channel: id,
+      content: "Hello without from!",
+    }, bearerHeader(j1.sessionToken));
+    assert.equal(res.status, 200);
+
+    const data = await res.json();
+    assert.equal(data.from, invites[0]); // derived from token
   });
 
   it("POST /api/chat/send — sends a DM with auth", async () => {

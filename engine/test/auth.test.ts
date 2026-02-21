@@ -201,29 +201,6 @@ describe("AuthEngine", () => {
     assert.notEqual(auth.resolveSession(r1.sessionToken, "c1"), "inv2");
   });
 
-  it("stores and retrieves public keys", () => {
-    const { publicKeyHex, privateKey } = generateTestKeypair();
-    const invite = "inv_test";
-    const signature = signJoin(privateKey, invite);
-
-    auth.authenticateJoin("challenge1", invite, 0, publicKeyHex, signature);
-
-    assert.equal(auth.getPublicKey("challenge1", invite), publicKeyHex);
-    assert.equal(auth.getPublicKey("challenge1", "inv_other"), undefined);
-  });
-
-  it("getPublicKeys returns map for challenge", () => {
-    const kp1 = generateTestKeypair();
-    const kp2 = generateTestKeypair();
-
-    auth.authenticateJoin("c1", "inv1", 0, kp1.publicKeyHex, signJoin(kp1.privateKey, "inv1"));
-    auth.authenticateJoin("c1", "inv2", 1, kp2.publicKeyHex, signJoin(kp2.privateKey, "inv2"));
-
-    const keys = auth.getPublicKeys("c1");
-    assert.ok(keys);
-    assert.equal(keys.size, 2);
-  });
-
   it("verifyChatSignature works", () => {
     const { publicKeyHex, privateKey } = generateTestKeypair();
     const channel = "invites";
@@ -245,11 +222,9 @@ describe("AuthEngine", () => {
     const { publicKeyHex, privateKey } = generateTestKeypair();
     const r = auth.authenticateJoin("c1", "inv1", 0, publicKeyHex, signJoin(privateKey, "inv1"));
     assert.ok("sessionToken" in r);
-    assert.ok(auth.getPublicKey("c1", "inv1"));
     assert.ok(auth.resolveSession(r.sessionToken, "c1"));
 
     auth.clearRuntimeState();
-    assert.equal(auth.getPublicKey("c1", "inv1"), undefined);
     assert.equal(auth.resolveSession(r.sessionToken, "c1"), null);
   });
 });

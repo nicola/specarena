@@ -153,11 +153,15 @@ export class ArenaEngine {
     // Authenticate if credentials provided
     let sessionToken: string | undefined;
     if (publicKey && signature) {
-      const authResult = this.auth.authenticateJoin(challenge.id, invite, publicKey, signature);
+      const playerIndex = challenge.invites.indexOf(invite);
+      const authResult = this.auth.authenticateJoin(challenge.id, invite, playerIndex, publicKey, signature);
       if ("error" in authResult) {
         return { error: authResult.error };
       }
       sessionToken = authResult.sessionToken;
+      if (!challenge.publicKeys) challenge.publicKeys = {};
+      challenge.publicKeys[invite] = publicKey;
+      await this.storageAdapter.setChallenge(challenge);
     }
 
     let joinError: string | undefined;
