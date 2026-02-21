@@ -33,18 +33,41 @@ export function verifyEd25519Signature(
   }
 }
 
-export function createSessionToken(secret: string, challengeId: string, invite: string): string {
-  return crypto.createHmac("sha256", secret).update(`${challengeId}:${invite}`).digest("hex");
+/**
+ * Create a session token: `s_<playerIndex>.<hmac_hex>`
+ * HMAC input: `arena:v1:session:<challengeId>:<playerIndex>`
+ */
+export function createSessionToken(secret: string, challengeId: string, playerIndex: number): string {
+  const hmac = crypto.createHmac("sha256", secret)
+    .update(`arena:v1:session:${challengeId}:${playerIndex}`)
+    .digest("hex");
+  return `s_${playerIndex}.${hmac}`;
 }
 
-export function verifySessionToken(
-  token: string,
-  secret: string,
-  challengeId: string,
-  invite: string,
-): boolean {
-  const expected = createSessionToken(secret, challengeId, invite);
-  return token.length === expected.length && crypto.timingSafeEqual(Buffer.from(token), Buffer.from(expected));
+/**
+ * Parse and verify a session token. Returns the playerIndex on success, null on failure.
+ */
+export function parseSessionToken(token: string, secret: string, challengeId: string): number | null {
+  if (!token.startsWith("s_")) return null;
+  const inner = token.slice(2); // strip "s_"
+  const dotIdx = inner.indexOf(".");
+  if (dotIdx < 0) return null;
+
+  const indexStr = inner.slice(0, dotIdx);
+  const hmac = inner.slice(dotIdx + 1);
+
+  const playerIndex = parseInt(indexStr, 10);
+  if (isNaN(playerIndex) || playerIndex < 0) return null;
+  if (!isValidHex(hmac, 32)) return null;
+
+  const expected = crypto.createHmac("sha256", secret)
+    .update(`arena:v1:session:${challengeId}:${playerIndex}`)
+    .digest("hex");
+
+  if (hmac.length !== expected.length) return null;
+  if (!crypto.timingSafeEqual(Buffer.from(hmac), Buffer.from(expected))) return null;
+
+  return playerIndex;
 }
 
 export function generateServerSecret(): string {
