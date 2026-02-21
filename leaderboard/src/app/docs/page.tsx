@@ -1,5 +1,6 @@
 import { Metadata } from "next";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { readFile } from "fs/promises";
 import { join } from "path";
 
@@ -19,6 +20,7 @@ export default async function DocsPage() {
     <section className="max-w-4xl mx-auto px-6 py-16">
         <div className="prose prose-zinc max-w-none">
           <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
             components={{
               h1: ({ children }) => (
                 <h1 className="text-3xl font-semibold text-zinc-900 mb-4" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
