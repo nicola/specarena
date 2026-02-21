@@ -1,8 +1,10 @@
 import {
+  createHmac,
   createHash,
   createPublicKey,
   randomBytes,
   randomUUID,
+  timingSafeEqual,
   verify as verifySignature,
 } from "node:crypto";
 import { decodeBase58 } from "./base58";
@@ -70,11 +72,6 @@ export interface SessionClaims {
   jti: string;
 }
 
-interface SessionRecord {
-  token: string;
-  claims: SessionClaims;
-}
-
 export interface IssueSessionInput {
   did: string;
   invite: string;
@@ -96,6 +93,7 @@ export interface AuthManagerOptions {
   allowedClockSkewMs?: number;
   domain?: string;
   requireJoinProof?: boolean;
+  sessionHmacKey?: string;
 }
 
 function bufferFromBase64(input: string): Buffer {
@@ -105,6 +103,39 @@ function bufferFromBase64(input: string): Buffer {
   } catch {
     return Buffer.from(input, "base64");
   }
+}
+
+interface SessionTokenHeader {
+  alg: "HS256";
+  typ: "AST";
+}
+
+function encodeJsonBase64Url(value: unknown): string {
+  return Buffer.from(JSON.stringify(value), "utf-8").toString("base64url");
+}
+
+function decodeJsonBase64Url<T>(input: string): T {
+  const text = Buffer.from(input, "base64url").toString("utf-8");
+  return JSON.parse(text) as T;
+}
+
+function isValidSessionClaims(value: unknown): value is SessionClaims {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+  const v = value as Partial<SessionClaims>;
+  return (
+    typeof v.sub === "string"
+    && typeof v.invite === "string"
+    && typeof v.challengeId === "string"
+    && Array.isArray(v.scope)
+    && v.scope.every((s) => typeof s === "string")
+    && typeof v.iat === "number"
+    && Number.isFinite(v.iat)
+    && typeof v.exp === "number"
+    && Number.isFinite(v.exp)
+    && typeof v.jti === "string"
+  );
 }
 
 export function buildJoinProofPayload(input: {
@@ -155,9 +186,8 @@ export class AuthManager {
   private readonly allowedClockSkewMs: number;
   private readonly domain: string;
   private readonly requireJoinProof: boolean;
+  private readonly sessionHmacKey: Buffer;
   private readonly nonces: Map<string, NonceRecord>;
-  private readonly sessions: Map<string, SessionRecord>;
-  private readonly sessionsByChallenge: Map<string, Set<string>>;
 
   constructor(options: AuthManagerOptions = {}) {
     this.nonceTtlMs = options.nonceTtlMs ?? 60_000;
@@ -166,15 +196,20 @@ export class AuthManager {
     this.domain = options.domain ?? process.env.ARENA_AUTH_DOMAIN ?? "arena";
     this.requireJoinProof = options.requireJoinProof
       ?? (process.env.ARENA_REQUIRE_DID_PROOF === "true");
+    const configuredHmacKey = options.sessionHmacKey ?? process.env.ARENA_SESSION_HMAC_KEY;
+    if (configuredHmacKey) {
+      this.sessionHmacKey = Buffer.from(configuredHmacKey, "utf-8");
+    } else {
+      this.sessionHmacKey = randomBytes(32);
+      console.warn(
+        "[AuthManager] ARENA_SESSION_HMAC_KEY is not set. Using ephemeral signing key; session tokens become invalid after restart."
+      );
+    }
     this.nonces = new Map();
-    this.sessions = new Map();
-    this.sessionsByChallenge = new Map();
   }
 
   async clearRuntimeState(): Promise<void> {
     this.nonces.clear();
-    this.sessions.clear();
-    this.sessionsByChallenge.clear();
   }
 
   issueJoinNonce(invite: string): IssueJoinNonceResult {
@@ -338,9 +373,18 @@ export class AuthManager {
     return `did:arena:anon:${digest}`;
   }
 
+  private signTokenPayload(header: SessionTokenHeader, claims: SessionClaims): string {
+    const headerSegment = encodeJsonBase64Url(header);
+    const claimsSegment = encodeJsonBase64Url(claims);
+    const input = `${headerSegment}.${claimsSegment}`;
+    const signature = createHmac("sha256", this.sessionHmacKey)
+      .update(input, "utf-8")
+      .digest("base64url");
+    return `${input}.${signature}`;
+  }
+
   issueSession(input: IssueSessionInput): IssueSessionResult {
     const now = Date.now();
-    const token = `arena_sess_${randomBytes(24).toString("base64url")}`;
     const claims: SessionClaims = {
       sub: input.did,
       invite: input.invite,
@@ -350,13 +394,7 @@ export class AuthManager {
       exp: Math.floor((now + this.sessionTtlMs) / 1000),
       jti: randomUUID(),
     };
-
-    this.sessions.set(token, { token, claims });
-
-    if (!this.sessionsByChallenge.has(input.challengeId)) {
-      this.sessionsByChallenge.set(input.challengeId, new Set());
-    }
-    this.sessionsByChallenge.get(input.challengeId)!.add(token);
+    const token = this.signTokenPayload({ alg: "HS256", typ: "AST" }, claims);
 
     return {
       accessToken: token,
@@ -379,8 +417,55 @@ export class AuthManager {
   }
 
   verifySessionToken(token: string, requiredScope?: string): AuthResult<SessionClaims> {
-    const session = this.sessions.get(token);
-    if (!session) {
+    const parts = token.split(".");
+    if (parts.length !== 3) {
+      return {
+        success: false,
+        code: AUTH_CODES.tokenInvalid,
+        message: "Invalid session token",
+      };
+    }
+    const [headerSegment, claimsSegment, signatureSegment] = parts;
+
+    let providedSignature: Buffer;
+    try {
+      providedSignature = Buffer.from(signatureSegment, "base64url");
+    } catch {
+      return {
+        success: false,
+        code: AUTH_CODES.tokenInvalid,
+        message: "Invalid session token",
+      };
+    }
+
+    const signingInput = `${headerSegment}.${claimsSegment}`;
+    const expectedSignature = createHmac("sha256", this.sessionHmacKey)
+      .update(signingInput, "utf-8")
+      .digest();
+
+    if (providedSignature.length !== expectedSignature.length
+      || !timingSafeEqual(providedSignature, expectedSignature)) {
+      return {
+        success: false,
+        code: AUTH_CODES.tokenInvalid,
+        message: "Invalid session token",
+      };
+    }
+
+    let header: SessionTokenHeader;
+    let claims: SessionClaims;
+    try {
+      header = decodeJsonBase64Url<SessionTokenHeader>(headerSegment);
+      claims = decodeJsonBase64Url<SessionClaims>(claimsSegment);
+    } catch {
+      return {
+        success: false,
+        code: AUTH_CODES.tokenInvalid,
+        message: "Invalid session token",
+      };
+    }
+
+    if (header.alg !== "HS256" || header.typ !== "AST" || !isValidSessionClaims(claims)) {
       return {
         success: false,
         code: AUTH_CODES.tokenInvalid,
@@ -389,8 +474,7 @@ export class AuthManager {
     }
 
     const nowSeconds = Math.floor(Date.now() / 1000);
-    if (session.claims.exp <= nowSeconds) {
-      this.sessions.delete(token);
+    if (claims.exp <= nowSeconds) {
       return {
         success: false,
         code: AUTH_CODES.tokenExpired,
@@ -398,7 +482,7 @@ export class AuthManager {
       };
     }
 
-    if (requiredScope && !session.claims.scope.includes(requiredScope)) {
+    if (requiredScope && !claims.scope.includes(requiredScope)) {
       return {
         success: false,
         code: AUTH_CODES.tokenScopeMismatch,
@@ -406,18 +490,11 @@ export class AuthManager {
       };
     }
 
-    return { success: true, data: session.claims };
+    return { success: true, data: claims };
   }
 
-  revokeSessionsForChallenge(challengeId: string): void {
-    const tokens = this.sessionsByChallenge.get(challengeId);
-    if (!tokens) {
-      return;
-    }
-    for (const token of tokens) {
-      this.sessions.delete(token);
-    }
-    this.sessionsByChallenge.delete(challengeId);
+  revokeSessionsForChallenge(_challengeId: string): void {
+    // Stateless tokens cannot be revoked per-challenge without state.
   }
 
   buildAuthRequiredError(): AuthErrorResult {

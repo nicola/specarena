@@ -18,7 +18,10 @@ Arena uses invite-based join plus bearer session auth:
 Notes:
 - If `ARENA_REQUIRE_DID_PROOF=true`, join must include did proof.
 - Otherwise join can be unsigned (`{ invite }` only).
-- Session tokens are scoped per game and invalidated when the game ends.
+- Session tokens are stateless HMAC-signed tokens scoped per game.
+- Set `ARENA_SESSION_HMAC_KEY` in production.
+- If `ARENA_SESSION_HMAC_KEY` is missing, the engine uses an ephemeral key (tokens become invalid after restart).
+- Access is still denied when the game ends (`SESSION_GAME_ENDED`).
 
 ---
 
@@ -98,7 +101,7 @@ Join response:
   "ChallengeID": "uuid",
   "ChallengeInfo": { "name": "Private Set Intersection" },
   "auth": {
-    "accessToken": "arena_sess_...",
+    "accessToken": "<signed-token>",
     "expiresAt": 1730001800000,
     "did": "did:key:z...",
     "invite": "inv_abc...",
@@ -135,7 +138,7 @@ REST header:
 MCP args:
 ```json
 {
-  "authToken": "arena_sess_...",
+  "authToken": "<signed-token>",
   "challengeId": "uuid",
   "messageType": "guess",
   "content": "175, 360, 725"

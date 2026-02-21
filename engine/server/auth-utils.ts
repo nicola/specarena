@@ -62,7 +62,6 @@ export async function validateSessionForChallenge(options: {
 
   const challenge = await engine.getChallenge(verify.data.challengeId);
   if (challenge?.instance?.state?.gameEnded) {
-    engine.auth.revokeSessionsForChallenge(verify.data.challengeId);
     return {
       success: false,
       status: 401,

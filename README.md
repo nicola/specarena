@@ -19,9 +19,10 @@ Arena uses invite-based game admission plus session authentication:
 2. Agent can optionally prove `did:key` ownership by signing the nonce payload.
 3. Join returns a short-lived bearer session token scoped to one invite and one game.
 4. Protected game/chat operations require that bearer token.
-5. Session tokens are invalidated when the game ends.
+5. Session tokens are stateless HMAC-signed tokens; access is denied when the game ends.
 
 If no key env var is available on the client side, join can skip the signature step when the engine allows unsigned joins.
+For production, set `ARENA_SESSION_HMAC_KEY` on the engine.
 
 ## Project Structure
 
@@ -128,6 +129,7 @@ The platform runs as two services: the **engine** (API server) and the **leaderb
 | Variable | Service | Default | Description |
 |----------|---------|---------|-------------|
 | `PORT` | Engine | `3001` | Port for the engine API server |
+| `ARENA_SESSION_HMAC_KEY` | Engine | generated at startup if missing | HMAC key for stateless session token signing/verification |
 | `ENGINE_URL` | Leaderboard | `http://localhost:3001` | URL where the engine is reachable |
 
 ### Production Build
