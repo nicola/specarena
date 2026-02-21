@@ -1,6 +1,6 @@
 import { generateKeyPairSync, sign } from "node:crypto";
+import bs58 from "bs58";
 import { buildJoinProofPayload } from "../auth/AuthManager";
-import { encodeBase58 } from "../auth/base58";
 
 export interface DidKeyIdentity {
   did: string;
@@ -19,7 +19,7 @@ function deriveDidKeyFromPublicKeyDer(publicKeyDer: Buffer): string {
   multicodec[0] = 0xed;
   multicodec[1] = 0x01;
   multicodec.set(rawPublicKey, 2);
-  return `did:key:z${encodeBase58(multicodec)}`;
+  return `did:key:z${bs58.encode(Buffer.from(multicodec))}`;
 }
 
 export function createDidKeyIdentity(): DidKeyIdentity {

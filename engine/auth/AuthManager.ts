@@ -1,13 +1,6 @@
-import {
-  createHmac,
-  createHash,
-  createPublicKey,
-  randomBytes,
-  randomUUID,
-  timingSafeEqual,
-  verify as verifySignature,
-} from "node:crypto";
-import { decodeBase58 } from "./base58";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
+import bs58 from "bs58";
+import { JWTPayload, SignJWT, errors as joseErrors, jwtVerify } from "jose";
 
 const AUTH_CODES = {
   authRequired: "AUTH_REQUIRED",
@@ -105,37 +98,40 @@ function bufferFromBase64(input: string): Buffer {
   }
 }
 
-interface SessionTokenHeader {
-  alg: "HS256";
-  typ: "AST";
+function hmacKeyFromString(value: string): Uint8Array {
+  return new TextEncoder().encode(value);
 }
 
-function encodeJsonBase64Url(value: unknown): string {
-  return Buffer.from(JSON.stringify(value), "utf-8").toString("base64url");
+function isValidScope(scope: unknown): scope is string[] {
+  return Array.isArray(scope) && scope.every((item) => typeof item === "string");
 }
 
-function decodeJsonBase64Url<T>(input: string): T {
-  const text = Buffer.from(input, "base64url").toString("utf-8");
-  return JSON.parse(text) as T;
-}
+function sessionClaimsFromPayload(payload: JWTPayload): SessionClaims | null {
+  const invite = payload.invite;
+  const challengeId = payload.challengeId;
+  const scope = payload.scope;
+  const iat = payload.iat;
+  const exp = payload.exp;
+  const jti = payload.jti;
+  const sub = payload.sub;
 
-function isValidSessionClaims(value: unknown): value is SessionClaims {
-  if (!value || typeof value !== "object") {
-    return false;
-  }
-  const v = value as Partial<SessionClaims>;
-  return (
-    typeof v.sub === "string"
-    && typeof v.invite === "string"
-    && typeof v.challengeId === "string"
-    && Array.isArray(v.scope)
-    && v.scope.every((s) => typeof s === "string")
-    && typeof v.iat === "number"
-    && Number.isFinite(v.iat)
-    && typeof v.exp === "number"
-    && Number.isFinite(v.exp)
-    && typeof v.jti === "string"
-  );
+  if (typeof sub !== "string") return null;
+  if (typeof invite !== "string") return null;
+  if (typeof challengeId !== "string") return null;
+  if (!isValidScope(scope)) return null;
+  if (typeof iat !== "number") return null;
+  if (typeof exp !== "number") return null;
+  if (typeof jti !== "string") return null;
+
+  return {
+    sub,
+    invite,
+    challengeId,
+    scope,
+    iat,
+    exp,
+    jti,
+  };
 }
 
 export function buildJoinProofPayload(input: {
@@ -163,7 +159,7 @@ function extractEd25519PublicKeyFromDidKey(did: string): Uint8Array {
   }
 
   const multibase = did.slice("did:key:z".length);
-  const decoded = decodeBase58(multibase);
+  const decoded = bs58.decode(multibase);
 
   // Ed25519 public key multicodec: 0xed01 + 32-byte key
   if (decoded.length !== 34 || decoded[0] !== 0xed || decoded[1] !== 0x01) {
@@ -173,20 +169,13 @@ function extractEd25519PublicKeyFromDidKey(did: string): Uint8Array {
   return decoded.slice(2);
 }
 
-function createEd25519PublicKey(rawPublicKey: Uint8Array) {
-  // SPKI DER prefix for Ed25519.
-  const prefix = Buffer.from("302a300506032b6570032100", "hex");
-  const der = Buffer.concat([prefix, Buffer.from(rawPublicKey)]);
-  return createPublicKey({ key: der, format: "der", type: "spki" });
-}
-
 export class AuthManager {
   private readonly nonceTtlMs: number;
   private readonly sessionTtlMs: number;
   private readonly allowedClockSkewMs: number;
   private readonly domain: string;
   private readonly requireJoinProof: boolean;
-  private readonly sessionHmacKey: Buffer;
+  private readonly sessionHmacKey: Uint8Array;
   private readonly nonces: Map<string, NonceRecord>;
 
   constructor(options: AuthManagerOptions = {}) {
@@ -196,15 +185,17 @@ export class AuthManager {
     this.domain = options.domain ?? process.env.ARENA_AUTH_DOMAIN ?? "arena";
     this.requireJoinProof = options.requireJoinProof
       ?? (process.env.ARENA_REQUIRE_DID_PROOF === "true");
+
     const configuredHmacKey = options.sessionHmacKey ?? process.env.ARENA_SESSION_HMAC_KEY;
     if (configuredHmacKey) {
-      this.sessionHmacKey = Buffer.from(configuredHmacKey, "utf-8");
+      this.sessionHmacKey = hmacKeyFromString(configuredHmacKey);
     } else {
       this.sessionHmacKey = randomBytes(32);
       console.warn(
         "[AuthManager] ARENA_SESSION_HMAC_KEY is not set. Using ephemeral signing key; session tokens become invalid after restart."
       );
     }
+
     this.nonces = new Map();
   }
 
@@ -274,7 +265,7 @@ export class AuthManager {
     return { success: true, data: nonce };
   }
 
-  verifyJoinProof(input: VerifyJoinInput): AuthResult<{ did: string }> {
+  async verifyJoinProof(input: VerifyJoinInput): Promise<AuthResult<{ did: string }>> {
     const hasProofFields = Boolean(input.did || input.nonceId || input.signature || input.timestamp);
     const hasAllProofFields = Boolean(input.did && input.nonceId && input.signature && input.timestamp !== undefined);
 
@@ -318,10 +309,9 @@ export class AuthManager {
       return nonceResult;
     }
 
-    let publicKey: ReturnType<typeof createEd25519PublicKey>;
+    let rawPublicKey: Uint8Array;
     try {
-      const rawPublicKey = extractEd25519PublicKeyFromDidKey(input.did!);
-      publicKey = createEd25519PublicKey(rawPublicKey);
+      rawPublicKey = extractEd25519PublicKeyFromDidKey(input.did!);
     } catch (error) {
       return {
         success: false,
@@ -339,7 +329,7 @@ export class AuthManager {
       did: input.did!,
     });
 
-    let signature: Buffer;
+    let signature: Uint8Array;
     try {
       signature = bufferFromBase64(input.signature!);
     } catch {
@@ -350,12 +340,24 @@ export class AuthManager {
       };
     }
 
-    const isValid = verifySignature(
-      null,
-      Buffer.from(payload, "utf-8"),
-      publicKey,
-      signature
-    );
+    let isValid = false;
+    try {
+      const publicKey = await crypto.subtle.importKey(
+        "raw",
+        rawPublicKey,
+        { name: "Ed25519" },
+        false,
+        ["verify"]
+      );
+      isValid = await crypto.subtle.verify(
+        "Ed25519",
+        publicKey,
+        signature,
+        new TextEncoder().encode(payload)
+      );
+    } catch {
+      isValid = false;
+    }
 
     if (!isValid) {
       return {
@@ -373,32 +375,26 @@ export class AuthManager {
     return `did:arena:anon:${digest}`;
   }
 
-  private signTokenPayload(header: SessionTokenHeader, claims: SessionClaims): string {
-    const headerSegment = encodeJsonBase64Url(header);
-    const claimsSegment = encodeJsonBase64Url(claims);
-    const input = `${headerSegment}.${claimsSegment}`;
-    const signature = createHmac("sha256", this.sessionHmacKey)
-      .update(input, "utf-8")
-      .digest("base64url");
-    return `${input}.${signature}`;
-  }
+  async issueSession(input: IssueSessionInput): Promise<IssueSessionResult> {
+    const iat = Math.floor(Date.now() / 1000);
+    const exp = Math.floor((Date.now() + this.sessionTtlMs) / 1000);
+    const jti = randomUUID();
 
-  issueSession(input: IssueSessionInput): IssueSessionResult {
-    const now = Date.now();
-    const claims: SessionClaims = {
-      sub: input.did,
+    const token = await new SignJWT({
       invite: input.invite,
       challengeId: input.challengeId,
       scope: input.scope,
-      iat: Math.floor(now / 1000),
-      exp: Math.floor((now + this.sessionTtlMs) / 1000),
-      jti: randomUUID(),
-    };
-    const token = this.signTokenPayload({ alg: "HS256", typ: "AST" }, claims);
+      jti,
+    })
+      .setProtectedHeader({ alg: "HS256", typ: "AST" })
+      .setSubject(input.did)
+      .setIssuedAt(iat)
+      .setExpirationTime(exp)
+      .sign(this.sessionHmacKey);
 
     return {
       accessToken: token,
-      expiresAt: claims.exp * 1000,
+      expiresAt: exp * 1000,
       did: input.did,
       invite: input.invite,
       challengeId: input.challengeId,
@@ -416,21 +412,23 @@ export class AuthManager {
     return value.trim();
   }
 
-  verifySessionToken(token: string, requiredScope?: string): AuthResult<SessionClaims> {
-    const parts = token.split(".");
-    if (parts.length !== 3) {
-      return {
-        success: false,
-        code: AUTH_CODES.tokenInvalid,
-        message: "Invalid session token",
-      };
-    }
-    const [headerSegment, claimsSegment, signatureSegment] = parts;
-
-    let providedSignature: Buffer;
+  async verifySessionToken(token: string, requiredScope?: string): Promise<AuthResult<SessionClaims>> {
+    let payload: JWTPayload;
+    let typ: string | undefined;
     try {
-      providedSignature = Buffer.from(signatureSegment, "base64url");
-    } catch {
+      const result = await jwtVerify(token, this.sessionHmacKey, {
+        algorithms: ["HS256"],
+      });
+      payload = result.payload;
+      typ = result.protectedHeader.typ;
+    } catch (error) {
+      if (error instanceof joseErrors.JWTExpired) {
+        return {
+          success: false,
+          code: AUTH_CODES.tokenExpired,
+          message: "Session token expired",
+        };
+      }
       return {
         success: false,
         code: AUTH_CODES.tokenInvalid,
@@ -438,13 +436,7 @@ export class AuthManager {
       };
     }
 
-    const signingInput = `${headerSegment}.${claimsSegment}`;
-    const expectedSignature = createHmac("sha256", this.sessionHmacKey)
-      .update(signingInput, "utf-8")
-      .digest();
-
-    if (providedSignature.length !== expectedSignature.length
-      || !timingSafeEqual(providedSignature, expectedSignature)) {
+    if (typ !== "AST") {
       return {
         success: false,
         code: AUTH_CODES.tokenInvalid,
@@ -452,33 +444,12 @@ export class AuthManager {
       };
     }
 
-    let header: SessionTokenHeader;
-    let claims: SessionClaims;
-    try {
-      header = decodeJsonBase64Url<SessionTokenHeader>(headerSegment);
-      claims = decodeJsonBase64Url<SessionClaims>(claimsSegment);
-    } catch {
+    const claims = sessionClaimsFromPayload(payload);
+    if (!claims) {
       return {
         success: false,
         code: AUTH_CODES.tokenInvalid,
         message: "Invalid session token",
-      };
-    }
-
-    if (header.alg !== "HS256" || header.typ !== "AST" || !isValidSessionClaims(claims)) {
-      return {
-        success: false,
-        code: AUTH_CODES.tokenInvalid,
-        message: "Invalid session token",
-      };
-    }
-
-    const nowSeconds = Math.floor(Date.now() / 1000);
-    if (claims.exp <= nowSeconds) {
-      return {
-        success: false,
-        code: AUTH_CODES.tokenExpired,
-        message: "Session token expired",
       };
     }
 

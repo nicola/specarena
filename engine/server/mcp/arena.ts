@@ -37,7 +37,7 @@ export function createArenaHandler(options: { redisUrl?: string; basePath?: stri
           timestamp: z.number().int().optional().describe("Unix timestamp in milliseconds used in join proof payload"),
         },
         async ({ invite, did, nonceId, signature, timestamp }) => {
-          const proofResult = engine.auth.verifyJoinProof({
+          const proofResult = await engine.auth.verifyJoinProof({
             invite,
             did,
             nonceId,
@@ -53,7 +53,7 @@ export function createArenaHandler(options: { redisUrl?: string; basePath?: stri
             return { content: [{ type: "text", text: JSON.stringify(joinResult) }] };
           }
 
-          const auth = engine.auth.issueSession({
+          const auth = await engine.auth.issueSession({
             did: proofResult.data.did,
             invite,
             challengeId: joinResult.ChallengeID,

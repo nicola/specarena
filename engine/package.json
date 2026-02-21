@@ -19,7 +19,9 @@
   },
   "dependencies": {
     "@hono/node-server": "^1.14.1",
+    "bs58": "^6.0.0",
     "hono": "^4.7.6",
+    "jose": "^6.1.0",
     "mcp-handler": "^1.0.4",
     "prando": "^6.0.1",
     "uuid": "^13.0.0",

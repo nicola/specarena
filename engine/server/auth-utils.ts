@@ -40,7 +40,7 @@ export async function validateSessionForChallenge(options: {
     };
   }
 
-  const verify = engine.auth.verifySessionToken(token, requiredScope);
+  const verify = await engine.auth.verifySessionToken(token, requiredScope);
   if (!verify.success) {
     return {
       success: false,

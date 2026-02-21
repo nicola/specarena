@@ -12,7 +12,7 @@ export function createArenaRoutes(engine: ArenaEngine = defaultEngine) {
       return c.json({ error: "invite is required" }, 400);
     }
 
-    const proofResult = engine.auth.verifyJoinProof({
+    const proofResult = await engine.auth.verifyJoinProof({
       invite,
       did,
       nonceId,
@@ -28,7 +28,7 @@ export function createArenaRoutes(engine: ArenaEngine = defaultEngine) {
       return c.json(result, 400);
     }
 
-    const auth = engine.auth.issueSession({
+    const auth = await engine.auth.issueSession({
       did: proofResult.data.did,
       invite,
       challengeId: result.ChallengeID,
