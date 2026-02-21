@@ -1,10 +1,12 @@
 import { describe, it, beforeEach, before, after } from "node:test";
 import assert from "node:assert/strict";
+import { createPublicKey, verify as cryptoVerify } from "node:crypto";
 import { serve } from "@hono/node-server";
 import type { ServerType } from "@hono/node-server";
 
 import app from "../server/index";
-import { defaultEngine } from "../engine";
+import { canonicalizeJson, defaultEngine } from "../engine";
+import type { ChallengeResultAttestationV1, ChallengeResultVerificationJwk } from "../types";
 
 // Test against a real HTTP server to catch routing issues that app.request() misses.
 // app.request() dispatches in-process and may not match wildcard routes the same way
@@ -36,6 +38,121 @@ before(async () => {
 
 after(() => {
   server.close();
+});
+
+describe("HTTP server — .well-known attestation discovery", () => {
+  beforeEach(async () => clearState());
+
+  it("GET /.well-known/jwks.json exposes an Ed25519 JWKS", async () => {
+    const res = await req("GET", "/.well-known/jwks.json");
+    assert.equal(res.status, 200);
+    assert.ok(res.headers.get("cache-control")?.includes("max-age=300"));
+
+    const data = await res.json();
+    assert.ok(Array.isArray(data.keys));
+    assert.equal(data.keys.length, 1);
+
+    const key = data.keys[0] as ChallengeResultVerificationJwk & { d?: string };
+    assert.equal(key.kty, "OKP");
+    assert.equal(key.crv, "Ed25519");
+    assert.equal(key.alg, "EdDSA");
+    assert.equal(key.use, "sig");
+    assert.ok(typeof key.kid === "string" && key.kid.length > 0);
+    assert.ok(typeof key.x === "string" && key.x.length > 0);
+    assert.equal(key.d, undefined, "JWKS must never expose private key material");
+  });
+
+  it("GET /.well-known/arena-attestation exposes discovery metadata", async () => {
+    const res = await req("GET", "/.well-known/arena-attestation");
+    assert.equal(res.status, 200);
+    assert.ok(res.headers.get("cache-control")?.includes("max-age=300"));
+
+    const data = await res.json();
+    assert.equal(data.version, "1");
+    assert.equal(data.kind, "arena.attestation.discovery");
+    assert.equal(data.attestation_kind, "arena.challenge_result.v1");
+    assert.equal(data.signature.alg, "Ed25519");
+    assert.equal(data.signature.format, "arena.challenge_result.v1-envelope");
+    assert.equal(data.canonicalization.id, "arena-json-sort-v1");
+    assert.equal(data.jwks_uri, `${baseUrl}/.well-known/jwks.json`);
+  });
+
+  it("attestation signatures can be verified with the discovered JWKS key", async () => {
+    const createRes = await req("POST", "/api/challenges/psi");
+    assert.equal(createRes.status, 200);
+    const { id, invites } = await createRes.json();
+
+    const invite1 = invites[0];
+    const invite2 = invites[1];
+
+    await req("POST", "/api/arena/join", { invite: invite1 });
+    await req("POST", "/api/arena/join", { invite: invite2 });
+
+    const sync1 = await (await req("GET", `/api/arena/sync?channel=${id}&from=${invite1}&index=0`)).json();
+    const sync2 = await (await req("GET", `/api/arena/sync?channel=${id}&from=${invite2}&index=0`)).json();
+
+    const p1SetMsg = sync1.messages.find((m: any) => m.to === invite1 && m.content.includes("Your private set"));
+    const p2SetMsg = sync2.messages.find((m: any) => m.to === invite2 && m.content.includes("Your private set"));
+    assert.ok(p1SetMsg);
+    assert.ok(p2SetMsg);
+
+    const parseSet = (c: string) => {
+      const match = c.match(/\{(.+)\}/);
+      return match
+        ? new Set(match[1].split(",").map((s) => parseInt(s.trim(), 10)))
+        : new Set<number>();
+    };
+
+    const intersection = [...parseSet(p1SetMsg.content)].filter((n) => parseSet(p2SetMsg.content).has(n));
+    const guess = intersection.join(", ");
+
+    await req("POST", "/api/arena/message", {
+      challengeId: id,
+      from: invite1,
+      messageType: "guess",
+      content: guess,
+    });
+    await req("POST", "/api/arena/message", {
+      challengeId: id,
+      from: invite2,
+      messageType: "guess",
+      content: guess,
+    });
+
+    const finalSync = await (await req("GET", `/api/arena/sync?channel=${id}&from=${invite1}&index=0`)).json();
+    const attestationMessage = finalSync.messages.find((m: any) => {
+      try {
+        const parsed = JSON.parse(m.content) as { kind?: string };
+        return parsed.kind === "arena.challenge_result.v1";
+      } catch {
+        return false;
+      }
+    });
+    assert.ok(attestationMessage, "Expected operator to emit signed attestation");
+    const attestation = JSON.parse(attestationMessage.content) as ChallengeResultAttestationV1;
+
+    const jwks = await (await req("GET", "/.well-known/jwks.json")).json();
+    const jwk = (jwks.keys as ChallengeResultVerificationJwk[]).find(
+      (key) => key.kid === attestation.signature.kid
+    );
+    assert.ok(jwk, "Expected JWKS key matching attestation kid");
+
+    const publicKey = createPublicKey({
+      key: {
+        kty: jwk.kty,
+        crv: jwk.crv,
+        x: jwk.x,
+      },
+      format: "jwk",
+    });
+    const verified = cryptoVerify(
+      null,
+      Buffer.from(canonicalizeJson(attestation.payload), "utf8"),
+      publicKey,
+      Buffer.from(attestation.signature.sig, "base64url")
+    );
+    assert.equal(verified, true);
+  });
 });
 
 describe("HTTP server — REST routes don't collide with MCP wildcards", () => {

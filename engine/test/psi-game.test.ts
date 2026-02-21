@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 
 // Import the fully configured app (registers challenges as a side effect)
 import app from "../server/index";
-import { defaultEngine } from "../engine";
+import { canonicalizeJson, defaultChallengeResultSigner, defaultEngine } from "../engine";
+import type { ChallengeResultAttestationV1 } from "../types";
 
 // Engine actions — shared by REST + MCP
 const challengeJoin = (invite: string) => defaultEngine.challengeJoin(invite);
@@ -159,8 +160,35 @@ describe("PSI game simulation", () => {
     assert.equal(scores[1].utility, 1, "player 2 utility=1 (exact intersection)");
     assert.equal(scores[1].security, 1, "player 2 security=1 (no extra leak)");
 
-    // 11. Game-end broadcast message
+    // 11. Signed end-of-game attestation is emitted and verifiable
     const finalSync = await challengeSync(challengeId, invite1, 0);
+    const attestationMsg = finalSync.messages.find((m) => {
+      try {
+        const parsed = JSON.parse(m.content) as { kind?: string };
+        return parsed.kind === "arena.challenge_result.v1";
+      } catch {
+        return false;
+      }
+    });
+    assert.ok(attestationMsg, "signed attestation message should exist");
+
+    const attestation = JSON.parse(attestationMsg!.content) as ChallengeResultAttestationV1;
+    assert.equal(attestation.kind, "arena.challenge_result.v1");
+    assert.equal(attestation.payload.challengeId, challengeId);
+    assert.equal(attestation.payload.playersCount, 2);
+    assert.equal(attestation.payload.scores.length, 2);
+    assert.equal(attestation.signature.alg, "Ed25519");
+    assert.equal(attestation.signature.kid, defaultChallengeResultSigner.keyId);
+    assert.equal(
+      await defaultChallengeResultSigner.verify(
+        canonicalizeJson(attestation.payload),
+        attestation.signature.sig
+      ),
+      true,
+      "signature should verify"
+    );
+
+    // 12. Existing human-readable game-end broadcast remains available
     const endMsg = finalSync.messages.find(
       (m) => m.from === "operator" && m.content.includes("Game ended")
     );

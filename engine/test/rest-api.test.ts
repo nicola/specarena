@@ -1,8 +1,10 @@
 import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert/strict";
+import { createPublicKey, verify as cryptoVerify } from "node:crypto";
 
 import app from "../server/index";
-import { defaultEngine } from "../engine";
+import { canonicalizeJson, defaultEngine } from "../engine";
+import type { ChallengeResultAttestationV1, ChallengeResultVerificationJwk } from "../types";
 
 // --- Helpers ---
 
@@ -23,6 +25,114 @@ async function createPsiChallenge() {
   assert.equal(res.status, 200);
   return res.json();
 }
+
+describe("REST API for .well-known attestation discovery", () => {
+  beforeEach(async () => clearState());
+
+  it("GET /.well-known/jwks.json returns an Ed25519 JWKS", async () => {
+    const res = await request("GET", "/.well-known/jwks.json");
+    assert.equal(res.status, 200);
+
+    const data = await res.json();
+    assert.ok(Array.isArray(data.keys));
+    assert.equal(data.keys.length, 1);
+    const key = data.keys[0] as ChallengeResultVerificationJwk & { d?: string };
+    assert.equal(key.kty, "OKP");
+    assert.equal(key.crv, "Ed25519");
+    assert.equal(key.alg, "EdDSA");
+    assert.equal(key.use, "sig");
+    assert.ok(typeof key.kid === "string" && key.kid.length > 0);
+    assert.ok(typeof key.x === "string" && key.x.length > 0);
+    assert.equal(key.d, undefined);
+  });
+
+  it("GET /.well-known/arena-attestation returns discovery metadata", async () => {
+    const res = await request("GET", "/.well-known/arena-attestation");
+    assert.equal(res.status, 200);
+
+    const data = await res.json();
+    assert.equal(data.version, "1");
+    assert.equal(data.kind, "arena.attestation.discovery");
+    assert.equal(data.attestation_kind, "arena.challenge_result.v1");
+    assert.equal(data.signature.alg, "Ed25519");
+    assert.equal(data.signature.format, "arena.challenge_result.v1-envelope");
+    assert.equal(data.canonicalization.id, "arena-json-sort-v1");
+    assert.ok(typeof data.jwks_uri === "string");
+    assert.ok(data.jwks_uri.endsWith("/.well-known/jwks.json"));
+  });
+
+  it("JWKS key verifies emitted challenge attestation", async () => {
+    const { id, invites } = await createPsiChallenge();
+    const [inv1, inv2] = invites;
+
+    await request("POST", "/api/arena/join", { invite: inv1 });
+    await request("POST", "/api/arena/join", { invite: inv2 });
+
+    const sync1 = await (await request("GET", `/api/arena/sync?channel=${id}&from=${inv1}&index=0`)).json();
+    const sync2 = await (await request("GET", `/api/arena/sync?channel=${id}&from=${inv2}&index=0`)).json();
+    const setMsg1 = sync1.messages.find((m: any) => m.to === inv1 && m.content.includes("Your private set"));
+    const setMsg2 = sync2.messages.find((m: any) => m.to === inv2 && m.content.includes("Your private set"));
+    assert.ok(setMsg1);
+    assert.ok(setMsg2);
+
+    const parseSet = (content: string): Set<number> => {
+      const match = content.match(/\{(.+)\}/);
+      if (!match) return new Set();
+      return new Set(match[1].split(",").map((s) => parseInt(s.trim(), 10)));
+    };
+    const p1Set = parseSet(setMsg1.content);
+    const p2Set = parseSet(setMsg2.content);
+    const intersection = new Set([...p1Set].filter((n) => p2Set.has(n)));
+    const guessContent = [...intersection].join(", ");
+
+    await request("POST", "/api/arena/message", {
+      challengeId: id,
+      from: inv1,
+      messageType: "guess",
+      content: guessContent,
+    });
+    await request("POST", "/api/arena/message", {
+      challengeId: id,
+      from: inv2,
+      messageType: "guess",
+      content: guessContent,
+    });
+
+    const finalSync = await (await request("GET", `/api/arena/sync?channel=${id}&from=${inv1}&index=0`)).json();
+    const attestationMsg = finalSync.messages.find((m: any) => {
+      try {
+        const parsed = JSON.parse(m.content) as { kind?: string };
+        return parsed.kind === "arena.challenge_result.v1";
+      } catch {
+        return false;
+      }
+    });
+    assert.ok(attestationMsg);
+
+    const attestation = JSON.parse(attestationMsg.content) as ChallengeResultAttestationV1;
+    const jwks = await (await request("GET", "/.well-known/jwks.json")).json();
+    const key = (jwks.keys as ChallengeResultVerificationJwk[]).find(
+      (candidate) => candidate.kid === attestation.signature.kid
+    );
+    assert.ok(key);
+
+    const publicKey = createPublicKey({
+      key: {
+        kty: key.kty,
+        crv: key.crv,
+        x: key.x,
+      },
+      format: "jwk",
+    });
+    const verified = cryptoVerify(
+      null,
+      Buffer.from(canonicalizeJson(attestation.payload), "utf8"),
+      publicKey,
+      Buffer.from(attestation.signature.sig, "base64url")
+    );
+    assert.equal(verified, true);
+  });
+});
 
 // --- Tests ---
 

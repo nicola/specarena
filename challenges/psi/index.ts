@@ -44,13 +44,13 @@ interface PsiGameState {
 }
 
 class PsiChallenge extends BaseChallenge<PsiGameState> {
-  constructor(params: PsiChallengeParams, messaging?: ChallengeMessaging) {
+  constructor(params: PsiChallengeParams, messaging?: ChallengeMessaging, signer?: ChallengeFactoryContext["signer"]) {
     const { userSets, intersectionSet } = userSetsFromParams(params);
     super(params.challengeId, params.players, {
       userSets,
       intersectionSet,
       guesses: Array.from({ length: params.players }, () => new Set<number>()),
-    }, messaging);
+    }, messaging, signer);
 
     this.handle("guess", (msg, playerIndex) => this.onGuess(msg, playerIndex));
   }
@@ -158,5 +158,5 @@ export function createChallenge(
     challengeId,
     ...DEFAULT_CONFIG,
     ...options,
-  } as PsiChallengeParams, context?.messaging);
+  } as PsiChallengeParams, context?.messaging, context?.signer);
 }

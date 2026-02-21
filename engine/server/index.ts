@@ -9,6 +9,7 @@ import { createChallengeRoutes } from "./routes/challenges";
 import { createInviteRoutes } from "./routes/invites";
 import { createChatRoutes } from "./routes/chat";
 import { createArenaRoutes } from "./routes/arena";
+import { createWellKnownRoutes } from "./routes/wellKnown";
 
 export function registerChallengesFromConfig(engine: ArenaEngine): void {
   const configs: ChallengeConfig[] = JSON.parse(
@@ -53,6 +54,7 @@ export function createApp(engine: ArenaEngine = defaultEngine): Hono {
   });
 
   // Mount REST routes
+  app.route("/", createWellKnownRoutes(engine));
   app.route("/", createChallengeRoutes(engine));
   app.route("/", createInviteRoutes(engine));
   app.route("/", createChatRoutes(engine.chat));

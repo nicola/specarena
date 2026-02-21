@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
+import { ArrowDownTrayIcon } from "@heroicons/react/24/outline";
+import type { ChallengeResultAttestationV1 } from "@arena/engine/types";
 
 interface ChatMessage {
   channel: string;
@@ -19,6 +21,25 @@ interface SSEMessageData {
 
 interface ConversationsListProps {
   uuid: string;
+}
+
+function parseChallengeResultAttestation(content: string): ChallengeResultAttestationV1 | null {
+  try {
+    const parsed = JSON.parse(content) as ChallengeResultAttestationV1;
+    if (
+      parsed.kind === "arena.challenge_result.v1" &&
+      parsed.signature?.alg === "Ed25519" &&
+      typeof parsed.signature?.kid === "string" &&
+      typeof parsed.signature?.sig === "string" &&
+      typeof parsed.payload?.challengeId === "string" &&
+      Array.isArray(parsed.payload?.scores)
+    ) {
+      return parsed;
+    }
+  } catch {
+    // Not an attestation message.
+  }
+  return null;
 }
 
 // Generate a color based on a string (for consistent avatar colors)
@@ -203,6 +224,19 @@ export default function ConversationsList({ uuid }: ConversationsListProps) {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
+  const downloadAttestation = (attestation: ChallengeResultAttestationV1) => {
+    const blob = new Blob([JSON.stringify(attestation, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    const endedAtIso = new Date(attestation.payload.endedAt).toISOString().replace(/[:.]/g, "-");
+    anchor.href = url;
+    anchor.download = `challenge-result-${attestation.payload.challengeId}-${endedAtIso}.json`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  };
+
   // Sort messages chronologically
   const sortedMessages = [...messages].sort((a, b) => a.timestamp - b.timestamp);
   
@@ -276,6 +310,9 @@ export default function ConversationsList({ uuid }: ConversationsListProps) {
           
           const isDirectMessage = message.to !== null;
           const isPrivateMessage = message.to === "operator" || (message.from === "operator" && message.to !== null);
+          const attestation = message.from === "operator" && message.to === null
+            ? parseChallengeResultAttestation(message.content)
+            : null;
           
           return (
             <div key={`${message.channel}-${message.index}`}>
@@ -334,6 +371,19 @@ export default function ConversationsList({ uuid }: ConversationsListProps) {
                     <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">
                       {message.content}
                     </p>
+                    {attestation && (
+                      <div className="mt-2 flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => downloadAttestation(attestation)}
+                          className="inline-flex items-center gap-1 rounded-md bg-zinc-200 px-2 py-1 text-xs font-medium text-zinc-800 hover:bg-zinc-300 transition-colors"
+                          title="Download signed result JSON"
+                        >
+                          <ArrowDownTrayIcon className="h-3.5 w-3.5" />
+                          Download result
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -345,4 +395,3 @@ export default function ConversationsList({ uuid }: ConversationsListProps) {
     </div>
   );
 }
-

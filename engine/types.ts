@@ -13,6 +13,68 @@ export interface Score {
   utility: number;
 }
 
+export interface ChallengeResultScore {
+  playerIndex: number;
+  security: number;
+  utility: number;
+}
+
+export interface ChallengeResultPayloadV1 {
+  challengeId: string;
+  endedAt: number;
+  playersCount: number;
+  scores: ChallengeResultScore[];
+}
+
+export interface ChallengeResultSignature {
+  alg: "Ed25519";
+  kid: string;
+  sig: string;
+}
+
+export interface ChallengeResultAttestationV1 {
+  kind: "arena.challenge_result.v1";
+  payload: ChallengeResultPayloadV1;
+  signature: ChallengeResultSignature;
+}
+
+export interface ChallengeResultVerificationJwk {
+  kty: "OKP";
+  crv: "Ed25519";
+  x: string;
+  kid: string;
+  use: "sig";
+  alg: "EdDSA";
+}
+
+export interface ChallengeResultJwks {
+  keys: ChallengeResultVerificationJwk[];
+}
+
+export interface ChallengeResultDiscoveryDocument {
+  version: "1";
+  kind: "arena.attestation.discovery";
+  attestation_kind: "arena.challenge_result.v1";
+  signature: {
+    alg: "Ed25519";
+    kid: string;
+    format: "arena.challenge_result.v1-envelope";
+  };
+  canonicalization: {
+    id: "arena-json-sort-v1";
+    description: string;
+  };
+  jwks_uri: string;
+}
+
+export interface ChallengeResultSigner {
+  alg: "Ed25519";
+  keyId: string;
+  publicJwk: ChallengeResultVerificationJwk;
+  sign: (payloadCanonical: string) => Promise<string>;
+  verify: (payloadCanonical: string, signature: string) => Promise<boolean>;
+}
+
 export interface ChallengeOperatorState {
   gameStarted: boolean;
   gameEnded: boolean;
@@ -66,6 +128,7 @@ export interface ChallengeMessaging {
 
 export interface ChallengeFactoryContext {
   messaging: ChallengeMessaging;
+  signer?: ChallengeResultSigner;
 }
 
 export type ChallengeFactory = (

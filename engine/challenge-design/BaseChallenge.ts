@@ -1,5 +1,15 @@
-import { ChallengeMessaging, ChallengeOperator, ChallengeOperatorState, ChatMessage, Score } from "../types";
+import {
+  ChallengeMessaging,
+  ChallengeOperator,
+  ChallengeOperatorState,
+  ChallengeResultAttestationV1,
+  ChallengeResultPayloadV1,
+  ChallengeResultSigner,
+  ChatMessage,
+  Score,
+} from "../types";
 import { defaultChatEngine } from "../chat/ChatEngine";
+import { canonicalizeJson, defaultChallengeResultSigner } from "../signing/ChallengeResultSigner";
 
 // BaseChallenge provides the shared "operator runtime" used by challenge
 // implementations:
@@ -15,14 +25,22 @@ export abstract class BaseChallenge<TGameState = {}> implements ChallengeOperato
   protected challengeId: string;
   protected playerCount: number;
   protected messaging: ChallengeMessaging;
+  protected signer: ChallengeResultSigner;
   state: ChallengeOperatorState;
   gameState: TGameState;
   private handlers = new Map<string, (msg: ChatMessage, playerIndex: number) => void | Promise<void>>();
 
-  constructor(challengeId: string, playerCount: number, gameState: TGameState, messaging?: ChallengeMessaging) {
+  constructor(
+    challengeId: string,
+    playerCount: number,
+    gameState: TGameState,
+    messaging?: ChallengeMessaging,
+    signer?: ChallengeResultSigner
+  ) {
     this.challengeId = challengeId;
     this.playerCount = playerCount;
     this.messaging = messaging ?? defaultChatEngine;
+    this.signer = signer ?? defaultChallengeResultSigner;
     this.state = {
       gameStarted: false,
       gameEnded: false,
@@ -98,12 +116,41 @@ export abstract class BaseChallenge<TGameState = {}> implements ChallengeOperato
   // --- Game lifecycle ---
 
   // Standard game-finalization helper used by challenges after scoring.
-  // It marks the game ended and emits a canonical score summary.
+  // It emits a signed score attestation and a human-readable score summary.
   protected async endGame(): Promise<void> {
-    this.state.gameEnded = true;
+    if (this.state.gameEnded) {
+      return;
+    }
+
+    const payload: ChallengeResultPayloadV1 = {
+      challengeId: this.challengeId,
+      endedAt: Date.now(),
+      playersCount: this.playerCount,
+      scores: this.state.scores.map((score, playerIndex) => ({
+        playerIndex,
+        security: score.security,
+        utility: score.utility,
+      })),
+    };
+
+    const canonicalPayload = canonicalizeJson(payload);
+    const signature = await this.signer.sign(canonicalPayload);
+    const attestation: ChallengeResultAttestationV1 = {
+      kind: "arena.challenge_result.v1",
+      payload,
+      signature: {
+        alg: this.signer.alg,
+        kid: this.signer.keyId,
+        sig: signature,
+      },
+    };
+
+    await this.broadcast(JSON.stringify(attestation));
+
     const lines = this.state.scores.map(
       (s, i) => `- Player ${i + 1}: ${JSON.stringify(s)}`
     );
     await this.broadcast(`Game ended.\n\nScores are:\n${lines.join("\n")}`);
+    this.state.gameEnded = true;
   }
 }

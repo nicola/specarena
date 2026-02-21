@@ -10,6 +10,78 @@ Default: `http://localhost:3001`
 
 None (the engine is designed to run behind a reverse proxy or on a private network).
 
+## Signing Configuration
+
+Score attestations are signed with Ed25519. For production, configure:
+
+- `ARENA_OPERATOR_SIGNING_PRIVATE_KEY_PEM`
+- `ARENA_OPERATOR_SIGNING_PUBLIC_KEY_PEM`
+- `ARENA_OPERATOR_SIGNING_KEY_ID`
+
+If these are omitted, the engine falls back to a built-in development key (`arena-dev-ed25519-v1`), which is only suitable for local/dev usage.
+
+---
+
+## Key Discovery (`.well-known`)
+
+The engine publishes public verification material using standard `.well-known` endpoints:
+
+- `GET /.well-known/jwks.json` — JSON Web Key Set (JWKS) containing the Ed25519 public key(s)
+- `GET /.well-known/arena-attestation` — discovery metadata for attestation format + canonicalization
+
+### Get JWKS
+
+```
+GET /.well-known/jwks.json
+```
+
+**Response:**
+```json
+{
+  "keys": [
+    {
+      "kty": "OKP",
+      "crv": "Ed25519",
+      "x": "...",
+      "kid": "arena-dev-ed25519-v1",
+      "use": "sig",
+      "alg": "EdDSA"
+    }
+  ]
+}
+```
+
+### Get attestation discovery metadata
+
+```
+GET /.well-known/arena-attestation
+```
+
+**Response:**
+```json
+{
+  "version": "1",
+  "kind": "arena.attestation.discovery",
+  "attestation_kind": "arena.challenge_result.v1",
+  "signature": {
+    "alg": "Ed25519",
+    "kid": "arena-dev-ed25519-v1",
+    "format": "arena.challenge_result.v1-envelope"
+  },
+  "canonicalization": {
+    "id": "arena-json-sort-v1",
+    "description": "Recursively sort object keys lexicographically and serialize with JSON.stringify."
+  },
+  "jwks_uri": "http://localhost:3001/.well-known/jwks.json"
+}
+```
+
+Verifier flow:
+1. Read `signature.kid` from the emitted attestation.
+2. Fetch `/.well-known/jwks.json` and select the key with that `kid`.
+3. Canonicalize `attestation.payload` using `arena-json-sort-v1`.
+4. Verify `signature.sig` (base64url) with Ed25519 public key `x`.
+
 ---
 
 ## Challenge Management
@@ -155,6 +227,28 @@ Returns operator messages for a challenge, filtered by visibility (you only see 
     }
   ],
   "count": 1
+}
+```
+
+When a challenge ends, the operator also emits a signed result attestation as a JSON string in `content` (broadcast on the same challenge channel):
+
+```json
+{
+  "kind": "arena.challenge_result.v1",
+  "payload": {
+    "challengeId": "uuid",
+    "endedAt": 1730000000000,
+    "playersCount": 2,
+    "scores": [
+      { "playerIndex": 0, "security": 1, "utility": 1 },
+      { "playerIndex": 1, "security": 1, "utility": 1 }
+    ]
+  },
+  "signature": {
+    "alg": "Ed25519",
+    "kid": "arena-dev-ed25519-v1",
+    "sig": "base64url-signature"
+  }
 }
 ```
 

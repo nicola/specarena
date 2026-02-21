@@ -3,15 +3,25 @@ import {
   Challenge,
   ChallengeError,
   ChallengeFactory,
+  ChallengeResultDiscoveryDocument,
+  ChallengeResultJwks,
+  ChallengeResultSigner,
   ChallengeMetadata,
   Result,
 } from "./types";
 import { ChatEngine, createChatEngine } from "./chat/ChatEngine";
 import { ArenaStorageAdapter, InMemoryArenaStorageAdapter } from "./storage/InMemoryArenaStorageAdapter";
+import {
+  ARENA_ATTESTATION_SIGNATURE_FORMAT,
+  ARENA_CANONICALIZATION_DESCRIPTION,
+  ARENA_CANONICALIZATION_ID,
+  createChallengeResultSignerFromEnv
+} from "./signing/ChallengeResultSigner";
 
 export interface EngineOptions {
   storageAdapter?: ArenaStorageAdapter;
   chatEngine?: ChatEngine;
+  signer?: ChallengeResultSigner;
 }
 
 export class ArenaEngine {
@@ -19,6 +29,7 @@ export class ArenaEngine {
   private readonly challengeFactories: Map<string, ChallengeFactory>;
   private readonly challengeOptions: Map<string, Record<string, unknown>>;
   private readonly challengeMetadataMap: Map<string, ChallengeMetadata>;
+  private readonly signer: ChallengeResultSigner;
   readonly chat: ChatEngine;
 
   constructor(options: EngineOptions = {}) {
@@ -27,6 +38,7 @@ export class ArenaEngine {
     this.challengeOptions = new Map<string, Record<string, unknown>>();
     this.challengeMetadataMap = new Map<string, ChallengeMetadata>();
     this.chat = options.chatEngine ?? createChatEngine();
+    this.signer = options.signer ?? createChallengeResultSignerFromEnv();
   }
 
   async clearRuntimeState(): Promise<void> {
@@ -55,6 +67,31 @@ export class ArenaEngine {
     return Object.fromEntries(this.challengeMetadataMap);
   }
 
+  getAttestationJwks(): ChallengeResultJwks {
+    return {
+      keys: [this.signer.publicJwk],
+    };
+  }
+
+  getAttestationDiscovery(origin: string): ChallengeResultDiscoveryDocument {
+    const normalizedOrigin = origin.replace(/\/+$/, "");
+    return {
+      version: "1",
+      kind: "arena.attestation.discovery",
+      attestation_kind: "arena.challenge_result.v1",
+      signature: {
+        alg: this.signer.alg,
+        kid: this.signer.keyId,
+        format: ARENA_ATTESTATION_SIGNATURE_FORMAT,
+      },
+      canonicalization: {
+        id: ARENA_CANONICALIZATION_ID,
+        description: ARENA_CANONICALIZATION_DESCRIPTION,
+      },
+      jwks_uri: `${normalizedOrigin}/.well-known/jwks.json`,
+    };
+  }
+
   async listChallenges(): Promise<Challenge[]> {
     return this.storageAdapter.listChallenges();
   }
@@ -70,6 +107,7 @@ export class ArenaEngine {
     const options = this.challengeOptions.get(challengeType);
     const instance = factory(id, options, {
       messaging: this.chat,
+      signer: this.signer,
     });
 
     const challenge: Challenge = {
@@ -200,3 +238,12 @@ export const defaultEngine = createEngine();
 export { ChatEngine, createChatEngine, defaultChatEngine } from "./chat/ChatEngine";
 export { ArenaStorageAdapter, InMemoryArenaStorageAdapter } from "./storage/InMemoryArenaStorageAdapter";
 export { ChatStorageAdapter, InMemoryChatStorageAdapter } from "./storage/InMemoryChatStorageAdapter";
+export {
+  ARENA_ATTESTATION_SIGNATURE_FORMAT,
+  ARENA_CANONICALIZATION_DESCRIPTION,
+  ARENA_CANONICALIZATION_ID,
+  defaultChallengeResultSigner,
+  canonicalizeJson,
+  createChallengeResultSignerFromEnv,
+  createEd25519ChallengeResultSigner,
+} from "./signing/ChallengeResultSigner";
