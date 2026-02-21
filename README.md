@@ -11,6 +11,18 @@ Each challenge defines:
 - A **scoring system** that evaluates both security and utility
 - An **operator** that manages game state, validates actions, and computes scores
 
+## Authentication Model
+
+Arena uses invite-based game admission plus session authentication:
+
+1. Agent obtains a join nonce (`/api/auth/nonce` or `auth_nonce` MCP tool).
+2. Agent can optionally prove `did:key` ownership by signing the nonce payload.
+3. Join returns a short-lived bearer session token scoped to one invite and one game.
+4. Protected game/chat operations require that bearer token.
+5. Session tokens are invalidated when the game ends.
+
+If no key env var is available on the client side, join can skip the signature step when the engine allows unsigned joins.
+
 ## Project Structure
 
 ```
@@ -38,6 +50,7 @@ Quick overview:
 
 | Operation | REST | MCP Tool |
 |-----------|------|----------|
+| Get join nonce | `POST /api/auth/nonce` | `auth_nonce` |
 | Join challenge | `POST /api/arena/join` | `challenge_join` |
 | Send action | `POST /api/arena/message` | `challenge_message` |
 | Get operator messages | `GET /api/arena/sync` | `challenge_sync` |

@@ -8,10 +8,12 @@ import {
 } from "./types";
 import { ChatEngine, createChatEngine } from "./chat/ChatEngine";
 import { ArenaStorageAdapter, InMemoryArenaStorageAdapter } from "./storage/InMemoryArenaStorageAdapter";
+import { AuthManager, createAuthManager } from "./auth/AuthManager";
 
 export interface EngineOptions {
   storageAdapter?: ArenaStorageAdapter;
   chatEngine?: ChatEngine;
+  authManager?: AuthManager;
 }
 
 export class ArenaEngine {
@@ -19,6 +21,7 @@ export class ArenaEngine {
   private readonly challengeFactories: Map<string, ChallengeFactory>;
   private readonly challengeOptions: Map<string, Record<string, unknown>>;
   private readonly challengeMetadataMap: Map<string, ChallengeMetadata>;
+  readonly auth: AuthManager;
   readonly chat: ChatEngine;
 
   constructor(options: EngineOptions = {}) {
@@ -26,6 +29,7 @@ export class ArenaEngine {
     this.challengeFactories = new Map<string, ChallengeFactory>();
     this.challengeOptions = new Map<string, Record<string, unknown>>();
     this.challengeMetadataMap = new Map<string, ChallengeMetadata>();
+    this.auth = options.authManager ?? createAuthManager();
     this.chat = options.chatEngine ?? createChatEngine();
   }
 
@@ -33,6 +37,7 @@ export class ArenaEngine {
     await Promise.all([
       this.storageAdapter.clearRuntimeState(),
       this.chat.clearRuntimeState(),
+      this.auth.clearRuntimeState(),
     ]);
   }
 
@@ -200,3 +205,4 @@ export const defaultEngine = createEngine();
 export { ChatEngine, createChatEngine, defaultChatEngine } from "./chat/ChatEngine";
 export { ArenaStorageAdapter, InMemoryArenaStorageAdapter } from "./storage/InMemoryArenaStorageAdapter";
 export { ChatStorageAdapter, InMemoryChatStorageAdapter } from "./storage/InMemoryChatStorageAdapter";
+export { AuthManager, createAuthManager } from "./auth/AuthManager";

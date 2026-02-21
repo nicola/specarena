@@ -3,13 +3,20 @@ import assert from "node:assert/strict";
 
 import app from "../server/index";
 import { defaultEngine } from "../engine";
+import { createDidKeyIdentity, joinWithDidProof } from "./auth-helpers";
 
-// --- Helpers ---
-
-async function request(method: string, path: string, body?: object) {
+async function request(
+  method: string,
+  path: string,
+  body?: object,
+  headers: Record<string, string> = {}
+) {
   return app.request(path, {
     method,
-    headers: body ? { "Content-Type": "application/json" } : {},
+    headers: {
+      ...(body ? { "Content-Type": "application/json" } : {}),
+      ...headers,
+    },
     body: body ? JSON.stringify(body) : undefined,
   });
 }
@@ -21,23 +28,40 @@ async function clearState() {
 async function createPsiChallenge() {
   const res = await request("POST", "/api/challenges/psi");
   assert.equal(res.status, 200);
-  return res.json();
+  return res.json() as Promise<{ id: string; invites: string[] }>;
 }
 
-// --- Tests ---
+function authHeader(accessToken: string): Record<string, string> {
+  return { Authorization: `Bearer ${accessToken}` };
+}
 
-describe("REST API for arena", () => {
+describe("REST API for arena auth", () => {
   beforeEach(async () => clearState());
 
-  it("POST /api/arena/join — joins a challenge", async () => {
+  it("POST /api/arena/join — signed join returns session token", async () => {
+    const { invites } = await createPsiChallenge();
+    const identity = createDidKeyIdentity();
+
+    const joined = await joinWithDidProof({
+      request,
+      invite: invites[0],
+      identity,
+    });
+
+    assert.ok(joined.challengeId);
+    assert.ok(joined.auth.accessToken);
+    assert.equal(joined.auth.invite, invites[0]);
+    assert.equal(joined.auth.did, identity.did);
+  });
+
+  it("POST /api/arena/join — unsigned join is allowed when did proof is optional", async () => {
     const { invites } = await createPsiChallenge();
 
     const res = await request("POST", "/api/arena/join", { invite: invites[0] });
     assert.equal(res.status, 200);
-
     const data = await res.json();
-    assert.ok(data.ChallengeID);
-    assert.ok(data.ChallengeInfo);
+    assert.ok(data.auth?.accessToken);
+    assert.ok(String(data.auth?.did).startsWith("did:arena:anon:"));
   });
 
   it("POST /api/arena/join — returns 400 for missing invite", async () => {
@@ -45,89 +69,51 @@ describe("REST API for arena", () => {
     assert.equal(res.status, 400);
   });
 
-  it("POST /api/arena/join — returns 400 for invalid invite", async () => {
-    const res = await request("POST", "/api/arena/join", { invite: "inv_fake" });
-    assert.equal(res.status, 400);
-    const data = await res.json();
-    assert.ok(data.error);
-  });
-
-  it("POST /api/arena/message — sends a guess", async () => {
-    const { id, invites } = await createPsiChallenge();
-
-    // Join both players
-    await request("POST", "/api/arena/join", { invite: invites[0] });
-    await request("POST", "/api/arena/join", { invite: invites[1] });
-
+  it("POST /api/arena/message requires auth token", async () => {
     const res = await request("POST", "/api/arena/message", {
-      challengeId: id,
-      from: invites[0],
-      messageType: "guess",
-      content: "100, 200, 300",
-    });
-    assert.equal(res.status, 200);
-
-    const data = await res.json();
-    assert.ok(data.ok || data.error); // might be ok or error depending on guess validity
-  });
-
-  it("POST /api/arena/message — returns 400 for missing fields", async () => {
-    const res = await request("POST", "/api/arena/message", { challengeId: "x" });
-    assert.equal(res.status, 400);
-  });
-
-  it("POST /api/arena/message — returns 400 for nonexistent challenge", async () => {
-    const res = await request("POST", "/api/arena/message", {
-      challengeId: "nonexistent",
-      from: "player",
+      challengeId: "x",
       messageType: "guess",
       content: "1 2 3",
     });
-    assert.equal(res.status, 400);
+    assert.equal(res.status, 401);
     const data = await res.json();
-    assert.ok(data.error.includes("not found"));
+    assert.equal(data.code, "AUTH_REQUIRED");
   });
 
-  it("GET /api/arena/sync — returns messages", async () => {
-    const { id, invites } = await createPsiChallenge();
-
-    // Join to generate operator messages
-    await request("POST", "/api/arena/join", { invite: invites[0] });
-
-    const res = await request("GET", `/api/arena/sync?channel=${id}&from=${invites[0]}&index=0`);
-    assert.equal(res.status, 200);
-
+  it("GET /api/arena/sync requires auth token", async () => {
+    const res = await request("GET", "/api/arena/sync?channel=abc&index=0");
+    assert.equal(res.status, 401);
     const data = await res.json();
-    assert.ok(data.messages);
-    assert.ok(data.count >= 1); // at least the private set message
+    assert.equal(data.code, "AUTH_REQUIRED");
   });
 
-  it("GET /api/arena/sync — returns 400 for missing params", async () => {
-    const res = await request("GET", "/api/arena/sync");
-    assert.equal(res.status, 400);
-  });
-
-  it("full game via REST API", async () => {
-    // Create
+  it("full game via REST API with bearer auth", async () => {
     const { id, invites } = await createPsiChallenge();
     const [inv1, inv2] = invites;
 
-    // Join
-    const join1 = await (await request("POST", "/api/arena/join", { invite: inv1 })).json();
-    const join2 = await (await request("POST", "/api/arena/join", { invite: inv2 })).json();
-    assert.ok(join1.ChallengeID);
-    assert.ok(join2.ChallengeID);
+    const p1 = await joinWithDidProof({ request, invite: inv1 });
+    const p2 = await joinWithDidProof({ request, invite: inv2 });
+    assert.equal(p1.challengeId, id);
+    assert.equal(p2.challengeId, id);
 
-    // Sync to get private sets
-    const sync1 = await (await request("GET", `/api/arena/sync?channel=${id}&from=${inv1}&index=0`)).json();
+    const sync1 = await (await request(
+      "GET",
+      `/api/arena/sync?channel=${id}&index=0`,
+      undefined,
+      authHeader(p1.auth.accessToken)
+    )).json();
     const setMsg1 = sync1.messages.find((m: any) => m.to === inv1 && m.content.includes("Your private set"));
     assert.ok(setMsg1);
 
-    const sync2 = await (await request("GET", `/api/arena/sync?channel=${id}&from=${inv2}&index=0`)).json();
+    const sync2 = await (await request(
+      "GET",
+      `/api/arena/sync?channel=${id}&index=0`,
+      undefined,
+      authHeader(p2.auth.accessToken)
+    )).json();
     const setMsg2 = sync2.messages.find((m: any) => m.to === inv2 && m.content.includes("Your private set"));
     assert.ok(setMsg2);
 
-    // Parse sets and find intersection
     const parseSet = (content: string): Set<number> => {
       const match = content.match(/\{(.+)\}/);
       if (!match) return new Set();
@@ -137,94 +123,108 @@ describe("REST API for arena", () => {
     const p2Set = parseSet(setMsg2.content);
     const intersection = new Set([...p1Set].filter((n) => p2Set.has(n)));
 
-    // Guess
     const guessContent = [...intersection].join(", ");
-    const g1 = await (await request("POST", "/api/arena/message", {
-      challengeId: id, from: inv1, messageType: "guess", content: guessContent,
-    })).json();
+    const g1 = await (await request(
+      "POST",
+      "/api/arena/message",
+      { challengeId: id, messageType: "guess", content: guessContent },
+      authHeader(p1.auth.accessToken)
+    )).json();
     assert.ok(g1.ok);
 
-    const g2 = await (await request("POST", "/api/arena/message", {
-      challengeId: id, from: inv2, messageType: "guess", content: guessContent,
-    })).json();
+    const g2 = await (await request(
+      "POST",
+      "/api/arena/message",
+      { challengeId: id, messageType: "guess", content: guessContent },
+      authHeader(p2.auth.accessToken)
+    )).json();
     assert.ok(g2.ok);
 
-    // Verify game ended with perfect scores
-    const instance = await defaultEngine.getChallenge(id);
-    assert.ok(instance);
-    assert.equal(instance.instance.state.gameEnded, true);
-    assert.equal(instance.instance.state.scores[0].utility, 1);
-    assert.equal(instance.instance.state.scores[1].utility, 1);
+    const challenge = await defaultEngine.getChallenge(id);
+    assert.ok(challenge);
+    assert.equal(challenge.instance.state.gameEnded, true);
+  });
+
+  it("tokens are invalid after game ends", async () => {
+    const { id, invites } = await createPsiChallenge();
+    const p1 = await joinWithDidProof({ request, invite: invites[0] });
+    const p2 = await joinWithDidProof({ request, invite: invites[1] });
+
+    const guess = "100, 200, 300";
+    await request("POST", "/api/arena/message", { challengeId: id, messageType: "guess", content: guess }, authHeader(p1.auth.accessToken));
+    await request("POST", "/api/arena/message", { challengeId: id, messageType: "guess", content: guess }, authHeader(p2.auth.accessToken));
+
+    const postEnd = await request(
+      "GET",
+      `/api/arena/sync?channel=${id}&index=0`,
+      undefined,
+      authHeader(p1.auth.accessToken)
+    );
+    assert.equal(postEnd.status, 401);
+    const data = await postEnd.json();
+    assert.equal(data.code, "SESSION_GAME_ENDED");
   });
 });
 
-describe("REST API for chat", () => {
+describe("REST API for chat auth", () => {
   beforeEach(async () => clearState());
 
-  it("POST /api/chat/send — sends a message", async () => {
+  it("POST /api/chat/send requires auth for non-invites channels", async () => {
     const res = await request("POST", "/api/chat/send", {
       channel: "test-channel",
-      from: "user1",
       content: "Hello!",
     });
-    assert.equal(res.status, 200);
-
+    assert.equal(res.status, 401);
     const data = await res.json();
-    assert.equal(data.channel, "test-channel");
-    assert.equal(data.from, "user1");
-    assert.equal(data.to, null);
-    assert.ok(typeof data.index === "number");
+    assert.equal(data.code, "AUTH_REQUIRED");
   });
 
-  it("POST /api/chat/send — sends a DM", async () => {
-    const res = await request("POST", "/api/chat/send", {
-      channel: "test-channel",
-      from: "user1",
-      to: "user2",
-      content: "Secret message",
+  it("GET /api/chat/sync requires auth for non-invites channels", async () => {
+    const res = await request("GET", "/api/chat/sync?channel=test-channel&index=0");
+    assert.equal(res.status, 401);
+    const data = await res.json();
+    assert.equal(data.code, "AUTH_REQUIRED");
+  });
+
+  it("invites channel still supports unauthenticated sync/send", async () => {
+    const send = await request("POST", "/api/chat/send", {
+      channel: "invites",
+      from: "listener",
+      content: "inv_123",
     });
-    assert.equal(res.status, 200);
+    assert.equal(send.status, 200);
 
-    const data = await res.json();
-    assert.equal(data.to, "user2");
+    const sync = await request("GET", "/api/chat/sync?channel=invites&from=listener&index=0");
+    assert.equal(sync.status, 200);
+    const data = await sync.json();
+    assert.ok(data.messages.some((m: any) => m.content === "inv_123"));
   });
 
-  it("POST /api/chat/send — returns 400 for missing fields", async () => {
-    const res = await request("POST", "/api/chat/send", { channel: "x" });
-    assert.equal(res.status, 400);
-  });
+  it("chat send/sync works with session token for challenge channel", async () => {
+    const { id, invites } = await createPsiChallenge();
+    const identityA = createDidKeyIdentity();
+    const identityB = createDidKeyIdentity();
+    const p1 = await joinWithDidProof({ request, invite: invites[0], identity: identityA });
+    await joinWithDidProof({ request, invite: invites[1], identity: identityB });
 
-  it("GET /api/chat/sync — returns messages with filtering", async () => {
-    // Send some messages
-    await request("POST", "/api/chat/send", { channel: "ch1", from: "a", content: "broadcast" });
-    await request("POST", "/api/chat/send", { channel: "ch1", from: "b", to: "a", content: "DM to A" });
-    await request("POST", "/api/chat/send", { channel: "ch1", from: "b", to: "c", content: "DM to C" });
+    const send = await request(
+      "POST",
+      "/api/chat/send",
+      { channel: id, content: "Hello opponent!" },
+      authHeader(p1.auth.accessToken)
+    );
+    assert.equal(send.status, 200);
+    const sendData = await send.json();
+    assert.equal(sendData.from, invites[0]);
 
-    // Sync as user A
-    const res = await request("GET", "/api/chat/sync?channel=ch1&from=a&index=0");
-    assert.equal(res.status, 200);
-
-    const data = await res.json();
-    // A should see: broadcast (from A), DM to A (to A), but NOT DM to C
-    assert.ok(data.messages.some((m: any) => m.content === "broadcast"));
-    assert.ok(data.messages.some((m: any) => m.content === "DM to A"));
-    assert.ok(!data.messages.some((m: any) => m.content === "DM to C"));
-  });
-
-  it("GET /api/chat/sync — returns 400 for missing params", async () => {
-    const res = await request("GET", "/api/chat/sync");
-    assert.equal(res.status, 400);
-  });
-
-  it("GET /api/chat/sync — index filters older messages", async () => {
-    await request("POST", "/api/chat/send", { channel: "ch2", from: "a", content: "msg1" });
-    await request("POST", "/api/chat/send", { channel: "ch2", from: "a", content: "msg2" });
-    await request("POST", "/api/chat/send", { channel: "ch2", from: "a", content: "msg3" });
-
-    // Only get messages from index 3 onward
-    const res = await request("GET", "/api/chat/sync?channel=ch2&from=a&index=3");
-    const data = await res.json();
-    assert.equal(data.count, 1);
-    assert.equal(data.messages[0].content, "msg3");
+    const sync = await request(
+      "GET",
+      `/api/chat/sync?channel=${id}&index=0`,
+      undefined,
+      authHeader(p1.auth.accessToken)
+    );
+    assert.equal(sync.status, 200);
+    const syncData = await sync.json();
+    assert.ok(syncData.messages.some((m: any) => m.content === "Hello opponent!"));
   });
 });

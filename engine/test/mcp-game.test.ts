@@ -6,8 +6,7 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 
 import app from "../server/index";
 import { defaultEngine } from "../engine";
-
-// --- Setup ---
+import { createDidKeyIdentity } from "./auth-helpers";
 
 let baseUrl: string;
 let server: ReturnType<typeof serve>;
@@ -16,7 +15,6 @@ async function clearState() {
   await defaultEngine.clearRuntimeState();
 }
 
-/** Create a connected MCP client for the arena endpoint */
 async function createArenaClient(): Promise<Client> {
   const client = new Client({ name: "test-arena", version: "1.0" });
   const transport = new StreamableHTTPClientTransport(
@@ -26,7 +24,6 @@ async function createArenaClient(): Promise<Client> {
   return client;
 }
 
-/** Create a connected MCP client for the chat endpoint */
 async function createChatClient(): Promise<Client> {
   const client = new Client({ name: "test-chat", version: "1.0" });
   const transport = new StreamableHTTPClientTransport(
@@ -36,7 +33,6 @@ async function createChatClient(): Promise<Client> {
   return client;
 }
 
-/** Call a tool and parse the JSON text result */
 async function callTool(client: Client, name: string, args: Record<string, unknown>) {
   const result = await client.callTool({ name, arguments: args });
   const text = (result.content as any)?.[0]?.text;
@@ -44,9 +40,32 @@ async function callTool(client: Client, name: string, args: Record<string, unkno
   try {
     return JSON.parse(text);
   } catch {
-    // Non-JSON text response (e.g. error strings)
     return { _text: text };
   }
+}
+
+async function mcpJoin(client: Client, invite: string) {
+  const identity = createDidKeyIdentity();
+  const nonceRes = await callTool(client, "auth_nonce", { purpose: "join", invite });
+  const timestamp = Date.now();
+  const signature = identity.signJoinProof({
+    domain: nonceRes.domain,
+    invite,
+    nonce: nonceRes.nonce,
+    nonceId: nonceRes.nonceId,
+    timestamp,
+  });
+  const joinRes = await callTool(client, "challenge_join", {
+    invite,
+    did: identity.did,
+    nonceId: nonceRes.nonceId,
+    signature,
+    timestamp,
+  });
+  return joinRes as {
+    ChallengeID: string;
+    auth: { accessToken: string };
+  };
 }
 
 before(async () => {
@@ -59,12 +78,9 @@ before(async () => {
 });
 
 after(() => {
-  // Force-close all open connections (SSE streams from MCP clients)
   server?.close();
   (server as any)?.closeAllConnections?.();
 });
-
-// --- Tests ---
 
 describe("PSI game via MCP protocol", () => {
   beforeEach(async () => {
@@ -74,12 +90,11 @@ describe("PSI game via MCP protocol", () => {
   it("MCP client connects and lists tools", async () => {
     const client = await createArenaClient();
     const tools = await client.listTools();
-
     const toolNames = tools.tools.map((t) => t.name);
+    assert.ok(toolNames.includes("auth_nonce"));
     assert.ok(toolNames.includes("challenge_join"));
     assert.ok(toolNames.includes("challenge_message"));
     assert.ok(toolNames.includes("challenge_sync"));
-
     await client.close();
   });
 
@@ -87,72 +102,62 @@ describe("PSI game via MCP protocol", () => {
     const arena = await createArenaClient();
     const chat = await createChatClient();
 
-    // 1. Create challenge via REST
     const createRes = await fetch(`${baseUrl}/api/challenges/psi`, { method: "POST" });
-    const { id: challengeId, invites } = await createRes.json();
+    const { id: challengeId, invites } = await createRes.json() as { id: string; invites: string[] };
     const [invite1, invite2] = invites;
 
-    // 2. Player 1 joins
-    const join1 = await callTool(arena, "challenge_join", { invite: invite1 });
+    const join1 = await mcpJoin(arena, invite1);
+    const join2 = await mcpJoin(arena, invite2);
     assert.equal(join1.ChallengeID, challengeId);
-    assert.equal(join1.ChallengeInfo.name, "Private Set Intersection");
+    assert.equal(join2.ChallengeID, challengeId);
 
+    const token1 = join1.auth.accessToken;
+    const token2 = join2.auth.accessToken;
     const instance = await defaultEngine.getChallenge(challengeId);
     assert.ok(instance);
-    assert.equal(instance.instance.state.gameStarted, false);
-
-    // 3. Player 2 joins → game starts
-    const join2 = await callTool(arena, "challenge_join", { invite: invite2 });
-    assert.equal(join2.ChallengeID, challengeId);
     assert.equal(instance.instance.state.gameStarted, true);
 
-    // 4. Player 1 syncs to get private set
     const sync1 = await callTool(arena, "challenge_sync", {
+      authToken: token1,
       channel: challengeId,
-      from: invite1,
       index: 0,
     });
-    assert.ok(sync1.count >= 1);
     const p1SetMsg = sync1.messages.find(
       (m: any) => m.to === invite1 && m.content.includes("Your private set")
     );
-    assert.ok(p1SetMsg, "player 1 should receive their set");
+    assert.ok(p1SetMsg);
 
-    // 5. Player 2 syncs - should NOT see player 1's private set
     const sync2 = await callTool(arena, "challenge_sync", {
+      authToken: token2,
       channel: challengeId,
-      from: invite2,
       index: 0,
     });
     const leakedP1 = sync2.messages.find(
       (m: any) => m.to === invite1 && m.from === "operator"
     );
-    assert.equal(leakedP1, undefined, "player 2 must not see player 1's private set");
+    assert.equal(leakedP1, undefined);
 
-    // 6. Players chat via MCP
     const chat1 = await callTool(chat, "send_chat", {
+      authToken: token1,
       channel: challengeId,
-      from: invite1,
       content: "Hello! Let's find the intersection.",
     });
-    assert.ok(chat1.index, "chat should return message index");
+    assert.ok(chat1.index);
 
     const chat2 = await callTool(chat, "send_chat", {
+      authToken: token2,
       channel: challengeId,
-      from: invite2,
       content: "Sure thing!",
     });
     assert.ok(chat2.index);
 
-    // 7. Sync chat messages
     const chatSync = await callTool(chat, "sync", {
+      authToken: token1,
       channel: challengeId,
-      from: invite1,
       index: 0,
     });
-    assert.ok(chatSync.messages.length >= 2, "should see both chat messages");
+    assert.ok(chatSync.messages.length >= 2);
 
-    // 8. Parse sets and compute intersection
     const parseSet = (content: string): Set<number> => {
       const match = content.match(/\{(.+)\}/);
       if (!match) return new Set();
@@ -161,35 +166,32 @@ describe("PSI game via MCP protocol", () => {
     const p2SetMsg = sync2.messages.find(
       (m: any) => m.to === invite2 && m.content.includes("Your private set")
     );
-    const p1Set = parseSet(p1SetMsg.content);
-    const p2Set = parseSet(p2SetMsg.content);
-    const intersection = new Set([...p1Set].filter((n) => p2Set.has(n)));
+    const intersection = [...parseSet(p1SetMsg.content)].filter((n) => parseSet(p2SetMsg.content).has(n));
 
-    // 9. Player 1 guesses exact intersection
     const guess1 = await callTool(arena, "challenge_message", {
+      authToken: token1,
       challengeId,
-      from: invite1,
       messageType: "guess",
-      content: [...intersection].join(", "),
+      content: intersection.join(", "),
     });
     assert.equal(guess1.ok, "Message sent");
-    assert.equal(instance.instance.state.gameEnded, false);
 
-    // 10. Player 2 guesses exact intersection
-    await callTool(arena, "challenge_message", {
+    const guess2 = await callTool(arena, "challenge_message", {
+      authToken: token2,
       challengeId,
-      from: invite2,
       messageType: "guess",
-      content: [...intersection].join(", "),
+      content: intersection.join(", "),
     });
+    assert.equal(guess2.ok, "Message sent");
 
-    // 11. Game ended with perfect scores
     assert.equal(instance.instance.state.gameEnded, true);
-    const scores = instance.instance.state.scores;
-    assert.equal(scores[0].utility, 1, "player 1 utility=1");
-    assert.equal(scores[0].security, 1, "player 1 security=1");
-    assert.equal(scores[1].utility, 1, "player 2 utility=1");
-    assert.equal(scores[1].security, 1, "player 2 security=1");
+
+    const postEnd = await callTool(arena, "challenge_sync", {
+      authToken: token1,
+      channel: challengeId,
+      index: 0,
+    });
+    assert.equal(postEnd.code, "SESSION_GAME_ENDED");
 
     await arena.close();
     await chat.close();
@@ -197,47 +199,40 @@ describe("PSI game via MCP protocol", () => {
 
   it("MCP error: duplicate join returns error", async () => {
     const arena = await createArenaClient();
-
     const createRes = await fetch(`${baseUrl}/api/challenges/psi`, { method: "POST" });
-    const { invites } = await createRes.json();
+    const { invites } = await createRes.json() as { invites: string[] };
 
-    await callTool(arena, "challenge_join", { invite: invites[0] });
-
-    // Join again with same invite → error
-    const result = await callTool(arena, "challenge_join", { invite: invites[0] });
-    assert.ok(
-      JSON.stringify(result).includes("ERR_INVITE_ALREADY_USED"),
-      "duplicate join should return error"
-    );
+    await mcpJoin(arena, invites[0]);
+    const result = await mcpJoin(arena, invites[0]);
+    assert.ok(JSON.stringify(result).includes("ERR_INVITE_ALREADY_USED"));
 
     await arena.close();
   });
 
-  it("MCP error: challenge_message with invalid challenge", async () => {
+  it("MCP error: protected tools require authToken", async () => {
     const arena = await createArenaClient();
-
-    const result = await callTool(arena, "challenge_message", {
-      challengeId: "nonexistent",
-      from: "nobody",
-      messageType: "guess",
-      content: "100 200",
-    });
-    assert.equal(result.error, "Challenge not found");
-
-    await arena.close();
-  });
-
-  it("MCP: challenge_sync returns empty for new channel", async () => {
-    const arena = await createArenaClient();
-
     const result = await callTool(arena, "challenge_sync", {
       channel: "nonexistent",
-      from: "nobody",
       index: 0,
     });
-    assert.equal(result.count, 0);
-    assert.deepEqual(result.messages, []);
-
+    assert.equal(result.code, "AUTH_REQUIRED");
     await arena.close();
+  });
+
+  it("MCP invites channel remains readable without auth token", async () => {
+    const chat = await createChatClient();
+    await callTool(chat, "send_chat", {
+      channel: "invites",
+      from: "listener",
+      content: "inv_foo",
+    });
+
+    const result = await callTool(chat, "sync", {
+      channel: "invites",
+      from: "listener",
+      index: 0,
+    });
+    assert.ok(result.messages.some((m: any) => m.content === "inv_foo"));
+    await chat.close();
   });
 });

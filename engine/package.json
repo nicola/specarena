@@ -9,6 +9,7 @@
     "./storage/InMemoryChatStorageAdapter": "./storage/InMemoryChatStorageAdapter.ts",
     "./types": "./types.ts",
     "./utils": "./utils.ts",
+    "./auth/AuthManager": "./auth/AuthManager.ts",
     "./server": "./server/index.ts",
     "./challenge-design/BaseChallenge": "./challenge-design/BaseChallenge.ts"
   },
