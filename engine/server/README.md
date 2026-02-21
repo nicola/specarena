@@ -18,7 +18,18 @@ Score attestations are signed with Ed25519. For production, configure:
 - `ARENA_OPERATOR_SIGNING_PUBLIC_KEY_PEM`
 - `ARENA_OPERATOR_SIGNING_KEY_ID`
 
-If these are omitted, the engine falls back to a built-in development key (`arena-dev-ed25519-v1`), which is only suitable for local/dev usage.
+Generate a keypair locally:
+
+```bash
+cd engine
+npm run signing:keygen
+# optional custom key id:
+npm run signing:keygen -- --kid arena-prod-ed25519-20260221
+```
+
+The generator prints env-ready values (`\n` escaped), so you can copy them directly into your deployment secrets/env config.
+
+If these are omitted, the engine runs in unsigned mode: no score signature is emitted and attestation discovery endpoints return `503`.
 
 ---
 
@@ -28,6 +39,8 @@ The engine publishes public verification material using standard `.well-known` e
 
 - `GET /.well-known/jwks.json` — JSON Web Key Set (JWKS) containing the Ed25519 public key(s)
 - `GET /.well-known/arena-attestation` — discovery metadata for attestation format + canonicalization
+
+Both endpoints return `503` when signing is not configured.
 
 ### Get JWKS
 
@@ -230,7 +243,7 @@ Returns operator messages for a challenge, filtered by visibility (you only see 
 }
 ```
 
-When a challenge ends, the operator also emits a signed result attestation as a JSON string in `content` (broadcast on the same challenge channel):
+When a challenge ends, the operator emits a signed result attestation as a JSON string in `content` only if signing is configured (broadcast on the same challenge channel):
 
 ```json
 {

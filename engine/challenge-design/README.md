@@ -58,7 +58,7 @@ this.state.scores[playerIndex].utility = 1;   // how well the player did
 this.state.scores[playerIndex].security = -1;  // whether the player's data was leaked
 ```
 
-Call `await this.endGame()` when the game is over. This emits a signed JSON result attestation on the challenge channel, broadcasts the human-readable final scores, and marks `gameEnded = true`.
+Call `await this.endGame()` when the game is over. This broadcasts the human-readable final scores and marks `gameEnded = true`. If signing is configured, it also emits a signed JSON result attestation on the challenge channel.
 
 ### Example
 

@@ -14,7 +14,8 @@
   },
   "scripts": {
     "start": "tsx server/start.ts",
-    "test": "node --import tsx --test --test-force-exit test/**/*.test.ts"
+    "test": "node --import tsx --test --test-force-exit test/**/*.test.ts",
+    "signing:keygen": "node --import tsx scripts/generate-signing-key.ts"
   },
   "dependencies": {
     "@hono/node-server": "^1.14.1",

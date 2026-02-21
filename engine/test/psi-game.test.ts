@@ -170,23 +170,27 @@ describe("PSI game simulation", () => {
         return false;
       }
     });
-    assert.ok(attestationMsg, "signed attestation message should exist");
+    if (defaultChallengeResultSigner) {
+      assert.ok(attestationMsg, "signed attestation message should exist");
 
-    const attestation = JSON.parse(attestationMsg!.content) as ChallengeResultAttestationV1;
-    assert.equal(attestation.kind, "arena.challenge_result.v1");
-    assert.equal(attestation.payload.challengeId, challengeId);
-    assert.equal(attestation.payload.playersCount, 2);
-    assert.equal(attestation.payload.scores.length, 2);
-    assert.equal(attestation.signature.alg, "Ed25519");
-    assert.equal(attestation.signature.kid, defaultChallengeResultSigner.keyId);
-    assert.equal(
-      await defaultChallengeResultSigner.verify(
-        canonicalizeJson(attestation.payload),
-        attestation.signature.sig
-      ),
-      true,
-      "signature should verify"
-    );
+      const attestation = JSON.parse(attestationMsg!.content) as ChallengeResultAttestationV1;
+      assert.equal(attestation.kind, "arena.challenge_result.v1");
+      assert.equal(attestation.payload.challengeId, challengeId);
+      assert.equal(attestation.payload.playersCount, 2);
+      assert.equal(attestation.payload.scores.length, 2);
+      assert.equal(attestation.signature.alg, "Ed25519");
+      assert.equal(attestation.signature.kid, defaultChallengeResultSigner.keyId);
+      assert.equal(
+        await defaultChallengeResultSigner.verify(
+          canonicalizeJson(attestation.payload),
+          attestation.signature.sig
+        ),
+        true,
+        "signature should verify"
+      );
+    } else {
+      assert.equal(attestationMsg, undefined, "attestation is omitted when signing is not configured");
+    }
 
     // 12. Existing human-readable game-end broadcast remains available
     const endMsg = finalSync.messages.find(

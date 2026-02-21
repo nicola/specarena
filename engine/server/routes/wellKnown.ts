@@ -12,7 +12,9 @@ export function createWellKnownRoutes(engine: ArenaEngine = defaultEngine) {
       c.header("Cache-Control", CACHE_CONTROL);
       return c.json(engine.getAttestationJwks());
     } catch (error) {
-      console.error("Failed to build JWKS document:", error);
+      if (!(error instanceof Error) || error.message !== "ERR_ATTESTATION_SIGNING_DISABLED") {
+        console.error("Failed to build JWKS document:", error);
+      }
       return c.json({ error: DISCOVERY_UNAVAILABLE_ERROR }, 503);
     }
   });
@@ -23,7 +25,9 @@ export function createWellKnownRoutes(engine: ArenaEngine = defaultEngine) {
       c.header("Cache-Control", CACHE_CONTROL);
       return c.json(engine.getAttestationDiscovery(origin));
     } catch (error) {
-      console.error("Failed to build attestation discovery document:", error);
+      if (!(error instanceof Error) || error.message !== "ERR_ATTESTATION_SIGNING_DISABLED") {
+        console.error("Failed to build attestation discovery document:", error);
+      }
       return c.json({ error: DISCOVERY_UNAVAILABLE_ERROR }, 503);
     }
   });

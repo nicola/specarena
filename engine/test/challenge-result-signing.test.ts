@@ -91,4 +91,25 @@ describe("challenge result signing", () => {
       /ERR_SIGNING_CONFIG_INCOMPLETE/
     );
   });
+
+  it("returns undefined when no signing env is configured", () => {
+    const signer = createChallengeResultSignerFromEnv({
+      privateKeyEnv: "",
+      publicKeyEnv: "",
+      keyIdEnv: "",
+    });
+    assert.equal(signer, undefined);
+  });
+
+  it("can use the development fallback signer when explicitly enabled", () => {
+    const signer = createChallengeResultSignerFromEnv({
+      privateKeyEnv: "",
+      publicKeyEnv: "",
+      keyIdEnv: "",
+      allowDevelopmentFallback: true,
+    });
+    assert.ok(signer);
+    assert.equal(signer.alg, "Ed25519");
+    assert.ok(signer.keyId.length > 0);
+  });
 });

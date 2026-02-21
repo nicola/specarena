@@ -43,41 +43,49 @@ after(() => {
 describe("HTTP server — .well-known attestation discovery", () => {
   beforeEach(async () => clearState());
 
-  it("GET /.well-known/jwks.json exposes an Ed25519 JWKS", async () => {
+  it("GET /.well-known/jwks.json is available only when signing is configured", async () => {
     const res = await req("GET", "/.well-known/jwks.json");
-    assert.equal(res.status, 200);
-    assert.ok(res.headers.get("cache-control")?.includes("max-age=300"));
-
     const data = await res.json();
-    assert.ok(Array.isArray(data.keys));
-    assert.equal(data.keys.length, 1);
+    if (res.status === 200) {
+      assert.ok(res.headers.get("cache-control")?.includes("max-age=300"));
+      assert.ok(Array.isArray(data.keys));
+      assert.equal(data.keys.length, 1);
 
-    const key = data.keys[0] as ChallengeResultVerificationJwk & { d?: string };
-    assert.equal(key.kty, "OKP");
-    assert.equal(key.crv, "Ed25519");
-    assert.equal(key.alg, "EdDSA");
-    assert.equal(key.use, "sig");
-    assert.ok(typeof key.kid === "string" && key.kid.length > 0);
-    assert.ok(typeof key.x === "string" && key.x.length > 0);
-    assert.equal(key.d, undefined, "JWKS must never expose private key material");
+      const key = data.keys[0] as ChallengeResultVerificationJwk & { d?: string };
+      assert.equal(key.kty, "OKP");
+      assert.equal(key.crv, "Ed25519");
+      assert.equal(key.alg, "EdDSA");
+      assert.equal(key.use, "sig");
+      assert.ok(typeof key.kid === "string" && key.kid.length > 0);
+      assert.ok(typeof key.x === "string" && key.x.length > 0);
+      assert.equal(key.d, undefined, "JWKS must never expose private key material");
+      return;
+    }
+
+    assert.equal(res.status, 503);
+    assert.equal(data.error, "ERR_ATTESTATION_DISCOVERY_UNAVAILABLE");
   });
 
-  it("GET /.well-known/arena-attestation exposes discovery metadata", async () => {
+  it("GET /.well-known/arena-attestation is available only when signing is configured", async () => {
     const res = await req("GET", "/.well-known/arena-attestation");
-    assert.equal(res.status, 200);
-    assert.ok(res.headers.get("cache-control")?.includes("max-age=300"));
-
     const data = await res.json();
-    assert.equal(data.version, "1");
-    assert.equal(data.kind, "arena.attestation.discovery");
-    assert.equal(data.attestation_kind, "arena.challenge_result.v1");
-    assert.equal(data.signature.alg, "Ed25519");
-    assert.equal(data.signature.format, "arena.challenge_result.v1-envelope");
-    assert.equal(data.canonicalization.id, "arena-json-sort-v1");
-    assert.equal(data.jwks_uri, `${baseUrl}/.well-known/jwks.json`);
+    if (res.status === 200) {
+      assert.ok(res.headers.get("cache-control")?.includes("max-age=300"));
+      assert.equal(data.version, "1");
+      assert.equal(data.kind, "arena.attestation.discovery");
+      assert.equal(data.attestation_kind, "arena.challenge_result.v1");
+      assert.equal(data.signature.alg, "Ed25519");
+      assert.equal(data.signature.format, "arena.challenge_result.v1-envelope");
+      assert.equal(data.canonicalization.id, "arena-json-sort-v1");
+      assert.equal(data.jwks_uri, `${baseUrl}/.well-known/jwks.json`);
+      return;
+    }
+
+    assert.equal(res.status, 503);
+    assert.equal(data.error, "ERR_ATTESTATION_DISCOVERY_UNAVAILABLE");
   });
 
-  it("attestation signatures can be verified with the discovered JWKS key", async () => {
+  it("attestation messages are emitted only when signing is configured", async () => {
     const createRes = await req("POST", "/api/challenges/psi");
     assert.equal(createRes.status, 200);
     const { id, invites } = await createRes.json();
@@ -128,30 +136,37 @@ describe("HTTP server — .well-known attestation discovery", () => {
         return false;
       }
     });
-    assert.ok(attestationMessage, "Expected operator to emit signed attestation");
-    const attestation = JSON.parse(attestationMessage.content) as ChallengeResultAttestationV1;
+    const jwksRes = await req("GET", "/.well-known/jwks.json");
+    if (jwksRes.status === 200) {
+      assert.ok(attestationMessage, "Expected operator to emit signed attestation");
+      const attestation = JSON.parse(attestationMessage.content) as ChallengeResultAttestationV1;
 
-    const jwks = await (await req("GET", "/.well-known/jwks.json")).json();
-    const jwk = (jwks.keys as ChallengeResultVerificationJwk[]).find(
-      (key) => key.kid === attestation.signature.kid
-    );
-    assert.ok(jwk, "Expected JWKS key matching attestation kid");
+      const jwks = await jwksRes.json();
+      const jwk = (jwks.keys as ChallengeResultVerificationJwk[]).find(
+        (key) => key.kid === attestation.signature.kid
+      );
+      assert.ok(jwk, "Expected JWKS key matching attestation kid");
 
-    const publicKey = createPublicKey({
-      key: {
-        kty: jwk.kty,
-        crv: jwk.crv,
-        x: jwk.x,
-      },
-      format: "jwk",
-    });
-    const verified = cryptoVerify(
-      null,
-      Buffer.from(canonicalizeJson(attestation.payload), "utf8"),
-      publicKey,
-      Buffer.from(attestation.signature.sig, "base64url")
-    );
-    assert.equal(verified, true);
+      const publicKey = createPublicKey({
+        key: {
+          kty: jwk.kty,
+          crv: jwk.crv,
+          x: jwk.x,
+        },
+        format: "jwk",
+      });
+      const verified = cryptoVerify(
+        null,
+        Buffer.from(canonicalizeJson(attestation.payload), "utf8"),
+        publicKey,
+        Buffer.from(attestation.signature.sig, "base64url")
+      );
+      assert.equal(verified, true);
+      return;
+    }
+
+    assert.equal(jwksRes.status, 503);
+    assert.equal(attestationMessage, undefined);
   });
 });
 

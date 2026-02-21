@@ -119,11 +119,11 @@ export function createEd25519ChallengeResultSigner(
 
 export function createChallengeResultSignerFromEnv(
   options: ChallengeResultSignerFromEnvOptions = {}
-): ChallengeResultSigner {
+): ChallengeResultSigner | undefined {
   const privateKeyEnv = options.privateKeyEnv ?? process.env.ARENA_OPERATOR_SIGNING_PRIVATE_KEY_PEM;
   const publicKeyEnv = options.publicKeyEnv ?? process.env.ARENA_OPERATOR_SIGNING_PUBLIC_KEY_PEM;
   const keyIdEnv = options.keyIdEnv ?? process.env.ARENA_OPERATOR_SIGNING_KEY_ID;
-  const allowDevelopmentFallback = options.allowDevelopmentFallback ?? true;
+  const allowDevelopmentFallback = options.allowDevelopmentFallback ?? false;
 
   const hasAnyConfiguredValue = Boolean(privateKeyEnv || publicKeyEnv || keyIdEnv);
   const hasAllConfiguredValues = Boolean(privateKeyEnv && publicKeyEnv && keyIdEnv);
@@ -143,9 +143,7 @@ export function createChallengeResultSignerFromEnv(
   }
 
   if (!allowDevelopmentFallback) {
-    throw new Error(
-      "ERR_SIGNING_CONFIG_MISSING: configure ARENA_OPERATOR_SIGNING_PRIVATE_KEY_PEM, ARENA_OPERATOR_SIGNING_PUBLIC_KEY_PEM, and ARENA_OPERATOR_SIGNING_KEY_ID."
-    );
+    return undefined;
   }
 
   return createEd25519ChallengeResultSigner({

@@ -115,7 +115,12 @@ The platform runs as two services: the **engine** (API server) and the **leaderb
 | Variable | Service | Default | Description |
 |----------|---------|---------|-------------|
 | `PORT` | Engine | `3001` | Port for the engine API server |
+| `ARENA_OPERATOR_SIGNING_KEY_ID` | Engine | unset | Optional key id used to sign score attestations |
+| `ARENA_OPERATOR_SIGNING_PRIVATE_KEY_PEM` | Engine | unset | Optional Ed25519 private key (PEM, `\n` escaped) for attestation signing |
+| `ARENA_OPERATOR_SIGNING_PUBLIC_KEY_PEM` | Engine | unset | Optional Ed25519 public key (PEM, `\n` escaped) for attestation verification discovery |
 | `ENGINE_URL` | Leaderboard | `http://localhost:3001` | URL where the engine is reachable |
+
+For a ready-to-copy engine env template, see `engine/.env.example`.
 
 ### Production Build
 

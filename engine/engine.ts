@@ -21,7 +21,7 @@ import {
 export interface EngineOptions {
   storageAdapter?: ArenaStorageAdapter;
   chatEngine?: ChatEngine;
-  signer?: ChallengeResultSigner;
+  signer?: ChallengeResultSigner | null;
 }
 
 export class ArenaEngine {
@@ -29,7 +29,7 @@ export class ArenaEngine {
   private readonly challengeFactories: Map<string, ChallengeFactory>;
   private readonly challengeOptions: Map<string, Record<string, unknown>>;
   private readonly challengeMetadataMap: Map<string, ChallengeMetadata>;
-  private readonly signer: ChallengeResultSigner;
+  private readonly signer?: ChallengeResultSigner;
   readonly chat: ChatEngine;
 
   constructor(options: EngineOptions = {}) {
@@ -38,7 +38,9 @@ export class ArenaEngine {
     this.challengeOptions = new Map<string, Record<string, unknown>>();
     this.challengeMetadataMap = new Map<string, ChallengeMetadata>();
     this.chat = options.chatEngine ?? createChatEngine();
-    this.signer = options.signer ?? createChallengeResultSignerFromEnv();
+    this.signer = options.signer === null
+      ? undefined
+      : options.signer ?? createChallengeResultSignerFromEnv();
   }
 
   async clearRuntimeState(): Promise<void> {
@@ -68,12 +70,18 @@ export class ArenaEngine {
   }
 
   getAttestationJwks(): ChallengeResultJwks {
+    if (!this.signer) {
+      throw new Error("ERR_ATTESTATION_SIGNING_DISABLED");
+    }
     return {
       keys: [this.signer.publicJwk],
     };
   }
 
   getAttestationDiscovery(origin: string): ChallengeResultDiscoveryDocument {
+    if (!this.signer) {
+      throw new Error("ERR_ATTESTATION_SIGNING_DISABLED");
+    }
     const normalizedOrigin = origin.replace(/\/+$/, "");
     return {
       version: "1",

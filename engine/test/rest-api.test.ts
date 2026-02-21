@@ -29,39 +29,47 @@ async function createPsiChallenge() {
 describe("REST API for .well-known attestation discovery", () => {
   beforeEach(async () => clearState());
 
-  it("GET /.well-known/jwks.json returns an Ed25519 JWKS", async () => {
+  it("GET /.well-known/jwks.json returns JWKS when signing is enabled, otherwise 503", async () => {
     const res = await request("GET", "/.well-known/jwks.json");
-    assert.equal(res.status, 200);
-
     const data = await res.json();
-    assert.ok(Array.isArray(data.keys));
-    assert.equal(data.keys.length, 1);
-    const key = data.keys[0] as ChallengeResultVerificationJwk & { d?: string };
-    assert.equal(key.kty, "OKP");
-    assert.equal(key.crv, "Ed25519");
-    assert.equal(key.alg, "EdDSA");
-    assert.equal(key.use, "sig");
-    assert.ok(typeof key.kid === "string" && key.kid.length > 0);
-    assert.ok(typeof key.x === "string" && key.x.length > 0);
-    assert.equal(key.d, undefined);
+    if (res.status === 200) {
+      assert.ok(Array.isArray(data.keys));
+      assert.equal(data.keys.length, 1);
+      const key = data.keys[0] as ChallengeResultVerificationJwk & { d?: string };
+      assert.equal(key.kty, "OKP");
+      assert.equal(key.crv, "Ed25519");
+      assert.equal(key.alg, "EdDSA");
+      assert.equal(key.use, "sig");
+      assert.ok(typeof key.kid === "string" && key.kid.length > 0);
+      assert.ok(typeof key.x === "string" && key.x.length > 0);
+      assert.equal(key.d, undefined);
+      return;
+    }
+
+    assert.equal(res.status, 503);
+    assert.equal(data.error, "ERR_ATTESTATION_DISCOVERY_UNAVAILABLE");
   });
 
-  it("GET /.well-known/arena-attestation returns discovery metadata", async () => {
+  it("GET /.well-known/arena-attestation returns metadata when signing is enabled, otherwise 503", async () => {
     const res = await request("GET", "/.well-known/arena-attestation");
-    assert.equal(res.status, 200);
-
     const data = await res.json();
-    assert.equal(data.version, "1");
-    assert.equal(data.kind, "arena.attestation.discovery");
-    assert.equal(data.attestation_kind, "arena.challenge_result.v1");
-    assert.equal(data.signature.alg, "Ed25519");
-    assert.equal(data.signature.format, "arena.challenge_result.v1-envelope");
-    assert.equal(data.canonicalization.id, "arena-json-sort-v1");
-    assert.ok(typeof data.jwks_uri === "string");
-    assert.ok(data.jwks_uri.endsWith("/.well-known/jwks.json"));
+    if (res.status === 200) {
+      assert.equal(data.version, "1");
+      assert.equal(data.kind, "arena.attestation.discovery");
+      assert.equal(data.attestation_kind, "arena.challenge_result.v1");
+      assert.equal(data.signature.alg, "Ed25519");
+      assert.equal(data.signature.format, "arena.challenge_result.v1-envelope");
+      assert.equal(data.canonicalization.id, "arena-json-sort-v1");
+      assert.ok(typeof data.jwks_uri === "string");
+      assert.ok(data.jwks_uri.endsWith("/.well-known/jwks.json"));
+      return;
+    }
+
+    assert.equal(res.status, 503);
+    assert.equal(data.error, "ERR_ATTESTATION_DISCOVERY_UNAVAILABLE");
   });
 
-  it("JWKS key verifies emitted challenge attestation", async () => {
+  it("attestation is emitted only when signing is enabled", async () => {
     const { id, invites } = await createPsiChallenge();
     const [inv1, inv2] = invites;
 
@@ -107,30 +115,37 @@ describe("REST API for .well-known attestation discovery", () => {
         return false;
       }
     });
-    assert.ok(attestationMsg);
 
-    const attestation = JSON.parse(attestationMsg.content) as ChallengeResultAttestationV1;
-    const jwks = await (await request("GET", "/.well-known/jwks.json")).json();
-    const key = (jwks.keys as ChallengeResultVerificationJwk[]).find(
-      (candidate) => candidate.kid === attestation.signature.kid
-    );
-    assert.ok(key);
+    const jwksRes = await request("GET", "/.well-known/jwks.json");
+    if (jwksRes.status === 200) {
+      assert.ok(attestationMsg, "expected signed attestation when signing is enabled");
+      const attestation = JSON.parse(attestationMsg.content) as ChallengeResultAttestationV1;
+      const jwks = await jwksRes.json();
+      const key = (jwks.keys as ChallengeResultVerificationJwk[]).find(
+        (candidate) => candidate.kid === attestation.signature.kid
+      );
+      assert.ok(key);
 
-    const publicKey = createPublicKey({
-      key: {
-        kty: key.kty,
-        crv: key.crv,
-        x: key.x,
-      },
-      format: "jwk",
-    });
-    const verified = cryptoVerify(
-      null,
-      Buffer.from(canonicalizeJson(attestation.payload), "utf8"),
-      publicKey,
-      Buffer.from(attestation.signature.sig, "base64url")
-    );
-    assert.equal(verified, true);
+      const publicKey = createPublicKey({
+        key: {
+          kty: key.kty,
+          crv: key.crv,
+          x: key.x,
+        },
+        format: "jwk",
+      });
+      const verified = cryptoVerify(
+        null,
+        Buffer.from(canonicalizeJson(attestation.payload), "utf8"),
+        publicKey,
+        Buffer.from(attestation.signature.sig, "base64url")
+      );
+      assert.equal(verified, true);
+      return;
+    }
+
+    assert.equal(jwksRes.status, 503);
+    assert.equal(attestationMsg, undefined, "expected unsigned game result when signing is disabled");
   });
 });
 

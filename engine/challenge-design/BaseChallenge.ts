@@ -25,7 +25,7 @@ export abstract class BaseChallenge<TGameState = {}> implements ChallengeOperato
   protected challengeId: string;
   protected playerCount: number;
   protected messaging: ChallengeMessaging;
-  protected signer: ChallengeResultSigner;
+  protected signer?: ChallengeResultSigner;
   state: ChallengeOperatorState;
   gameState: TGameState;
   private handlers = new Map<string, (msg: ChatMessage, playerIndex: number) => void | Promise<void>>();
@@ -116,7 +116,7 @@ export abstract class BaseChallenge<TGameState = {}> implements ChallengeOperato
   // --- Game lifecycle ---
 
   // Standard game-finalization helper used by challenges after scoring.
-  // It emits a signed score attestation and a human-readable score summary.
+  // It emits a human-readable score summary, and optionally a signed attestation.
   protected async endGame(): Promise<void> {
     if (this.state.gameEnded) {
       return;
@@ -133,19 +133,20 @@ export abstract class BaseChallenge<TGameState = {}> implements ChallengeOperato
       })),
     };
 
-    const canonicalPayload = canonicalizeJson(payload);
-    const signature = await this.signer.sign(canonicalPayload);
-    const attestation: ChallengeResultAttestationV1 = {
-      kind: "arena.challenge_result.v1",
-      payload,
-      signature: {
-        alg: this.signer.alg,
-        kid: this.signer.keyId,
-        sig: signature,
-      },
-    };
-
-    await this.broadcast(JSON.stringify(attestation));
+    if (this.signer) {
+      const canonicalPayload = canonicalizeJson(payload);
+      const signature = await this.signer.sign(canonicalPayload);
+      const attestation: ChallengeResultAttestationV1 = {
+        kind: "arena.challenge_result.v1",
+        payload,
+        signature: {
+          alg: this.signer.alg,
+          kid: this.signer.keyId,
+          sig: signature,
+        },
+      };
+      await this.broadcast(JSON.stringify(attestation));
+    }
 
     const lines = this.state.scores.map(
       (s, i) => `- Player ${i + 1}: ${JSON.stringify(s)}`
