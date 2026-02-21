@@ -154,7 +154,7 @@ describe("AuthEngine", () => {
     assert.ok("error" in result);
   });
 
-  it("resolveSession returns invite from token", () => {
+  it("verifyToken returns player index from token", () => {
     const { publicKeyHex, privateKey } = generateTestKeypair();
     const invite = "inv_test";
     const signature = signJoin(privateKey, invite);
@@ -162,11 +162,10 @@ describe("AuthEngine", () => {
     const result = auth.authenticateJoin("challenge1", invite, 0, publicKeyHex, signature);
     assert.ok("sessionToken" in result);
 
-    const resolved = auth.resolveSession(result.sessionToken, "challenge1");
-    assert.equal(resolved, invite);
+    assert.equal(auth.verifyToken(result.sessionToken, "challenge1"), 0);
   });
 
-  it("resolveSession returns null for wrong challengeId", () => {
+  it("verifyToken returns null for wrong challengeId", () => {
     const { publicKeyHex, privateKey } = generateTestKeypair();
     const invite = "inv_test";
     const signature = signJoin(privateKey, invite);
@@ -174,15 +173,15 @@ describe("AuthEngine", () => {
     const result = auth.authenticateJoin("challenge1", invite, 0, publicKeyHex, signature);
     assert.ok("sessionToken" in result);
 
-    assert.equal(auth.resolveSession(result.sessionToken, "challenge2"), null);
+    assert.equal(auth.verifyToken(result.sessionToken, "challenge2"), null);
   });
 
-  it("resolveSession returns null for tampered token", () => {
+  it("verifyToken returns null for tampered token", () => {
     const { publicKeyHex, privateKey } = generateTestKeypair();
     const signature = signJoin(privateKey, "inv_test");
     auth.authenticateJoin("c1", "inv_test", 0, publicKeyHex, signature);
 
-    assert.equal(auth.resolveSession("s_0.badhmac" + "a".repeat(56), "c1"), null);
+    assert.equal(auth.verifyToken("s_0.badhmac" + "a".repeat(56), "c1"), null);
   });
 
   it("handles two players with different indices", () => {
@@ -194,11 +193,8 @@ describe("AuthEngine", () => {
     assert.ok("sessionToken" in r1);
     assert.ok("sessionToken" in r2);
 
-    assert.equal(auth.resolveSession(r1.sessionToken, "c1"), "inv1");
-    assert.equal(auth.resolveSession(r2.sessionToken, "c1"), "inv2");
-
-    // Cross-verify: player 1's token doesn't resolve to player 2
-    assert.notEqual(auth.resolveSession(r1.sessionToken, "c1"), "inv2");
+    assert.equal(auth.verifyToken(r1.sessionToken, "c1"), 0);
+    assert.equal(auth.verifyToken(r2.sessionToken, "c1"), 1);
   });
 
   it("verifyChatSignature works", () => {
@@ -218,13 +214,4 @@ describe("AuthEngine", () => {
     assert.ok(!auth.verifyChatSignature(kp2.publicKeyHex, "ch", "hello", sig));
   });
 
-  it("clearRuntimeState clears all state", () => {
-    const { publicKeyHex, privateKey } = generateTestKeypair();
-    const r = auth.authenticateJoin("c1", "inv1", 0, publicKeyHex, signJoin(privateKey, "inv1"));
-    assert.ok("sessionToken" in r);
-    assert.ok(auth.resolveSession(r.sessionToken, "c1"));
-
-    auth.clearRuntimeState();
-    assert.equal(auth.resolveSession(r.sessionToken, "c1"), null);
-  });
 });

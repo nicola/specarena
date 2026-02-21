@@ -1,11 +1,11 @@
 import { createMcpHandler } from "mcp-handler";
 import { z } from "zod";
-import { ChatEngine, defaultChatEngine } from "../../chat/ChatEngine";
-import { AuthEngine } from "../../auth/index";
+import { ArenaEngine, defaultEngine } from "../../engine";
 
-export function createChatHandler(options: { redisUrl?: string; basePath?: string; chat?: ChatEngine; auth?: AuthEngine } = {}) {
-  const chat = options.chat ?? defaultChatEngine;
-  const auth = options.auth;
+export function createChatHandler(options: { redisUrl?: string; basePath?: string; engine?: ArenaEngine } = {}) {
+  const engine = options.engine ?? defaultEngine;
+  const chat = engine.chat;
+  const auth = engine.auth;
 
   return createMcpHandler(
     (server) => {
@@ -14,19 +14,30 @@ export function createChatHandler(options: { redisUrl?: string; basePath?: strin
         "Send a chat message to other agents in a channel. If 'to' is not specified, the message is broadcast to all agents.",
         {
           channel: z.string().describe("The challenge UUID channel identifier"),
-          from: z.string().describe("The user ID of the sender"),
+          from: z.string().optional().describe("The user ID of the sender (derived from sessionToken if omitted)"),
           to: z.string().nullable().optional().describe("The user ID of the recipient, or null/undefined to broadcast to all"),
           content: z.string().describe("The message content to send"),
           sessionToken: z.string().optional().describe("Session token for authentication (not needed for invites channel)"),
           publicKey: z.string().optional().describe("Ed25519 public key (hex) for self-certification on invites channel"),
-          signature: z.string().optional().describe("Ed25519 signature (hex) of 'arena:chat:<channel>:<content>' for self-certification"),
+          signature: z.string().optional().describe("Ed25519 signature (hex) of 'arena:v1:chat:<channel>:<content>' for self-certification"),
         },
-        async ({ channel, from, to, content, sessionToken, publicKey, signature }) => {
-          // Verify session for non-invites channels
-          if (channel !== "invites" && sessionToken && auth) {
-            if (!auth.verifySession(sessionToken, channel, from)) {
+        async ({ channel, from: paramFrom, to, content, sessionToken, publicKey, signature }) => {
+          let from = paramFrom;
+
+          // Resolve identity from session token for non-invites channels
+          if (channel !== "invites" && sessionToken) {
+            const invite = await engine.resolveSession(sessionToken, channel);
+            if (!invite) {
               return { content: [{ type: "text", text: JSON.stringify({ error: "Unauthorized" }) }] };
             }
+            if (from && from !== invite) {
+              return { content: [{ type: "text", text: JSON.stringify({ error: "Unauthorized" }) }] };
+            }
+            from = invite;
+          }
+
+          if (!from) {
+            return { content: [{ type: "text", text: JSON.stringify({ error: "from or sessionToken is required" }) }] };
           }
 
           // Optional self-cert for invites channel
@@ -48,16 +59,27 @@ export function createChatHandler(options: { redisUrl?: string; basePath?: strin
         "Get all messages from a channel starting from a specific index",
         {
           channel: z.string().describe("The challenge UUID channel identifier"),
-          from: z.string().describe("The user ID of the sender"),
+          from: z.string().optional().describe("The user ID of the sender (derived from sessionToken if omitted)"),
           index: z.number().int().min(0).describe("The starting index to fetch messages from"),
           sessionToken: z.string().optional().describe("Session token for authentication (not needed for invites channel)"),
         },
-        async ({ channel, from, index, sessionToken }) => {
-          // Verify session for non-invites channels
-          if (channel !== "invites" && sessionToken && auth) {
-            if (!auth.verifySession(sessionToken, channel, from)) {
+        async ({ channel, from: paramFrom, index, sessionToken }) => {
+          let from = paramFrom;
+
+          // Resolve identity from session token for non-invites channels
+          if (channel !== "invites" && sessionToken) {
+            const invite = await engine.resolveSession(sessionToken, channel);
+            if (!invite) {
               return { content: [{ type: "text", text: JSON.stringify({ error: "Unauthorized" }) }] };
             }
+            if (from && from !== invite) {
+              return { content: [{ type: "text", text: JSON.stringify({ error: "Unauthorized" }) }] };
+            }
+            from = invite;
+          }
+
+          if (!from) {
+            return { content: [{ type: "text", text: JSON.stringify({ error: "from or sessionToken is required" }) }] };
           }
 
           return {

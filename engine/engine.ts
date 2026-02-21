@@ -37,7 +37,13 @@ export class ArenaEngine {
       this.storageAdapter.clearRuntimeState(),
       this.chat.clearRuntimeState(),
     ]);
-    this.auth.clearRuntimeState();
+  }
+
+  async resolveSession(token: string, challengeId: string): Promise<string | null> {
+    const playerIndex = this.auth.verifyToken(token, challengeId);
+    if (playerIndex === null) return null;
+    const challenge = await this.getChallenge(challengeId);
+    return challenge?.invites[playerIndex] ?? null;
   }
 
   registerChallengeFactory(type: string, factory: ChallengeFactory, options?: Record<string, unknown>): void {

@@ -36,7 +36,7 @@ export function registerChallengesFromConfig(engine: ArenaEngine): void {
 export function createApp(engine: ArenaEngine = defaultEngine): Hono {
   registerChallengesFromConfig(engine);
   const app = new Hono();
-  const authMiddleware = sessionAuth(engine.auth);
+  const authMiddleware = sessionAuth((token, cid) => engine.resolveSession(token, cid));
 
   // Global error handler — catches malformed JSON, unexpected throws, etc.
   app.onError((err, c) => {
@@ -68,7 +68,7 @@ export function createApp(engine: ArenaEngine = defaultEngine): Hono {
 
   // Mount MCP handlers
   const arenaHandler = createArenaHandler({ basePath: "/api/arena", engine });
-  const chatHandler = createChatHandler({ basePath: "/api/chat", chat: engine.chat, auth: engine.auth });
+  const chatHandler = createChatHandler({ basePath: "/api/chat", engine });
 
   app.all("/api/arena/mcp", (c) => arenaHandler(c.req.raw));
   app.all("/api/arena/sse", (c) => arenaHandler(c.req.raw));

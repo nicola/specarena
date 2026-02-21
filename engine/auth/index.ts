@@ -9,12 +9,9 @@ import {
 
 export class AuthEngine {
   private readonly secret: string;
-  // challengeId → playerIndex → invite
-  private readonly invitesByIndex: Map<string, Map<number, string>>;
 
   constructor(secret?: string) {
     this.secret = secret ?? generateServerSecret();
-    this.invitesByIndex = new Map();
   }
 
   authenticateJoin(
@@ -36,24 +33,16 @@ export class AuthEngine {
       return { error: "Signature verification failed" };
     }
 
-    // Store index → invite mapping
-    if (!this.invitesByIndex.has(challengeId)) {
-      this.invitesByIndex.set(challengeId, new Map());
-    }
-    this.invitesByIndex.get(challengeId)!.set(playerIndex, invite);
-
     const sessionToken = createSessionToken(this.secret, challengeId, playerIndex);
     return { sessionToken };
   }
 
   /**
-   * Resolve a session token to the player's invite code.
-   * Returns the invite string on success, null on failure.
+   * Verify a session token and return the player index.
+   * Returns the player index on success, null on failure.
    */
-  resolveSession(token: string, challengeId: string): string | null {
-    const playerIndex = parseSessionToken(token, this.secret, challengeId);
-    if (playerIndex === null) return null;
-    return this.invitesByIndex.get(challengeId)?.get(playerIndex) ?? null;
+  verifyToken(token: string, challengeId: string): number | null {
+    return parseSessionToken(token, this.secret, challengeId);
   }
 
   verifyChatSignature(publicKey: string, channel: string, content: string, signature: string): boolean {
@@ -64,9 +53,6 @@ export class AuthEngine {
     return verifyEd25519Signature(publicKey, message, signature);
   }
 
-  clearRuntimeState(): void {
-    this.invitesByIndex.clear();
-  }
 }
 
 /**
@@ -74,7 +60,7 @@ export class AuthEngine {
  * Skips verification for the "invites" channel.
  * On success, sets `authInvite` on the Hono context (the resolved invite code).
  */
-export function sessionAuth(auth: AuthEngine) {
+export function sessionAuth(resolveSession: (token: string, challengeId: string) => Promise<string | null>) {
   return async (c: Context, next: Next) => {
     // Extract Bearer token
     const authHeader = c.req.header("Authorization");
@@ -105,7 +91,7 @@ export function sessionAuth(auth: AuthEngine) {
       return c.json({ error: "Unauthorized" }, 401);
     }
 
-    const invite = auth.resolveSession(token, challengeId);
+    const invite = await resolveSession(token, challengeId);
     if (!invite) {
       return c.json({ error: "Unauthorized" }, 401);
     }
