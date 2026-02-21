@@ -6,11 +6,11 @@ export function createArenaRoutes(engine: ArenaEngine = defaultEngine) {
 
   // POST /api/arena/join - Join a challenge with an invite code
   app.post("/api/arena/join", async (c) => {
-    const { invite } = await c.req.json();
+    const { invite, publicKey, signature } = await c.req.json();
     if (!invite) {
       return c.json({ error: "invite is required" }, 400);
     }
-    const result = await engine.challengeJoin(invite);
+    const result = await engine.challengeJoin(invite, publicKey, signature);
     if ("error" in result) {
       return c.json(result, 400);
     }

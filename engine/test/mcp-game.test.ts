@@ -6,6 +6,7 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 
 import app from "../server/index";
 import { defaultEngine } from "../engine";
+import { generateTestKeypair, signJoin } from "./helpers/auth";
 
 // --- Setup ---
 
@@ -92,25 +93,40 @@ describe("PSI game via MCP protocol", () => {
     const { id: challengeId, invites } = await createRes.json();
     const [invite1, invite2] = invites;
 
-    // 2. Player 1 joins
-    const join1 = await callTool(arena, "challenge_join", { invite: invite1 });
+    // 2. Player 1 joins with auth
+    const kp1 = generateTestKeypair();
+    const join1 = await callTool(arena, "challenge_join", {
+      invite: invite1,
+      publicKey: kp1.publicKeyHex,
+      signature: signJoin(kp1.privateKey, invite1),
+    });
     assert.equal(join1.ChallengeID, challengeId);
     assert.equal(join1.ChallengeInfo.name, "Private Set Intersection");
+    assert.ok(join1.sessionToken, "should return sessionToken");
+    const token1 = join1.sessionToken;
 
     const instance = await defaultEngine.getChallenge(challengeId);
     assert.ok(instance);
     assert.equal(instance.instance.state.gameStarted, false);
 
-    // 3. Player 2 joins → game starts
-    const join2 = await callTool(arena, "challenge_join", { invite: invite2 });
+    // 3. Player 2 joins with auth → game starts
+    const kp2 = generateTestKeypair();
+    const join2 = await callTool(arena, "challenge_join", {
+      invite: invite2,
+      publicKey: kp2.publicKeyHex,
+      signature: signJoin(kp2.privateKey, invite2),
+    });
     assert.equal(join2.ChallengeID, challengeId);
+    assert.ok(join2.sessionToken);
+    const token2 = join2.sessionToken;
     assert.equal(instance.instance.state.gameStarted, true);
 
-    // 4. Player 1 syncs to get private set
+    // 4. Player 1 syncs to get private set (with sessionToken)
     const sync1 = await callTool(arena, "challenge_sync", {
       channel: challengeId,
       from: invite1,
       index: 0,
+      sessionToken: token1,
     });
     assert.ok(sync1.count >= 1);
     const p1SetMsg = sync1.messages.find(
@@ -123,17 +139,19 @@ describe("PSI game via MCP protocol", () => {
       channel: challengeId,
       from: invite2,
       index: 0,
+      sessionToken: token2,
     });
     const leakedP1 = sync2.messages.find(
       (m: any) => m.to === invite1 && m.from === "operator"
     );
     assert.equal(leakedP1, undefined, "player 2 must not see player 1's private set");
 
-    // 6. Players chat via MCP
+    // 6. Players chat via MCP (with sessionToken)
     const chat1 = await callTool(chat, "send_chat", {
       channel: challengeId,
       from: invite1,
       content: "Hello! Let's find the intersection.",
+      sessionToken: token1,
     });
     assert.ok(chat1.index, "chat should return message index");
 
@@ -141,6 +159,7 @@ describe("PSI game via MCP protocol", () => {
       channel: challengeId,
       from: invite2,
       content: "Sure thing!",
+      sessionToken: token2,
     });
     assert.ok(chat2.index);
 
@@ -149,6 +168,7 @@ describe("PSI game via MCP protocol", () => {
       channel: challengeId,
       from: invite1,
       index: 0,
+      sessionToken: token1,
     });
     assert.ok(chatSync.messages.length >= 2, "should see both chat messages");
 
@@ -171,6 +191,7 @@ describe("PSI game via MCP protocol", () => {
       from: invite1,
       messageType: "guess",
       content: [...intersection].join(", "),
+      sessionToken: token1,
     });
     assert.equal(guess1.ok, "Message sent");
     assert.equal(instance.instance.state.gameEnded, false);
@@ -181,6 +202,7 @@ describe("PSI game via MCP protocol", () => {
       from: invite2,
       messageType: "guess",
       content: [...intersection].join(", "),
+      sessionToken: token2,
     });
 
     // 11. Game ended with perfect scores
@@ -201,10 +223,20 @@ describe("PSI game via MCP protocol", () => {
     const createRes = await fetch(`${baseUrl}/api/challenges/psi`, { method: "POST" });
     const { invites } = await createRes.json();
 
-    await callTool(arena, "challenge_join", { invite: invites[0] });
+    const kp = generateTestKeypair();
+    await callTool(arena, "challenge_join", {
+      invite: invites[0],
+      publicKey: kp.publicKeyHex,
+      signature: signJoin(kp.privateKey, invites[0]),
+    });
 
     // Join again with same invite → error
-    const result = await callTool(arena, "challenge_join", { invite: invites[0] });
+    const kp2 = generateTestKeypair();
+    const result = await callTool(arena, "challenge_join", {
+      invite: invites[0],
+      publicKey: kp2.publicKeyHex,
+      signature: signJoin(kp2.privateKey, invites[0]),
+    });
     assert.ok(
       JSON.stringify(result).includes("ERR_INVITE_ALREADY_USED"),
       "duplicate join should return error"

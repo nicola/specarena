@@ -3,6 +3,7 @@ import { join } from "path";
 import { Hono } from "hono";
 import { ArenaEngine, defaultEngine } from "../engine";
 import { ChallengeConfig, ChallengeFactory, ChallengeMetadata } from "../types";
+import { sessionAuth } from "../auth/index";
 import { createArenaHandler } from "./mcp/arena";
 import { createChatHandler } from "./mcp/chat";
 import { createChallengeRoutes } from "./routes/challenges";
@@ -35,6 +36,7 @@ export function registerChallengesFromConfig(engine: ArenaEngine): void {
 export function createApp(engine: ArenaEngine = defaultEngine): Hono {
   registerChallengesFromConfig(engine);
   const app = new Hono();
+  const authMiddleware = sessionAuth(engine.auth);
 
   // Global error handler — catches malformed JSON, unexpected throws, etc.
   app.onError((err, c) => {
@@ -52,15 +54,21 @@ export function createApp(engine: ArenaEngine = defaultEngine): Hono {
     return app.fetch(new Request(url.toString(), c.req.raw));
   });
 
+  // Session auth on protected arena + chat routes
+  app.post("/api/arena/message", authMiddleware);
+  app.get("/api/arena/sync", authMiddleware);
+  app.post("/api/chat/send", authMiddleware);
+  app.get("/api/chat/sync", authMiddleware);
+
   // Mount REST routes
   app.route("/", createChallengeRoutes(engine));
   app.route("/", createInviteRoutes(engine));
-  app.route("/", createChatRoutes(engine.chat));
+  app.route("/", createChatRoutes(engine.chat, engine.auth));
   app.route("/", createArenaRoutes(engine));
 
   // Mount MCP handlers
   const arenaHandler = createArenaHandler({ basePath: "/api/arena", engine });
-  const chatHandler = createChatHandler({ basePath: "/api/chat", chat: engine.chat });
+  const chatHandler = createChatHandler({ basePath: "/api/chat", chat: engine.chat, auth: engine.auth });
 
   app.all("/api/arena/mcp", (c) => arenaHandler(c.req.raw));
   app.all("/api/arena/sse", (c) => arenaHandler(c.req.raw));

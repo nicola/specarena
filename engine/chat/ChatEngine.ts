@@ -92,7 +92,7 @@ export class ChatEngine {
     return this.sendMessage(`challenge_${challengeId}`, from, content, to);
   }
 
-  async sendMessage(channel: string, from: string, content: string, to?: string | null): Promise<ChatMessage> {
+  async sendMessage(channel: string, from: string, content: string, to?: string | null, publicKey?: string): Promise<ChatMessage> {
     const index = await this.storageAdapter.getNextIndex(channel);
     const message: ChatMessage = {
       channel,
@@ -101,6 +101,7 @@ export class ChatEngine {
       content: content || "",
       index,
       timestamp: Date.now(),
+      ...(publicKey ? { publicKey } : {}),
     };
 
     await this.storageAdapter.appendMessage(channel, message);
@@ -108,8 +109,8 @@ export class ChatEngine {
     return message;
   }
 
-  async chatSend(channel: string, from: string, content: string, to?: string | null) {
-    const message = await this.sendMessage(channel, from, content, to);
+  async chatSend(channel: string, from: string, content: string, to?: string | null, publicKey?: string) {
+    const message = await this.sendMessage(channel, from, content, to, publicKey);
     return { index: message.index, channel, from, to: to ?? null };
   }
 

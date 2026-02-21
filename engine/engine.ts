@@ -8,6 +8,7 @@ import {
 } from "./types";
 import { ChatEngine, createChatEngine } from "./chat/ChatEngine";
 import { ArenaStorageAdapter, InMemoryArenaStorageAdapter } from "./storage/InMemoryArenaStorageAdapter";
+import { AuthEngine } from "./auth/index";
 
 export interface EngineOptions {
   storageAdapter?: ArenaStorageAdapter;
@@ -20,6 +21,7 @@ export class ArenaEngine {
   private readonly challengeOptions: Map<string, Record<string, unknown>>;
   private readonly challengeMetadataMap: Map<string, ChallengeMetadata>;
   readonly chat: ChatEngine;
+  readonly auth: AuthEngine;
 
   constructor(options: EngineOptions = {}) {
     this.storageAdapter = options.storageAdapter ?? new InMemoryArenaStorageAdapter();
@@ -27,6 +29,7 @@ export class ArenaEngine {
     this.challengeOptions = new Map<string, Record<string, unknown>>();
     this.challengeMetadataMap = new Map<string, ChallengeMetadata>();
     this.chat = options.chatEngine ?? createChatEngine();
+    this.auth = new AuthEngine();
   }
 
   async clearRuntimeState(): Promise<void> {
@@ -34,6 +37,7 @@ export class ArenaEngine {
       this.storageAdapter.clearRuntimeState(),
       this.chat.clearRuntimeState(),
     ]);
+    this.auth.clearRuntimeState();
   }
 
   registerChallengeFactory(type: string, factory: ChallengeFactory, options?: Record<string, unknown>): void {
@@ -137,7 +141,7 @@ export class ArenaEngine {
       .sort((a, b) => b.createdAt - a.createdAt);
   }
 
-  async challengeJoin(invite: string) {
+  async challengeJoin(invite: string, publicKey?: string, signature?: string) {
     const result = await this.getChallengeFromInvite(invite);
 
     if (!result.success) {
@@ -145,6 +149,16 @@ export class ArenaEngine {
     }
 
     const challenge = result.data;
+
+    // Authenticate if credentials provided
+    let sessionToken: string | undefined;
+    if (publicKey && signature) {
+      const authResult = this.auth.authenticateJoin(challenge.id, invite, publicKey, signature);
+      if ("error" in authResult) {
+        return { error: authResult.error };
+      }
+      sessionToken = authResult.sessionToken;
+    }
 
     let joinError: string | undefined;
     try {
@@ -161,6 +175,7 @@ export class ArenaEngine {
     return {
       ChallengeID: challenge.id,
       ChallengeInfo: metadata,
+      ...(sessionToken ? { sessionToken } : {}),
     };
   }
 

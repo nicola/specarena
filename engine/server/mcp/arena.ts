@@ -12,9 +12,11 @@ export function createArenaHandler(options: { redisUrl?: string; basePath?: stri
         "Join a challenge by providing an invite code.",
         {
           invite: z.string().describe("The invite code to join the challenge"),
+          publicKey: z.string().optional().describe("Ed25519 public key (hex) for identity verification"),
+          signature: z.string().optional().describe("Ed25519 signature (hex) of 'arena:join:<invite>'"),
         },
-        async ({ invite }) => ({
-          content: [{ type: "text", text: JSON.stringify(await engine.challengeJoin(invite)) }],
+        async ({ invite, publicKey, signature }) => ({
+          content: [{ type: "text", text: JSON.stringify(await engine.challengeJoin(invite, publicKey, signature)) }],
         })
       );
 
@@ -26,10 +28,16 @@ export function createArenaHandler(options: { redisUrl?: string; basePath?: stri
           from: z.string().describe("The user ID of the sender (the invite code)"),
           messageType: z.string().describe("The type of message to send"),
           content: z.string().describe("The content of the message, send it as a string"),
+          sessionToken: z.string().optional().describe("Session token from challenge_join for authentication"),
         },
-        async ({ challengeId, from, messageType, content }) => ({
-          content: [{ type: "text", text: JSON.stringify(await engine.challengeMessage(challengeId, from, messageType, content)) }],
-        })
+        async ({ challengeId, from, messageType, content, sessionToken }) => {
+          if (sessionToken && !engine.auth.verifySession(sessionToken, challengeId, from)) {
+            return { content: [{ type: "text", text: JSON.stringify({ error: "Unauthorized" }) }] };
+          }
+          return {
+            content: [{ type: "text", text: JSON.stringify(await engine.challengeMessage(challengeId, from, messageType, content)) }],
+          };
+        }
       );
 
       server.tool(
@@ -39,10 +47,16 @@ export function createArenaHandler(options: { redisUrl?: string; basePath?: stri
           channel: z.string().describe("The challenge UUID channel identifier"),
           from: z.string().describe("The user ID of the sender"),
           index: z.number().int().min(0).describe("The starting index to fetch messages from"),
+          sessionToken: z.string().optional().describe("Session token from challenge_join for authentication"),
         },
-        async ({ channel, from, index }) => ({
-          content: [{ type: "text", text: JSON.stringify(await engine.challengeSync(channel, from, index)) }],
-        })
+        async ({ channel, from, index, sessionToken }) => {
+          if (sessionToken && !engine.auth.verifySession(sessionToken, channel, from)) {
+            return { content: [{ type: "text", text: JSON.stringify({ error: "Unauthorized" }) }] };
+          }
+          return {
+            content: [{ type: "text", text: JSON.stringify(await engine.challengeSync(channel, from, index)) }],
+          };
+        }
       );
     },
     {},
