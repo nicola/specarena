@@ -196,8 +196,8 @@ export class ArenaEngine {
     return challenge?.instance?.state?.players?.[userIndex] ?? null;
   }
 
-  async challengeSync(channel: string, from: string, index: number) {
-    return this.chat.challengeSync(channel, from, index);
+  async challengeSync(channel: string, viewer: string | null, index: number) {
+    return this.chat.challengeSync(channel, viewer, index);
   }
 }
 

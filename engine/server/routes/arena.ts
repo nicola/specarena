@@ -1,11 +1,9 @@
 import { Hono } from "hono";
 import { ArenaEngine, defaultEngine } from "../../engine";
-import { createSessionAuth, SessionUser } from "../../auth/middleware";
-
-type Env = { Variables: { sessionUser?: SessionUser } };
+import { createSessionAuth, getIdentity, AuthEnv } from "../../auth/middleware";
 
 export function createArenaRoutes(engine: ArenaEngine = defaultEngine) {
-  const app = new Hono<Env>();
+  const app = new Hono<AuthEnv>();
   const sessionAuth = createSessionAuth(engine);
 
   // POST /api/arena/join - Join a challenge with an invite code
@@ -59,22 +57,9 @@ export function createArenaRoutes(engine: ArenaEngine = defaultEngine) {
       return c.json({ error: "challengeId and content are required" }, 400);
     }
 
-    let from: string;
-    if (engine.auth) {
-      const sessionUser = c.get("sessionUser");
-      if (!sessionUser) {
-        return c.json({ error: "Authentication required" }, 401);
-      }
-      const identity = await engine.resolvePlayerIdentity(challengeId, sessionUser.userIndex);
-      if (!identity) {
-        return c.json({ error: "Could not resolve player identity" }, 403);
-      }
-      from = identity;
-    } else {
-      if (!bodyFrom) {
-        return c.json({ error: "from is required" }, 400);
-      }
-      from = bodyFrom;
+    const from = getIdentity(c, bodyFrom);
+    if (!from) {
+      return c.json({ error: engine.auth ? "Authentication required" : "from is required" }, engine.auth ? 401 : 400);
     }
 
     const result = await engine.challengeMessage(challengeId, from, messageType || "", content);
@@ -93,21 +78,8 @@ export function createArenaRoutes(engine: ArenaEngine = defaultEngine) {
       return c.json({ error: "channel is required" }, 400);
     }
 
-    if (engine.auth) {
-      const sessionUser = c.get("sessionUser");
-      let viewer: string | null = null;
-      if (sessionUser) {
-        viewer = await engine.resolvePlayerIdentity(channel, sessionUser.userIndex);
-      }
-      return c.json(await engine.chat.challengeSyncRedacted(channel, viewer, index));
-    }
-
-    // Auth OFF: require from query param
-    const from = c.req.query("from");
-    if (!from) {
-      return c.json({ error: "from is required" }, 400);
-    }
-    return c.json(await engine.challengeSync(channel, from, index));
+    const viewer = getIdentity(c, c.req.query("from"));
+    return c.json(await engine.challengeSync(channel, viewer, index));
   });
 
   return app;

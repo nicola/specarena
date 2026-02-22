@@ -127,7 +127,7 @@ describe("PSI game via MCP protocol", () => {
     const leakedP1 = sync2.messages.find(
       (m: any) => m.to === invite1 && m.from === "operator"
     );
-    assert.equal(leakedP1, undefined, "player 2 must not see player 1's private set");
+    assert.ok(leakedP1?.redacted, "player 2 should see player 1's private set as redacted");
 
     // 6. Players chat via MCP
     const chat1 = await callTool(chat, "send_chat", {

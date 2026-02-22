@@ -37,16 +37,12 @@ export class ChatEngine {
     return this.storageAdapter.getMessagesForChannel(channel);
   }
 
-  private filterVisibleMessages(messages: ChatMessage[], from: string, index: number): ChatMessage[] {
-    return messages.filter((msg: ChatMessage) =>
-      msg.index !== undefined && msg.index >= index && (!msg.to || msg.to === from || msg.from === from));
-  }
-
   private redactMessage(msg: ChatMessage): ChatMessage {
     return { ...msg, content: "", redacted: true };
   }
 
-  syncRedacted(_channel: string, viewer: string | null, index: number, messages: ChatMessage[]): { messages: ChatMessage[]; count: number } {
+  private async syncChannel(channel: string, viewer: string | null, index: number) {
+    const messages = await this.getMessagesForChannel(channel);
     const result = messages
       .filter((msg) => msg.index !== undefined && msg.index >= index)
       .map((msg) => {
@@ -55,21 +51,6 @@ export class ChatEngine {
         return this.redactMessage(msg);
       });
     return { messages: result, count: result.length };
-  }
-
-  async challengeSyncRedacted(challengeId: string, viewer: string | null, index: number) {
-    const channel = `challenge_${challengeId}`;
-    const messages = await this.getMessagesForChannel(channel);
-    return this.syncRedacted(channel, viewer, index, messages);
-  }
-
-  private async syncChannel(channel: string, from: string, index: number) {
-    const messages = await this.getMessagesForChannel(channel);
-    const filteredMessages = this.filterVisibleMessages(messages, from, index);
-    return {
-      messages: filteredMessages,
-      count: filteredMessages.length,
-    };
   }
 
   subscribeToChannel(channel: string, controller: ReadableStreamDefaultController, viewer?: string | null): () => void {
@@ -147,12 +128,12 @@ export class ChatEngine {
     return { index: message.index, channel, from, to: to ?? null };
   }
 
-  async chatSync(channel: string, from: string, index: number) {
-    return this.syncChannel(channel, from, index);
+  async chatSync(channel: string, viewer: string | null, index: number) {
+    return this.syncChannel(channel, viewer, index);
   }
 
-  async challengeSync(challengeId: string, from: string, index: number) {
-    return this.syncChannel(`challenge_${challengeId}`, from, index);
+  async challengeSync(challengeId: string, viewer: string | null, index: number) {
+    return this.syncChannel(`challenge_${challengeId}`, viewer, index);
   }
 }
 

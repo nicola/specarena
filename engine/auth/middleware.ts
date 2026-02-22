@@ -22,6 +22,12 @@ export interface SessionUser {
   challengeId: string;
 }
 
+export type AuthEnv = { Variables: { sessionUser?: SessionUser; identity?: string } };
+
+export function getIdentity(c: Context, fallback?: string | null): string | null {
+  return c.get("identity") ?? fallback ?? null;
+}
+
 export function requireSessionKey(c: Context, next: Next) {
   const sessionKey = c.get("sessionUser");
   if (!sessionKey) {
@@ -106,6 +112,13 @@ export function createSessionAuth(engine: ArenaEngine) {
 
     // Set session user in context
     c.set("sessionUser", sessionUser);
+
+    // Resolve player identity
+    const identity = await engine.resolvePlayerIdentity(sessionUser.challengeId, sessionUser.userIndex);
+    if (identity) {
+      c.set("identity", identity);
+    }
+
     return next();
   };
 }

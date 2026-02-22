@@ -287,9 +287,9 @@ describe("PSI game simulation", () => {
     // Sync as player 1 — should only see own messages and broadcasts
     const p1Sync = await challengeSync(challengeId, invite1, 0);
     const p2Private = p1Sync.messages.find(
-      (m) => m.to === invite2 && m.from === "operator"
+      (m: any) => m.to === invite2 && m.from === "operator"
     );
-    assert.equal(p2Private, undefined, "player 1 should not see player 2's private messages");
+    assert.ok(p2Private?.redacted, "player 1 should see player 2's private messages as redacted");
 
     // Player 1 should see their own set
     const ownSet = p1Sync.messages.find(
