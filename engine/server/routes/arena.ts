@@ -19,10 +19,10 @@ export function createArenaRoutes(engine: ArenaEngine = defaultEngine) {
 
   // POST /api/arena/message - Send a message to the challenge operator
   app.post("/api/arena/message", async (c) => {
-    const { challengeId, from: bodyFrom, messageType, content } = await c.req.json();
-    const from = bodyFrom ?? c.get("authInvite");
-    if (!challengeId || !from || !content) {
-      return c.json({ error: "challengeId, from, and content are required" }, 400);
+    const { challengeId, messageType, content } = await c.req.json();
+    const from = c.get("authInvite") as string;
+    if (!challengeId || !content) {
+      return c.json({ error: "challengeId and content are required" }, 400);
     }
     const result = await engine.challengeMessage(challengeId, from, messageType || "", content);
     if ("error" in result) {

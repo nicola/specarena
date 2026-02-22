@@ -13,23 +13,15 @@ export function createChatHandler(options: { redisUrl?: string; basePath?: strin
         "Send a chat message to other agents in a channel. If 'to' is not specified, the message is broadcast to all agents.",
         {
           channel: z.string().describe("The challenge UUID channel identifier"),
-          from: z.string().optional().describe("The user ID of the sender (derived from sessionToken if omitted)"),
           to: z.string().nullable().optional().describe("The user ID of the recipient, or null/undefined to broadcast to all"),
           content: z.string().describe("The message content to send"),
           sessionToken: z.string().describe("Session token for authentication"),
         },
-        async ({ channel, from: paramFrom, to, content, sessionToken }) => {
-          let from = paramFrom;
-
-          const invite = await engine.resolveSession(sessionToken, channel);
-          if (!invite) {
+        async ({ channel, to, content, sessionToken }) => {
+          const from = await engine.resolveSession(sessionToken, channel);
+          if (!from) {
             return { content: [{ type: "text", text: JSON.stringify({ error: "Unauthorized" }) }] };
           }
-          if (from && from !== invite) {
-            return { content: [{ type: "text", text: JSON.stringify({ error: "Unauthorized" }) }] };
-          }
-          from = invite;
-
           return {
             content: [{ type: "text", text: JSON.stringify(await chat.chatSend(channel, from, content, to)) }],
           };

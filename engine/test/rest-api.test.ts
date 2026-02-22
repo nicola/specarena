@@ -93,7 +93,6 @@ describe("REST API for arena", () => {
 
     const res = await request("POST", "/api/arena/message", {
       challengeId: id,
-      from: invites[0],
       messageType: "guess",
       content: "100, 200, 300",
     }, bearerHeader(j1.sessionToken));
@@ -103,20 +102,6 @@ describe("REST API for arena", () => {
     assert.ok(data.ok || data.error);
   });
 
-  it("POST /api/arena/message — from is derived from token when omitted", async () => {
-    const { id, invites } = await createPsiChallenge();
-    const j1 = await authJoin(invites[0]);
-    await authJoin(invites[1]);
-
-    // Send without `from` — should be derived from token
-    const res = await request("POST", "/api/arena/message", {
-      challengeId: id,
-      messageType: "guess",
-      content: "100, 200, 300",
-    }, bearerHeader(j1.sessionToken));
-    assert.equal(res.status, 200);
-  });
-
   it("POST /api/arena/message — returns 401 without token", async () => {
     const { id, invites } = await createPsiChallenge();
     await authJoin(invites[0]);
@@ -124,31 +109,15 @@ describe("REST API for arena", () => {
 
     const res = await request("POST", "/api/arena/message", {
       challengeId: id,
-      from: invites[0],
       messageType: "guess",
       content: "100, 200, 300",
     });
     assert.equal(res.status, 401);
   });
 
-  it("POST /api/arena/message — returns 401 for wrong token", async () => {
-    const { id, invites } = await createPsiChallenge();
-    await authJoin(invites[0]);
-    const j2 = await authJoin(invites[1]);
-
-    // Use player 2's token but player 1's from
-    const res = await request("POST", "/api/arena/message", {
-      challengeId: id,
-      from: invites[0],
-      messageType: "guess",
-      content: "100",
-    }, bearerHeader(j2.sessionToken));
-    assert.equal(res.status, 401);
-  });
-
   it("POST /api/arena/message — returns 400 for missing fields", async () => {
     const res = await request("POST", "/api/arena/message", { challengeId: "x" });
-    // Missing from → 401 because middleware rejects before route validation
+    // No token → 401 from middleware
     assert.ok([400, 401].includes(res.status));
   });
 
@@ -252,12 +221,12 @@ describe("REST API for arena", () => {
     // Guess
     const guessContent = [...intersection].join(", ");
     const g1 = await (await request("POST", "/api/arena/message", {
-      challengeId: id, from: inv1, messageType: "guess", content: guessContent,
+      challengeId: id, messageType: "guess", content: guessContent,
     }, bearerHeader(j1.sessionToken))).json();
     assert.ok(g1.ok);
 
     const g2 = await (await request("POST", "/api/arena/message", {
-      challengeId: id, from: inv2, messageType: "guess", content: guessContent,
+      challengeId: id, messageType: "guess", content: guessContent,
     }, bearerHeader(j2.sessionToken))).json();
     assert.ok(g2.ok);
 
@@ -285,7 +254,6 @@ describe("Auth attack vectors", () => {
     // Use challenge-A token to send a message on challenge-B
     const res = await request("POST", "/api/arena/message", {
       challengeId: c2.id,
-      from: c1.invites[0],
       messageType: "guess",
       content: "100",
     }, bearerHeader(j1.sessionToken));
@@ -318,7 +286,6 @@ describe("Auth attack vectors", () => {
 
     const res = await request("POST", "/api/arena/message", {
       challengeId: id,
-      from: invites[0],
       messageType: "guess",
       content: "100",
     }, bearerHeader("s_0.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"));
@@ -331,7 +298,6 @@ describe("Auth attack vectors", () => {
 
     const res = await request("POST", "/api/arena/message", {
       challengeId: id,
-      from: invites[0],
       content: "x",
     }, { Authorization: "Bearer " });
     assert.equal(res.status, 401);
@@ -343,40 +309,29 @@ describe("Auth attack vectors", () => {
 
     const res = await request("POST", "/api/arena/message", {
       challengeId: id,
-      from: invites[0],
       content: "x",
     }, { Authorization: `Basic ${j1.sessionToken}` });
     assert.equal(res.status, 401);
   });
 
-  // -- Impersonation --
+  // -- Identity is token-derived, body `from` is ignored --
 
-  it("chat send: valid token but mismatched from is rejected", async () => {
+  it("body from field is ignored — identity comes from token", async () => {
     const { id, invites } = await createPsiChallenge();
     const j1 = await authJoin(invites[0]);
     await authJoin(invites[1]);
 
-    // Player 1's token, but from=player 2
+    // Send chat with from=player2 in body, but player1's token
+    // Server should use player1's identity from the token
     const res = await request("POST", "/api/chat/send", {
       channel: id,
-      from: invites[1],
-      content: "I'm pretending to be player 2",
+      from: invites[1], // ignored
+      content: "This is from player 1 regardless",
     }, bearerHeader(j1.sessionToken));
-    assert.equal(res.status, 401);
-  });
+    assert.equal(res.status, 200);
 
-  it("arena message: valid token but mismatched from is rejected", async () => {
-    const { id, invites } = await createPsiChallenge();
-    const j1 = await authJoin(invites[0]);
-    await authJoin(invites[1]);
-
-    const res = await request("POST", "/api/arena/message", {
-      challengeId: id,
-      from: invites[1],
-      messageType: "guess",
-      content: "100",
-    }, bearerHeader(j1.sessionToken));
-    assert.equal(res.status, 401);
+    const data = await res.json();
+    assert.equal(data.from, invites[0], "from should be player 1 (from token), not player 2 (from body)");
   });
 
   it("each player gets a distinct session token", async () => {
@@ -427,7 +382,6 @@ describe("Auth attack vectors", () => {
     // Player 1 sends a DM to player 2
     await request("POST", "/api/chat/send", {
       channel: id,
-      from: invites[0],
       to: invites[1],
       content: "secret for p2 only",
     }, bearerHeader(j1.sessionToken));
@@ -480,20 +434,18 @@ describe("REST API for chat", () => {
   it("POST /api/chat/send — returns 401 for invites channel (auth required on all writes)", async () => {
     const res = await request("POST", "/api/chat/send", {
       channel: "invites",
-      from: "user1",
       content: "Hello!",
     });
     assert.equal(res.status, 401);
   });
 
-  it("POST /api/chat/send — requires auth for non-invites channel", async () => {
+  it("POST /api/chat/send — requires auth", async () => {
     const { id, invites } = await createPsiChallenge();
     const j1 = await authJoin(invites[0]);
 
     // Without token → 401
     const res1 = await request("POST", "/api/chat/send", {
       channel: id,
-      from: invites[0],
       content: "Hello!",
     });
     assert.equal(res1.status, 401);
@@ -501,26 +453,12 @@ describe("REST API for chat", () => {
     // With token → 200
     const res2 = await request("POST", "/api/chat/send", {
       channel: id,
-      from: invites[0],
       content: "Hello!",
     }, bearerHeader(j1.sessionToken));
     assert.equal(res2.status, 200);
-  });
 
-  it("POST /api/chat/send — from is derived from token when omitted", async () => {
-    const { id, invites } = await createPsiChallenge();
-    const j1 = await authJoin(invites[0]);
-    await authJoin(invites[1]);
-
-    // Send without `from`
-    const res = await request("POST", "/api/chat/send", {
-      channel: id,
-      content: "Hello without from!",
-    }, bearerHeader(j1.sessionToken));
-    assert.equal(res.status, 200);
-
-    const data = await res.json();
-    assert.equal(data.from, invites[0]); // derived from token
+    const data = await res2.json();
+    assert.equal(data.from, invites[0], "from should be derived from token");
   });
 
   it("POST /api/chat/send — sends a DM with auth", async () => {
@@ -530,7 +468,6 @@ describe("REST API for chat", () => {
 
     const res = await request("POST", "/api/chat/send", {
       channel: id,
-      from: invites[0],
       to: invites[1],
       content: "Secret message",
     }, bearerHeader(j1.sessionToken));
@@ -540,7 +477,7 @@ describe("REST API for chat", () => {
     assert.equal(data.to, invites[1]);
   });
 
-  it("POST /api/chat/send — returns 401 for missing fields (no auth)", async () => {
+  it("POST /api/chat/send — returns 401 without auth", async () => {
     const res = await request("POST", "/api/chat/send", { channel: "invites" });
     assert.equal(res.status, 401);
   });
@@ -552,10 +489,10 @@ describe("REST API for chat", () => {
 
     // Send a message (authed) and a DM
     await request("POST", "/api/chat/send", {
-      channel: id, from: invites[0], content: "broadcast",
+      channel: id, content: "broadcast",
     }, bearerHeader(j1.sessionToken));
     await request("POST", "/api/chat/send", {
-      channel: id, from: invites[0], to: invites[1], content: "secret",
+      channel: id, to: invites[1], content: "secret",
     }, bearerHeader(j1.sessionToken));
 
     // Sync without token → 200 (open sync)

@@ -59,20 +59,14 @@ export function sessionAuth(resolveSession: ResolveSession) {
     const authHeader = c.req.header("Authorization");
     const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : undefined;
 
-    // Determine challengeId and channel based on request method
+    // Determine challengeId based on request method
     let challengeId: string | undefined;
-    let channel: string | undefined;
-    let bodyFrom: string | undefined;
 
     if (c.req.method === "GET") {
-      channel = c.req.query("channel");
-      challengeId = channel;
-      bodyFrom = c.req.query("from");
+      challengeId = c.req.query("channel");
     } else {
       const body = await c.req.json();
       challengeId = body.challengeId ?? body.channel;
-      channel = body.channel ?? body.challengeId;
-      bodyFrom = body.from;
     }
 
     if (!token || !challengeId) {
@@ -81,11 +75,6 @@ export function sessionAuth(resolveSession: ResolveSession) {
 
     const invite = await resolveSession(token, challengeId);
     if (!invite) {
-      return c.json({ error: "Unauthorized" }, 401);
-    }
-
-    // If `from` was provided, validate consistency
-    if (bodyFrom && bodyFrom !== invite) {
       return c.json({ error: "Unauthorized" }, 401);
     }
 

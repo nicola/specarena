@@ -6,10 +6,10 @@ export function createChatRoutes(chat: ChatEngine = defaultChatEngine) {
 
   // POST /api/chat/send - Send a chat message
   app.post("/api/chat/send", async (c) => {
-    const { channel, from: bodyFrom, to, content } = await c.req.json();
-    const from = bodyFrom ?? c.get("authInvite");
-    if (!channel || !from || !content) {
-      return c.json({ error: "channel, from, and content are required" }, 400);
+    const { channel, to, content } = await c.req.json();
+    const from = c.get("authInvite") as string;
+    if (!channel || !content) {
+      return c.json({ error: "channel and content are required" }, 400);
     }
 
     return c.json(await chat.chatSend(channel, from, content, to));

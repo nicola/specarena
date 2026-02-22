@@ -134,7 +134,6 @@ describe("HTTP server — REST routes don't collide with MCP wildcards", () => {
     // Chat between players (authed)
     const chatRes = await req("POST", "/api/chat/send", {
       channel: id,
-      from: invites[0],
       content: "Hey opponent!",
     }, bearerHeader(j1.sessionToken));
     assert.equal(chatRes.status, 200);
@@ -162,12 +161,12 @@ describe("HTTP server — REST routes don't collide with MCP wildcards", () => {
 
     // Submit guesses
     const g1 = await req("POST", "/api/arena/message", {
-      challengeId: id, from: invites[0], messageType: "guess", content: intersection.join(", "),
+      challengeId: id, messageType: "guess", content: intersection.join(", "),
     }, bearerHeader(j1.sessionToken));
     assert.equal(g1.status, 200);
 
     const g2 = await req("POST", "/api/arena/message", {
-      challengeId: id, from: invites[1], messageType: "guess", content: intersection.join(", "),
+      challengeId: id, messageType: "guess", content: intersection.join(", "),
     }, bearerHeader(j2.sessionToken));
     assert.equal(g2.status, 200);
   });
@@ -224,7 +223,7 @@ describe("HTTP server — /api/v1 routes mirror /api", () => {
 
     // Chat via v1 (authed)
     const chatRes = await req("POST", "/api/v1/chat/send", {
-      channel: id, from: invites[0], content: "v1 chat",
+      channel: id, content: "v1 chat",
     }, bearerHeader(j1.sessionToken));
     assert.equal(chatRes.status, 200);
 

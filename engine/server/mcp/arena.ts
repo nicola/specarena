@@ -25,20 +25,15 @@ export function createArenaHandler(options: { redisUrl?: string; basePath?: stri
         "Send a message to the challenge operator (generally a function call)",
         {
           challengeId: z.string().describe("The id of the current challenge"),
-          from: z.string().optional().describe("The user ID of the sender (derived from sessionToken if omitted)"),
           messageType: z.string().describe("The type of message to send"),
           content: z.string().describe("The content of the message, send it as a string"),
           sessionToken: z.string().describe("Session token from challenge_join for authentication"),
         },
-        async ({ challengeId, from: paramFrom, messageType, content, sessionToken }) => {
-          const invite = await engine.resolveSession(sessionToken, challengeId);
-          if (!invite) {
+        async ({ challengeId, messageType, content, sessionToken }) => {
+          const from = await engine.resolveSession(sessionToken, challengeId);
+          if (!from) {
             return { content: [{ type: "text", text: JSON.stringify({ error: "Unauthorized" }) }] };
           }
-          if (paramFrom && paramFrom !== invite) {
-            return { content: [{ type: "text", text: JSON.stringify({ error: "Unauthorized" }) }] };
-          }
-          const from = invite;
           return {
             content: [{ type: "text", text: JSON.stringify(await engine.challengeMessage(challengeId, from, messageType, content)) }],
           };
