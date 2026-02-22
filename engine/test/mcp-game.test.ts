@@ -240,16 +240,16 @@ describe("PSI game via MCP protocol", () => {
     await arena.close();
   });
 
-  it("MCP error: challenge_message with invalid challenge", async () => {
+  it("MCP error: challenge_message with invalid challenge returns Unauthorized", async () => {
     const arena = await createArenaClient();
 
     const result = await callTool(arena, "challenge_message", {
       challengeId: "nonexistent",
-      from: "nobody",
       messageType: "guess",
       content: "100 200",
+      sessionToken: "s_0.fake",
     });
-    assert.equal(result.error, "Challenge not found");
+    assert.equal(result.error, "Unauthorized");
 
     await arena.close();
   });

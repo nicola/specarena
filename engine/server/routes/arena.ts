@@ -7,8 +7,8 @@ export function createArenaRoutes(engine: ArenaEngine = defaultEngine) {
   // POST /api/arena/join - Join a challenge with an invite code
   app.post("/api/arena/join", async (c) => {
     const { invite, publicKey, signature } = await c.req.json();
-    if (!invite) {
-      return c.json({ error: "invite is required" }, 400);
+    if (!invite || !publicKey || !signature) {
+      return c.json({ error: "invite, publicKey, and signature are required" }, 400);
     }
     const result = await engine.challengeJoin(invite, publicKey, signature);
     if ("error" in result) {
@@ -34,7 +34,7 @@ export function createArenaRoutes(engine: ArenaEngine = defaultEngine) {
   // GET /api/arena/sync - Get messages from the challenge operator
   app.get("/api/arena/sync", async (c) => {
     const channel = c.req.query("channel");
-    const from = c.req.query("from") ?? c.get("authInvite") as string | undefined;
+    const from = c.get("authInvite") as string | undefined;
     const index = parseInt(c.req.query("index") || "0", 10);
     if (!channel) {
       return c.json({ error: "channel is required" }, 400);

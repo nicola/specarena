@@ -147,7 +147,7 @@ export class ArenaEngine {
       .sort((a, b) => b.createdAt - a.createdAt);
   }
 
-  async challengeJoin(invite: string, publicKey?: string, signature?: string) {
+  async challengeJoin(invite: string, publicKey: string, signature: string) {
     const result = await this.getChallengeFromInvite(invite);
 
     if (!result.success) {
@@ -156,19 +156,16 @@ export class ArenaEngine {
 
     const challenge = result.data;
 
-    // Authenticate if credentials provided
-    let sessionToken: string | undefined;
-    if (publicKey && signature) {
-      const playerIndex = challenge.invites.indexOf(invite);
-      const authResult = this.auth.authenticateJoin(challenge.id, invite, playerIndex, publicKey, signature);
-      if ("error" in authResult) {
-        return { error: authResult.error };
-      }
-      sessionToken = authResult.sessionToken;
-      if (!challenge.publicKeys) challenge.publicKeys = {};
-      challenge.publicKeys[invite] = publicKey;
-      await this.storageAdapter.setChallenge(challenge);
+    // Authenticate join with Ed25519 signature
+    const playerIndex = challenge.invites.indexOf(invite);
+    const authResult = this.auth.authenticateJoin(challenge.id, invite, playerIndex, publicKey, signature);
+    if ("error" in authResult) {
+      return { error: authResult.error };
     }
+    const sessionToken = authResult.sessionToken;
+    if (!challenge.publicKeys) challenge.publicKeys = {};
+    challenge.publicKeys[invite] = publicKey;
+    await this.storageAdapter.setChallenge(challenge);
 
     let joinError: string | undefined;
     try {
@@ -185,7 +182,7 @@ export class ArenaEngine {
     return {
       ChallengeID: challenge.id,
       ChallengeInfo: metadata,
-      ...(sessionToken ? { sessionToken } : {}),
+      sessionToken,
     };
   }
 

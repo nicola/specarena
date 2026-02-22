@@ -1,9 +1,18 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { createEngine, InMemoryArenaStorageAdapter } from "@arena/engine/engine";
+import crypto from "node:crypto";
+import { createEngine, InMemoryArenaStorageAdapter, ArenaEngine } from "@arena/engine/engine";
 import { createApp } from "@arena/engine/server";
 import { ChallengeMetadata } from "@arena/engine/types";
 import { createChallenge } from "./index";
+
+function authJoin(engine: ArenaEngine, invite: string) {
+  const { publicKey, privateKey } = crypto.generateKeyPairSync("ed25519");
+  const der = publicKey.export({ type: "spki", format: "der" }) as Buffer;
+  const publicKeyHex = der.subarray(-32).toString("hex");
+  const signature = crypto.sign(null, Buffer.from(`arena:v1:join:${invite}`), privateKey).toString("hex");
+  return engine.challengeJoin(invite, publicKeyHex, signature);
+}
 
 const PSI_METADATA: ChallengeMetadata = {
   name: "Private Set Intersection",
@@ -34,21 +43,21 @@ describe("PSI challenge with isolated engine instances", () => {
     const challenge = await engine.createChallenge("psi");
     const [invite1, invite2] = challenge.invites;
 
-    const join1 = await engine.challengeJoin(invite1);
-    const join2 = await engine.challengeJoin(invite2);
+    const join1 = await authJoin(engine,invite1);
+    const join2 = await authJoin(engine,invite2);
     assert.equal(join1.ChallengeID, challenge.id);
     assert.equal(join2.ChallengeID, challenge.id);
     assert.equal(challenge.instance.state.gameStarted, true);
 
     const sync1 = await engine.challengeSync(challenge.id, invite1, 0);
     const sync2 = await engine.challengeSync(challenge.id, invite2, 0);
-    const p1SetMsg = sync1.messages.find((m) => m.to === invite1 && m.content.includes("Your private set"));
-    const p2SetMsg = sync2.messages.find((m) => m.to === invite2 && m.content.includes("Your private set"));
+    const p1SetMsg = sync1.messages.find((m) => m.to === invite1 && m.content?.includes("Your private set"));
+    const p2SetMsg = sync2.messages.find((m) => m.to === invite2 && m.content?.includes("Your private set"));
     assert.ok(p1SetMsg);
     assert.ok(p2SetMsg);
 
-    const p1Set = parseSet(p1SetMsg!.content);
-    const p2Set = parseSet(p2SetMsg!.content);
+    const p1Set = parseSet(p1SetMsg!.content!);
+    const p2Set = parseSet(p2SetMsg!.content!);
     const intersection = [...p1Set].filter((n) => p2Set.has(n));
     assert.ok(intersection.length > 0);
 
@@ -74,7 +83,7 @@ describe("PSI challenge with isolated engine instances", () => {
     assert.equal((await engineB.listChallenges()).length, 0);
     assert.equal((await engineB.chat.getMessagesForChallengeChannel(challengeA.id)).length, 0);
 
-    await engineA.challengeJoin(inviteA);
+    await authJoin(engineA,inviteA);
     assert.equal((await engineA.listChallenges()).length, 1);
     assert.ok((await engineA.chat.getMessagesForChallengeChannel(challengeA.id)).length > 0);
     assert.equal((await engineB.listChallenges()).length, 0);
@@ -87,7 +96,7 @@ describe("PSI challenge with isolated engine instances", () => {
     engine.registerChallengeMetadata("psi", PSI_METADATA);
 
     const challenge = await engine.createChallenge("psi");
-    await engine.challengeJoin(challenge.invites[0]);
+    await authJoin(engine,challenge.invites[0]);
 
     assert.equal((await engine.listChallenges()).length, 1);
     assert.ok((await engine.chat.getMessagesForChallengeChannel(challenge.id)).length > 0);

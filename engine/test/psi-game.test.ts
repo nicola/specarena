@@ -4,9 +4,14 @@ import assert from "node:assert/strict";
 // Import the fully configured app (registers challenges as a side effect)
 import app from "../server/index";
 import { defaultEngine } from "../engine";
+import { generateTestKeypair, signJoin } from "./helpers/auth";
 
 // Engine actions — shared by REST + MCP
-const challengeJoin = (invite: string) => defaultEngine.challengeJoin(invite);
+const challengeJoin = (invite: string) => {
+  const kp = generateTestKeypair();
+  const sig = signJoin(kp.privateKey, invite);
+  return defaultEngine.challengeJoin(invite, kp.publicKeyHex, sig);
+};
 const challengeMessage = (challengeId: string, from: string, messageType: string, content: string) =>
   defaultEngine.challengeMessage(challengeId, from, messageType, content);
 const challengeSync = (channel: string, from: string, index: number) => defaultEngine.challengeSync(channel, from, index);
@@ -130,8 +135,8 @@ describe("PSI game simulation", () => {
     assert.ok(p2SetMsg, "player 2 should receive their private set");
 
     // 5. Parse the sets
-    const p1Set = parseSet(p1SetMsg!.content);
-    const p2Set = parseSet(p2SetMsg!.content);
+    const p1Set = parseSet(p1SetMsg!.content!);
+    const p2Set = parseSet(p2SetMsg!.content!);
 
     // Compute the actual intersection
     const intersection = new Set([...p1Set].filter((n) => p2Set.has(n)));
@@ -165,7 +170,7 @@ describe("PSI game simulation", () => {
       (m) => m.from === "operator" && m.content?.includes("Game ended")
     );
     assert.ok(endMsg, "game-end broadcast should exist");
-    assert.ok(endMsg!.content.includes("Scores are:"));
+    assert.ok(endMsg!.content?.includes("Scores are:"));
   });
 
   // -- Scoring edge cases --

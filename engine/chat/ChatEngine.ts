@@ -76,7 +76,11 @@ export class ChatEngine {
       return;
     }
 
-    const data = JSON.stringify({ type: "new_message", message });
+    // Redact directed messages for SSE subscribers (always unauthenticated)
+    const outMessage = message.to
+      ? { ...message, content: null, redacted: true as const }
+      : message;
+    const data = JSON.stringify({ type: "new_message", message: outMessage });
     const messageToSend = `data: ${data}\n\n`;
     const deadConnections: ReadableStreamDefaultController[] = [];
 

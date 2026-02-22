@@ -18,7 +18,7 @@ export function createChatRoutes(chat: ChatEngine = defaultChatEngine) {
   // GET /api/chat/sync - Get messages from a channel
   app.get("/api/chat/sync", async (c) => {
     const channel = c.req.query("channel");
-    const from = c.req.query("from") ?? c.get("authInvite") as string | undefined;
+    const from = c.get("authInvite") as string | undefined;
     const index = parseInt(c.req.query("index") || "0", 10);
     if (!channel) {
       return c.json({ error: "channel is required" }, 400);
@@ -26,11 +26,14 @@ export function createChatRoutes(chat: ChatEngine = defaultChatEngine) {
     return c.json(await chat.chatSync(channel, from, index));
   });
 
-  // GET /api/chat/messages/:uuid - get messages
+  // GET /api/chat/messages/:uuid - get messages (unauthenticated — directed messages redacted)
   app.get("/api/chat/messages/:uuid", async (c) => {
     const uuid = c.req.param("uuid");
     const messages = await chat.getMessagesForChannel(uuid);
-    return c.json({ channel: uuid, messages, count: messages.length });
+    const redacted = messages.map((msg) =>
+      msg.to ? { ...msg, content: null, redacted: true as const } : msg
+    );
+    return c.json({ channel: uuid, messages: redacted, count: redacted.length });
   });
 
   // GET /api/chat/ws/:uuid - SSE stream
@@ -39,9 +42,12 @@ export function createChatRoutes(chat: ChatEngine = defaultChatEngine) {
 
     const stream = new ReadableStream({
       async start(controller) {
-        // Send initial messages
+        // Send initial messages (redact directed messages — SSE subscribers are unauthenticated)
         const initialMessages = await chat.getMessagesForChannel(uuid);
-        const initialData = JSON.stringify({ type: "initial", messages: initialMessages });
+        const redacted = initialMessages.map((msg) =>
+          msg.to ? { ...msg, content: null, redacted: true as const } : msg
+        );
+        const initialData = JSON.stringify({ type: "initial", messages: redacted });
         controller.enqueue(new TextEncoder().encode(`data: ${initialData}\n\n`));
 
         // Subscribe to new messages

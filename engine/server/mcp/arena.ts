@@ -12,8 +12,8 @@ export function createArenaHandler(options: { redisUrl?: string; basePath?: stri
         "Join a challenge by providing an invite code.",
         {
           invite: z.string().describe("The invite code to join the challenge"),
-          publicKey: z.string().optional().describe("Ed25519 public key (hex) for identity verification"),
-          signature: z.string().optional().describe("Ed25519 signature (hex) of 'arena:v1:join:<invite>'"),
+          publicKey: z.string().describe("Ed25519 public key (hex) for identity verification"),
+          signature: z.string().describe("Ed25519 signature (hex) of 'arena:v1:join:<invite>'"),
         },
         async ({ invite, publicKey, signature }) => ({
           content: [{ type: "text", text: JSON.stringify(await engine.challengeJoin(invite, publicKey, signature)) }],
@@ -28,23 +28,17 @@ export function createArenaHandler(options: { redisUrl?: string; basePath?: stri
           from: z.string().optional().describe("The user ID of the sender (derived from sessionToken if omitted)"),
           messageType: z.string().describe("The type of message to send"),
           content: z.string().describe("The content of the message, send it as a string"),
-          sessionToken: z.string().optional().describe("Session token from challenge_join for authentication"),
+          sessionToken: z.string().describe("Session token from challenge_join for authentication"),
         },
         async ({ challengeId, from: paramFrom, messageType, content, sessionToken }) => {
-          let from = paramFrom;
-          if (sessionToken) {
-            const invite = await engine.resolveSession(sessionToken, challengeId);
-            if (!invite) {
-              return { content: [{ type: "text", text: JSON.stringify({ error: "Unauthorized" }) }] };
-            }
-            if (from && from !== invite) {
-              return { content: [{ type: "text", text: JSON.stringify({ error: "Unauthorized" }) }] };
-            }
-            from = invite;
+          const invite = await engine.resolveSession(sessionToken, challengeId);
+          if (!invite) {
+            return { content: [{ type: "text", text: JSON.stringify({ error: "Unauthorized" }) }] };
           }
-          if (!from) {
-            return { content: [{ type: "text", text: JSON.stringify({ error: "from or sessionToken is required" }) }] };
+          if (paramFrom && paramFrom !== invite) {
+            return { content: [{ type: "text", text: JSON.stringify({ error: "Unauthorized" }) }] };
           }
+          const from = invite;
           return {
             content: [{ type: "text", text: JSON.stringify(await engine.challengeMessage(challengeId, from, messageType, content)) }],
           };
@@ -56,18 +50,14 @@ export function createArenaHandler(options: { redisUrl?: string; basePath?: stri
         "Get all information from the challenge operator",
         {
           channel: z.string().describe("The challenge UUID channel identifier"),
-          from: z.string().optional().describe("The user ID for to: message filtering (derived from sessionToken if omitted)"),
           index: z.number().int().min(0).describe("The starting index to fetch messages from"),
           sessionToken: z.string().optional().describe("Session token from challenge_join for authentication (optional — unauthenticated sync redacts to: messages)"),
         },
-        async ({ channel, from: paramFrom, index, sessionToken }) => {
-          let from = paramFrom;
+        async ({ channel, index, sessionToken }) => {
+          let from: string | undefined;
           if (sessionToken) {
             const invite = await engine.resolveSession(sessionToken, channel);
             if (invite) {
-              if (from && from !== invite) {
-                return { content: [{ type: "text", text: JSON.stringify({ error: "Unauthorized" }) }] };
-              }
               from = invite;
             }
           }

@@ -41,19 +41,14 @@ export function createChatHandler(options: { redisUrl?: string; basePath?: strin
         "Get all messages from a channel starting from a specific index",
         {
           channel: z.string().describe("The challenge UUID channel identifier"),
-          from: z.string().optional().describe("The user ID for to: message filtering (derived from sessionToken if omitted)"),
           index: z.number().int().min(0).describe("The starting index to fetch messages from"),
           sessionToken: z.string().optional().describe("Session token for authentication (optional — unauthenticated sync redacts to: messages)"),
         },
-        async ({ channel, from: paramFrom, index, sessionToken }) => {
-          let from = paramFrom;
-
+        async ({ channel, index, sessionToken }) => {
+          let from: string | undefined;
           if (sessionToken) {
             const invite = await engine.resolveSession(sessionToken, channel);
             if (invite) {
-              if (from && from !== invite) {
-                return { content: [{ type: "text", text: JSON.stringify({ error: "Unauthorized" }) }] };
-              }
               from = invite;
             }
           }
