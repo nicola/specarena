@@ -8,6 +8,7 @@ import {
 } from "./types";
 import { ChatEngine, createChatEngine } from "./chat/ChatEngine";
 import { ArenaStorageAdapter, InMemoryArenaStorageAdapter } from "./storage/InMemoryArenaStorageAdapter";
+import { generateSecret } from "./auth";
 
 export interface EngineOptions {
   storageAdapter?: ArenaStorageAdapter;
@@ -20,6 +21,7 @@ export class ArenaEngine {
   private readonly challengeOptions: Map<string, Record<string, unknown>>;
   private readonly challengeMetadataMap: Map<string, ChallengeMetadata>;
   readonly chat: ChatEngine;
+  readonly secret: string;
 
   constructor(options: EngineOptions = {}) {
     this.storageAdapter = options.storageAdapter ?? new InMemoryArenaStorageAdapter();
@@ -27,6 +29,7 @@ export class ArenaEngine {
     this.challengeOptions = new Map<string, Record<string, unknown>>();
     this.challengeMetadataMap = new Map<string, ChallengeMetadata>();
     this.chat = options.chatEngine ?? createChatEngine();
+    this.secret = generateSecret();
   }
 
   async clearRuntimeState(): Promise<void> {
@@ -78,6 +81,7 @@ export class ArenaEngine {
       createdAt: Date.now(),
       challengeType,
       invites: [`inv_${uuidv4()}`, `inv_${uuidv4()}`],
+      publicKeys: [],
       instance,
     };
 
@@ -137,7 +141,7 @@ export class ArenaEngine {
       .sort((a, b) => b.createdAt - a.createdAt);
   }
 
-  async challengeJoin(invite: string) {
+  async challengeJoin(invite: string, publicKey?: string) {
     const result = await this.getChallengeFromInvite(invite);
 
     if (!result.success) {
@@ -155,6 +159,14 @@ export class ArenaEngine {
 
     if (joinError) {
       return { error: joinError };
+    }
+
+    // Store public key at the player's index
+    if (publicKey) {
+      const playerIndex = challenge.instance.state.players.indexOf(invite);
+      if (playerIndex >= 0) {
+        challenge.publicKeys[playerIndex] = publicKey;
+      }
     }
 
     const metadata = this.getChallengeMetadata(challenge.challengeType);

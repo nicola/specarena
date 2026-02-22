@@ -5,24 +5,43 @@ import type { ServerType } from "@hono/node-server";
 
 import app from "../server/index";
 import { defaultEngine } from "../engine";
+import { generateKeyPair, sign } from "../auth";
 
 // Test against a real HTTP server to catch routing issues that app.request() misses.
-// app.request() dispatches in-process and may not match wildcard routes the same way
-// a real HTTP server does.
 
 let server: ServerType;
 let baseUrl: string;
 
-async function req(method: string, path: string, body?: object) {
+function bearerHeaders(key: string): Record<string, string> {
+  return { Authorization: `Bearer ${key}` };
+}
+
+async function req(method: string, path: string, body?: object, headers?: Record<string, string>) {
   return fetch(`${baseUrl}${path}`, {
     method,
-    headers: body ? { "Content-Type": "application/json" } : {},
+    headers: { ...(body ? { "Content-Type": "application/json" } : {}), ...headers },
     body: body ? JSON.stringify(body) : undefined,
   });
 }
 
 async function clearState() {
   await defaultEngine.clearRuntimeState();
+}
+
+function signJoin(privateKey: string, challengeId: string, invite: string) {
+  const timestamp = Date.now();
+  const message = `${challengeId}:${invite}:${timestamp}`;
+  return { signature: sign(privateKey, message), timestamp };
+}
+
+async function joinWithAuth(invite: string, challengeId: string) {
+  const kp = generateKeyPair();
+  const { signature, timestamp } = signJoin(kp.privateKey, challengeId, invite);
+  const res = await req("POST", "/api/arena/join", {
+    invite, publicKey: kp.publicKey, signature, timestamp,
+  });
+  const data = await res.json();
+  return { sessionKey: data.sessionKey as string, data };
 }
 
 before(async () => {
@@ -41,31 +60,36 @@ after(() => {
 describe("HTTP server — REST routes don't collide with MCP wildcards", () => {
   beforeEach(async () => clearState());
 
-  it("POST /api/chat/send returns 200, not 500", async () => {
+  it("POST /api/chat/send returns 401 without key", async () => {
     const res = await req("POST", "/api/chat/send", {
       channel: "test-channel",
       from: "user1",
       content: "Hello!",
     });
-    assert.equal(res.status, 200);
-
-    const data = await res.json();
-    assert.equal(data.channel, "test-channel");
-    assert.equal(data.from, "user1");
-    assert.ok(typeof data.index === "number");
+    assert.equal(res.status, 401);
   });
 
-  it("GET /api/chat/sync returns 200, not 500", async () => {
-    // Seed a message first
-    await req("POST", "/api/chat/send", {
-      channel: "ch1",
-      from: "a",
-      content: "hello",
-    });
+  it("POST /api/chat/send returns 200 with valid Bearer key", async () => {
+    const createRes = await req("POST", "/api/challenges/psi");
+    const { id, invites } = await createRes.json();
+    const { sessionKey } = await joinWithAuth(invites[0], id);
+    await joinWithAuth(invites[1], id);
+
+    const res = await req("POST", "/api/chat/send", {
+      channel: id,
+      content: "Hello!",
+    }, bearerHeaders(sessionKey));
+    assert.equal(res.status, 200);
+    const data = await res.json();
+    assert.equal(data.channel, id);
+    assert.equal(data.from, invites[0]);
+  });
+
+  it("GET /api/chat/sync returns 200 with from param (no auth)", async () => {
+    await defaultEngine.chat.chatSend("ch1", "a", "hello");
 
     const res = await req("GET", "/api/chat/sync?channel=ch1&from=a&index=0");
     assert.equal(res.status, 200);
-
     const data = await res.json();
     assert.equal(data.count, 1);
     assert.equal(data.messages[0].content, "hello");
@@ -74,14 +98,13 @@ describe("HTTP server — REST routes don't collide with MCP wildcards", () => {
   it("POST /api/arena/join returns 400 for invalid invite, not 500", async () => {
     const res = await req("POST", "/api/arena/join", { invite: "inv_fake" });
     assert.equal(res.status, 400);
-
     const data = await res.json();
     assert.ok(data.error);
   });
 
-  it("POST /api/arena/message returns 400 for missing fields, not 500", async () => {
+  it("POST /api/arena/message returns 401 for missing key", async () => {
     const res = await req("POST", "/api/arena/message", { challengeId: "x" });
-    assert.equal(res.status, 400);
+    assert.equal(res.status, 401);
   });
 
   it("GET /api/arena/sync returns 400 for missing params, not 500", async () => {
@@ -100,8 +123,6 @@ describe("HTTP server — REST routes don't collide with MCP wildcards", () => {
         clientInfo: { name: "test", version: "1.0" },
       },
     });
-    // MCP requires specific Accept headers — 406 is expected without them.
-    // The key thing is it's NOT a 500 or 404.
     assert.ok([200, 406].includes(res.status), `Expected 200 or 406, got ${res.status}`);
   });
 
@@ -119,56 +140,49 @@ describe("HTTP server — REST routes don't collide with MCP wildcards", () => {
     assert.ok([200, 406].includes(res.status), `Expected 200 or 406, got ${res.status}`);
   });
 
-  it("full game flow over HTTP", async () => {
-    // Create challenge
+  it("full game flow over HTTP with auth", async () => {
     const createRes = await req("POST", "/api/challenges/psi");
     assert.equal(createRes.status, 200);
     const { id, invites } = await createRes.json();
 
-    // Join both players
-    const j1 = await (await req("POST", "/api/arena/join", { invite: invites[0] })).json();
-    const j2 = await (await req("POST", "/api/arena/join", { invite: invites[1] })).json();
-    assert.ok(j1.ChallengeID);
-    assert.ok(j2.ChallengeID);
+    const { sessionKey: key1 } = await joinWithAuth(invites[0], id);
+    const { sessionKey: key2 } = await joinWithAuth(invites[1], id);
 
-    // Chat between players (this was the 500 bug)
+    // Chat between players
     const chatRes = await req("POST", "/api/chat/send", {
       channel: id,
-      from: invites[0],
       content: "Hey opponent!",
-    });
+    }, bearerHeaders(key1));
     assert.equal(chatRes.status, 200);
 
-    // Read chat
-    const syncRes = await req("GET", `/api/chat/sync?channel=${id}&from=${invites[0]}&index=0`);
+    // Read chat with auth
+    const syncRes = await req("GET", `/api/chat/sync?channel=${id}&index=0`, undefined, bearerHeaders(key1));
     assert.equal(syncRes.status, 200);
     const syncData = await syncRes.json();
     assert.ok(syncData.messages.some((m: any) => m.content === "Hey opponent!"));
 
-    // Get private sets from operator
-    const s1 = await (await req("GET", `/api/arena/sync?channel=${id}&from=${invites[0]}&index=0`)).json();
-    const s2 = await (await req("GET", `/api/arena/sync?channel=${id}&from=${invites[1]}&index=0`)).json();
+    // Get private sets
+    const s1 = await (await req("GET", `/api/arena/sync?channel=${id}&index=0`, undefined, bearerHeaders(key1))).json();
+    const s2 = await (await req("GET", `/api/arena/sync?channel=${id}&index=0`, undefined, bearerHeaders(key2))).json();
     const setMsg1 = s1.messages.find((m: any) => m.to === invites[0] && m.content.includes("private set"));
     const setMsg2 = s2.messages.find((m: any) => m.to === invites[1] && m.content.includes("private set"));
     assert.ok(setMsg1);
     assert.ok(setMsg2);
 
-    // Parse and find intersection
     const parseSet = (c: string) => {
       const m = c.match(/\{(.+)\}/);
       return m ? new Set(m[1].split(",").map((s) => parseInt(s.trim(), 10))) : new Set<number>();
     };
     const intersection = [...parseSet(setMsg1.content)].filter((n) => parseSet(setMsg2.content).has(n));
 
-    // Submit guesses
     const g1 = await req("POST", "/api/arena/message", {
-      challengeId: id, from: invites[0], messageType: "guess", content: intersection.join(", "),
-    });
+      challengeId: id, messageType: "guess", content: intersection.join(", "),
+    }, bearerHeaders(key1));
     assert.equal(g1.status, 200);
 
     const g2 = await req("POST", "/api/arena/message", {
-      challengeId: id, from: invites[1], messageType: "guess", content: intersection.join(", "),
-    });
+      challengeId: id, messageType: "guess", content: intersection.join(", "),
+    }, bearerHeaders(key2));
     assert.equal(g2.status, 200);
   });
 });
@@ -198,45 +212,40 @@ describe("HTTP server — /api/v1 routes mirror /api", () => {
     assert.equal(data.invites.length, 2);
   });
 
-  it("POST /api/v1/chat/send works", async () => {
+  it("POST /api/v1/chat/send with auth", async () => {
+    const { id, invites } = await (await req("POST", "/api/v1/challenges/psi")).json();
+    const { sessionKey } = await joinWithAuth(invites[0], id);
+    await joinWithAuth(invites[1], id);
+
     const res = await req("POST", "/api/v1/chat/send", {
-      channel: "v1-test",
-      from: "user1",
+      channel: id,
       content: "Hello from v1!",
-    });
+    }, bearerHeaders(sessionKey));
     assert.equal(res.status, 200);
     const data = await res.json();
-    assert.equal(data.channel, "v1-test");
+    assert.equal(data.channel, id);
   });
 
-  it("GET /api/v1/chat/sync works", async () => {
-    await req("POST", "/api/v1/chat/send", {
-      channel: "v1-ch",
-      from: "a",
-      content: "msg",
-    });
+  it("GET /api/v1/chat/sync works (unauthenticated with from)", async () => {
+    await defaultEngine.chat.chatSend("v1-ch", "a", "msg");
     const res = await req("GET", "/api/v1/chat/sync?channel=v1-ch&from=a&index=0");
     assert.equal(res.status, 200);
     const data = await res.json();
     assert.equal(data.count, 1);
   });
 
-  it("full game flow via /api/v1", async () => {
+  it("full game flow via /api/v1 with auth", async () => {
     const { id, invites } = await (await req("POST", "/api/v1/challenges/psi")).json();
 
-    const j1 = await (await req("POST", "/api/v1/arena/join", { invite: invites[0] })).json();
-    const j2 = await (await req("POST", "/api/v1/arena/join", { invite: invites[1] })).json();
-    assert.ok(j1.ChallengeID);
-    assert.ok(j2.ChallengeID);
+    const { sessionKey: key1 } = await joinWithAuth(invites[0], id);
+    const { sessionKey: key2 } = await joinWithAuth(invites[1], id);
 
-    // Chat via v1
     const chatRes = await req("POST", "/api/v1/chat/send", {
-      channel: id, from: invites[0], content: "v1 chat",
-    });
+      channel: id, content: "v1 chat",
+    }, bearerHeaders(key1));
     assert.equal(chatRes.status, 200);
 
-    // Sync via v1
-    const sync = await (await req("GET", `/api/v1/arena/sync?channel=${id}&from=${invites[0]}&index=0`)).json();
+    const sync = await (await req("GET", `/api/v1/arena/sync?channel=${id}&index=0`, undefined, bearerHeaders(key1))).json();
     assert.ok(sync.messages.length > 0);
   });
 });

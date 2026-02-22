@@ -4,9 +4,10 @@ import assert from "node:assert/strict";
 // Import the fully configured app (registers challenges as a side effect)
 import app from "../server/index";
 import { defaultEngine } from "../engine";
+import { generateKeyPair, sign, createSessionKey } from "../auth";
 
 // Engine actions — shared by REST + MCP
-const challengeJoin = (invite: string) => defaultEngine.challengeJoin(invite);
+const challengeJoin = (invite: string, publicKey?: string) => defaultEngine.challengeJoin(invite, publicKey);
 const challengeMessage = (challengeId: string, from: string, messageType: string, content: string) =>
   defaultEngine.challengeMessage(challengeId, from, messageType, content);
 const challengeSync = (channel: string, from: string, index: number) => defaultEngine.challengeSync(channel, from, index);
@@ -49,6 +50,7 @@ async function getChallengeOrThrow(challengeId: string) {
 }
 
 // --- Tests ---
+// These tests use the engine directly (not REST), so no session keys needed.
 
 describe("PSI game simulation", () => {
   beforeEach(async () => {
@@ -96,7 +98,7 @@ describe("PSI game simulation", () => {
     assert.ok(data.challenges.some((ch: any) => ch.id === c.id));
   });
 
-  // -- Full game flow --
+  // -- Full game flow (engine-direct, no REST auth needed) --
 
   it("full game: create → join → chat → guess → scores", async () => {
     // 1. Create challenge

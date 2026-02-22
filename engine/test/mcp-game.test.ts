@@ -6,6 +6,7 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 
 import app from "../server/index";
 import { defaultEngine } from "../engine";
+import { generateKeyPair, sign } from "../auth";
 
 // --- Setup ---
 
@@ -14,6 +15,12 @@ let server: ReturnType<typeof serve>;
 
 async function clearState() {
   await defaultEngine.clearRuntimeState();
+}
+
+function signJoin(privateKey: string, challengeId: string, invite: string) {
+  const timestamp = Date.now();
+  const message = `${challengeId}:${invite}:${timestamp}`;
+  return { signature: sign(privateKey, message), timestamp };
 }
 
 /** Create a connected MCP client for the arena endpoint */
@@ -92,24 +99,39 @@ describe("PSI game via MCP protocol", () => {
     const { id: challengeId, invites } = await createRes.json();
     const [invite1, invite2] = invites;
 
-    // 2. Player 1 joins
-    const join1 = await callTool(arena, "challenge_join", { invite: invite1 });
+    // 2. Player 1 joins with auth
+    const kp1 = generateKeyPair();
+    const { signature: sig1, timestamp: ts1 } = signJoin(kp1.privateKey, challengeId, invite1);
+    const join1 = await callTool(arena, "challenge_join", {
+      invite: invite1,
+      publicKey: kp1.publicKey,
+      signature: sig1,
+      timestamp: ts1,
+    });
     assert.equal(join1.ChallengeID, challengeId);
-    assert.equal(join1.ChallengeInfo.name, "Private Set Intersection");
+    assert.ok(join1.sessionKey);
 
     const instance = await defaultEngine.getChallenge(challengeId);
     assert.ok(instance);
     assert.equal(instance.instance.state.gameStarted, false);
 
-    // 3. Player 2 joins → game starts
-    const join2 = await callTool(arena, "challenge_join", { invite: invite2 });
+    // 3. Player 2 joins with auth → game starts
+    const kp2 = generateKeyPair();
+    const { signature: sig2, timestamp: ts2 } = signJoin(kp2.privateKey, challengeId, invite2);
+    const join2 = await callTool(arena, "challenge_join", {
+      invite: invite2,
+      publicKey: kp2.publicKey,
+      signature: sig2,
+      timestamp: ts2,
+    });
     assert.equal(join2.ChallengeID, challengeId);
+    assert.ok(join2.sessionKey);
     assert.equal(instance.instance.state.gameStarted, true);
 
     // 4. Player 1 syncs to get private set
     const sync1 = await callTool(arena, "challenge_sync", {
       channel: challengeId,
-      from: invite1,
+      key: join1.sessionKey,
       index: 0,
     });
     assert.ok(sync1.count >= 1);
@@ -121,7 +143,7 @@ describe("PSI game via MCP protocol", () => {
     // 5. Player 2 syncs - should NOT see player 1's private set
     const sync2 = await callTool(arena, "challenge_sync", {
       channel: challengeId,
-      from: invite2,
+      key: join2.sessionKey,
       index: 0,
     });
     const leakedP1 = sync2.messages.find(
@@ -132,22 +154,22 @@ describe("PSI game via MCP protocol", () => {
     // 6. Players chat via MCP
     const chat1 = await callTool(chat, "send_chat", {
       channel: challengeId,
-      from: invite1,
+      key: join1.sessionKey,
       content: "Hello! Let's find the intersection.",
     });
-    assert.ok(chat1.index, "chat should return message index");
+    assert.ok(chat1.index !== undefined, "chat should return message index");
 
     const chat2 = await callTool(chat, "send_chat", {
       channel: challengeId,
-      from: invite2,
+      key: join2.sessionKey,
       content: "Sure thing!",
     });
-    assert.ok(chat2.index);
+    assert.ok(chat2.index !== undefined);
 
     // 7. Sync chat messages
     const chatSync = await callTool(chat, "sync", {
       channel: challengeId,
-      from: invite1,
+      key: join1.sessionKey,
       index: 0,
     });
     assert.ok(chatSync.messages.length >= 2, "should see both chat messages");
@@ -168,7 +190,7 @@ describe("PSI game via MCP protocol", () => {
     // 9. Player 1 guesses exact intersection
     const guess1 = await callTool(arena, "challenge_message", {
       challengeId,
-      from: invite1,
+      key: join1.sessionKey,
       messageType: "guess",
       content: [...intersection].join(", "),
     });
@@ -178,7 +200,7 @@ describe("PSI game via MCP protocol", () => {
     // 10. Player 2 guesses exact intersection
     await callTool(arena, "challenge_message", {
       challengeId,
-      from: invite2,
+      key: join2.sessionKey,
       messageType: "guess",
       content: [...intersection].join(", "),
     });
@@ -199,12 +221,26 @@ describe("PSI game via MCP protocol", () => {
     const arena = await createArenaClient();
 
     const createRes = await fetch(`${baseUrl}/api/challenges/psi`, { method: "POST" });
-    const { invites } = await createRes.json();
+    const { id: challengeId, invites } = await createRes.json();
 
-    await callTool(arena, "challenge_join", { invite: invites[0] });
+    const kp = generateKeyPair();
+    const { signature, timestamp } = signJoin(kp.privateKey, challengeId, invites[0]);
+    await callTool(arena, "challenge_join", {
+      invite: invites[0],
+      publicKey: kp.publicKey,
+      signature,
+      timestamp,
+    });
 
     // Join again with same invite → error
-    const result = await callTool(arena, "challenge_join", { invite: invites[0] });
+    const kp2 = generateKeyPair();
+    const { signature: sig2, timestamp: ts2 } = signJoin(kp2.privateKey, challengeId, invites[0]);
+    const result = await callTool(arena, "challenge_join", {
+      invite: invites[0],
+      publicKey: kp2.publicKey,
+      signature: sig2,
+      timestamp: ts2,
+    });
     assert.ok(
       JSON.stringify(result).includes("ERR_INVITE_ALREADY_USED"),
       "duplicate join should return error"
@@ -213,30 +249,29 @@ describe("PSI game via MCP protocol", () => {
     await arena.close();
   });
 
-  it("MCP error: challenge_message with invalid challenge", async () => {
+  it("MCP error: challenge_message with invalid key", async () => {
     const arena = await createArenaClient();
 
     const result = await callTool(arena, "challenge_message", {
       challengeId: "nonexistent",
-      from: "nobody",
+      key: "s_0" + "a".repeat(64),
       messageType: "guess",
       content: "100 200",
     });
-    assert.equal(result.error, "Challenge not found");
+    assert.ok(result.error);
 
     await arena.close();
   });
 
-  it("MCP: challenge_sync returns empty for new channel", async () => {
+  it("MCP: challenge_sync with invalid key returns error", async () => {
     const arena = await createArenaClient();
 
     const result = await callTool(arena, "challenge_sync", {
       channel: "nonexistent",
-      from: "nobody",
+      key: "s_0" + "a".repeat(64),
       index: 0,
     });
-    assert.equal(result.count, 0);
-    assert.deepEqual(result.messages, []);
+    assert.ok(result.error);
 
     await arena.close();
   });

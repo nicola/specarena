@@ -36,6 +36,7 @@ export interface Challenge {
   createdAt: number;
   challengeType: string;
   invites: string[];
+  publicKeys: string[];
   instance: ChallengeOperator;
 }
 

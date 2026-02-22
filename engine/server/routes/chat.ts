@@ -1,24 +1,42 @@
 import { Hono } from "hono";
-import { ChatEngine, defaultChatEngine } from "../../chat/ChatEngine";
+import { ArenaEngine, defaultEngine } from "../../engine";
+import { createSessionAuthMiddleware, SessionUser } from "../../auth/middleware";
 
-export function createChatRoutes(chat: ChatEngine = defaultChatEngine) {
+export function createChatRoutes(engine: ArenaEngine = defaultEngine) {
+  const chat = engine.chat;
+  const sessionAuth = createSessionAuthMiddleware(engine);
+
   const app = new Hono();
 
-  // POST /api/chat/send - Send a chat message
-  app.post("/api/chat/send", async (c) => {
-    const { channel, from, to, content } = await c.req.json();
-    if (!channel || !from || !content) {
-      return c.json({ error: "channel, from, and content are required" }, 400);
+  // POST /api/chat/send - Send a chat message (requires auth)
+  app.post("/api/chat/send", sessionAuth, async (c) => {
+    const sessionUser = c.get("sessionUser") as SessionUser;
+    const { channel, to, content } = await c.req.json();
+    const from = sessionUser.invite;
+
+    if (!channel || !content) {
+      return c.json({ error: "channel and content are required" }, 400);
     }
     return c.json(await chat.chatSend(channel, from, content, to));
   });
 
-  // GET /api/chat/sync - Get messages from a channel
-  app.get("/api/chat/sync", async (c) => {
+  // GET /api/chat/sync - Get messages from a channel (optional auth, redaction if authed)
+  app.get("/api/chat/sync", sessionAuth, async (c) => {
     const channel = c.req.query("channel");
-    const from = c.req.query("from");
     const index = parseInt(c.req.query("index") || "0", 10);
-    if (!channel || !from) {
+    if (!channel) {
+      return c.json({ error: "channel is required" }, 400);
+    }
+
+    const sessionUser = c.get("sessionUser") as SessionUser | undefined;
+    if (sessionUser) {
+      // Authenticated: use redacted sync
+      return c.json(await chat.syncChannelWithRedaction(channel, sessionUser.invite, index));
+    }
+
+    // Unauthenticated: require from param, existing behavior
+    const from = c.req.query("from");
+    if (!from) {
       return c.json({ error: "channel and from are required" }, 400);
     }
     return c.json(await chat.chatSync(channel, from, index));

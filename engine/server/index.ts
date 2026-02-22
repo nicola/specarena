@@ -55,12 +55,12 @@ export function createApp(engine: ArenaEngine = defaultEngine): Hono {
   // Mount REST routes
   app.route("/", createChallengeRoutes(engine));
   app.route("/", createInviteRoutes(engine));
-  app.route("/", createChatRoutes(engine.chat));
+  app.route("/", createChatRoutes(engine));
   app.route("/", createArenaRoutes(engine));
 
   // Mount MCP handlers
   const arenaHandler = createArenaHandler({ basePath: "/api/arena", engine });
-  const chatHandler = createChatHandler({ basePath: "/api/chat", chat: engine.chat });
+  const chatHandler = createChatHandler({ basePath: "/api/chat", engine });
 
   app.all("/api/arena/mcp", (c) => arenaHandler(c.req.raw));
   app.all("/api/arena/sse", (c) => arenaHandler(c.req.raw));

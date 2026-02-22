@@ -108,6 +108,18 @@ export class ChatEngine {
     return message;
   }
 
+  async syncChannelWithRedaction(channel: string, authenticatedUser: string, index: number) {
+    const messages = await this.getMessagesForChannel(channel);
+    const filtered = messages.filter((msg) => msg.index !== undefined && msg.index >= index);
+    const redacted = filtered.map((msg) => {
+      if (msg.to && msg.to !== authenticatedUser) {
+        return { ...msg, content: "[redacted]", redacted: true };
+      }
+      return msg;
+    });
+    return { messages: redacted, count: redacted.length };
+  }
+
   async chatSend(channel: string, from: string, content: string, to?: string | null) {
     const message = await this.sendMessage(channel, from, content, to);
     return { index: message.index, channel, from, to: to ?? null };
