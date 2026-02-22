@@ -171,6 +171,21 @@ describe("Auth module — unit tests", () => {
     const result = verifyJoinRequest(kp.publicKey, "bad_sig", challengeId, invite, timestamp);
     assert.equal(result.valid, false);
   });
+
+  it("createSessionKey rejects negative userIndex", () => {
+    const secret = generateSecret();
+    assert.throws(() => createSessionKey(secret, "test", -1), RangeError);
+  });
+
+  it("createSessionKey rejects userIndex >= 10", () => {
+    const secret = generateSecret();
+    assert.throws(() => createSessionKey(secret, "test", 10), RangeError);
+  });
+
+  it("createSessionKey rejects non-integer userIndex", () => {
+    const secret = generateSecret();
+    assert.throws(() => createSessionKey(secret, "test", 1.5), RangeError);
+  });
 });
 
 // --- Integration tests ---
@@ -289,6 +304,26 @@ describe("Auth — REST API integration", () => {
     const redactedMsg = syncData.messages.find((m: any) => m.redacted === true);
     assert.ok(redactedMsg, "should have a redacted message");
     assert.equal(redactedMsg.content, "[redacted]");
+    // Redacted messages should strip sender/recipient metadata
+    assert.equal(redactedMsg.from, undefined);
+    assert.equal(redactedMsg.to, undefined);
+    assert.equal(redactedMsg.timestamp, undefined);
+  });
+
+  it("sender can see their own sent DMs (H1 fix)", async () => {
+    const { id, invites } = await createPsiChallenge();
+    const { data: join1 } = await joinWithAuth(invites[0], id);
+    await joinWithAuth(invites[1], id);
+
+    // Player 1 sends DM to player 2
+    await request("POST", "/api/chat/send", {
+      channel: id, to: invites[1], content: "my DM to p2",
+    }, bearer(join1.sessionKey));
+
+    // Sync as player 1 → should see own sent DM
+    const syncRes = await request("GET", `/api/chat/sync?channel=${id}&index=0`, undefined, bearer(join1.sessionKey));
+    const syncData = await syncRes.json();
+    assert.ok(syncData.messages.some((m: any) => m.content === "my DM to p2"), "sender should see own DMs");
   });
 
   it("full game flow with auth", async () => {
@@ -516,6 +551,44 @@ describe("Auth — red team / negative tests", () => {
 
     const res = await request("GET", `/api/arena/sync?channel=${id}&index=0`, undefined, bearer(j1.sessionKey));
     assert.equal(res.status, 200);
+  });
+
+  it("unauthenticated GET /api/arena/sync → 401 (IDOR fix)", async () => {
+    const { id, invites } = await createPsiChallenge();
+    await joinWithAuth(invites[0], id);
+
+    // Attacker tries to sync with spoofed from param, no key
+    const res = await request("GET", `/api/arena/sync?channel=${id}&from=${invites[0]}&index=0`);
+    assert.equal(res.status, 401);
+  });
+
+  it("unauthenticated GET /api/chat/sync → 401 (IDOR fix)", async () => {
+    const { id, invites } = await createPsiChallenge();
+    await joinWithAuth(invites[0], id);
+
+    const res = await request("GET", `/api/chat/sync?channel=${id}&from=${invites[0]}&index=0`);
+    assert.equal(res.status, 401);
+  });
+
+  it("partial auth params on join → 400 (not silent legacy fallback)", async () => {
+    const { invites } = await createPsiChallenge();
+    const kp = generateKeyPair();
+
+    const res = await request("POST", "/api/arena/join", {
+      invite: invites[0],
+      publicKey: kp.publicKey,
+      // missing signature and timestamp
+    });
+    assert.equal(res.status, 400);
+    const data = await res.json();
+    assert.ok(data.error.includes("must all be provided"));
+  });
+
+  it("join without any auth params → 400 (legacy removed)", async () => {
+    const { invites } = await createPsiChallenge();
+
+    const res = await request("POST", "/api/arena/join", { invite: invites[0] });
+    assert.equal(res.status, 400);
   });
 
   it("server ignores from field — uses authenticated identity", async () => {

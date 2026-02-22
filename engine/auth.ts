@@ -12,6 +12,9 @@ export function generateSecret(): string {
  * Total: 67 chars — "s_" + 1 digit + 64 hex chars.
  */
 export function createSessionKey(secret: string, challengeId: string, userIndex: number): string {
+  if (!Number.isInteger(userIndex) || userIndex < 0 || userIndex > 9) {
+    throw new RangeError(`userIndex must be 0-9, got ${userIndex}`);
+  }
   const hmac = crypto.createHmac("sha256", secret)
     .update(`${challengeId}:${userIndex}`)
     .digest("hex");

@@ -8,7 +8,7 @@ import {
 } from "./types";
 import { ChatEngine, createChatEngine } from "./chat/ChatEngine";
 import { ArenaStorageAdapter, InMemoryArenaStorageAdapter } from "./storage/InMemoryArenaStorageAdapter";
-import { generateSecret } from "./auth";
+import { generateSecret, createSessionKey, validateSessionKey } from "./auth";
 
 export interface EngineOptions {
   storageAdapter?: ArenaStorageAdapter;
@@ -21,7 +21,7 @@ export class ArenaEngine {
   private readonly challengeOptions: Map<string, Record<string, unknown>>;
   private readonly challengeMetadataMap: Map<string, ChallengeMetadata>;
   readonly chat: ChatEngine;
-  readonly secret: string;
+  private readonly _secret: string;
 
   constructor(options: EngineOptions = {}) {
     this.storageAdapter = options.storageAdapter ?? new InMemoryArenaStorageAdapter();
@@ -29,7 +29,17 @@ export class ArenaEngine {
     this.challengeOptions = new Map<string, Record<string, unknown>>();
     this.challengeMetadataMap = new Map<string, ChallengeMetadata>();
     this.chat = options.chatEngine ?? createChatEngine();
-    this.secret = generateSecret();
+    this._secret = generateSecret();
+  }
+
+  /** Create a session key for a player in a challenge. */
+  createSessionKey(challengeId: string, userIndex: number): string {
+    return createSessionKey(this._secret, challengeId, userIndex);
+  }
+
+  /** Validate a session key against a challenge. */
+  validateSessionKey(key: string, challengeId: string): { valid: true; userIndex: number } | { valid: false } {
+    return validateSessionKey(this._secret, key, challengeId);
   }
 
   async clearRuntimeState(): Promise<void> {

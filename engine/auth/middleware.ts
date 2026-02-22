@@ -1,6 +1,6 @@
 import type { Context, Next } from "hono";
 import type { ArenaEngine } from "../engine";
-import { validateSessionKey, parseSessionKey } from "../auth";
+import { parseSessionKey } from "../auth";
 
 export interface SessionUser {
   userIndex: number;
@@ -11,7 +11,7 @@ export interface SessionUser {
 /**
  * Creates a Hono middleware that validates session keys.
  * - POST routes: key required → 401 if missing/invalid, 403 if game ended
- * - GET routes: key optional → proceeds without auth if absent, 401 if present but invalid
+ * - GET routes: key required when provided, 401 if present but invalid
  */
 export function createSessionAuthMiddleware(engine: ArenaEngine) {
   return async (c: Context, next: Next) => {
@@ -25,7 +25,7 @@ export function createSessionAuthMiddleware(engine: ArenaEngine) {
       if (isWrite) {
         return c.json({ error: "Authentication required" }, 401);
       }
-      // GET without key → proceed without auth (existing behavior)
+      // GET without key → proceed without auth
       return next();
     }
 
@@ -43,7 +43,9 @@ export function createSessionAuthMiddleware(engine: ArenaEngine) {
       const cloned = c.req.raw.clone();
       try {
         const body = await cloned.json();
-        challengeId = body.challengeId || body.channel;
+        // Store parsed body for handlers to use (avoids double-read desync)
+        c.set("parsedBody", body);
+        challengeId = body.challengeId ?? body.channel;
       } catch {
         // Body might not be JSON; let handler deal with it
       }
@@ -52,7 +54,6 @@ export function createSessionAuthMiddleware(engine: ArenaEngine) {
     }
 
     if (challengeId) {
-      // Try stripping challenge_ prefix if the raw value doesn't validate
       challengeId = deriveChallengeId(challengeId);
     }
 
@@ -61,7 +62,7 @@ export function createSessionAuthMiddleware(engine: ArenaEngine) {
     }
 
     // Validate HMAC
-    const validation = validateSessionKey(engine.secret, key, challengeId);
+    const validation = engine.validateSessionKey(key, challengeId);
     if (!validation.valid) {
       return c.json({ error: "Invalid session key" }, 401);
     }

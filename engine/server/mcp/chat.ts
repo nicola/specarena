@@ -1,7 +1,6 @@
 import { createMcpHandler } from "mcp-handler";
 import { z } from "zod";
 import { ArenaEngine, defaultEngine } from "../../engine";
-import { validateSessionKey } from "../../auth";
 
 export function createChatHandler(options: { redisUrl?: string; basePath?: string; engine?: ArenaEngine } = {}) {
   const engine = options.engine ?? defaultEngine;
@@ -22,7 +21,7 @@ export function createChatHandler(options: { redisUrl?: string; basePath?: strin
           // Derive challengeId from channel
           const challengeId = channel.startsWith("challenge_") ? channel.slice("challenge_".length) : channel;
 
-          const validation = validateSessionKey(engine.secret, key, challengeId);
+          const validation = engine.validateSessionKey(key, challengeId);
           if (!validation.valid) {
             return { content: [{ type: "text" as const, text: JSON.stringify({ error: "Invalid session key" }) }] };
           }
@@ -55,7 +54,7 @@ export function createChatHandler(options: { redisUrl?: string; basePath?: strin
           // Derive challengeId from channel
           const challengeId = channel.startsWith("challenge_") ? channel.slice("challenge_".length) : channel;
 
-          const validation = validateSessionKey(engine.secret, key, challengeId);
+          const validation = engine.validateSessionKey(key, challengeId);
           if (!validation.valid) {
             return { content: [{ type: "text" as const, text: JSON.stringify({ error: "Invalid session key" }) }] };
           }

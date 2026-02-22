@@ -63,11 +63,24 @@ describe("REST API for arena", () => {
     assert.equal(res.status, 400);
   });
 
-  it("POST /api/arena/join — returns 400 for invalid invite", async () => {
+  it("POST /api/arena/join — returns 400 for missing auth params", async () => {
     const res = await request("POST", "/api/arena/join", { invite: "inv_fake" });
     assert.equal(res.status, 400);
     const data = await res.json();
     assert.ok(data.error);
+  });
+
+  it("POST /api/arena/join — returns 400 for partial auth params", async () => {
+    const { invites } = await createPsiChallenge();
+    const kp = generateKeyPair();
+    const res = await request("POST", "/api/arena/join", {
+      invite: invites[0],
+      publicKey: kp.publicKey,
+      // missing signature and timestamp
+    });
+    assert.equal(res.status, 400);
+    const data = await res.json();
+    assert.ok(data.error.includes("must all be provided"));
   });
 
   it("POST /api/arena/message — sends a guess", async () => {
@@ -211,16 +224,32 @@ describe("REST API for chat", () => {
     const redacted = data.messages.find((m: any) => m.redacted === true);
     assert.ok(redacted);
     assert.equal(redacted.content, "[redacted]");
+    // Redacted messages should not leak sender/recipient metadata
+    assert.equal(redacted.from, undefined);
+    assert.equal(redacted.to, undefined);
   });
 
-  it("GET /api/chat/sync — unauthenticated with from param works", async () => {
-    // Use engine directly to send a message (bypassing auth)
+  it("GET /api/chat/sync — unauthenticated returns 401", async () => {
     await defaultEngine.chat.chatSend("test-ch", "user1", "hello");
 
     const res = await request("GET", "/api/chat/sync?channel=test-ch&from=user1&index=0");
-    assert.equal(res.status, 200);
+    assert.equal(res.status, 401);
+  });
+
+  it("sender can see their own sent DMs", async () => {
+    const { id, invites } = await createPsiChallenge();
+    const { sessionKey: key1 } = await joinWithAuth(invites[0], id);
+    await joinWithAuth(invites[1], id);
+
+    // Player 1 sends DM to player 2
+    await request("POST", "/api/chat/send", {
+      channel: id, to: invites[1], content: "my secret DM",
+    }, bearer(key1));
+
+    // Sync as player 1 — should see own sent DM unredacted
+    const res = await request("GET", `/api/chat/sync?channel=${id}&index=0`, undefined, bearer(key1));
     const data = await res.json();
-    assert.equal(data.count, 1);
+    assert.ok(data.messages.some((m: any) => m.content === "my secret DM"));
   });
 
   it("GET /api/chat/sync — index filters older messages", async () => {

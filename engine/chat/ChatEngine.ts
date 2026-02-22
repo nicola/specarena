@@ -8,11 +8,11 @@ export interface ChatEngineOptions {
 export class ChatEngine {
   private readonly storageAdapter: ChatStorageAdapter;
   // TODO in the future separate to another service and persist this on db
-  private readonly channelSubscribers: Map<string, Set<ReadableStreamDefaultController>>;
+  private readonly channelSubscribers: Map<string, Set<{ controller: ReadableStreamDefaultController; user?: string }>>;
 
   constructor(options: ChatEngineOptions = {}) {
     this.storageAdapter = options.storageAdapter ?? new InMemoryChatStorageAdapter();
-    this.channelSubscribers = new Map<string, Set<ReadableStreamDefaultController>>();
+    this.channelSubscribers = new Map<string, Set<{ controller: ReadableStreamDefaultController; user?: string }>>();
   }
 
   async clearRuntimeState(): Promise<void> {
@@ -46,22 +46,30 @@ export class ChatEngine {
     };
   }
 
-  subscribeToChannel(channel: string, controller: ReadableStreamDefaultController): () => void {
+  subscribeToChannel(channel: string, controller: ReadableStreamDefaultController, user?: string): () => void {
     if (!this.channelSubscribers.has(channel)) {
       this.channelSubscribers.set(channel, new Set());
     }
-    this.channelSubscribers.get(channel)!.add(controller);
+    const entry = { controller, user };
+    this.channelSubscribers.get(channel)!.add(entry);
 
     return () => {
       const subscribers = this.channelSubscribers.get(channel);
       if (!subscribers) {
         return;
       }
-      subscribers.delete(controller);
+      subscribers.delete(entry);
       if (subscribers.size === 0) {
         this.channelSubscribers.delete(channel);
       }
     };
+  }
+
+  private redactMessage(message: ChatMessage, forUser: string): object {
+    if (message.to && message.to !== forUser && message.from !== forUser) {
+      return { index: message.index, channel: message.channel, content: "[redacted]", redacted: true };
+    }
+    return message;
   }
 
   private notifyChannelSubscribers(channel: string, message: ChatMessage): void {
@@ -70,19 +78,20 @@ export class ChatEngine {
       return;
     }
 
-    const data = JSON.stringify({ type: "new_message", message });
-    const messageToSend = `data: ${data}\n\n`;
-    const deadConnections: ReadableStreamDefaultController[] = [];
+    const deadEntries: { controller: ReadableStreamDefaultController; user?: string }[] = [];
 
-    subscribers.forEach((controller) => {
+    subscribers.forEach((entry) => {
       try {
-        controller.enqueue(new TextEncoder().encode(messageToSend));
+        // Per-subscriber redaction: redact DMs not addressed to this subscriber
+        const visibleMessage = entry.user ? this.redactMessage(message, entry.user) : message;
+        const data = JSON.stringify({ type: "new_message", message: visibleMessage });
+        entry.controller.enqueue(new TextEncoder().encode(`data: ${data}\n\n`));
       } catch {
-        deadConnections.push(controller);
+        deadEntries.push(entry);
       }
     });
 
-    deadConnections.forEach((controller) => subscribers.delete(controller));
+    deadEntries.forEach((entry) => subscribers.delete(entry));
     if (subscribers.size === 0) {
       this.channelSubscribers.delete(channel);
     }
@@ -112,8 +121,9 @@ export class ChatEngine {
     const messages = await this.getMessagesForChannel(channel);
     const filtered = messages.filter((msg) => msg.index !== undefined && msg.index >= index);
     const redacted = filtered.map((msg) => {
-      if (msg.to && msg.to !== authenticatedUser) {
-        return { ...msg, content: "[redacted]", redacted: true };
+      if (msg.to && msg.to !== authenticatedUser && msg.from !== authenticatedUser) {
+        // Strip metadata from redacted messages to prevent traffic analysis
+        return { index: msg.index, channel: msg.channel, content: "[redacted]", redacted: true };
       }
       return msg;
     });
@@ -130,7 +140,7 @@ export class ChatEngine {
   }
 
   async challengeSync(challengeId: string, from: string, index: number) {
-    return this.syncChannel(`challenge_${challengeId}`, from, index);
+    return this.syncChannelWithRedaction(`challenge_${challengeId}`, from, index);
   }
 }
 

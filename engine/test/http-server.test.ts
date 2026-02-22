@@ -85,17 +85,14 @@ describe("HTTP server — REST routes don't collide with MCP wildcards", () => {
     assert.equal(data.from, invites[0]);
   });
 
-  it("GET /api/chat/sync returns 200 with from param (no auth)", async () => {
+  it("GET /api/chat/sync returns 401 without auth", async () => {
     await defaultEngine.chat.chatSend("ch1", "a", "hello");
 
     const res = await req("GET", "/api/chat/sync?channel=ch1&from=a&index=0");
-    assert.equal(res.status, 200);
-    const data = await res.json();
-    assert.equal(data.count, 1);
-    assert.equal(data.messages[0].content, "hello");
+    assert.equal(res.status, 401);
   });
 
-  it("POST /api/arena/join returns 400 for invalid invite, not 500", async () => {
+  it("POST /api/arena/join returns 400 for missing auth params", async () => {
     const res = await req("POST", "/api/arena/join", { invite: "inv_fake" });
     assert.equal(res.status, 400);
     const data = await res.json();
@@ -112,8 +109,8 @@ describe("HTTP server — REST routes don't collide with MCP wildcards", () => {
     assert.equal(res.status, 400);
   });
 
-  it("MCP endpoint still responds at /api/chat/mcp", async () => {
-    const res = await req("POST", "/api/chat/mcp", {
+  it("MCP endpoint responds at /api/mcp/chat/mcp", async () => {
+    const res = await req("POST", "/api/mcp/chat/mcp", {
       jsonrpc: "2.0",
       id: 1,
       method: "initialize",
@@ -126,8 +123,8 @@ describe("HTTP server — REST routes don't collide with MCP wildcards", () => {
     assert.ok([200, 406].includes(res.status), `Expected 200 or 406, got ${res.status}`);
   });
 
-  it("MCP endpoint still responds at /api/arena/mcp", async () => {
-    const res = await req("POST", "/api/arena/mcp", {
+  it("MCP endpoint responds at /api/mcp/arena/mcp", async () => {
+    const res = await req("POST", "/api/mcp/arena/mcp", {
       jsonrpc: "2.0",
       id: 1,
       method: "initialize",
@@ -226,12 +223,10 @@ describe("HTTP server — /api/v1 routes mirror /api", () => {
     assert.equal(data.channel, id);
   });
 
-  it("GET /api/v1/chat/sync works (unauthenticated with from)", async () => {
+  it("GET /api/v1/chat/sync returns 401 without auth", async () => {
     await defaultEngine.chat.chatSend("v1-ch", "a", "msg");
     const res = await req("GET", "/api/v1/chat/sync?channel=v1-ch&from=a&index=0");
-    assert.equal(res.status, 200);
-    const data = await res.json();
-    assert.equal(data.count, 1);
+    assert.equal(res.status, 401);
   });
 
   it("full game flow via /api/v1 with auth", async () => {

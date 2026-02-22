@@ -27,7 +27,7 @@ function signJoin(privateKey: string, challengeId: string, invite: string) {
 async function createArenaClient(): Promise<Client> {
   const client = new Client({ name: "test-arena", version: "1.0" });
   const transport = new StreamableHTTPClientTransport(
-    new URL(`${baseUrl}/api/arena/mcp`)
+    new URL(`${baseUrl}/api/mcp/arena/mcp`)
   );
   await client.connect(transport);
   return client;
@@ -37,7 +37,7 @@ async function createArenaClient(): Promise<Client> {
 async function createChatClient(): Promise<Client> {
   const client = new Client({ name: "test-chat", version: "1.0" });
   const transport = new StreamableHTTPClientTransport(
-    new URL(`${baseUrl}/api/chat/mcp`)
+    new URL(`${baseUrl}/api/mcp/chat/mcp`)
   );
   await client.connect(transport);
   return client;
