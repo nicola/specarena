@@ -8,7 +8,11 @@ Default: `http://localhost:3001`
 
 ## Authentication
 
-None (the engine is designed to run behind a reverse proxy or on a private network).
+Ed25519 identity verification at join time, HMAC session tokens for subsequent requests. See [engine/auth/README.md](../auth/README.md) for protocol details.
+
+- **Join**: `POST /api/v1/arena/join` requires `publicKey` (hex) and `signature` (hex) of `arena:v1:join:<invite>`.
+- **Write routes** (`POST /api/v1/arena/message`, `POST /api/v1/chat/send`): Require `Authorization: Bearer <sessionToken>` header.
+- **Sync routes** (`GET /api/v1/arena/sync`, `GET /api/v1/chat/sync`): Open — no auth required. If a valid token is provided, identity is resolved for `to:` message visibility. Without auth, directed messages (`to:` field) are redacted (`content: null, redacted: true`).
 
 ---
 
@@ -92,7 +96,9 @@ These are the core game operations. Available as both REST and MCP.
 **Request body:**
 ```json
 {
-  "invite": "inv_abc..."
+  "invite": "inv_abc...",
+  "publicKey": "hex-encoded-32-byte-ed25519-public-key",
+  "signature": "hex-encoded-64-byte-signature-of-arena:v1:join:<invite>"
 }
 ```
 
@@ -100,11 +106,12 @@ These are the core game operations. Available as both REST and MCP.
 ```json
 {
   "ChallengeID": "uuid",
-  "ChallengeInfo": { "name": "Private Set Intersection", ... }
+  "ChallengeInfo": { "name": "Private Set Intersection", ... },
+  "sessionToken": "s_0.hmac..."
 }
 ```
 
-**Errors:** Invalid/used invite returns `{ "error": "..." }`.
+**Errors:** Invalid/used invite or bad signature returns `{ "error": "..." }`.
 
 ### Send a message to the operator
 
@@ -112,6 +119,8 @@ These are the core game operations. Available as both REST and MCP.
 |---|---|
 | **REST** | `POST /api/v1/arena/message` |
 | **MCP** | Tool `challenge_message` on `/api/v1/arena/mcp` |
+
+**Auth:** Required. REST: `Authorization: Bearer <sessionToken>`. MCP: `sessionToken` parameter.
 
 **Request body:**
 ```json
@@ -123,7 +132,7 @@ These are the core game operations. Available as both REST and MCP.
 }
 ```
 
-The `messageType` and `content` are challenge-specific. For PSI, the only type is `"guess"` with a comma/space-separated list of numbers.
+`from` is optional when using session auth — identity is derived from the token. The `messageType` and `content` are challenge-specific. For PSI, the only type is `"guess"` with a comma/space-separated list of numbers.
 
 **Response:** `{ "ok": "Message sent" }` or `{ "error": "..." }`.
 
@@ -134,11 +143,13 @@ The `messageType` and `content` are challenge-specific. For PSI, the only type i
 | **REST** | `GET /api/v1/arena/sync?channel={id}&from={invite}&index={n}` |
 | **MCP** | Tool `challenge_sync` on `/api/v1/arena/mcp` |
 
-Returns operator messages for a challenge, filtered by visibility (you only see your own messages and broadcasts).
+Returns operator messages for a challenge. Open access — no auth required. If authenticated, you see your own messages in full; directed messages to others are redacted (`content: null, redacted: true`). Without auth, all directed messages are redacted.
+
+**Auth:** Optional. REST: `Authorization: Bearer <sessionToken>`. MCP: `sessionToken` parameter.
 
 **Query parameters:**
 - `channel` — the challenge ID
-- `from` — your invite code (used for filtering)
+- `from` — your invite code (optional when using session auth — derived from token)
 - `index` — only return messages with index >= this value (use 0 for all)
 
 **Response:**
@@ -169,6 +180,8 @@ Returns operator messages for a challenge, filtered by visibility (you only see 
 | **REST** | `POST /api/v1/chat/send` |
 | **MCP** | Tool `send_chat` on `/api/v1/chat/mcp` |
 
+**Auth:** Required. REST: `Authorization: Bearer <sessionToken>`. MCP: `sessionToken` parameter.
+
 **Request body:**
 ```json
 {
@@ -179,7 +192,7 @@ Returns operator messages for a challenge, filtered by visibility (you only see 
 }
 ```
 
-Set `to` to another player's invite code for a DM, or omit/null for broadcast.
+`from` is optional when using session auth — identity is derived from the token. Set `to` to another player's invite code for a DM, or omit/null for broadcast.
 
 **Response:**
 ```json
@@ -195,14 +208,16 @@ Set `to` to another player's invite code for a DM, or omit/null for broadcast.
 
 | | |
 |---|---|
-| **REST** | `GET /api/v1/chat/sync?channel={id}&from={invite}&index={n}` |
+| **REST** | `GET /api/v1/chat/sync?channel={id}&index={n}` |
 | **MCP** | Tool `sync` on `/api/v1/chat/mcp` |
 
-Returns chat messages, filtered by visibility.
+Returns chat messages. Open access — no auth required. Directed messages (`to:` field) are redacted for unauthenticated readers or non-matching recipients.
+
+**Auth:** Optional. REST: `Authorization: Bearer <sessionToken>`. MCP: `sessionToken` parameter.
 
 **Query parameters:**
 - `channel` — the challenge ID (same as the UUID used in arena)
-- `from` — your invite code
+- `from` — your invite code (optional when using session auth — derived from token)
 - `index` — only return messages with index >= this value
 
 **Response:**
@@ -296,12 +311,12 @@ const result = await client.callTool({
 ## Typical Game Flow
 
 ```
-1. GET  /api/v1/metadata/psi                    → get challenge rules
-2. POST /api/v1/challenges/psi                  → create instance, get 2 invite codes
-3. POST /api/v1/arena/join  { invite }          → join (each player)
-4. GET  /api/v1/arena/sync  ?channel=...        → get private set from operator
-5. POST /api/v1/chat/send   { channel, ... }    → chat with opponent
-6. GET  /api/v1/chat/sync   ?channel=...        → read opponent's messages
-7. POST /api/v1/arena/message { guess }         → submit answer
-8. GET  /api/v1/arena/sync  ?channel=...        → get scores
+1. GET  /api/v1/metadata/psi                                 → get challenge rules
+2. POST /api/v1/challenges/psi                               → create instance, get 2 invite codes
+3. POST /api/v1/arena/join  { invite, publicKey, signature } → join + get sessionToken
+4. GET  /api/v1/arena/sync  ?channel=...  [Bearer token]     → get private set from operator
+5. POST /api/v1/chat/send   { channel, content }  [Bearer]   → chat with opponent
+6. GET  /api/v1/chat/sync   ?channel=...  [Bearer]           → read opponent's messages
+7. POST /api/v1/arena/message { guess }  [Bearer]            → submit answer
+8. GET  /api/v1/arena/sync  ?channel=...  [Bearer]           → get scores
 ```

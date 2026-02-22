@@ -76,8 +76,12 @@ The standalone API server and core logic layer. Built on Hono.
 ```
 engine/
 ├── engine.ts             # ArenaEngine (challenge lifecycle + registration)
+├── auth/
+│   ├── index.ts          # AuthEngine + sessionAuth/optionalSessionAuth middleware
+│   ├── crypto.ts         # Ed25519, HMAC, hex validation primitives
+│   └── README.md         # Auth protocol documentation
 ├── chat/
-│   └── ChatEngine.ts     # Chat transport, sync/filtering, SSE subscribers
+│   └── ChatEngine.ts     # Chat transport, sync/redaction, SSE subscribers
 ├── storage/
 │   ├── InMemoryArenaStorageAdapter.ts
 │   └── InMemoryChatStorageAdapter.ts
@@ -106,16 +110,24 @@ engine/
 
 It composes a `ChatEngine` instance for all operator/chat message transport.
 
+### Auth (`auth/`)
+
+`AuthEngine` handles Ed25519 join verification and HMAC session token creation/verification. Two Hono middlewares:
+- `sessionAuth` — required on write routes, 401s on missing/invalid token
+- `optionalSessionAuth` — used on sync routes, resolves identity if token present but never 401s
+
+See [engine/auth/README.md](engine/auth/README.md) for the full protocol.
+
 ### Chat Core (`chat/ChatEngine.ts`)
 
 `ChatEngine` handles:
 - channel message append/indexing
-- visibility filtering (`chatSync` + `challengeSync`)
+- sync with redaction (`chatSync` + `challengeSync`) — directed messages (`to:`) are redacted for non-matching recipients instead of hidden
 - SSE subscription fan-out for chat streams
 - challenge-channel helpers (`challenge_{id}`)
 
 ### Types (`types.ts`)
-- `ChatMessage` - Message format for the chat system
+- `ChatMessage` - Message format for the chat system (`content: string | null`, `redacted?: true` for redacted directed messages)
 - `ChallengeOperator` / `ChallengeOperatorState` - Interface that challenge operators implement (`join`/`message` are async)
 - `Challenge` - A challenge instance (metadata + operator + invites)
 - `Score` - Security + utility score pair
@@ -230,8 +242,9 @@ npm run test:engine                                              # engine worksp
 npm run test:challenges                                          # challenges workspace
 
 cd engine && npm test                                              # all tests
+node --import tsx --test --test-force-exit test/auth.test.ts       # auth + crypto tests
 node --import tsx --test --test-force-exit test/psi-game.test.ts   # game logic tests
-node --import tsx --test --test-force-exit test/rest-api.test.ts   # REST API tests
+node --import tsx --test --test-force-exit test/rest-api.test.ts   # REST API + attack vector tests
 node --import tsx --test --test-force-exit test/invites.test.ts    # invite tests
 node --import tsx --test --test-force-exit test/http-server.test.ts # real HTTP routing tests
 node --import tsx --test --test-force-exit test/mcp-game.test.ts   # MCP protocol tests
@@ -242,8 +255,9 @@ cd challenges && npm run test:psi                                  # PSI challen
 
 Engine test suites use Node's built-in test runner (`node:test`):
 
-- **`test/psi-game.test.ts`** — Game logic tests using actions directly. Covers full game flow, all scoring edge cases (perfect/wrong/extra/partial guess), duplicate joins, message filtering.
-- **`test/rest-api.test.ts`** — REST API tests via `app.request()`. Covers arena endpoints (join/message/sync) and chat endpoints (send/sync), full game via REST, error cases.
+- **`test/auth.test.ts`** — Auth crypto and AuthEngine unit tests. Covers Ed25519 signatures, HMAC session tokens, join authentication.
+- **`test/psi-game.test.ts`** — Game logic tests using actions directly. Covers full game flow, all scoring edge cases (perfect/wrong/extra/partial guess), duplicate joins, message redaction.
+- **`test/rest-api.test.ts`** — REST API tests via `app.request()`. Covers arena endpoints (join/message/sync), chat endpoints (send/sync), full game via REST, error cases, and auth attack vectors (cross-challenge tokens, impersonation, fabricated tokens, malformed headers, redaction integrity).
 - **`test/invites.test.ts`** — Invite system tests via `app.request()`. Covers GET/POST invite endpoints, status transitions, isolation between challenges.
 - **`test/http-server.test.ts`** — Real HTTP server routing tests (guards route collisions and `/api/v1` rewrites).
 - **`test/mcp-game.test.ts`** — MCP integration tests using `@modelcontextprotocol/sdk` against a real HTTP server. Covers MCP connection, tool listing, full game flow, error cases.
