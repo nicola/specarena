@@ -5,14 +5,19 @@ export interface ChatEngineOptions {
   storageAdapter?: ChatStorageAdapter;
 }
 
+interface ChannelSubscriber {
+  controller: ReadableStreamDefaultController;
+  viewer: string | null;
+}
+
 export class ChatEngine {
   private readonly storageAdapter: ChatStorageAdapter;
   // TODO in the future separate to another service and persist this on db
-  private readonly channelSubscribers: Map<string, Set<ReadableStreamDefaultController>>;
+  private readonly channelSubscribers: Map<string, Set<ChannelSubscriber>>;
 
   constructor(options: ChatEngineOptions = {}) {
     this.storageAdapter = options.storageAdapter ?? new InMemoryChatStorageAdapter();
-    this.channelSubscribers = new Map<string, Set<ReadableStreamDefaultController>>();
+    this.channelSubscribers = new Map<string, Set<ChannelSubscriber>>();
   }
 
   async clearRuntimeState(): Promise<void> {
@@ -37,6 +42,27 @@ export class ChatEngine {
       msg.index !== undefined && msg.index >= index && (!msg.to || msg.to === from || msg.from === from));
   }
 
+  private redactMessage(msg: ChatMessage): ChatMessage {
+    return { ...msg, content: "", redacted: true };
+  }
+
+  syncRedacted(_channel: string, viewer: string | null, index: number, messages: ChatMessage[]): { messages: ChatMessage[]; count: number } {
+    const result = messages
+      .filter((msg) => msg.index !== undefined && msg.index >= index)
+      .map((msg) => {
+        if (!msg.to) return msg;
+        if (viewer && (msg.to === viewer || msg.from === viewer)) return msg;
+        return this.redactMessage(msg);
+      });
+    return { messages: result, count: result.length };
+  }
+
+  async challengeSyncRedacted(challengeId: string, viewer: string | null, index: number) {
+    const channel = `challenge_${challengeId}`;
+    const messages = await this.getMessagesForChannel(channel);
+    return this.syncRedacted(channel, viewer, index, messages);
+  }
+
   private async syncChannel(channel: string, from: string, index: number) {
     const messages = await this.getMessagesForChannel(channel);
     const filteredMessages = this.filterVisibleMessages(messages, from, index);
@@ -46,18 +72,19 @@ export class ChatEngine {
     };
   }
 
-  subscribeToChannel(channel: string, controller: ReadableStreamDefaultController): () => void {
+  subscribeToChannel(channel: string, controller: ReadableStreamDefaultController, viewer?: string | null): () => void {
     if (!this.channelSubscribers.has(channel)) {
       this.channelSubscribers.set(channel, new Set());
     }
-    this.channelSubscribers.get(channel)!.add(controller);
+    const subscriber: ChannelSubscriber = { controller, viewer: viewer ?? null };
+    this.channelSubscribers.get(channel)!.add(subscriber);
 
     return () => {
       const subscribers = this.channelSubscribers.get(channel);
       if (!subscribers) {
         return;
       }
-      subscribers.delete(controller);
+      subscribers.delete(subscriber);
       if (subscribers.size === 0) {
         this.channelSubscribers.delete(channel);
       }
@@ -70,19 +97,26 @@ export class ChatEngine {
       return;
     }
 
-    const data = JSON.stringify({ type: "new_message", message });
-    const messageToSend = `data: ${data}\n\n`;
-    const deadConnections: ReadableStreamDefaultController[] = [];
+    const deadSubscribers: ChannelSubscriber[] = [];
 
-    subscribers.forEach((controller) => {
+    subscribers.forEach((sub) => {
+      let msgToSend = message;
+      if (message.to) {
+        const viewer = sub.viewer;
+        if (!viewer || (message.to !== viewer && message.from !== viewer)) {
+          msgToSend = this.redactMessage(message);
+        }
+      }
+      const data = JSON.stringify({ type: "new_message", message: msgToSend });
+      const encoded = `data: ${data}\n\n`;
       try {
-        controller.enqueue(new TextEncoder().encode(messageToSend));
+        sub.controller.enqueue(new TextEncoder().encode(encoded));
       } catch {
-        deadConnections.push(controller);
+        deadSubscribers.push(sub);
       }
     });
 
-    deadConnections.forEach((controller) => subscribers.delete(controller));
+    deadSubscribers.forEach((sub) => subscribers.delete(sub));
     if (subscribers.size === 0) {
       this.channelSubscribers.delete(channel);
     }

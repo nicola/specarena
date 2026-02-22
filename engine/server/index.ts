@@ -55,19 +55,21 @@ export function createApp(engine: ArenaEngine = defaultEngine): Hono {
   // Mount REST routes
   app.route("/", createChallengeRoutes(engine));
   app.route("/", createInviteRoutes(engine));
-  app.route("/", createChatRoutes(engine.chat));
+  app.route("/", createChatRoutes(engine));
   app.route("/", createArenaRoutes(engine));
 
-  // Mount MCP handlers
-  const arenaHandler = createArenaHandler({ basePath: "/api/arena", engine });
-  const chatHandler = createChatHandler({ basePath: "/api/chat", chat: engine.chat });
+  // Mount MCP handlers (disabled when auth is on — no auth mechanism for MCP)
+  if (!engine.auth) {
+    const arenaHandler = createArenaHandler({ basePath: "/api/arena", engine });
+    const chatHandler = createChatHandler({ basePath: "/api/chat", chat: engine.chat });
 
-  app.all("/api/arena/mcp", (c) => arenaHandler(c.req.raw));
-  app.all("/api/arena/sse", (c) => arenaHandler(c.req.raw));
-  app.all("/api/arena/message", (c) => arenaHandler(c.req.raw));
-  app.all("/api/chat/mcp", (c) => chatHandler(c.req.raw));
-  app.all("/api/chat/sse", (c) => chatHandler(c.req.raw));
-  app.all("/api/chat/message", (c) => chatHandler(c.req.raw));
+    app.all("/api/arena/mcp", (c) => arenaHandler(c.req.raw));
+    app.all("/api/arena/sse", (c) => arenaHandler(c.req.raw));
+    app.all("/api/arena/message", (c) => arenaHandler(c.req.raw));
+    app.all("/api/chat/mcp", (c) => chatHandler(c.req.raw));
+    app.all("/api/chat/sse", (c) => chatHandler(c.req.raw));
+    app.all("/api/chat/message", (c) => chatHandler(c.req.raw));
+  }
 
   return app;
 }

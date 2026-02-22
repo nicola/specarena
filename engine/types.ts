@@ -6,6 +6,7 @@ export interface ChatMessage {
   index?: number;
   timestamp: number;
   type?: string;
+  redacted?: boolean;
 }
 
 export interface Score {
