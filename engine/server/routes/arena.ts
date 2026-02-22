@@ -19,7 +19,8 @@ export function createArenaRoutes(engine: ArenaEngine = defaultEngine) {
 
   // POST /api/arena/message - Send a message to the challenge operator
   app.post("/api/arena/message", async (c) => {
-    const { challengeId, from, messageType, content } = await c.req.json();
+    const { challengeId, from: bodyFrom, messageType, content } = await c.req.json();
+    const from = bodyFrom ?? c.get("authInvite");
     if (!challengeId || !from || !content) {
       return c.json({ error: "challengeId, from, and content are required" }, 400);
     }
@@ -33,10 +34,10 @@ export function createArenaRoutes(engine: ArenaEngine = defaultEngine) {
   // GET /api/arena/sync - Get messages from the challenge operator
   app.get("/api/arena/sync", async (c) => {
     const channel = c.req.query("channel");
-    const from = c.req.query("from");
+    const from = c.req.query("from") ?? c.get("authInvite") as string | undefined;
     const index = parseInt(c.req.query("index") || "0", 10);
-    if (!channel || !from) {
-      return c.json({ error: "channel and from are required" }, 400);
+    if (!channel) {
+      return c.json({ error: "channel is required" }, 400);
     }
     return c.json(await engine.challengeSync(channel, from, index));
   });

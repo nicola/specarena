@@ -1,6 +1,6 @@
 import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import { generateTestKeypair, signJoin, signChat } from "./helpers/auth";
+import { generateTestKeypair, signJoin } from "./helpers/auth";
 import {
   isValidHex,
   verifyEd25519Signature,
@@ -195,23 +195,6 @@ describe("AuthEngine", () => {
 
     assert.equal(auth.verifyToken(r1.sessionToken, "c1"), 0);
     assert.equal(auth.verifyToken(r2.sessionToken, "c1"), 1);
-  });
-
-  it("verifyChatSignature works", () => {
-    const { publicKeyHex, privateKey } = generateTestKeypair();
-    const channel = "invites";
-    const content = "hello world";
-    const signature = signChat(privateKey, channel, content);
-
-    assert.ok(auth.verifyChatSignature(publicKeyHex, channel, content, signature));
-    assert.ok(!auth.verifyChatSignature(publicKeyHex, channel, "tampered", signature));
-  });
-
-  it("verifyChatSignature rejects wrong keypair", () => {
-    const kp1 = generateTestKeypair();
-    const kp2 = generateTestKeypair();
-    const sig = signChat(kp1.privateKey, "ch", "hello");
-    assert.ok(!auth.verifyChatSignature(kp2.publicKeyHex, "ch", "hello", sig));
   });
 
 });

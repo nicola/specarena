@@ -185,12 +185,20 @@ describe("REST API for arena", () => {
     assert.ok(data.messages);
   });
 
-  it("GET /api/arena/sync — returns 401 without token", async () => {
+  it("GET /api/arena/sync — returns 200 without token (open sync with redaction)", async () => {
     const { id, invites } = await createPsiChallenge();
     await authJoin(invites[0]);
 
-    const res = await request("GET", `/api/arena/sync?channel=${id}&from=${invites[0]}&index=0`);
-    assert.equal(res.status, 401);
+    const res = await request("GET", `/api/arena/sync?channel=${id}&index=0`);
+    assert.equal(res.status, 200);
+    const data = await res.json();
+    // Without auth, all to: messages should be redacted
+    for (const m of data.messages) {
+      if (m.to) {
+        assert.equal(m.content, null, "to: messages should be redacted without auth");
+        assert.equal(m.redacted, true);
+      }
+    }
   });
 
   it("GET /api/arena/sync — returns 400 for missing params", async () => {
@@ -262,22 +270,220 @@ describe("REST API for arena", () => {
   });
 });
 
+describe("Auth attack vectors", () => {
+  beforeEach(async () => clearState());
+
+  // -- Token abuse --
+
+  it("cross-challenge token: token from challenge A rejected on challenge B", async () => {
+    const c1 = await createPsiChallenge();
+    const c2 = await createPsiChallenge();
+
+    const j1 = await authJoin(c1.invites[0]);
+    await authJoin(c1.invites[1]);
+
+    // Use challenge-A token to send a message on challenge-B
+    const res = await request("POST", "/api/arena/message", {
+      challengeId: c2.id,
+      from: c1.invites[0],
+      messageType: "guess",
+      content: "100",
+    }, bearerHeader(j1.sessionToken));
+    assert.equal(res.status, 401);
+  });
+
+  it("cross-challenge token: token from challenge A rejected on challenge B sync", async () => {
+    const c1 = await createPsiChallenge();
+    const c2 = await createPsiChallenge();
+
+    const j1 = await authJoin(c1.invites[0]);
+
+    // Use challenge-A token to sync challenge-B — open sync, but authInvite should not resolve
+    const res = await request("GET", `/api/arena/sync?channel=${c2.id}&index=0`, undefined, bearerHeader(j1.sessionToken));
+    assert.equal(res.status, 200);
+    const data = await res.json();
+    // Token didn't resolve for this challenge, so all to: messages are redacted
+    for (const m of data.messages) {
+      if (m.to) {
+        assert.equal(m.content, null);
+        assert.equal(m.redacted, true);
+      }
+    }
+  });
+
+  it("fabricated token string is rejected", async () => {
+    const { id, invites } = await createPsiChallenge();
+    await authJoin(invites[0]);
+    await authJoin(invites[1]);
+
+    const res = await request("POST", "/api/arena/message", {
+      challengeId: id,
+      from: invites[0],
+      messageType: "guess",
+      content: "100",
+    }, bearerHeader("s_0.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"));
+    assert.equal(res.status, 401);
+  });
+
+  it("malformed Authorization header: 'Bearer' with no token", async () => {
+    const { id, invites } = await createPsiChallenge();
+    await authJoin(invites[0]);
+
+    const res = await request("POST", "/api/arena/message", {
+      challengeId: id,
+      from: invites[0],
+      content: "x",
+    }, { Authorization: "Bearer " });
+    assert.equal(res.status, 401);
+  });
+
+  it("malformed Authorization header: wrong scheme", async () => {
+    const { id, invites } = await createPsiChallenge();
+    const j1 = await authJoin(invites[0]);
+
+    const res = await request("POST", "/api/arena/message", {
+      challengeId: id,
+      from: invites[0],
+      content: "x",
+    }, { Authorization: `Basic ${j1.sessionToken}` });
+    assert.equal(res.status, 401);
+  });
+
+  // -- Impersonation --
+
+  it("chat send: valid token but mismatched from is rejected", async () => {
+    const { id, invites } = await createPsiChallenge();
+    const j1 = await authJoin(invites[0]);
+    await authJoin(invites[1]);
+
+    // Player 1's token, but from=player 2
+    const res = await request("POST", "/api/chat/send", {
+      channel: id,
+      from: invites[1],
+      content: "I'm pretending to be player 2",
+    }, bearerHeader(j1.sessionToken));
+    assert.equal(res.status, 401);
+  });
+
+  it("arena message: valid token but mismatched from is rejected", async () => {
+    const { id, invites } = await createPsiChallenge();
+    const j1 = await authJoin(invites[0]);
+    await authJoin(invites[1]);
+
+    const res = await request("POST", "/api/arena/message", {
+      challengeId: id,
+      from: invites[1],
+      messageType: "guess",
+      content: "100",
+    }, bearerHeader(j1.sessionToken));
+    assert.equal(res.status, 401);
+  });
+
+  it("each player gets a distinct session token", async () => {
+    const { invites } = await createPsiChallenge();
+    const j1 = await authJoin(invites[0]);
+    const j2 = await authJoin(invites[1]);
+    assert.notEqual(j1.sessionToken, j2.sessionToken);
+  });
+
+  // -- Join abuse --
+
+  it("duplicate join: reusing an invite returns error", async () => {
+    const { invites } = await createPsiChallenge();
+    await authJoin(invites[0]);
+
+    const kp2 = generateTestKeypair();
+    const res = await request("POST", "/api/arena/join", {
+      invite: invites[0],
+      publicKey: kp2.publicKeyHex,
+      signature: signJoin(kp2.privateKey, invites[0]),
+    });
+    assert.equal(res.status, 400);
+    const data = await res.json();
+    assert.ok(data.error.includes("INVITE_ALREADY_USED"));
+  });
+
+  it("join with valid signature but wrong public key format", async () => {
+    const { invites } = await createPsiChallenge();
+    const kp = generateTestKeypair();
+    const sig = signJoin(kp.privateKey, invites[0]);
+
+    // Public key too short
+    const res = await request("POST", "/api/arena/join", {
+      invite: invites[0],
+      publicKey: "abcd",
+      signature: sig,
+    });
+    assert.equal(res.status, 400);
+  });
+
+  // -- Redaction integrity --
+
+  it("authenticated player cannot see other player's DMs", async () => {
+    const { id, invites } = await createPsiChallenge();
+    const j1 = await authJoin(invites[0]);
+    const j2 = await authJoin(invites[1]);
+
+    // Player 1 sends a DM to player 2
+    await request("POST", "/api/chat/send", {
+      channel: id,
+      from: invites[0],
+      to: invites[1],
+      content: "secret for p2 only",
+    }, bearerHeader(j1.sessionToken));
+
+    // Player 2 syncs — should see the DM content (they are the recipient)
+    const sync2 = await (await request("GET", `/api/chat/sync?channel=${id}&index=0`, undefined, bearerHeader(j2.sessionToken))).json();
+    const dm2 = sync2.messages.find((m: any) => m.to === invites[1] && m.from === invites[0]);
+    assert.ok(dm2);
+    assert.equal(dm2.content, "secret for p2 only");
+    assert.equal(dm2.redacted, undefined);
+
+    // Player 1 syncs — should also see it (they are the sender)
+    const sync1 = await (await request("GET", `/api/chat/sync?channel=${id}&index=0`, undefined, bearerHeader(j1.sessionToken))).json();
+    const dm1 = sync1.messages.find((m: any) => m.to === invites[1] && m.from === invites[0]);
+    assert.ok(dm1);
+    assert.equal(dm1.content, "secret for p2 only");
+
+    // A third-party (unauthenticated) — DM is redacted
+    const syncAnon = await (await request("GET", `/api/chat/sync?channel=${id}&index=0`)).json();
+    const dmAnon = syncAnon.messages.find((m: any) => m.to === invites[1] && m.from === invites[0]);
+    assert.ok(dmAnon);
+    assert.equal(dmAnon.content, null);
+    assert.equal(dmAnon.redacted, true);
+  });
+
+  it("arena sync: authenticated player sees own DMs, opponent's are redacted", async () => {
+    const { id, invites } = await createPsiChallenge();
+    const j1 = await authJoin(invites[0]);
+    const j2 = await authJoin(invites[1]);
+
+    // After both join, operator sends private sets (to: each player)
+    const sync1 = await (await request("GET", `/api/arena/sync?channel=${id}&index=0`, undefined, bearerHeader(j1.sessionToken))).json();
+
+    // Player 1 should see their own set in full
+    const ownSet = sync1.messages.find((m: any) => m.to === invites[0] && m.from === "operator");
+    assert.ok(ownSet);
+    assert.ok(ownSet.content?.includes("Your private set"));
+
+    // Player 1 should see player 2's set as redacted
+    const oppSet = sync1.messages.find((m: any) => m.to === invites[1] && m.from === "operator");
+    assert.ok(oppSet);
+    assert.equal(oppSet.content, null);
+    assert.equal(oppSet.redacted, true);
+  });
+});
+
 describe("REST API for chat", () => {
   beforeEach(async () => clearState());
 
-  it("POST /api/chat/send — sends a message to invites (no auth needed)", async () => {
+  it("POST /api/chat/send — returns 401 for invites channel (auth required on all writes)", async () => {
     const res = await request("POST", "/api/chat/send", {
       channel: "invites",
       from: "user1",
       content: "Hello!",
     });
-    assert.equal(res.status, 200);
-
-    const data = await res.json();
-    assert.equal(data.channel, "invites");
-    assert.equal(data.from, "user1");
-    assert.equal(data.to, null);
-    assert.ok(typeof data.index === "number");
+    assert.equal(res.status, 401);
   });
 
   it("POST /api/chat/send — requires auth for non-invites channel", async () => {
@@ -334,40 +540,42 @@ describe("REST API for chat", () => {
     assert.equal(data.to, invites[1]);
   });
 
-  it("POST /api/chat/send — returns 400 for missing fields", async () => {
+  it("POST /api/chat/send — returns 401 for missing fields (no auth)", async () => {
     const res = await request("POST", "/api/chat/send", { channel: "invites" });
-    // channel="invites" skips auth, so we get 400 from route
-    assert.equal(res.status, 400);
+    assert.equal(res.status, 401);
   });
 
-  it("GET /api/chat/sync — returns messages for invites (no auth)", async () => {
-    await request("POST", "/api/chat/send", { channel: "invites", from: "a", content: "broadcast" });
-
-    const res = await request("GET", "/api/chat/sync?channel=invites&from=a&index=0");
-    assert.equal(res.status, 200);
-
-    const data = await res.json();
-    assert.ok(data.messages.some((m: any) => m.content === "broadcast"));
-  });
-
-  it("GET /api/chat/sync — requires auth for non-invites channel", async () => {
+  it("GET /api/chat/sync — open sync returns 200 without auth", async () => {
     const { id, invites } = await createPsiChallenge();
     const j1 = await authJoin(invites[0]);
+    await authJoin(invites[1]);
 
-    // Send a message (authed)
+    // Send a message (authed) and a DM
     await request("POST", "/api/chat/send", {
-      channel: id, from: invites[0], content: "msg",
+      channel: id, from: invites[0], content: "broadcast",
+    }, bearerHeader(j1.sessionToken));
+    await request("POST", "/api/chat/send", {
+      channel: id, from: invites[0], to: invites[1], content: "secret",
     }, bearerHeader(j1.sessionToken));
 
-    // Sync without token → 401
-    const res1 = await request("GET", `/api/chat/sync?channel=${id}&from=${invites[0]}&index=0`);
-    assert.equal(res1.status, 401);
+    // Sync without token → 200 (open sync)
+    const res1 = await request("GET", `/api/chat/sync?channel=${id}&index=0`);
+    assert.equal(res1.status, 200);
+    const data1 = await res1.json();
+    assert.equal(data1.count, 2);
+    // Broadcast visible, DM redacted
+    const broadcast = data1.messages.find((m: any) => !m.to);
+    assert.equal(broadcast.content, "broadcast");
+    const dm = data1.messages.find((m: any) => m.to);
+    assert.equal(dm.content, null);
+    assert.equal(dm.redacted, true);
 
-    // Sync with token → 200
-    const res2 = await request("GET", `/api/chat/sync?channel=${id}&from=${invites[0]}&index=0`, undefined, bearerHeader(j1.sessionToken));
+    // Sync with token → 200, DM visible to sender
+    const res2 = await request("GET", `/api/chat/sync?channel=${id}&index=0`, undefined, bearerHeader(j1.sessionToken));
     assert.equal(res2.status, 200);
-    const data = await res2.json();
-    assert.equal(data.count, 1);
+    const data2 = await res2.json();
+    const dm2 = data2.messages.find((m: any) => m.to);
+    assert.equal(dm2.content, "secret");
   });
 
   it("GET /api/chat/sync — returns 400 for missing params", async () => {
@@ -376,12 +584,16 @@ describe("REST API for chat", () => {
   });
 
   it("GET /api/chat/sync — index filters older messages", async () => {
-    // Use invites channel (no auth needed)
-    await request("POST", "/api/chat/send", { channel: "invites", from: "a", content: "msg1" });
-    await request("POST", "/api/chat/send", { channel: "invites", from: "a", content: "msg2" });
-    await request("POST", "/api/chat/send", { channel: "invites", from: "a", content: "msg3" });
+    const { id, invites } = await createPsiChallenge();
+    const j1 = await authJoin(invites[0]);
+    await authJoin(invites[1]);
 
-    const res = await request("GET", "/api/chat/sync?channel=invites&from=a&index=3");
+    const s1 = await (await request("POST", "/api/chat/send", { channel: id, content: "msg1" }, bearerHeader(j1.sessionToken))).json();
+    await request("POST", "/api/chat/send", { channel: id, content: "msg2" }, bearerHeader(j1.sessionToken));
+    const s3 = await (await request("POST", "/api/chat/send", { channel: id, content: "msg3" }, bearerHeader(j1.sessionToken))).json();
+
+    // Sync from msg3's index — should return only msg3
+    const res = await request("GET", `/api/chat/sync?channel=${id}&index=${s3.index}`, undefined, bearerHeader(j1.sessionToken));
     const data = await res.json();
     assert.equal(data.count, 1);
     assert.equal(data.messages[0].content, "msg3");

@@ -120,11 +120,11 @@ describe("PSI game simulation", () => {
     // 4. Sync to get private sets
     const sync1 = await challengeSync(challengeId, invite1, 0);
     const p1SetMsg = sync1.messages.find(
-      (m) => m.to === invite1 && m.from === "operator" && m.content.includes("Your private set")
+      (m) => m.to === invite1 && m.from === "operator" && m.content?.includes("Your private set")
     );
     const sync2 = await challengeSync(challengeId, invite2, 0);
     const p2SetMsg = sync2.messages.find(
-      (m) => m.to === invite2 && m.from === "operator" && m.content.includes("Your private set")
+      (m) => m.to === invite2 && m.from === "operator" && m.content?.includes("Your private set")
     );
     assert.ok(p1SetMsg, "player 1 should receive their private set");
     assert.ok(p2SetMsg, "player 2 should receive their private set");
@@ -162,7 +162,7 @@ describe("PSI game simulation", () => {
     // 11. Game-end broadcast message
     const finalSync = await challengeSync(challengeId, invite1, 0);
     const endMsg = finalSync.messages.find(
-      (m) => m.from === "operator" && m.content.includes("Game ended")
+      (m) => m.from === "operator" && m.content?.includes("Game ended")
     );
     assert.ok(endMsg, "game-end broadcast should exist");
     assert.ok(endMsg!.content.includes("Scores are:"));
@@ -284,16 +284,18 @@ describe("PSI game simulation", () => {
     await challengeJoin(invite1);
     await challengeJoin(invite2);
 
-    // Sync as player 1 — should only see own messages and broadcasts
+    // Sync as player 1 — player 2's private messages are redacted
     const p1Sync = await challengeSync(challengeId, invite1, 0);
     const p2Private = p1Sync.messages.find(
       (m) => m.to === invite2 && m.from === "operator"
     );
-    assert.equal(p2Private, undefined, "player 1 should not see player 2's private messages");
+    assert.ok(p2Private, "player 1 should see redacted message for player 2");
+    assert.equal(p2Private!.content, null, "redacted message content should be null");
+    assert.equal(p2Private!.redacted, true, "redacted message should have redacted flag");
 
     // Player 1 should see their own set
     const ownSet = p1Sync.messages.find(
-      (m) => m.to === invite1 && m.content.includes("Your private set")
+      (m) => m.to === invite1 && m.content?.includes("Your private set")
     );
     assert.ok(ownSet, "player 1 should see their own private set");
   });

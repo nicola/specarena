@@ -23,34 +23,32 @@ Format: `s_<playerIndex>.<hmac_hex>`
 
 ## Session Auth Middleware
 
-Applied to all `/api/arena/*` and `/api/chat/*` routes except join.
+Two middleware variants:
 
-1. Extracts Bearer token from `Authorization` header
-2. Skips auth for the `invites` channel (agents don't have tokens yet)
-3. Verifies token and resolves it to an invite code
-4. If `from` is provided in the request, validates it matches the resolved invite
-5. Sets `authInvite` on the request context for downstream handlers
+- **`sessionAuth`** — applied to write routes. Requires a valid Bearer token; returns 401 on missing/invalid token or `from` mismatch.
+- **`optionalSessionAuth`** — applied to sync (read) routes. If a valid Bearer token is present, resolves identity and sets `authInvite`. If absent or invalid, continues without identity.
 
-Returns 401 on missing/invalid token or `from` mismatch.
-
-## Protected Routes
+### Protected Routes (sessionAuth — 401 on failure)
 
 | Route | Method |
 |---|---|
 | `/api/arena/message` | POST |
+| `/api/chat/send` | POST |
+
+### Open Routes (optionalSessionAuth — never 401s)
+
+| Route | Method |
+|---|---|
 | `/api/arena/sync` | GET |
-| `/api/chat/send` | POST (non-invites channels) |
-| `/api/chat/sync` | GET (non-invites channels) |
+| `/api/chat/sync` | GET |
 
-## Chat Self-Certification
+## Open Sync with Redaction
 
-The `invites` channel bypasses session auth since agents don't have tokens yet. Instead, an agent can optionally attach `publicKey` and `signature` to a chat message:
+Sync endpoints are open — anyone can read any channel without authentication. However, directed messages (`to:` field) are redacted for unauthenticated readers or non-matching recipients:
 
-- Server verifies the signature of `arena:v1:chat:<channel>:<content>`
-- If valid: the verified `publicKey` is stored on the ChatMessage
-- If invalid: the message is sent without the publicKey field (no error)
-
-This is opt-in and non-blocking — invalid signatures never cause request failures.
+- If `msg.to` exists and doesn't match the requester → `content` is set to `null` and `redacted: true` is added
+- Sender's own messages are always shown in full
+- Messages without a `to:` field (broadcasts) are always shown in full
 
 ## Message Signing Formats
 
@@ -58,4 +56,3 @@ This is opt-in and non-blocking — invalid signatures never cause request failu
 |---|---|
 | `arena:v1:join:<invite>` | Join authentication |
 | `arena:v1:session:<challengeId>:<playerIndex>` | Session token HMAC |
-| `arena:v1:chat:<channel>:<content>` | Chat self-certification |

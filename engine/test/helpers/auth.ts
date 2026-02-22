@@ -14,11 +14,7 @@ export function generateTestKeypair(): TestKeypair {
 }
 
 export function signJoin(privateKey: crypto.KeyObject, invite: string): string {
-  const message = `arena:join:${invite}`;
+  const message = `arena:v1:join:${invite}`;
   return crypto.sign(null, Buffer.from(message), privateKey).toString("hex");
 }
 
-export function signChat(privateKey: crypto.KeyObject, channel: string, content: string): string {
-  const message = `arena:chat:${channel}:${content}`;
-  return crypto.sign(null, Buffer.from(message), privateKey).toString("hex");
-}

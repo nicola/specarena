@@ -1,35 +1,27 @@
 import { Hono } from "hono";
 import { ChatEngine, defaultChatEngine } from "../../chat/ChatEngine";
-import { AuthEngine } from "../../auth/index";
 
-export function createChatRoutes(chat: ChatEngine = defaultChatEngine, auth?: AuthEngine) {
+export function createChatRoutes(chat: ChatEngine = defaultChatEngine) {
   const app = new Hono();
 
   // POST /api/chat/send - Send a chat message
   app.post("/api/chat/send", async (c) => {
-    const { channel, from, to, content, publicKey, signature } = await c.req.json();
+    const { channel, from: bodyFrom, to, content } = await c.req.json();
+    const from = bodyFrom ?? c.get("authInvite");
     if (!channel || !from || !content) {
       return c.json({ error: "channel, from, and content are required" }, 400);
     }
 
-    // Optional self-cert for invites channel
-    let verifiedPublicKey: string | undefined;
-    if (channel === "invites" && publicKey && signature && auth) {
-      if (auth.verifyChatSignature(publicKey, channel, content, signature)) {
-        verifiedPublicKey = publicKey;
-      }
-    }
-
-    return c.json(await chat.chatSend(channel, from, content, to, verifiedPublicKey));
+    return c.json(await chat.chatSend(channel, from, content, to));
   });
 
   // GET /api/chat/sync - Get messages from a channel
   app.get("/api/chat/sync", async (c) => {
     const channel = c.req.query("channel");
-    const from = c.req.query("from");
+    const from = c.req.query("from") ?? c.get("authInvite") as string | undefined;
     const index = parseInt(c.req.query("index") || "0", 10);
-    if (!channel || !from) {
-      return c.json({ error: "channel and from are required" }, 400);
+    if (!channel) {
+      return c.json({ error: "channel is required" }, 400);
     }
     return c.json(await chat.chatSync(channel, from, index));
   });

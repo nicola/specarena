@@ -32,17 +32,23 @@ export class ChatEngine {
     return this.storageAdapter.getMessagesForChannel(channel);
   }
 
-  private filterVisibleMessages(messages: ChatMessage[], from: string, index: number): ChatMessage[] {
-    return messages.filter((msg: ChatMessage) =>
-      msg.index !== undefined && msg.index >= index && (!msg.to || msg.to === from || msg.from === from));
+  private prepareMessagesForSync(messages: ChatMessage[], from: string | undefined, index: number): ChatMessage[] {
+    return messages
+      .filter((msg) => msg.index !== undefined && msg.index >= index)
+      .map((msg) => {
+        if (msg.to && msg.to !== from && msg.from !== from) {
+          return { ...msg, content: null, redacted: true as const };
+        }
+        return msg;
+      });
   }
 
-  private async syncChannel(channel: string, from: string, index: number) {
+  private async syncChannel(channel: string, from: string | undefined, index: number) {
     const messages = await this.getMessagesForChannel(channel);
-    const filteredMessages = this.filterVisibleMessages(messages, from, index);
+    const prepared = this.prepareMessagesForSync(messages, from, index);
     return {
-      messages: filteredMessages,
-      count: filteredMessages.length,
+      messages: prepared,
+      count: prepared.length,
     };
   }
 
@@ -92,7 +98,7 @@ export class ChatEngine {
     return this.sendMessage(`challenge_${challengeId}`, from, content, to);
   }
 
-  async sendMessage(channel: string, from: string, content: string, to?: string | null, publicKey?: string): Promise<ChatMessage> {
+  async sendMessage(channel: string, from: string, content: string, to?: string | null): Promise<ChatMessage> {
     const index = await this.storageAdapter.getNextIndex(channel);
     const message: ChatMessage = {
       channel,
@@ -101,7 +107,6 @@ export class ChatEngine {
       content: content || "",
       index,
       timestamp: Date.now(),
-      ...(publicKey ? { publicKey } : {}),
     };
 
     await this.storageAdapter.appendMessage(channel, message);
@@ -109,16 +114,16 @@ export class ChatEngine {
     return message;
   }
 
-  async chatSend(channel: string, from: string, content: string, to?: string | null, publicKey?: string) {
-    const message = await this.sendMessage(channel, from, content, to, publicKey);
+  async chatSend(channel: string, from: string, content: string, to?: string | null) {
+    const message = await this.sendMessage(channel, from, content, to);
     return { index: message.index, channel, from, to: to ?? null };
   }
 
-  async chatSync(channel: string, from: string, index: number) {
+  async chatSync(channel: string, from: string | undefined, index: number) {
     return this.syncChannel(channel, from, index);
   }
 
-  async challengeSync(challengeId: string, from: string, index: number) {
+  async challengeSync(challengeId: string, from: string | undefined, index: number) {
     return this.syncChannel(`challenge_${challengeId}`, from, index);
   }
 }

@@ -2,11 +2,11 @@ export interface ChatMessage {
   channel: string;
   from: string;
   to?: string | null;
-  content: string;
+  content: string | null;
   index?: number;
   timestamp: number;
   type?: string;
-  publicKey?: string;
+  redacted?: true;
 }
 
 export interface Score {

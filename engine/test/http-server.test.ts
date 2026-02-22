@@ -53,33 +53,22 @@ after(() => {
 describe("HTTP server — REST routes don't collide with MCP wildcards", () => {
   beforeEach(async () => clearState());
 
-  it("POST /api/chat/send returns 200 for invites channel", async () => {
+  it("POST /api/chat/send returns 401 without auth", async () => {
     const res = await req("POST", "/api/chat/send", {
       channel: "invites",
       from: "user1",
       content: "Hello!",
     });
-    assert.equal(res.status, 200);
-
-    const data = await res.json();
-    assert.equal(data.channel, "invites");
-    assert.equal(data.from, "user1");
-    assert.ok(typeof data.index === "number");
+    assert.equal(res.status, 401);
   });
 
-  it("GET /api/chat/sync returns 200 for invites channel", async () => {
-    await req("POST", "/api/chat/send", {
-      channel: "invites",
-      from: "a",
-      content: "hello",
-    });
-
-    const res = await req("GET", "/api/chat/sync?channel=invites&from=a&index=0");
+  it("GET /api/chat/sync returns 200 without auth (open sync)", async () => {
+    const res = await req("GET", "/api/chat/sync?channel=invites&index=0");
     assert.equal(res.status, 200);
 
     const data = await res.json();
-    assert.equal(data.count, 1);
-    assert.equal(data.messages[0].content, "hello");
+    assert.equal(data.count, 0);
+    assert.deepEqual(data.messages, []);
   });
 
   it("POST /api/arena/join returns 400 for invalid invite, not 500", async () => {
@@ -95,9 +84,11 @@ describe("HTTP server — REST routes don't collide with MCP wildcards", () => {
     assert.equal(res.status, 401);
   });
 
-  it("GET /api/arena/sync returns 401 without auth", async () => {
-    const res = await req("GET", "/api/arena/sync?channel=x&from=y");
-    assert.equal(res.status, 401);
+  it("GET /api/arena/sync returns 200 without auth (open sync)", async () => {
+    const res = await req("GET", "/api/arena/sync?channel=x&index=0");
+    assert.equal(res.status, 200);
+    const data = await res.json();
+    assert.equal(data.count, 0);
   });
 
   it("MCP endpoint still responds at /api/chat/mcp", async () => {
@@ -207,27 +198,20 @@ describe("HTTP server — /api/v1 routes mirror /api", () => {
     assert.equal(data.invites.length, 2);
   });
 
-  it("POST /api/v1/chat/send works for invites", async () => {
+  it("POST /api/v1/chat/send returns 401 without auth", async () => {
     const res = await req("POST", "/api/v1/chat/send", {
       channel: "invites",
       from: "user1",
       content: "Hello from v1!",
     });
-    assert.equal(res.status, 200);
-    const data = await res.json();
-    assert.equal(data.channel, "invites");
+    assert.equal(res.status, 401);
   });
 
-  it("GET /api/v1/chat/sync works for invites", async () => {
-    await req("POST", "/api/v1/chat/send", {
-      channel: "invites",
-      from: "a",
-      content: "msg",
-    });
-    const res = await req("GET", "/api/v1/chat/sync?channel=invites&from=a&index=0");
+  it("GET /api/v1/chat/sync works without auth (open sync)", async () => {
+    const res = await req("GET", "/api/v1/chat/sync?channel=invites&index=0");
     assert.equal(res.status, 200);
     const data = await res.json();
-    assert.equal(data.count, 1);
+    assert.equal(data.count, 0);
   });
 
   it("full game flow via /api/v1", async () => {

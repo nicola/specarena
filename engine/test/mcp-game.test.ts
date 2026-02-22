@@ -121,10 +121,9 @@ describe("PSI game via MCP protocol", () => {
     const token2 = join2.sessionToken;
     assert.equal(instance.instance.state.gameStarted, true);
 
-    // 4. Player 1 syncs to get private set (with sessionToken)
+    // 4. Player 1 syncs to get private set (from derived from token)
     const sync1 = await callTool(arena, "challenge_sync", {
       channel: challengeId,
-      from: invite1,
       index: 0,
       sessionToken: token1,
     });
@@ -134,22 +133,22 @@ describe("PSI game via MCP protocol", () => {
     );
     assert.ok(p1SetMsg, "player 1 should receive their set");
 
-    // 5. Player 2 syncs - should NOT see player 1's private set
+    // 5. Player 2 syncs (from derived from token) - player 1's private set is redacted
     const sync2 = await callTool(arena, "challenge_sync", {
       channel: challengeId,
-      from: invite2,
       index: 0,
       sessionToken: token2,
     });
-    const leakedP1 = sync2.messages.find(
+    const redactedP1 = sync2.messages.find(
       (m: any) => m.to === invite1 && m.from === "operator"
     );
-    assert.equal(leakedP1, undefined, "player 2 must not see player 1's private set");
+    assert.ok(redactedP1, "player 2 should see redacted message for player 1");
+    assert.equal(redactedP1.content, null, "redacted message content should be null");
+    assert.equal(redactedP1.redacted, true, "redacted message should have redacted flag");
 
-    // 6. Players chat via MCP (with sessionToken)
+    // 6. Players chat via MCP (from derived from token)
     const chat1 = await callTool(chat, "send_chat", {
       channel: challengeId,
-      from: invite1,
       content: "Hello! Let's find the intersection.",
       sessionToken: token1,
     });
@@ -157,16 +156,14 @@ describe("PSI game via MCP protocol", () => {
 
     const chat2 = await callTool(chat, "send_chat", {
       channel: challengeId,
-      from: invite2,
       content: "Sure thing!",
       sessionToken: token2,
     });
     assert.ok(chat2.index);
 
-    // 7. Sync chat messages
+    // 7. Sync chat messages (from derived from token)
     const chatSync = await callTool(chat, "sync", {
       channel: challengeId,
-      from: invite1,
       index: 0,
       sessionToken: token1,
     });
@@ -185,10 +182,9 @@ describe("PSI game via MCP protocol", () => {
     const p2Set = parseSet(p2SetMsg.content);
     const intersection = new Set([...p1Set].filter((n) => p2Set.has(n)));
 
-    // 9. Player 1 guesses exact intersection
+    // 9. Player 1 guesses exact intersection (from derived from token)
     const guess1 = await callTool(arena, "challenge_message", {
       challengeId,
-      from: invite1,
       messageType: "guess",
       content: [...intersection].join(", "),
       sessionToken: token1,
@@ -196,10 +192,9 @@ describe("PSI game via MCP protocol", () => {
     assert.equal(guess1.ok, "Message sent");
     assert.equal(instance.instance.state.gameEnded, false);
 
-    // 10. Player 2 guesses exact intersection
+    // 10. Player 2 guesses exact intersection (from derived from token)
     await callTool(arena, "challenge_message", {
       challengeId,
-      from: invite2,
       messageType: "guess",
       content: [...intersection].join(", "),
       sessionToken: token2,
@@ -264,7 +259,6 @@ describe("PSI game via MCP protocol", () => {
 
     const result = await callTool(arena, "challenge_sync", {
       channel: "nonexistent",
-      from: "nobody",
       index: 0,
     });
     assert.equal(result.count, 0);

@@ -212,7 +212,7 @@ export class ArenaEngine {
     }
   }
 
-  async challengeSync(channel: string, from: string, index: number) {
+  async challengeSync(channel: string, from: string | undefined, index: number) {
     return this.chat.challengeSync(channel, from, index);
   }
 }

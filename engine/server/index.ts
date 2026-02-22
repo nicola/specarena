@@ -3,7 +3,7 @@ import { join } from "path";
 import { Hono } from "hono";
 import { ArenaEngine, defaultEngine } from "../engine";
 import { ChallengeConfig, ChallengeFactory, ChallengeMetadata } from "../types";
-import { sessionAuth } from "../auth/index";
+import { sessionAuth, optionalSessionAuth } from "../auth/index";
 import { createArenaHandler } from "./mcp/arena";
 import { createChatHandler } from "./mcp/chat";
 import { createChallengeRoutes } from "./routes/challenges";
@@ -36,7 +36,9 @@ export function registerChallengesFromConfig(engine: ArenaEngine): void {
 export function createApp(engine: ArenaEngine = defaultEngine): Hono {
   registerChallengesFromConfig(engine);
   const app = new Hono();
-  const authMiddleware = sessionAuth((token, cid) => engine.resolveSession(token, cid));
+  const resolveSession = (token: string, cid: string) => engine.resolveSession(token, cid);
+  const authMiddleware = sessionAuth(resolveSession);
+  const optionalAuthMiddleware = optionalSessionAuth(resolveSession);
 
   // Global error handler — catches malformed JSON, unexpected throws, etc.
   app.onError((err, c) => {
@@ -54,16 +56,16 @@ export function createApp(engine: ArenaEngine = defaultEngine): Hono {
     return app.fetch(new Request(url.toString(), c.req.raw));
   });
 
-  // Session auth on protected arena + chat routes
+  // Session auth on write routes; optional auth on sync (open read with redaction)
   app.post("/api/arena/message", authMiddleware);
-  app.get("/api/arena/sync", authMiddleware);
+  app.get("/api/arena/sync", optionalAuthMiddleware);
   app.post("/api/chat/send", authMiddleware);
-  app.get("/api/chat/sync", authMiddleware);
+  app.get("/api/chat/sync", optionalAuthMiddleware);
 
   // Mount REST routes
   app.route("/", createChallengeRoutes(engine));
   app.route("/", createInviteRoutes(engine));
-  app.route("/", createChatRoutes(engine.chat, engine.auth));
+  app.route("/", createChatRoutes(engine.chat));
   app.route("/", createArenaRoutes(engine));
 
   // Mount MCP handlers
