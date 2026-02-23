@@ -440,80 +440,6 @@ describe("Viewer-mode redaction — chat/ws SSE endpoint (leaderboard path)", ()
     }
   });
 
-  it("SSE stream sends game_ended and closes for a finished challenge (viewer)", async () => {
-    const { id, invites } = await createChallenge();
-    const { data: join0 } = await joinWithAuth(invites[0], keyA);
-    const { data: join1 } = await joinWithAuth(invites[1], keyB);
-
-    // Complete the game: both players submit one guess each
-    await authedRequest("POST", "/api/arena/message", join0.sessionKey,
-      { challengeId: id, messageType: "guess", content: "100" });
-    await authedRequest("POST", "/api/arena/message", join1.sessionKey,
-      { challengeId: id, messageType: "guess", content: "100" });
-
-    // Confirm game is ended
-    const ch = await engine.getChallenge(id);
-    assert.equal(ch?.instance?.state?.gameEnded, true, "game should be ended");
-
-    // Viewer connects after game is over
-    const res = await request("GET", `/api/chat/ws/challenge_${id}`);
-    assert.equal(res.status, 200);
-
-    const reader = res.body!.getReader();
-    const buf = { s: "" };
-    try {
-      const event1 = await readNextSSEData(reader, buf);
-      assert.equal(event1.type, "initial", "first event must be the initial batch");
-      assert.ok(event1.messages.length > 0, "initial batch must contain game messages");
-
-      const event2 = await readNextSSEData(reader, buf);
-      assert.equal(event2.type, "game_ended", "second event must be game_ended");
-
-      // Stream should be closed after game_ended
-      const { done } = await Promise.race([
-        reader.read(),
-        new Promise<{ done: true; value: undefined }>((res) =>
-          setTimeout(() => res({ done: true, value: undefined }), 500)
-        ),
-      ]);
-      assert.ok(done, "stream should close after game_ended event");
-    } finally {
-      reader.cancel().catch(() => {});
-    }
-  });
-
-  it("SSE stream sends game_ended when game ends mid-stream (viewer)", async () => {
-    const { id, invites } = await createChallenge();
-    const { data: join0 } = await joinWithAuth(invites[0], keyA);
-    const { data: join1 } = await joinWithAuth(invites[1], keyB);
-
-    // Viewer subscribes BEFORE game ends
-    const res = await request("GET", `/api/chat/ws/challenge_${id}`);
-    const reader = res.body!.getReader();
-    const buf = { s: "" };
-    try {
-      // Consume initial batch (empty at this point)
-      const initial = await readNextSSEData(reader, buf);
-      assert.equal(initial.type, "initial");
-
-      // Now complete the game while viewer is connected
-      await authedRequest("POST", "/api/arena/message", join0.sessionKey,
-        { challengeId: id, messageType: "guess", content: "100" });
-      await authedRequest("POST", "/api/arena/message", join1.sessionKey,
-        { challengeId: id, messageType: "guess", content: "100" });
-
-      // Drain events until we see game_ended (broadcasts arrive first)
-      let gameEndedSeen = false;
-      for (let i = 0; i < 10; i++) {
-        const event = await readNextSSEData(reader, buf, 2000);
-        if (event.type === "game_ended") { gameEndedSeen = true; break; }
-      }
-      assert.ok(gameEndedSeen, "game_ended event must be emitted when game finishes");
-    } finally {
-      reader.cancel().catch(() => {});
-    }
-  });
-
   it("live SSE new_message — DM is redacted for viewer", async () => {
     const { id, invites } = await createChallenge();
     const { data: join0 } = await joinWithAuth(invites[0], keyA);
@@ -578,40 +504,6 @@ describe("Concurrent SSE streams", () => {
       }
     }
     return Promise.race([drain(), deadline]);
-  }
-
-  /** Collects all SSE data events until the stream closes or timeout. */
-  async function collectAllSSEData(
-    reader: ReadableStreamDefaultReader<Uint8Array>,
-    buf: { s: string },
-    timeoutMs = 3000
-  ): Promise<any[]> {
-    const events: any[] = [];
-    const decoder = new TextDecoder();
-    const deadline = Date.now() + timeoutMs;
-    for (;;) {
-      const remaining = deadline - Date.now();
-      if (remaining <= 0) break;
-      try {
-        const readPromise = reader.read();
-        const timeoutPromise = new Promise<{ done: true; value: undefined }>((res) =>
-          setTimeout(() => res({ done: true, value: undefined }), remaining)
-        );
-        const { done, value } = await Promise.race([readPromise, timeoutPromise]);
-        if (done) break;
-        buf.s += decoder.decode(value, { stream: true });
-        let nl: number;
-        while ((nl = buf.s.indexOf("\n\n")) !== -1) {
-          const block = buf.s.slice(0, nl);
-          buf.s = buf.s.slice(nl + 2);
-          const line = block.split("\n").find((l) => l.startsWith("data: "));
-          if (line) events.push(JSON.parse(line.slice(6)));
-        }
-      } catch {
-        break;
-      }
-    }
-    return events;
   }
 
   it("multiple viewers receive all messages", async () => {
@@ -688,82 +580,6 @@ describe("Concurrent SSE streams", () => {
     } finally {
       reader1.cancel().catch(() => {});
       reader2.cancel().catch(() => {});
-    }
-  });
-
-  it("game ending closes streams for all concurrent viewers", async () => {
-    const { id, invites } = await createChallenge();
-    const { data: join0 } = await joinWithAuth(invites[0], keyA);
-    const { data: join1 } = await joinWithAuth(invites[1], keyB);
-
-    // Three viewers subscribe to challenge channel
-    const viewers = await Promise.all([
-      request("GET", `/api/chat/ws/challenge_${id}`),
-      request("GET", `/api/chat/ws/challenge_${id}`),
-      request("GET", `/api/chat/ws/challenge_${id}`),
-    ]);
-    const readers = viewers.map((r) => r.body!.getReader());
-    const bufs = readers.map(() => ({ s: "" }));
-
-    try {
-      // Consume initial events
-      for (let i = 0; i < 3; i++) {
-        const init = await readNextSSEData(readers[i], bufs[i]);
-        assert.equal(init.type, "initial");
-      }
-
-      // End the game
-      await authedRequest("POST", "/api/arena/message", join0.sessionKey,
-        { challengeId: id, messageType: "guess", content: "100" });
-      await authedRequest("POST", "/api/arena/message", join1.sessionKey,
-        { challengeId: id, messageType: "guess", content: "100" });
-
-      // All three should receive game_ended and streams should close
-      for (let i = 0; i < 3; i++) {
-        const events = await collectAllSSEData(readers[i], bufs[i]);
-        const gameEndedEvent = events.find((e) => e.type === "game_ended");
-        assert.ok(gameEndedEvent, `viewer ${i} must receive game_ended`);
-      }
-    } finally {
-      for (const r of readers) r.cancel().catch(() => {});
-    }
-  });
-
-  it("both channels (bare + prefixed) get game_ended", async () => {
-    const { id, invites } = await createChallenge();
-    const { data: join0 } = await joinWithAuth(invites[0], keyA);
-    const { data: join1 } = await joinWithAuth(invites[1], keyB);
-
-    // Subscribe to both bare id and challenge_id channels
-    const resBare = await request("GET", `/api/chat/ws/${id}`);
-    const resPrefixed = await request("GET", `/api/chat/ws/challenge_${id}`);
-    const readerBare = resBare.body!.getReader();
-    const readerPrefixed = resPrefixed.body!.getReader();
-    const bufBare = { s: "" };
-    const bufPrefixed = { s: "" };
-
-    try {
-      // Consume initial events
-      await readNextSSEData(readerBare, bufBare);
-      await readNextSSEData(readerPrefixed, bufPrefixed);
-
-      // End the game
-      await authedRequest("POST", "/api/arena/message", join0.sessionKey,
-        { challengeId: id, messageType: "guess", content: "100" });
-      await authedRequest("POST", "/api/arena/message", join1.sessionKey,
-        { challengeId: id, messageType: "guess", content: "100" });
-
-      // Both channels should receive game_ended
-      const eventsBare = await collectAllSSEData(readerBare, bufBare);
-      const eventsPrefixed = await collectAllSSEData(readerPrefixed, bufPrefixed);
-
-      const gameEndedBare = eventsBare.find((e) => e.type === "game_ended");
-      const gameEndedPrefixed = eventsPrefixed.find((e) => e.type === "game_ended");
-      assert.ok(gameEndedBare, "bare channel must receive game_ended");
-      assert.ok(gameEndedPrefixed, "prefixed channel must receive game_ended");
-    } finally {
-      readerBare.cancel().catch(() => {});
-      readerPrefixed.cancel().catch(() => {});
     }
   });
 

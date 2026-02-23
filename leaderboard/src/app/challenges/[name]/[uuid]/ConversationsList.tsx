@@ -13,7 +13,7 @@ interface ChatMessage {
 }
 
 interface SSEMessageData {
-  type: 'initial' | 'new_message' | 'game_ended';
+  type: 'initial' | 'new_message';
   messages?: ChatMessage[];
   message?: ChatMessage;
 }
@@ -87,11 +87,6 @@ export default function ConversationsList({ uuid, engineUrl = "" }: Conversation
         setError(null);
         setTimeout(scrollToBottom, 100);
       }
-    } else if (data.type === 'game_ended') {
-      // Challenge is over — close both streams so EventSource doesn't reconnect
-      eventSourceRef.current?.close();
-      challengeEventSourceRef.current?.close();
-      setLoading(false);
     } else if (data.type === 'new_message' && data.message) {
       // New message received
       setMessages((prev) => {
