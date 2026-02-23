@@ -1,14 +1,13 @@
 import { Hono } from "hono";
 import { ArenaEngine, defaultEngine } from "../../engine";
-import { createSessionAuth, getIdentity, AuthEnv } from "../../auth/middleware";
+import { getIdentity, IdentityEnv } from "./identity";
 
 export function createChatRoutes(engine: ArenaEngine = defaultEngine) {
-  const app = new Hono<AuthEnv>();
+  const app = new Hono<IdentityEnv>();
   const chat = engine.chat;
-  const sessionAuth = createSessionAuth(engine);
 
   // POST /api/chat/send - Send a chat message
-  app.post("/api/chat/send", sessionAuth, async (c) => {
+  app.post("/api/chat/send", async (c) => {
     const { channel, from: bodyFrom, to, content } = await c.req.json();
     if (!channel || !content) {
       return c.json({ error: "channel and content are required" }, 400);
@@ -16,14 +15,14 @@ export function createChatRoutes(engine: ArenaEngine = defaultEngine) {
 
     const from = getIdentity(c, bodyFrom);
     if (!from) {
-      return c.json({ error: engine.auth ? "Authentication required" : "from is required" }, engine.auth ? 401 : 400);
+      return c.json({ error: "from is required" }, 400);
     }
 
     return c.json(await chat.chatSend(channel, from, content, to));
   });
 
   // GET /api/chat/sync - Get messages from a channel
-  app.get("/api/chat/sync", sessionAuth, async (c) => {
+  app.get("/api/chat/sync", async (c) => {
     const channel = c.req.query("channel");
     const index = parseInt(c.req.query("index") || "0", 10);
 
@@ -43,7 +42,7 @@ export function createChatRoutes(engine: ArenaEngine = defaultEngine) {
   });
 
   // GET /api/chat/ws/:uuid - SSE stream
-  app.get("/api/chat/ws/:uuid", sessionAuth, (c) => {
+  app.get("/api/chat/ws/:uuid", (c) => {
     const uuid = c.req.param("uuid");
     const viewer = getIdentity(c, c.req.query("from"));
 
