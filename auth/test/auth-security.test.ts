@@ -135,7 +135,7 @@ describe("Auth security — join signature verification", () => {
 describe("Auth security — session key validation on message route", () => {
   beforeEach(async () => engine.clearRuntimeState());
 
-  it("rejects message with no session key (401)", async () => {
+  it("rejects message with no session key (400 — viewer has no identity)", async () => {
     const { id, invites } = await createChallenge();
     await joinWithAuth(invites[0], keyA);
     await joinWithAuth(invites[1], keyB);
@@ -145,7 +145,7 @@ describe("Auth security — session key validation on message route", () => {
       messageType: "guess",
       content: "100",
     });
-    assert.equal(res.status, 401);
+    assert.equal(res.status, 400);
   });
 
   it("rejects message with garbage session key", async () => {
@@ -234,13 +234,19 @@ describe("Auth security — session key validation on message route", () => {
 describe("Auth security — session key validation on sync route", () => {
   beforeEach(async () => engine.clearRuntimeState());
 
-  it("sync without session key returns 401", async () => {
+  it("sync without session key returns 200 with redacted data (viewer mode)", async () => {
     const { id, invites } = await createChallenge();
     await joinWithAuth(invites[0], keyA);
     await joinWithAuth(invites[1], keyB);
 
     const res = await request("GET", `/api/arena/sync?channel=${id}&index=0`);
-    assert.equal(res.status, 401);
+    assert.equal(res.status, 200);
+    const data = await res.json();
+    // Viewer should see messages but all private messages should be redacted
+    const privateMessages = data.messages.filter((m: any) => m.to);
+    for (const msg of privateMessages) {
+      assert.ok(msg.redacted, "all private messages should be redacted for viewer");
+    }
   });
 
   it("sync with forged session key returns 401", async () => {
@@ -293,7 +299,7 @@ describe("Auth security — session key validation on sync route", () => {
 describe("Auth security — chat routes with session keys", () => {
   beforeEach(async () => engine.clearRuntimeState());
 
-  it("chat send without session key returns 401", async () => {
+  it("chat send without session key returns 400 (viewer has no identity)", async () => {
     const { id, invites } = await createChallenge();
     await joinWithAuth(invites[0], keyA);
     await joinWithAuth(invites[1], keyB);
@@ -302,7 +308,7 @@ describe("Auth security — chat routes with session keys", () => {
       channel: `challenge_${id}`,
       content: "hello",
     });
-    assert.equal(res.status, 401);
+    assert.equal(res.status, 400);
   });
 
   it("chat send with valid session key succeeds and uses resolved identity", async () => {

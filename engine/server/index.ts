@@ -9,11 +9,13 @@ import { createChallengeRoutes } from "./routes/challenges";
 import { createInviteRoutes } from "./routes/invites";
 import { createChatRoutes } from "./routes/chat";
 import { createArenaRoutes } from "./routes/arena";
+import { createResolveIdentity } from "./routes/identity";
 
 export { createArenaRoutes } from "./routes/arena";
 export { createChatRoutes } from "./routes/chat";
 export { createChallengeRoutes } from "./routes/challenges";
 export { createInviteRoutes } from "./routes/invites";
+export { createResolveIdentity } from "./routes/identity";
 
 export function registerChallengesFromConfig(engine: ArenaEngine): void {
   const configs: ChallengeConfig[] = JSON.parse(
@@ -57,6 +59,9 @@ export function createApp(engine: ArenaEngine = defaultEngine, options?: { mcp?:
     url.pathname = url.pathname.replace(/^\/api\/v1/, "/api");
     return app.fetch(new Request(url.toString(), c.req.raw));
   });
+
+  // Resolve identity from query/body params (standalone mode)
+  app.use("*", createResolveIdentity(engine));
 
   // Mount REST routes
   app.route("/", createChallengeRoutes(engine));
