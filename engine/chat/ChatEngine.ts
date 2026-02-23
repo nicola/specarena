@@ -1,4 +1,4 @@
-import { ChatMessage } from "../types";
+import { ChatMessage, toChallengeChannel } from "../types";
 import { ChatStorageAdapter, InMemoryChatStorageAdapter } from "../storage/InMemoryChatStorageAdapter";
 
 export interface ChatEngineOptions {
@@ -33,7 +33,7 @@ export class ChatEngine {
   }
 
   async getMessagesForChallengeChannel(challengeId: string): Promise<ChatMessage[]> {
-    return this.getMessagesForChannel(`challenge_${challengeId}`);
+    return this.getMessagesForChannel(toChallengeChannel(challengeId));
   }
 
   async getMessagesForChannel(channel: string): Promise<ChatMessage[]> {
@@ -132,11 +132,11 @@ export class ChatEngine {
 
   broadcastChallengeEvent(challengeId: string, event: Record<string, unknown>): void {
     this.broadcastEvent(challengeId, event);
-    this.broadcastEvent(`challenge_${challengeId}`, event);
+    this.broadcastEvent(toChallengeChannel(challengeId), event);
   }
 
   async sendChallengeMessage(challengeId: string, from: string, content: string, to?: string | null): Promise<ChatMessage> {
-    return this.sendMessage(`challenge_${challengeId}`, from, content, to);
+    return this.sendMessage(toChallengeChannel(challengeId), from, content, to);
   }
 
   async sendMessage(channel: string, from: string, content: string, to?: string | null): Promise<ChatMessage> {
@@ -165,7 +165,7 @@ export class ChatEngine {
   }
 
   async challengeSync(challengeId: string, viewer: string | null, index: number) {
-    return this.syncChannel(`challenge_${challengeId}`, viewer, index);
+    return this.syncChannel(toChallengeChannel(challengeId), viewer, index);
   }
 }
 

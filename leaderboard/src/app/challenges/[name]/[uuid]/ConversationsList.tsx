@@ -66,9 +66,12 @@ const getInitials = (name: string): string => {
     .slice(0, 2);
 };
 
+const CHALLENGE_CHANNEL_PREFIX = "challenge_";
+const toChallengeChannel = (id: string) => `${CHALLENGE_CHANNEL_PREFIX}${id}`;
+
 // Map raw channel names to friendly display labels
 const getChannelDisplayName = (channel: string, uuid: string): string => {
-  if (channel === `challenge_${uuid}`) return "Arena";
+  if (channel === toChallengeChannel(uuid)) return "Arena";
   if (channel === uuid) return "Chat";
   return channel;
 };
@@ -130,6 +133,24 @@ export default function ConversationsList({ uuid, engineUrl = "" }: Conversation
     }
   }, []);
 
+  const connectSSE = useCallback((url: string, onMessage: (data: SSEMessageData) => void): EventSource => {
+    const es = new EventSource(url);
+    es.onmessage = (event) => {
+      try {
+        onMessage(JSON.parse(event.data));
+      } catch (err) {
+        console.error('Error parsing SSE message:', err);
+      }
+    };
+    es.onerror = () => {
+      setError("Connection error. Attempting to reconnect...");
+    };
+    es.onopen = () => {
+      setError(null);
+    };
+    return es;
+  }, []);
+
   const connectWebSocket = useCallback(() => {
     // Reset initial load counter
     initialLoadCountRef.current = 0;
@@ -142,53 +163,10 @@ export default function ConversationsList({ uuid, engineUrl = "" }: Conversation
       challengeEventSourceRef.current.close();
     }
 
-    // Connect directly to the engine (bypasses Next.js proxy for SSE)
     const base = engineUrl;
-
-    // Create first EventSource connection for regular uuid
-    const eventSource = new EventSource(`${base}/api/chat/ws/${uuid}`);
-    eventSourceRef.current = eventSource;
-
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        handleMessage(data);
-      } catch (err) {
-        console.error('Error parsing SSE message:', err);
-      }
-    };
-
-    eventSource.onerror = (err) => {
-      console.error('EventSource error:', err);
-      setError("Connection error. Attempting to reconnect...");
-    };
-
-    eventSource.onopen = () => {
-      setError(null);
-    };
-
-    // Create second EventSource connection for challenge_uuid
-    const challengeEventSource = new EventSource(`${base}/api/chat/ws/challenge_${uuid}`);
-    challengeEventSourceRef.current = challengeEventSource;
-
-    challengeEventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        handleMessage(data);
-      } catch (err) {
-        console.error('Error parsing challenge SSE message:', err);
-      }
-    };
-
-    challengeEventSource.onerror = (err) => {
-      console.error('Challenge EventSource error:', err);
-      setError("Connection error. Attempting to reconnect...");
-    };
-
-    challengeEventSource.onopen = () => {
-      setError(null);
-    };
-  }, [uuid, engineUrl, handleMessage]);
+    eventSourceRef.current = connectSSE(`${base}/api/chat/ws/${uuid}`, handleMessage);
+    challengeEventSourceRef.current = connectSSE(`${base}/api/chat/ws/${toChallengeChannel(uuid)}`, handleMessage);
+  }, [uuid, engineUrl, handleMessage, connectSSE]);
 
   useEffect(() => {
     // Initialize loading state and connect to both EventSource streams
@@ -335,23 +313,31 @@ export default function ConversationsList({ uuid, engineUrl = "" }: Conversation
           return (
             <div key={`${message.channel}-${message.index}`}>
               {/* Conversation Header - show when conversation changes */}
-              {conversationChanged && (
-                <div className="sticky top-0 bg-white/95 backdrop-blur-sm py-2 z-10 mb-2">
-                  <div className="flex items-center gap-2">
-                    <div className="h-px flex-1 bg-zinc-200"></div>
-                    <span className="text-xs font-medium text-zinc-500 px-2 flex items-center gap-1">
-                      {message.to
-                        ? <><span title={message.from}>{displayName(message.from)}</span>{" -> "}<span title={message.to}>{displayName(message.to)}</span></>
-                        : getChannelDisplayName(currentConversation, uuid)
-                      }
-                      {(currentConversation === uuid || currentConversation === `challenge_${uuid}`) && (
-                        <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full border border-zinc-300 text-zinc-400 text-[9px] leading-none cursor-default" title={currentConversation}>i</span>
-                      )}
-                    </span>
-                    <div className="h-px flex-1 bg-zinc-200"></div>
+              {conversationChanged && (() => {
+                const channelName = getChannelDisplayName(currentConversation, uuid);
+                const isArena = currentConversation === toChallengeChannel(uuid);
+                const isChat = currentConversation === uuid;
+                return (
+                  <div className="sticky top-0 bg-white/95 backdrop-blur-sm py-2 z-10 mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className={`h-px flex-1 ${isArena ? 'bg-amber-200' : 'bg-zinc-200'}`}></div>
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                        isArena
+                          ? 'bg-amber-100 text-amber-700'
+                          : isChat
+                            ? 'bg-zinc-100 text-zinc-500'
+                            : 'text-zinc-500'
+                      }`}>
+                        {message.to
+                          ? <><span title={message.from}>{displayName(message.from)}</span>{" → "}<span title={message.to}>{displayName(message.to)}</span></>
+                          : channelName
+                        }
+                      </span>
+                      <div className={`h-px flex-1 ${isArena ? 'bg-amber-200' : 'bg-zinc-200'}`}></div>
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
               
               {/* Message */}
               <div className={`flex gap-3 group ${showSender ? 'mt-4' : 'mt-1'}`}>

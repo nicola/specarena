@@ -1,3 +1,10 @@
+export const CHALLENGE_CHANNEL_PREFIX = "challenge_";
+export const toChallengeChannel = (id: string) => `${CHALLENGE_CHANNEL_PREFIX}${id}`;
+export const fromChallengeChannel = (channel: string): string | null =>
+  channel.startsWith(CHALLENGE_CHANNEL_PREFIX)
+    ? channel.slice(CHALLENGE_CHANNEL_PREFIX.length)
+    : null;
+
 export interface ChatMessage {
   channel: string;
   from: string;

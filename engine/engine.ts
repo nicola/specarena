@@ -5,6 +5,7 @@ import {
   ChallengeFactory,
   ChallengeMetadata,
   Result,
+  fromChallengeChannel,
 } from "./types";
 import { ChatEngine, createChatEngine } from "./chat/ChatEngine";
 import { ArenaStorageAdapter, InMemoryArenaStorageAdapter } from "./storage/InMemoryArenaStorageAdapter";
@@ -27,9 +28,7 @@ export class ArenaEngine {
     this.challengeMetadataMap = new Map<string, ChallengeMetadata>();
     this.chat = options.chatEngine ?? createChatEngine({
       isChannelRevealed: async (channel) => {
-        const challengeId = channel.startsWith("challenge_")
-          ? channel.slice("challenge_".length)
-          : null;
+        const challengeId = fromChallengeChannel(channel);
         if (!challengeId) return false;
         const challenge = await this.getChallenge(challengeId);
         return challenge?.instance?.state?.gameEnded ?? false;
@@ -208,6 +207,10 @@ export class ArenaEngine {
 
   async challengeSync(channel: string, viewer: string | null, index: number) {
     return this.chat.challengeSync(channel, viewer, index);
+  }
+
+  async chatSync(channel: string, viewer: string | null, index: number) {
+    return this.chat.chatSync(channel, viewer, index);
   }
 }
 
