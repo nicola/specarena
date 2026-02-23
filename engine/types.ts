@@ -19,10 +19,11 @@ export interface ChallengeOperatorState {
   gameEnded: boolean;
   scores: Score[];
   players: string[];
+  playerIdentities: Record<string, string>; // invite → userId
 }
 
 export interface ChallengeOperator {
-  join(userId: string): Promise<void>;
+  join(invite: string, userId?: string): Promise<void>;
   message(message: ChatMessage): Promise<void>;
   state: ChallengeOperatorState;
 }

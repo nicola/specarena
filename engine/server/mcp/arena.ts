@@ -12,9 +12,10 @@ export function createArenaHandler(options: { redisUrl?: string; basePath?: stri
         "Join a challenge by providing an invite code.",
         {
           invite: z.string().describe("The invite code to join the challenge"),
+          userId: z.string().optional().describe("Optional persistent user identity URI"),
         },
-        async ({ invite }) => ({
-          content: [{ type: "text", text: JSON.stringify(await engine.challengeJoin(invite)) }],
+        async ({ invite, userId }) => ({
+          content: [{ type: "text", text: JSON.stringify(await engine.challengeJoin(invite, userId)) }],
         })
       );
 

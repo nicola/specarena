@@ -5,7 +5,7 @@ import {
   createApp,
 } from "@arena/engine/server";
 import { AuthEngine } from "../AuthEngine";
-import { generateSecret } from "../utils";
+import { generateSecret, hashPublicKey } from "../utils";
 import { createAuthUser } from "../middleware";
 
 export interface AuthAppOptions {
@@ -56,7 +56,8 @@ export function createAuthApp(options: AuthAppOptions = {}) {
       return c.json({ error: authResult.reason }, 401);
     }
 
-    const result = await engine.challengeJoin(invite);
+    const userId = hashPublicKey(publicKey);
+    const result = await engine.challengeJoin(invite, userId);
     if ("error" in result) {
       return c.json(result, 400);
     }

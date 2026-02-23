@@ -12,6 +12,7 @@ interface ChallengeInstance {
       gameStarted?: boolean;
       gameEnded?: boolean;
       players: string[];
+      playerIdentities?: Record<string, string>;
     };
   };
 }
@@ -108,6 +109,15 @@ export default function ChallengesList({ challenges, challengeType }: Challenges
                   <p className="text-sm text-zinc-600 text-xs">
                     Created {formatDate(challengeInstance.createdAt)}
                   </p>
+                  {challengeInstance.instance?.state?.gameEnded && challengeInstance.instance.state.playerIdentities && Object.keys(challengeInstance.instance.state.playerIdentities).length > 0 && (
+                    <div className="flex gap-2 mt-1">
+                      {Object.values(challengeInstance.instance.state.playerIdentities).map((id, idx) => (
+                        <span key={idx} className="text-xs font-mono text-zinc-400" title={id}>
+                          {id.slice(0, 8)}...
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div className="text-zinc-400">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -159,3 +159,11 @@ arena:v1:join:<invite>:<timestamp>
 ```
 
 Signed with an Ed25519 private key (hex-encoded DER/PKCS8). The server verifies with the corresponding public key (hex-encoded DER/SPKI). Timestamps must be within 5 minutes of the server clock.
+
+## Player Identities
+
+During the auth join flow, the server derives a persistent `userId` from the player's public key by hashing it with SHA-256 (`hashPublicKey` in `auth/utils.ts`). This identity is stored in `state.playerIdentities` as a mapping from invite code to userId hash. The mapping is:
+
+- Included in the `game_ended` SSE event payload (`playerIdentities: Record<string, string>`)
+- Available via `engine.getPlayerIdentities(challengeId)` after the game ends
+- Displayed in the leaderboard UI as truncated hex hashes in the Final Scores panel and on challenge cards

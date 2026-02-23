@@ -145,7 +145,7 @@ export class ArenaEngine {
       .sort((a, b) => b.createdAt - a.createdAt);
   }
 
-  async challengeJoin(invite: string) {
+  async challengeJoin(invite: string, userId?: string) {
     const result = await this.getChallengeFromInvite(invite);
 
     if (!result.success) {
@@ -156,7 +156,7 @@ export class ArenaEngine {
 
     let joinError: string | undefined;
     try {
-      await challenge.instance.join(invite);
+      await challenge.instance.join(invite, userId);
     } catch (error) {
       joinError = error instanceof Error ? error.message : String(error);
     }
@@ -193,6 +193,12 @@ export class ArenaEngine {
     } catch (error) {
       return { error: error instanceof Error ? error.message : String(error) };
     }
+  }
+
+  async getPlayerIdentities(challengeId: string): Promise<Record<string, string> | null> {
+    const challenge = await this.getChallenge(challengeId);
+    if (!challenge?.instance?.state?.gameEnded) return null;
+    return challenge.instance.state.playerIdentities;
   }
 
   async resolvePlayerIdentity(challengeId: string, userIndex: number): Promise<string | null> {

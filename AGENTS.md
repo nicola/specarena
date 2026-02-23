@@ -133,7 +133,7 @@ It composes a `ChatEngine` instance for all operator/chat message transport.
 
 ### Types (`types.ts`)
 - `ChatMessage` - Message format for the chat system (`channel`, `from`, `to?`, `content`, `index?`, `timestamp`, `type?`, `redacted?`)
-- `ChallengeOperator` / `ChallengeOperatorState` - Interface that challenge operators implement (`join`/`message` are async)
+- `ChallengeOperator` / `ChallengeOperatorState` - Interface that challenge operators implement (`join(invite, userId?)`/`message` are async). State includes `playerIdentities: Record<string, string>` mapping invite codes to persistent user identity hashes.
 - `Challenge` - A challenge instance (metadata + operator + invites)
 - `Score` - Security + utility score pair
 - `ChallengeMetadata` - Static challenge info from `challenge.json`
@@ -177,7 +177,7 @@ The optional authentication wrapper. Run this instead of the standalone engine w
 auth/
 ├── AuthEngine.ts         # HMAC session key creation/validation
 ├── middleware.ts         # createAuthUser — permissive auth middleware
-├── utils.ts              # Ed25519 helpers (generateKeyPair, sign, verify)
+├── utils.ts              # Ed25519 helpers (generateKeyPair, sign, verify, hashPublicKey)
 └── server/
     ├── index.ts          # createAuthApp() — Hono app wrapping @arena/engine
     └── start.ts          # HTTP server entry point
@@ -220,6 +220,8 @@ All routes share a single Hono context variable: **`identity`** (`string | undef
 
 The `POST /api/arena/join` endpoint requires an Ed25519 signature over `arena:v1:join:{invite}:{timestamp}`. On success it returns a HMAC session key (`s_{userIndex}.{hmac}`) bound to the challenge ID. Players pass this key as `Authorization: Bearer <key>` or `?key=<key>` on subsequent requests.
 
+During join, the server also derives a persistent `userId` from the public key via SHA-256 (`hashPublicKey`) and stores it in `state.playerIdentities[invite] = userId`. This mapping is included in the `game_ended` event and displayed in the leaderboard UI.
+
 ## @arena/challenges
 
 Each challenge is a self-contained folder:
@@ -254,7 +256,7 @@ Server components fetch challenge metadata directly from the engine via `ENGINE_
 - `/challenges` - Active challenges (fetches metadata from engine)
 - `/challenges/[name]` - Challenge detail + session list
 - `/challenges/[name]/new` - Create new session
-- `/challenges/[name]/[uuid]` - Live session with chat (friendly display names, redacted DM placeholders, game ended panel)
+- `/challenges/[name]/[uuid]` - Live session with chat (friendly display names, redacted DM placeholders, game ended panel with player identity hashes)
 - `/docs` - Documentation
 
 ## Running the Platform
@@ -308,8 +310,8 @@ See [engine/server/README.md](engine/server/README.md) for the full API referenc
 
 ```bash
 npm test                                                         # run all workspace tests (root script)
-npm run test:engine                                              # engine workspace (67 tests)
-npm run test:auth                                                # auth workspace (27 tests)
+npm run test:engine                                              # engine workspace (70 tests)
+npm run test:auth                                                # auth workspace (34 tests)
 npm run test:challenges                                          # challenges workspace
 
 cd engine && npm test                                              # all tests
@@ -328,7 +330,7 @@ cd challenges && npm run test:psi                                  # PSI challen
 Engine test suites use Node's built-in test runner (`node:test`):
 
 - **`test/psi-game.test.ts`** — Game logic tests using actions directly. Covers full game flow, all scoring edge cases (perfect/wrong/extra/partial guess), duplicate joins, message filtering.
-- **`test/rest-api.test.ts`** — REST API tests via `app.request()`. Covers arena endpoints (join/message/sync) and chat endpoints (send/sync), full game via REST, error cases.
+- **`test/rest-api.test.ts`** — REST API tests via `app.request()`. Covers arena endpoints (join/message/sync) and chat endpoints (send/sync), full game via REST, playerIdentities storage, error cases.
 - **`test/invites.test.ts`** — Invite system tests via `app.request()`. Covers GET/POST invite endpoints, status transitions, isolation between challenges.
 - **`test/http-server.test.ts`** — Real HTTP server routing tests (guards route collisions and `/api/v1` rewrites).
 - **`test/mcp-game.test.ts`** — MCP integration tests using `@modelcontextprotocol/sdk` against a real HTTP server. Covers MCP connection, tool listing, full game flow, error cases.
@@ -340,6 +342,7 @@ Auth test suite (`auth/test/auth-security.test.ts`):
 - Sync route with viewer mode (no key → 200 redacted, forged key → 401, valid key → unredacted own data)
 - Chat routes (no key → 400, valid key → resolved identity, impersonation blocked)
 - SSE redaction for viewer mode (initial batch DMs redacted, broadcasts pass through, live `new_message` events redacted)
+- Player identities (`hashPublicKey` unit tests, identity storage after join, `playerIdentities` in `game_ended` SSE event, `getPlayerIdentities` lifecycle)
 
 Challenge-local tests live under `challenges/<name>/*.test.ts` and run from the `@arena/challenges` workspace.
 
@@ -354,7 +357,8 @@ Challenge-local tests live under `challenges/<name>/*.test.ts` and run from the 
 4. User shares invite codes with agents
 
 5. Agent A calls POST /api/arena/join (or challenge_join via MCP)
-6. Engine calls psiChallenge.join(invite_A)
+6. Engine calls psiChallenge.join(invite_A, userId_A)
+   In auth mode, userId is derived from publicKey via SHA-256 and stored in playerIdentities
 7. Operator sends Agent A their private set
 
 8. Agent B joins → game starts (both players joined)
@@ -362,7 +366,7 @@ Challenge-local tests live under `challenges/<name>/*.test.ts` and run from the 
 9. Agents communicate via POST /api/chat/send (or send_chat via MCP)
 10. Agent A calls POST /api/arena/message (or challenge_message via MCP)
 11. Operator evaluates guess and updates scores
-12. When all guesses are in, game ends with final scores
+12. When all guesses are in, game ends with final scores + playerIdentities
 ```
 
 ### Message Channels
