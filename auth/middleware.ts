@@ -46,14 +46,20 @@ async function getChallengeIdFromRequest(c: Context): Promise<string | null> {
   return challengeId;
 }
 
-export function createStrictAuth(engine: ArenaEngine, auth: AuthEngine) {
+export function createAuthUser(engine: ArenaEngine, auth: AuthEngine) {
   return async (c: Context, next: Next) => {
     const key = extractBearerToken(c.req.header("Authorization"))
       ?? c.req.query("key");
     const challengeId = await getChallengeIdFromRequest(c);
 
-    if (!key || !challengeId) {
-      return c.json({ error: "Authentication required" }, 401);
+    if (!key) {
+      c.set("identity", "viewer");
+      return next();
+    }
+
+    if (!challengeId) {
+      c.set("identity", "viewer");
+      return next();
     }
 
     const validation = auth.validateSessionKey(key, challengeId);
@@ -62,10 +68,7 @@ export function createStrictAuth(engine: ArenaEngine, auth: AuthEngine) {
     }
 
     const identity = await engine.resolvePlayerIdentity(challengeId, validation.userIndex);
-    if (identity) {
-      c.set("identity", identity);
-    }
-
+    c.set("identity", identity ?? "viewer");
     return next();
   };
 }

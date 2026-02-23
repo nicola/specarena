@@ -13,7 +13,7 @@ export function createChatRoutes(engine: ArenaEngine = defaultEngine) {
       return c.json({ error: "channel and content are required" }, 400);
     }
 
-    const from = getIdentity(c, bodyFrom);
+    const from = getIdentity(c);
     if (!from) {
       return c.json({ error: "from is required" }, 400);
     }
@@ -30,7 +30,7 @@ export function createChatRoutes(engine: ArenaEngine = defaultEngine) {
       return c.json({ error: "channel is required" }, 400);
     }
 
-    const viewer = getIdentity(c, c.req.query("from"));
+    const viewer = getIdentity(c);
     return c.json(await chat.chatSync(channel, viewer, index));
   });
 
@@ -44,7 +44,7 @@ export function createChatRoutes(engine: ArenaEngine = defaultEngine) {
   // GET /api/chat/ws/:uuid - SSE stream
   app.get("/api/chat/ws/:uuid", (c) => {
     const uuid = c.req.param("uuid");
-    const viewer = getIdentity(c, c.req.query("from"));
+    const viewer = getIdentity(c);
 
     const stream = new ReadableStream({
       async start(controller) {

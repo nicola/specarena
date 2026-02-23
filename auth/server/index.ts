@@ -2,14 +2,11 @@ import { Hono } from "hono";
 import { ArenaEngine, createEngine } from "@arena/engine/engine";
 import {
   registerChallengesFromConfig,
-  createArenaRoutes,
-  createChatRoutes,
-  createChallengeRoutes,
-  createInviteRoutes,
+  createApp,
 } from "@arena/engine/server";
 import { AuthEngine } from "../AuthEngine";
 import { generateSecret } from "../utils";
-import { createStrictAuth } from "../middleware";
+import { createAuthUser } from "../middleware";
 
 export interface AuthAppOptions {
   secret?: string;
@@ -20,7 +17,6 @@ export function createAuthApp(options: AuthAppOptions = {}) {
   const secret = options.secret ?? generateSecret();
   const engine = options.engine ?? createEngine();
   const auth = new AuthEngine(secret);
-  registerChallengesFromConfig(engine);
 
   const app = new Hono();
 
@@ -40,14 +36,8 @@ export function createAuthApp(options: AuthAppOptions = {}) {
     return app.fetch(new Request(url.toString(), c.req.raw));
   });
 
-  const strictAuth = createStrictAuth(engine, auth);
-
-  // Auth middleware on protected routes
-  app.use("/api/arena/message", strictAuth);
-  app.use("/api/arena/sync", strictAuth);
-  app.use("/api/chat/send", strictAuth);
-  app.use("/api/chat/sync", strictAuth);
-  app.use("/api/chat/ws/*", strictAuth);
+  // Permissive auth: sets identity for all routes
+  app.use("*", createAuthUser(engine, auth));
 
   // Ad-hoc join: verify Ed25519 signature, call engine.challengeJoin(), mint session key
   app.post("/api/arena/join", async (c) => {
@@ -82,11 +72,8 @@ export function createAuthApp(options: AuthAppOptions = {}) {
     return c.json({ ...result, sessionKey });
   });
 
-  // Mount clean engine routes (join is shadowed by the handler above)
-  app.route("/", createChallengeRoutes(engine));
-  app.route("/", createInviteRoutes(engine));
-  app.route("/", createArenaRoutes(engine));
-  app.route("/", createChatRoutes(engine));
+  // Mount engine app (includes identity resolution middleware + all routes)
+  app.route("/", createApp(engine, { mcp: false }));
 
   return { app, engine, auth };
 }

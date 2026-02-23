@@ -27,7 +27,7 @@ export function createArenaRoutes(engine: ArenaEngine = defaultEngine) {
       return c.json({ error: "challengeId and content are required" }, 400);
     }
 
-    const from = getIdentity(c, bodyFrom);
+    const from = getIdentity(c);
     if (!from) {
       return c.json({ error: "from is required" }, 400);
     }
@@ -48,7 +48,7 @@ export function createArenaRoutes(engine: ArenaEngine = defaultEngine) {
       return c.json({ error: "channel is required" }, 400);
     }
 
-    const viewer = getIdentity(c, c.req.query("from"));
+    const viewer = getIdentity(c);
     return c.json(await engine.challengeSync(channel, viewer, index));
   });
 
