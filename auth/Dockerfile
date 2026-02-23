@@ -22,7 +22,4 @@ COPY auth/ auth/
 ENV PORT=3001
 EXPOSE 3001
 
-HEALTHCHECK --interval=5s --timeout=3s --retries=3 --start-period=10s \
-  CMD wget --spider -q http://localhost:3001/health || exit 1
-
 CMD ["node", "--import", "tsx", "auth/server/start.ts"]
