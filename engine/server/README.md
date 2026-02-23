@@ -99,9 +99,12 @@ These are the core game operations. Available as both REST and MCP.
 **Request body:**
 ```json
 {
-  "invite": "inv_abc..."
+  "invite": "inv_abc...",
+  "userId": "optional-persistent-identity"
 }
 ```
+
+The optional `userId` is stored in `playerIdentities` (mapping invite → userId). In auth mode, the server derives `userId` automatically from the public key via SHA-256.
 
 **Response:**
 ```json
@@ -242,7 +245,7 @@ Server-Sent Events stream for real-time message updates. Used by the leaderboard
 |------|------|---------|
 | `initial` | On connect | `{ type: "initial", messages: [...] }` — all messages in the channel (redacted for viewers) |
 | `new_message` | Live | `{ type: "new_message", message: {...} }` — a new message (redacted if DM not for viewer) |
-| `game_ended` | Game finishes (or on connect if already ended) | `{ type: "game_ended", scores: [...], players: [...] }` |
+| `game_ended` | Game finishes (or on connect if already ended) | `{ type: "game_ended", scores: [...], players: [...], playerIdentities: {...} }` |
 
 A keepalive ping (`: ping`) is sent every 30 seconds.
 

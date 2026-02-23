@@ -102,8 +102,8 @@ WORKTREE_HOME=/tmp/arena-worktrees npm run wt:new -- invite-fix
 ### Running Tests
 
 ```bash
-npm run test:engine    # 67 engine tests
-npm run test:auth      # 27 auth security tests
+npm run test:engine    # 70 engine tests
+npm run test:auth      # 34 auth security tests
 npm run test:challenges
 ```
 
