@@ -8,12 +8,9 @@ import {
 } from "./types";
 import { ChatEngine, createChatEngine } from "./chat/ChatEngine";
 import { ArenaStorageAdapter, InMemoryArenaStorageAdapter } from "./storage/InMemoryArenaStorageAdapter";
-import { AuthEngine } from "./auth/AuthEngine";
-
 export interface EngineOptions {
   storageAdapter?: ArenaStorageAdapter;
   chatEngine?: ChatEngine;
-  authEngine?: AuthEngine;
 }
 
 export class ArenaEngine {
@@ -22,7 +19,6 @@ export class ArenaEngine {
   private readonly challengeOptions: Map<string, Record<string, unknown>>;
   private readonly challengeMetadataMap: Map<string, ChallengeMetadata>;
   readonly chat: ChatEngine;
-  readonly auth?: AuthEngine;
 
   constructor(options: EngineOptions = {}) {
     this.storageAdapter = options.storageAdapter ?? new InMemoryArenaStorageAdapter();
@@ -30,7 +26,6 @@ export class ArenaEngine {
     this.challengeOptions = new Map<string, Record<string, unknown>>();
     this.challengeMetadataMap = new Map<string, ChallengeMetadata>();
     this.chat = options.chatEngine ?? createChatEngine();
-    this.auth = options.authEngine;
   }
 
   async clearRuntimeState(): Promise<void> {

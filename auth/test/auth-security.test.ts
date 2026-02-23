@@ -1,18 +1,13 @@
 import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 
-import { createEngine } from "../engine";
-import { AuthEngine } from "../auth/AuthEngine";
-import { generateKeyPair, generateSecret, sign } from "../auth/utils";
-import { createApp, registerChallengesFromConfig } from "../server/index";
+import { generateKeyPair, generateSecret, sign } from "../utils";
+import { createAuthApp } from "../server/index";
 
 // --- Auth-enabled engine + app ---
 
 const secret = generateSecret();
-const authEngine = new AuthEngine(secret);
-const engine = createEngine({ authEngine });
-registerChallengesFromConfig(engine);
-const app = createApp(engine);
+const { app, engine } = createAuthApp({ secret });
 
 // Two independent key pairs (simulating two different clients)
 const keyA = generateKeyPair();
@@ -239,42 +234,26 @@ describe("Auth security — session key validation on message route", () => {
 describe("Auth security — session key validation on sync route", () => {
   beforeEach(async () => engine.clearRuntimeState());
 
-  it("sync without session key returns redacted messages (no identity)", async () => {
+  it("sync without session key returns 401", async () => {
     const { id, invites } = await createChallenge();
     await joinWithAuth(invites[0], keyA);
     await joinWithAuth(invites[1], keyB);
 
-    // Sync with no auth — should get messages but private ones are redacted
     const res = await request("GET", `/api/arena/sync?channel=${id}&index=0`);
-    assert.equal(res.status, 200);
-    const data = await res.json();
-
-    // All private messages (with a `to` field) should be redacted
-    const privateMessages = data.messages.filter((m: any) => m.to);
-    assert.ok(privateMessages.length > 0, "should have private messages");
-    for (const msg of privateMessages) {
-      assert.ok(msg.redacted, `private message to ${msg.to} should be redacted`);
-      assert.equal(msg.content, "", "redacted content should be empty");
-    }
+    assert.equal(res.status, 401);
   });
 
-  it("sync with forged session key still returns redacted messages", async () => {
+  it("sync with forged session key returns 401", async () => {
     const { id, invites } = await createChallenge();
     await joinWithAuth(invites[0], keyA);
     await joinWithAuth(invites[1], keyB);
 
     const forgedKey = "s_0." + "ab".repeat(32);
     const res = await request("GET", `/api/arena/sync?channel=${id}&index=0&key=${forgedKey}`);
-    assert.equal(res.status, 200);
-    const data = await res.json();
-
-    const privateMessages = data.messages.filter((m: any) => m.to);
-    for (const msg of privateMessages) {
-      assert.ok(msg.redacted, "forged key should not decrypt private messages");
-    }
+    assert.equal(res.status, 401);
   });
 
-  it("sync with wrong challenge's session key returns redacted messages", async () => {
+  it("sync with wrong challenge's session key returns 401", async () => {
     const c1 = await createChallenge();
     const c2 = await createChallenge();
 
@@ -284,13 +263,7 @@ describe("Auth security — session key validation on sync route", () => {
 
     // Use c1's session key to sync c2
     const res = await request("GET", `/api/arena/sync?channel=${c2.id}&index=0&key=${join1.sessionKey}`);
-    assert.equal(res.status, 200);
-    const data = await res.json();
-
-    const privateMessages = data.messages.filter((m: any) => m.to);
-    for (const msg of privateMessages) {
-      assert.ok(msg.redacted, "cross-challenge key should not reveal private messages");
-    }
+    assert.equal(res.status, 401);
   });
 
   it("sync with valid session key reveals own private messages", async () => {

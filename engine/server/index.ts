@@ -10,6 +10,11 @@ import { createInviteRoutes } from "./routes/invites";
 import { createChatRoutes } from "./routes/chat";
 import { createArenaRoutes } from "./routes/arena";
 
+export { createArenaRoutes } from "./routes/arena";
+export { createChatRoutes } from "./routes/chat";
+export { createChallengeRoutes } from "./routes/challenges";
+export { createInviteRoutes } from "./routes/invites";
+
 export function registerChallengesFromConfig(engine: ArenaEngine): void {
   const configs: ChallengeConfig[] = JSON.parse(
     readFileSync(join(__dirname, "..", "challenges.json"), "utf-8")
@@ -32,7 +37,8 @@ export function registerChallengesFromConfig(engine: ArenaEngine): void {
   }
 }
 
-export function createApp(engine: ArenaEngine = defaultEngine): Hono {
+export function createApp(engine: ArenaEngine = defaultEngine, options?: { mcp?: boolean }): Hono {
+  const mcp = options?.mcp ?? true;
   registerChallengesFromConfig(engine);
   const app = new Hono();
 
@@ -58,8 +64,8 @@ export function createApp(engine: ArenaEngine = defaultEngine): Hono {
   app.route("/", createChatRoutes(engine));
   app.route("/", createArenaRoutes(engine));
 
-  // Mount MCP handlers (disabled when auth is on — no auth mechanism for MCP)
-  if (!engine.auth) {
+  // Mount MCP handlers
+  if (mcp) {
     const arenaHandler = createArenaHandler({ basePath: "/api/arena", engine });
     const chatHandler = createChatHandler({ basePath: "/api/chat", chat: engine.chat });
 
