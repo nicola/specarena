@@ -1,16 +1,13 @@
-# Auth-enabled mode (default)
-# Requires AUTH_SECRET — set in .env or your shell environment.
-#
-# For engine-only (no auth): docker compose -f docker-compose.engine.yml up
+# Engine-only mode (no auth)
+# Usage: docker compose -f docker-compose.engine.yml up
 
 services:
   engine:
     build:
       context: .
-      dockerfile: auth/Dockerfile
+      dockerfile: engine/Dockerfile
     environment:
       - PORT=3001
-      - AUTH_SECRET=${AUTH_SECRET:?Set AUTH_SECRET in .env or environment}
     expose:
       - "3001"
 
