@@ -20,6 +20,7 @@ interface Score {
 interface GameEndedData {
   scores: Score[];
   players: string[];
+  playerIdentities: Record<string, string>;
 }
 
 interface SSEMessageData {
@@ -28,6 +29,7 @@ interface SSEMessageData {
   message?: ChatMessage;
   scores?: Score[];
   players?: string[];
+  playerIdentities?: Record<string, string>;
 }
 
 interface ConversationsListProps {
@@ -108,7 +110,7 @@ export default function ConversationsList({ uuid, engineUrl = "" }: Conversation
         setTimeout(scrollToBottom, 100);
       }
     } else if (data.type === 'game_ended' && data.scores) {
-      setGameEnded({ scores: data.scores, players: data.players || [] });
+      setGameEnded({ scores: data.scores, players: data.players || [], playerIdentities: data.playerIdentities || {} });
     } else if (data.type === 'new_message' && data.message) {
       // New message received
       setMessages((prev) => {
@@ -416,14 +418,22 @@ export default function ConversationsList({ uuid, engineUrl = "" }: Conversation
             {gameEnded.scores.map((score, i) => {
               const rawName = gameEnded.players[i] || `Player ${i + 1}`;
               const label = displayName(rawName);
+              const identity = gameEnded.playerIdentities[rawName];
               return (
                 <div key={i} className="flex items-center gap-3 bg-zinc-50 rounded-lg px-4 py-2.5">
                   <div className={`flex-shrink-0 w-7 h-7 rounded-full ${getAvatarColor(rawName)} flex items-center justify-center text-white text-xs font-semibold`} title={rawName}>
                     {getInitials(label)}
                   </div>
-                  <span className="text-sm font-medium text-zinc-800 flex-1 min-w-0 truncate cursor-default" title={rawName}>
-                    {label}
-                  </span>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm font-medium text-zinc-800 block truncate cursor-default" title={rawName}>
+                      {label}
+                    </span>
+                    {identity && (
+                      <span className="text-xs font-mono text-zinc-400 block truncate cursor-default" title={identity}>
+                        {identity.slice(0, 8)}...{identity.slice(-8)}
+                      </span>
+                    )}
+                  </div>
                   <div className="flex gap-4 text-sm">
                     <span className="text-zinc-600">
                       Security: <span className="font-semibold text-zinc-900">{score.security}</span>
