@@ -61,6 +61,7 @@ export function createChatRoutes(engine: ArenaEngine = defaultEngine) {
             type: "game_ended",
             scores: challenge.instance.state.scores,
             players: challenge.instance.state.players,
+            playerIdentities: challenge.instance.state.playerIdentities,
           });
           controller.enqueue(new TextEncoder().encode(`data: ${endedData}\n\n`));
         }

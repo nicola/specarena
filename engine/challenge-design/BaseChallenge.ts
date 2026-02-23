@@ -28,6 +28,7 @@ export abstract class BaseChallenge<TGameState = {}> implements ChallengeOperato
       gameEnded: false,
       scores: Array.from({ length: playerCount }, (): Score => ({ security: 0, utility: 0 })),
       players: [],
+      playerIdentities: {},
     };
     this.gameState = gameState;
   }
@@ -36,13 +37,17 @@ export abstract class BaseChallenge<TGameState = {}> implements ChallengeOperato
 
   // Admission flow used by the engine when a player joins with an invite.
   // Once playerCount is reached, the game transitions to started.
-  async join(userId: string): Promise<void> {
-    if (this.state.players.includes(userId)) {
+  async join(invite: string, userId?: string): Promise<void> {
+    if (this.state.players.includes(invite)) {
       throw new Error("ERR_INVITE_ALREADY_USED: This invite has already been used.");
     }
 
-    const playerIndex = this.state.players.push(userId) - 1;
-    await this.onPlayerJoin(userId, playerIndex);
+    if (userId) {
+      this.state.playerIdentities[invite] = userId;
+    }
+
+    const playerIndex = this.state.players.push(invite) - 1;
+    await this.onPlayerJoin(invite, playerIndex);
 
     if (this.state.players.length === this.playerCount) {
       this.state.gameStarted = true;
@@ -109,6 +114,7 @@ export abstract class BaseChallenge<TGameState = {}> implements ChallengeOperato
       type: "game_ended",
       scores: this.state.scores,
       players: this.state.players,
+      playerIdentities: this.state.playerIdentities,
     });
   }
 }

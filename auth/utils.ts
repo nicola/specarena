@@ -50,6 +50,13 @@ export function generateSecret(): string {
   return crypto.randomBytes(32).toString("hex");
 }
 
+/**
+ * Derive a userId from an Ed25519 public key by hashing with SHA-256.
+ */
+export function hashPublicKey(publicKeyHex: string): string {
+  return crypto.createHash("sha256").update(publicKeyHex).digest("hex");
+}
+
 export function parseSessionKey(key: string): { userIndex: number; hmac: string } | null {
   // Session Key has the format: "s_" +  index + "." + hmac
 
