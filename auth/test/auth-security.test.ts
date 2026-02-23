@@ -1,7 +1,7 @@
 import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 
-import { generateKeyPair, generateSecret, sign } from "../utils";
+import { generateKeyPair, generateSecret, hashPublicKey, sign } from "../utils";
 import { createAuthApp } from "../server/index";
 
 // --- Auth-enabled engine + app ---
@@ -679,5 +679,123 @@ describe("Concurrent SSE streams", () => {
     } finally {
       reader.cancel().catch(() => {});
     }
+  });
+});
+
+describe("Player identities — hashPublicKey", () => {
+  it("returns a 64-char hex SHA-256 hash", () => {
+    const hash = hashPublicKey(keyA.publicKey);
+    assert.equal(hash.length, 64);
+    assert.match(hash, /^[0-9a-f]{64}$/);
+  });
+
+  it("is deterministic for the same key", () => {
+    assert.equal(hashPublicKey(keyA.publicKey), hashPublicKey(keyA.publicKey));
+  });
+
+  it("produces different hashes for different keys", () => {
+    assert.notEqual(hashPublicKey(keyA.publicKey), hashPublicKey(keyB.publicKey));
+  });
+});
+
+describe("Player identities — stored after authenticated join", () => {
+  beforeEach(async () => engine.clearRuntimeState());
+
+  it("playerIdentities maps invite to hashed public key after join", async () => {
+    const { id, invites } = await createChallenge();
+    await joinWithAuth(invites[0], keyA);
+    await joinWithAuth(invites[1], keyB);
+
+    const challenge = await engine.getChallenge(id);
+    assert.ok(challenge);
+    const identities = challenge.instance.state.playerIdentities;
+
+    assert.equal(identities[invites[0]], hashPublicKey(keyA.publicKey));
+    assert.equal(identities[invites[1]], hashPublicKey(keyB.publicKey));
+  });
+
+  it("playerIdentities appears in game_ended SSE event", async () => {
+    const { id, invites } = await createChallenge();
+    const { data: join0 } = await joinWithAuth(invites[0], keyA);
+    const { data: join1 } = await joinWithAuth(invites[1], keyB);
+
+    // End the game by submitting guesses
+    await authedRequest("POST", "/api/arena/message", join0.sessionKey,
+      { challengeId: id, messageType: "guess", content: "100" });
+    await authedRequest("POST", "/api/arena/message", join1.sessionKey,
+      { challengeId: id, messageType: "guess", content: "100" });
+
+    // Late viewer connects and receives game_ended
+    const res = await request("GET", `/api/chat/ws/${id}`);
+    const reader = res.body!.getReader();
+    const buf = { s: "" };
+
+    /** Reads the next SSE `data:` payload from an open stream reader. */
+    async function readNextSSEData(
+      r: ReadableStreamDefaultReader<Uint8Array>,
+      b: { s: string },
+      timeoutMs = 2000
+    ): Promise<any> {
+      const decoder = new TextDecoder();
+      const deadline = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("SSE read timed out")), timeoutMs)
+      );
+      async function drain(): Promise<any> {
+        for (;;) {
+          const { done, value } = await r.read();
+          if (done) throw new Error("Stream ended before data event");
+          b.s += decoder.decode(value, { stream: true });
+          let nl: number;
+          while ((nl = b.s.indexOf("\n\n")) !== -1) {
+            const block = b.s.slice(0, nl);
+            b.s = b.s.slice(nl + 2);
+            const line = block.split("\n").find((l) => l.startsWith("data: "));
+            if (line) return JSON.parse(line.slice(6));
+          }
+        }
+      }
+      return Promise.race([drain(), deadline]);
+    }
+
+    try {
+      // Drain until game_ended
+      let gameEnded: any = null;
+      for (let i = 0; i < 10; i++) {
+        const ev = await readNextSSEData(reader, buf);
+        if (ev.type === "game_ended") { gameEnded = ev; break; }
+      }
+      assert.ok(gameEnded, "game_ended event must be received");
+      assert.ok(gameEnded.playerIdentities, "game_ended must include playerIdentities");
+      assert.equal(gameEnded.playerIdentities[invites[0]], hashPublicKey(keyA.publicKey));
+      assert.equal(gameEnded.playerIdentities[invites[1]], hashPublicKey(keyB.publicKey));
+    } finally {
+      reader.cancel().catch(() => {});
+    }
+  });
+
+  it("getPlayerIdentities returns null before game ends", async () => {
+    const { id, invites } = await createChallenge();
+    await joinWithAuth(invites[0], keyA);
+    await joinWithAuth(invites[1], keyB);
+
+    const identities = await engine.getPlayerIdentities(id);
+    assert.equal(identities, null);
+  });
+
+  it("getPlayerIdentities returns mapping after game ends", async () => {
+    const { id, invites } = await createChallenge();
+    const { data: join0 } = await joinWithAuth(invites[0], keyA);
+    const { data: join1 } = await joinWithAuth(invites[1], keyB);
+
+    // End the game
+    await authedRequest("POST", "/api/arena/message", join0.sessionKey,
+      { challengeId: id, messageType: "guess", content: "100" });
+    await authedRequest("POST", "/api/arena/message", join1.sessionKey,
+      { challengeId: id, messageType: "guess", content: "100" });
+
+    const identities = await engine.getPlayerIdentities(id);
+    assert.ok(identities);
+    assert.equal(identities[invites[0]], hashPublicKey(keyA.publicKey));
+    assert.equal(identities[invites[1]], hashPublicKey(keyB.publicKey));
   });
 });
