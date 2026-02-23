@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 
 interface ChatMessage {
   channel: string;
@@ -62,6 +62,13 @@ const getInitials = (name: string): string => {
     .join("")
     .toUpperCase()
     .slice(0, 2);
+};
+
+// Map raw channel names to friendly display labels
+const getChannelDisplayName = (channel: string, uuid: string): string => {
+  if (channel === `challenge_${uuid}`) return "Arena";
+  if (channel === uuid) return "Chat";
+  return channel;
 };
 
 export default function ConversationsList({ uuid, engineUrl = "" }: ConversationsListProps) {
@@ -223,7 +230,23 @@ export default function ConversationsList({ uuid, engineUrl = "" }: Conversation
 
   // Sort messages chronologically
   const sortedMessages = [...messages].sort((a, b) => a.timestamp - b.timestamp);
-  
+
+  // Build a map from invite codes to "Player N" display names (order of first appearance)
+  const playerMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const msg of sortedMessages) {
+      if (msg.from !== "operator" && !map.has(msg.from)) {
+        map.set(msg.from, `Player ${map.size + 1}`);
+      }
+    }
+    return map;
+  }, [sortedMessages]);
+
+  const displayName = (name: string): string => {
+    if (name === "operator") return "Operator";
+    return playerMap.get(name) ?? name;
+  };
+
   // Helper to get conversation key for a message
   const getConversationKey = (message: ChatMessage): string => {
     if (!!message.to) {
@@ -273,6 +296,7 @@ export default function ConversationsList({ uuid, engineUrl = "" }: Conversation
         <div className="flex items-center gap-3">
           {gameEnded ? (
             <span className="text-xs text-zinc-500 flex items-center gap-1.5 font-medium">
+              <span className="w-2 h-2 bg-zinc-500 rounded-full"></span>
               Game ended
             </span>
           ) : (
@@ -313,8 +337,14 @@ export default function ConversationsList({ uuid, engineUrl = "" }: Conversation
                 <div className="sticky top-0 bg-white/95 backdrop-blur-sm py-2 z-10 mb-2">
                   <div className="flex items-center gap-2">
                     <div className="h-px flex-1 bg-zinc-200"></div>
-                    <span className="text-xs font-medium text-zinc-500 px-2">
-                      {currentConversation}
+                    <span className="text-xs font-medium text-zinc-500 px-2 flex items-center gap-1">
+                      {message.to
+                        ? <><span title={message.from}>{displayName(message.from)}</span>{" -> "}<span title={message.to}>{displayName(message.to)}</span></>
+                        : getChannelDisplayName(currentConversation, uuid)
+                      }
+                      {(currentConversation === uuid || currentConversation === `challenge_${uuid}`) && (
+                        <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full border border-zinc-300 text-zinc-400 text-[9px] leading-none cursor-default" title={currentConversation}>i</span>
+                      )}
                     </span>
                     <div className="h-px flex-1 bg-zinc-200"></div>
                   </div>
@@ -325,8 +355,8 @@ export default function ConversationsList({ uuid, engineUrl = "" }: Conversation
               <div className={`flex gap-3 group ${showSender ? 'mt-4' : 'mt-1'}`}>
                 {/* Avatar */}
                 {showSender ? (
-                  <div className={`flex-shrink-0 w-8 h-8 rounded-full ${getAvatarColor(message.from)} flex items-center justify-center text-white text-xs font-semibold`}>
-                    {getInitials(message.from)}
+                  <div className={`flex-shrink-0 w-8 h-8 rounded-full ${getAvatarColor(message.from)} flex items-center justify-center text-white text-xs font-semibold`} title={message.from}>
+                    {getInitials(displayName(message.from))}
                   </div>
                 ) : (
                   <div className="w-8"></div>
@@ -336,8 +366,8 @@ export default function ConversationsList({ uuid, engineUrl = "" }: Conversation
                 <div className="flex-1 min-w-0">
                   {showSender && (
                     <div className="flex items-baseline gap-2 mb-1">
-                      <span className="font-semibold text-sm text-zinc-900">
-                        {message.from}
+                      <span className="font-semibold text-sm text-zinc-900 cursor-default" title={message.from}>
+                        {displayName(message.from)}
                       </span>
                       {!isDirectMessage && (
                         <span className="text-xs text-zinc-500 bg-zinc-100 px-1.5 py-0.5 rounded">
@@ -384,14 +414,15 @@ export default function ConversationsList({ uuid, engineUrl = "" }: Conversation
           <h4 className="text-sm font-semibold text-zinc-900 mb-3">Final Scores</h4>
           <div className="grid gap-2">
             {gameEnded.scores.map((score, i) => {
-              const playerName = gameEnded.players[i] || `Player ${i + 1}`;
+              const rawName = gameEnded.players[i] || `Player ${i + 1}`;
+              const label = displayName(rawName);
               return (
                 <div key={i} className="flex items-center gap-3 bg-zinc-50 rounded-lg px-4 py-2.5">
-                  <div className={`flex-shrink-0 w-7 h-7 rounded-full ${getAvatarColor(playerName)} flex items-center justify-center text-white text-xs font-semibold`}>
-                    {getInitials(playerName)}
+                  <div className={`flex-shrink-0 w-7 h-7 rounded-full ${getAvatarColor(rawName)} flex items-center justify-center text-white text-xs font-semibold`} title={rawName}>
+                    {getInitials(label)}
                   </div>
-                  <span className="text-sm font-medium text-zinc-800 flex-1 min-w-0 truncate">
-                    {playerName}
+                  <span className="text-sm font-medium text-zinc-800 flex-1 min-w-0 truncate cursor-default" title={rawName}>
+                    {label}
                   </span>
                   <div className="flex gap-4 text-sm">
                     <span className="text-zinc-600">
