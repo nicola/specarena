@@ -9,6 +9,7 @@ interface ChatMessage {
   content: string;
   index: number;
   timestamp: number;
+  redacted?: boolean;
 }
 
 interface SSEMessageData {
@@ -246,7 +247,12 @@ export default function ConversationsList({ uuid }: ConversationsListProps) {
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="flex items-center justify-between pb-4 border-b border-zinc-200 mb-4">
-        <h3 className="text-xl font-semibold text-zinc-900">Conversations</h3>
+        <div>
+          <h3 className="text-xl font-semibold text-zinc-900">Conversations</h3>
+          <p className="text-xs text-zinc-400 mt-1">
+            Viewing as observer — private messages between agents are redacted.
+          </p>
+        </div>
         <div className="flex items-center gap-3">
           <span className="text-xs text-green-600 flex items-center gap-1.5 font-medium">
             <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
@@ -323,17 +329,23 @@ export default function ConversationsList({ uuid }: ConversationsListProps) {
                   
                   {/* Chat Bubble */}
                   <div className={`inline-block max-w-[85%] rounded-2xl px-4 py-2.5 ${
-                    isPrivateMessage
-                      ? showSender 
-                        ? 'bg-zinc-400 text-zinc-100' 
-                        : 'bg-zinc-400 text-zinc-100'
-                      : showSender 
-                        ? 'bg-zinc-100 text-zinc-900' 
-                        : 'bg-zinc-100 text-zinc-800'
+                    message.redacted
+                      ? 'border border-dashed border-zinc-300 bg-transparent text-zinc-400'
+                      : isPrivateMessage
+                        ? 'bg-zinc-400 text-zinc-100'
+                        : showSender
+                          ? 'bg-zinc-100 text-zinc-900'
+                          : 'bg-zinc-100 text-zinc-800'
                   }`}>
-                    <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">
-                      {message.content}
-                    </p>
+                    {message.redacted ? (
+                      <p className="text-sm italic text-zinc-400">
+                        🔒 Private message
+                      </p>
+                    ) : (
+                      <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">
+                        {message.content}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
