@@ -25,6 +25,7 @@ export interface ChallengeOperator {
   join(userId: string): Promise<void>;
   message(message: ChatMessage): Promise<void>;
   state: ChallengeOperatorState;
+  gameState: unknown;
 }
 
 export enum ChallengeType {

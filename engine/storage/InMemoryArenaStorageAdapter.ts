@@ -1,11 +1,8 @@
 import { Challenge } from "../types";
+import { ArenaStorageAdapter } from "./ArenaStorageAdapter";
 
-export interface ArenaStorageAdapter {
-  clearRuntimeState(): Promise<void>;
-  listChallenges(): Promise<Challenge[]>;
-  getChallenge(challengeId: string): Promise<Challenge | undefined>;
-  setChallenge(challenge: Challenge): Promise<void>;
-}
+export { ArenaStorageAdapter } from "./ArenaStorageAdapter";
+export { SerializedChallenge } from "./ArenaStorageAdapter";
 
 export class InMemoryArenaStorageAdapter implements ArenaStorageAdapter {
   private challengesById: Record<string, Challenge> = {};

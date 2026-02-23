@@ -63,6 +63,28 @@ export class ArenaEngine {
     return Object.fromEntries(this.challengeMetadataMap);
   }
 
+  async loadChallenges(): Promise<void> {
+    const serialized = await this.storageAdapter.listSerializedChallenges?.();
+    if (!serialized) return;
+    for (const data of serialized) {
+      const factory = this.challengeFactories.get(data.challengeType);
+      if (!factory) continue;
+      const options = this.challengeOptions.get(data.challengeType);
+      const instance = factory(data.id, options, { messaging: this.chat });
+      instance.state = data.operatorState;
+      instance.gameState = data.gameState;
+      const challenge: Challenge = {
+        id: data.id,
+        name: data.name,
+        createdAt: data.createdAt,
+        challengeType: data.challengeType,
+        invites: data.invites,
+        instance,
+      };
+      await this.storageAdapter.setChallenge(challenge);
+    }
+  }
+
   async listChallenges(): Promise<Challenge[]> {
     return this.storageAdapter.listChallenges();
   }
@@ -165,6 +187,8 @@ export class ArenaEngine {
       return { error: joinError };
     }
 
+    await this.storageAdapter.setChallenge(challenge);
+
     const metadata = this.getChallengeMetadata(challenge.challengeType);
     return {
       ChallengeID: challenge.id,
@@ -189,6 +213,7 @@ export class ArenaEngine {
         content,
         timestamp: Date.now(),
       });
+      await this.storageAdapter.setChallenge(challenge);
       return { ok: "Message sent" };
     } catch (error) {
       return { error: error instanceof Error ? error.message : String(error) };
@@ -211,5 +236,5 @@ export function createEngine(options: EngineOptions = {}): ArenaEngine {
 
 export const defaultEngine = createEngine();
 export { ChatEngine, createChatEngine, defaultChatEngine } from "./chat/ChatEngine";
-export { ArenaStorageAdapter, InMemoryArenaStorageAdapter } from "./storage/InMemoryArenaStorageAdapter";
+export { ArenaStorageAdapter, InMemoryArenaStorageAdapter, SerializedChallenge } from "./storage/InMemoryArenaStorageAdapter";
 export { ChatStorageAdapter, InMemoryChatStorageAdapter } from "./storage/InMemoryChatStorageAdapter";

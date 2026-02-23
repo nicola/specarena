@@ -5,8 +5,12 @@
   "exports": {
     "./engine": "./engine.ts",
     "./chat/ChatEngine": "./chat/ChatEngine.ts",
+    "./storage/ArenaStorageAdapter": "./storage/ArenaStorageAdapter.ts",
+    "./storage/ChatStorageAdapter": "./storage/ChatStorageAdapter.ts",
     "./storage/InMemoryArenaStorageAdapter": "./storage/InMemoryArenaStorageAdapter.ts",
     "./storage/InMemoryChatStorageAdapter": "./storage/InMemoryChatStorageAdapter.ts",
+    "./storage/SqliteArenaStorageAdapter": "./storage/SqliteArenaStorageAdapter.ts",
+    "./storage/SqliteChatStorageAdapter": "./storage/SqliteChatStorageAdapter.ts",
     "./types": "./types.ts",
     "./utils": "./utils.ts",
     "./server": "./server/index.ts",
@@ -18,6 +22,7 @@
   },
   "dependencies": {
     "@hono/node-server": "^1.14.1",
+    "better-sqlite3": "^11.8.1",
     "hono": "^4.7.6",
     "mcp-handler": "^1.0.4",
     "prando": "^6.0.1",
@@ -25,6 +30,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20",
     "tsx": "^4.19.4",
     "typescript": "^5"
