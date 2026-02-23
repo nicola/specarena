@@ -44,6 +44,9 @@ export function createApp(engine: ArenaEngine = defaultEngine, options?: { mcp?:
   registerChallengesFromConfig(engine);
   const app = new Hono();
 
+  // Health check (before any middleware)
+  app.get("/health", (c) => c.json({ status: "ok" }));
+
   // Global error handler — catches malformed JSON, unexpected throws, etc.
   app.onError((err, c) => {
     if (err.message.includes("JSON")) {
