@@ -343,3 +343,341 @@ describe("Auth security — chat routes with session keys", () => {
     assert.equal(data.from, invites[0], "should use session identity, ignoring client 'from'");
   });
 });
+
+describe("Viewer-mode redaction — chat/ws SSE endpoint (leaderboard path)", () => {
+  beforeEach(async () => engine.clearRuntimeState());
+
+  /** Reads the next SSE `data:` payload from an open stream reader. */
+  async function readNextSSEData(
+    reader: ReadableStreamDefaultReader<Uint8Array>,
+    buf: { s: string },
+    timeoutMs = 2000
+  ): Promise<any> {
+    const decoder = new TextDecoder();
+    const deadline = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("SSE read timed out")), timeoutMs)
+    );
+    async function drain(): Promise<any> {
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) throw new Error("Stream ended before data event");
+        buf.s += decoder.decode(value, { stream: true });
+        let nl: number;
+        while ((nl = buf.s.indexOf("\n\n")) !== -1) {
+          const block = buf.s.slice(0, nl);
+          buf.s = buf.s.slice(nl + 2);
+          const line = block.split("\n").find((l) => l.startsWith("data: "));
+          if (line) return JSON.parse(line.slice(6));
+        }
+      }
+    }
+    return Promise.race([drain(), deadline]);
+  }
+
+  it("initial SSE batch — DMs are redacted for viewer", async () => {
+    const { id, invites } = await createChallenge();
+    const { data: join0 } = await joinWithAuth(invites[0], keyA);
+    await joinWithAuth(invites[1], keyB);
+
+    // Player 0 sends a DM to player 1 on the challenge channel
+    await authedRequest("POST", "/api/chat/send", join0.sessionKey, {
+      channel: `challenge_${id}`,
+      to: invites[1],
+      content: "secret handshake",
+    });
+
+    // Connect as viewer (no auth token) — should see the DM as redacted
+    const res = await request("GET", `/api/chat/ws/challenge_${id}`);
+    assert.equal(res.status, 200);
+    assert.ok(
+      res.headers.get("content-type")?.includes("text/event-stream"),
+      "should return an SSE stream"
+    );
+
+    const reader = res.body!.getReader();
+    const buf = { s: "" };
+    try {
+      const event = await readNextSSEData(reader, buf);
+      assert.equal(event.type, "initial");
+      const dms = (event.messages as any[]).filter((m: any) => m.to);
+      assert.ok(dms.length > 0, "channel should contain the DM that was just sent");
+      for (const dm of dms) {
+        assert.equal(dm.redacted, true, `DM from=${dm.from} to=${dm.to} must be redacted for viewer`);
+        assert.equal(dm.content, "", "redacted DM must have empty content string");
+      }
+    } finally {
+      reader.cancel().catch(() => {});
+    }
+  });
+
+  it("initial SSE batch — broadcasts are not redacted for viewer", async () => {
+    const { id, invites } = await createChallenge();
+    const { data: join0 } = await joinWithAuth(invites[0], keyA);
+    await joinWithAuth(invites[1], keyB);
+
+    // Player 0 sends a broadcast on the challenge channel
+    await authedRequest("POST", "/api/chat/send", join0.sessionKey, {
+      channel: `challenge_${id}`,
+      content: "hello everyone",
+    });
+
+    const res = await request("GET", `/api/chat/ws/challenge_${id}`);
+    assert.equal(res.status, 200);
+
+    const reader = res.body!.getReader();
+    const buf = { s: "" };
+    try {
+      const event = await readNextSSEData(reader, buf);
+      assert.equal(event.type, "initial");
+      const broadcasts = (event.messages as any[]).filter((m: any) => !m.to);
+      assert.ok(broadcasts.length > 0, "should have at least one broadcast");
+      for (const bc of broadcasts) {
+        assert.ok(bc.redacted !== true, `broadcast from ${bc.from} must not be redacted`);
+        assert.ok(bc.content !== undefined, "broadcast must have a content field");
+      }
+    } finally {
+      reader.cancel().catch(() => {});
+    }
+  });
+
+  it("live SSE new_message — DM is redacted for viewer", async () => {
+    const { id, invites } = await createChallenge();
+    const { data: join0 } = await joinWithAuth(invites[0], keyA);
+    await joinWithAuth(invites[1], keyB);
+
+    // Subscribe to SSE as viewer before sending the DM
+    const res = await request("GET", `/api/chat/ws/challenge_${id}`);
+    assert.equal(res.status, 200);
+
+    const reader = res.body!.getReader();
+    const buf = { s: "" };
+    try {
+      // Read initial event — this also ensures the channel subscription is active
+      // (subscribeToChannel is called before chatSync, so the subscriber is ready)
+      const initialEvent = await readNextSSEData(reader, buf);
+      assert.equal(initialEvent.type, "initial");
+
+      // Player 0 sends a DM to player 1 — viewer should receive a redacted new_message
+      await authedRequest("POST", "/api/chat/send", join0.sessionKey, {
+        channel: `challenge_${id}`,
+        to: invites[1],
+        content: "secret handshake",
+      });
+
+      // Next event should be a live new_message with the DM redacted for viewer
+      const liveEvent = await readNextSSEData(reader, buf);
+      assert.equal(liveEvent.type, "new_message");
+      assert.ok(liveEvent.message.to, "event should be a DM (non-null to field)");
+      assert.equal(liveEvent.message.redacted, true, "live DM must be redacted for viewer");
+      assert.equal(liveEvent.message.content, "", "redacted live DM must have empty content");
+    } finally {
+      reader.cancel().catch(() => {});
+    }
+  });
+});
+
+describe("Concurrent SSE streams", () => {
+  beforeEach(async () => engine.clearRuntimeState());
+
+  /** Reads the next SSE `data:` payload from an open stream reader. */
+  async function readNextSSEData(
+    reader: ReadableStreamDefaultReader<Uint8Array>,
+    buf: { s: string },
+    timeoutMs = 2000
+  ): Promise<any> {
+    const decoder = new TextDecoder();
+    const deadline = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("SSE read timed out")), timeoutMs)
+    );
+    async function drain(): Promise<any> {
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) throw new Error("Stream ended before data event");
+        buf.s += decoder.decode(value, { stream: true });
+        let nl: number;
+        while ((nl = buf.s.indexOf("\n\n")) !== -1) {
+          const block = buf.s.slice(0, nl);
+          buf.s = buf.s.slice(nl + 2);
+          const line = block.split("\n").find((l) => l.startsWith("data: "));
+          if (line) return JSON.parse(line.slice(6));
+        }
+      }
+    }
+    return Promise.race([drain(), deadline]);
+  }
+
+  it("multiple viewers receive all messages", async () => {
+    const { id, invites } = await createChallenge();
+    const { data: join0 } = await joinWithAuth(invites[0], keyA);
+    await joinWithAuth(invites[1], keyB);
+
+    // Two viewers subscribe to the same channel
+    const res1 = await request("GET", `/api/chat/ws/challenge_${id}`);
+    const res2 = await request("GET", `/api/chat/ws/challenge_${id}`);
+    const reader1 = res1.body!.getReader();
+    const reader2 = res2.body!.getReader();
+    const buf1 = { s: "" };
+    const buf2 = { s: "" };
+
+    try {
+      // Both get initial event
+      const init1 = await readNextSSEData(reader1, buf1);
+      const init2 = await readNextSSEData(reader2, buf2);
+      assert.equal(init1.type, "initial");
+      assert.equal(init2.type, "initial");
+
+      // Send 3 broadcast messages
+      for (let i = 0; i < 3; i++) {
+        await authedRequest("POST", "/api/chat/send", join0.sessionKey, {
+          channel: `challenge_${id}`,
+          content: `msg-${i}`,
+        });
+      }
+
+      // Both viewers should receive all 3
+      for (let i = 0; i < 3; i++) {
+        const ev1 = await readNextSSEData(reader1, buf1);
+        const ev2 = await readNextSSEData(reader2, buf2);
+        assert.equal(ev1.type, "new_message");
+        assert.equal(ev2.type, "new_message");
+        assert.equal(ev1.message.content, `msg-${i}`);
+        assert.equal(ev2.message.content, `msg-${i}`);
+      }
+    } finally {
+      reader1.cancel().catch(() => {});
+      reader2.cancel().catch(() => {});
+    }
+  });
+
+  it("one viewer disconnecting doesn't break others", async () => {
+    const { id, invites } = await createChallenge();
+    const { data: join0 } = await joinWithAuth(invites[0], keyA);
+    await joinWithAuth(invites[1], keyB);
+
+    const res1 = await request("GET", `/api/chat/ws/challenge_${id}`);
+    const res2 = await request("GET", `/api/chat/ws/challenge_${id}`);
+    const reader1 = res1.body!.getReader();
+    const reader2 = res2.body!.getReader();
+    const buf1 = { s: "" };
+    const buf2 = { s: "" };
+
+    try {
+      await readNextSSEData(reader1, buf1); // initial
+      await readNextSSEData(reader2, buf2); // initial
+
+      // Disconnect viewer 1
+      await reader1.cancel();
+
+      // Send a message — viewer 2 should still receive it
+      await authedRequest("POST", "/api/chat/send", join0.sessionKey, {
+        channel: `challenge_${id}`,
+        content: "after-disconnect",
+      });
+
+      const ev2 = await readNextSSEData(reader2, buf2);
+      assert.equal(ev2.type, "new_message");
+      assert.equal(ev2.message.content, "after-disconnect");
+    } finally {
+      reader1.cancel().catch(() => {});
+      reader2.cancel().catch(() => {});
+    }
+  });
+
+  it("game_ended event is received by viewer with structured scores", async () => {
+    const { id, invites } = await createChallenge();
+    const { data: join0 } = await joinWithAuth(invites[0], keyA);
+    const { data: join1 } = await joinWithAuth(invites[1], keyB);
+
+    const res = await request("GET", `/api/chat/ws/challenge_${id}`);
+    const reader = res.body!.getReader();
+    const buf = { s: "" };
+
+    try {
+      const init = await readNextSSEData(reader, buf);
+      assert.equal(init.type, "initial");
+
+      // End the game
+      await authedRequest("POST", "/api/arena/message", join0.sessionKey,
+        { challengeId: id, messageType: "guess", content: "100" });
+      await authedRequest("POST", "/api/arena/message", join1.sessionKey,
+        { challengeId: id, messageType: "guess", content: "100" });
+
+      // Drain events until game_ended
+      let gameEnded: any = null;
+      for (let i = 0; i < 10; i++) {
+        const ev = await readNextSSEData(reader, buf);
+        if (ev.type === "game_ended") { gameEnded = ev; break; }
+      }
+      assert.ok(gameEnded, "game_ended event must be received");
+      assert.ok(Array.isArray(gameEnded.scores), "scores should be an array");
+      assert.equal(gameEnded.scores.length, 2);
+      assert.ok(typeof gameEnded.scores[0].security === "number");
+      assert.ok(typeof gameEnded.scores[0].utility === "number");
+      assert.ok(Array.isArray(gameEnded.players));
+    } finally {
+      reader.cancel().catch(() => {});
+    }
+  });
+
+  it("late viewer gets game_ended after initial for finished game", async () => {
+    const { id, invites } = await createChallenge();
+    const { data: join0 } = await joinWithAuth(invites[0], keyA);
+    const { data: join1 } = await joinWithAuth(invites[1], keyB);
+
+    // End the game first
+    await authedRequest("POST", "/api/arena/message", join0.sessionKey,
+      { challengeId: id, messageType: "guess", content: "100" });
+    await authedRequest("POST", "/api/arena/message", join1.sessionKey,
+      { challengeId: id, messageType: "guess", content: "100" });
+
+    // Late viewer connects
+    const res = await request("GET", `/api/chat/ws/challenge_${id}`);
+    const reader = res.body!.getReader();
+    const buf = { s: "" };
+
+    try {
+      const init = await readNextSSEData(reader, buf);
+      assert.equal(init.type, "initial");
+      assert.ok(init.messages.length > 0);
+
+      const ended = await readNextSSEData(reader, buf);
+      assert.equal(ended.type, "game_ended");
+      assert.ok(Array.isArray(ended.scores));
+      assert.equal(ended.scores.length, 2);
+    } finally {
+      reader.cancel().catch(() => {});
+    }
+  });
+
+  it("messages continue flowing during active game", async () => {
+    const { id, invites } = await createChallenge();
+    const { data: join0 } = await joinWithAuth(invites[0], keyA);
+    await joinWithAuth(invites[1], keyB);
+
+    const res = await request("GET", `/api/chat/ws/challenge_${id}`);
+    const reader = res.body!.getReader();
+    const buf = { s: "" };
+
+    try {
+      const init = await readNextSSEData(reader, buf);
+      assert.equal(init.type, "initial");
+
+      // Send 3 messages sequentially
+      for (let i = 0; i < 3; i++) {
+        await authedRequest("POST", "/api/chat/send", join0.sessionKey, {
+          channel: `challenge_${id}`,
+          content: `flow-${i}`,
+        });
+      }
+
+      // All 3 arrive as new_message events in order
+      for (let i = 0; i < 3; i++) {
+        const ev = await readNextSSEData(reader, buf);
+        assert.equal(ev.type, "new_message");
+        assert.equal(ev.message.content, `flow-${i}`, `message ${i} should arrive in order`);
+      }
+    } finally {
+      reader.cancel().catch(() => {});
+    }
+  });
+});

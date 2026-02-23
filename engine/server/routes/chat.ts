@@ -53,6 +53,18 @@ export function createChatRoutes(engine: ArenaEngine = defaultEngine) {
         const initialData = JSON.stringify({ type: "initial", messages: initialMessages });
         controller.enqueue(new TextEncoder().encode(`data: ${initialData}\n\n`));
 
+        // If the game has already ended, send game_ended event with scores
+        const challengeId = uuid.startsWith("challenge_") ? uuid.slice(10) : uuid;
+        const challenge = await engine.getChallenge(challengeId);
+        if (challenge?.instance?.state?.gameEnded) {
+          const endedData = JSON.stringify({
+            type: "game_ended",
+            scores: challenge.instance.state.scores,
+            players: challenge.instance.state.players,
+          });
+          controller.enqueue(new TextEncoder().encode(`data: ${endedData}\n\n`));
+        }
+
         // Subscribe to new messages with viewer identity
         const unsubscribe = chat.subscribeToChannel(uuid, controller, viewer);
 

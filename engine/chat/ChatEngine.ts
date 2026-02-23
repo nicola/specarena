@@ -103,6 +103,33 @@ export class ChatEngine {
     }
   }
 
+  broadcastEvent(channel: string, event: Record<string, unknown>): void {
+    const subscribers = this.channelSubscribers.get(channel);
+    if (!subscribers) return;
+
+    const deadSubscribers: ChannelSubscriber[] = [];
+    const encoded = `data: ${JSON.stringify(event)}\n\n`;
+    const bytes = new TextEncoder().encode(encoded);
+
+    subscribers.forEach((sub) => {
+      try {
+        sub.controller.enqueue(bytes);
+      } catch {
+        deadSubscribers.push(sub);
+      }
+    });
+
+    deadSubscribers.forEach((sub) => subscribers.delete(sub));
+    if (subscribers.size === 0) {
+      this.channelSubscribers.delete(channel);
+    }
+  }
+
+  broadcastChallengeEvent(challengeId: string, event: Record<string, unknown>): void {
+    this.broadcastEvent(challengeId, event);
+    this.broadcastEvent(`challenge_${challengeId}`, event);
+  }
+
   async sendChallengeMessage(challengeId: string, from: string, content: string, to?: string | null): Promise<ChatMessage> {
     return this.sendMessage(`challenge_${challengeId}`, from, content, to);
   }

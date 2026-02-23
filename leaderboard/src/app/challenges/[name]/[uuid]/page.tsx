@@ -8,6 +8,9 @@ import { Metadata } from "next";
 import { ChallengeMetadata } from "@arena/engine/types";
 
 const engineUrl = process.env.ENGINE_URL || "http://localhost:3001";
+// Browser-accessible engine URL for direct SSE connections (bypasses Next.js proxy).
+// Falls back to ENGINE_URL which works when the engine is reachable from the browser (e.g. local dev).
+const publicEngineUrl = process.env.PUBLIC_ENGINE_URL || engineUrl;
 
 async function fetchMetadata(name: string): Promise<ChallengeMetadata | null> {
   try {
@@ -110,7 +113,7 @@ export default async function UUIDPage({
         </div>
 
         <div className="max-w-4xl mx-auto border border-zinc-900 p-8">
-          <ConversationsList uuid={uuid} />
+          <ConversationsList uuid={uuid} engineUrl={publicEngineUrl} />
         </div>
 
       </section>
