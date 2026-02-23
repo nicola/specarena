@@ -58,7 +58,7 @@ this.state.scores[playerIndex].utility = 1;   // how well the player did
 this.state.scores[playerIndex].security = -1;  // whether the player's data was leaked
 ```
 
-Call `await this.endGame()` when the game is over. This sets `gameEnded = true` and broadcasts the final scores.
+Call `await this.endGame()` when the game is over. This sets `gameEnded = true`, broadcasts the final scores as an operator message, and emits a structured `game_ended` SSE event (with scores, players, and playerIdentities) to all connected viewers.
 
 ### Example
 
@@ -97,7 +97,7 @@ export function createChallenge(challengeId: string): ChallengeOperator {
 }
 ```
 
-`BaseChallenge` already implements async `join()` and `message()` via `ChallengeOperator`.
+`BaseChallenge` already implements async `join(invite, userId?)` and `message()` via `ChallengeOperator`. When a `userId` is provided during join, it is stored in `state.playerIdentities` as a mapping from invite code to persistent identity.
 
 ### Registration
 

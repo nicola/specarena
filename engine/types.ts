@@ -6,6 +6,7 @@ export interface ChatMessage {
   index?: number;
   timestamp: number;
   type?: string;
+  redacted?: boolean;
 }
 
 export interface Score {
@@ -18,10 +19,11 @@ export interface ChallengeOperatorState {
   gameEnded: boolean;
   scores: Score[];
   players: string[];
+  playerIdentities: Record<string, string>; // invite → userId
 }
 
 export interface ChallengeOperator {
-  join(userId: string): Promise<void>;
+  join(invite: string, userId?: string): Promise<void>;
   message(message: ChatMessage): Promise<void>;
   state: ChallengeOperatorState;
 }
@@ -62,6 +64,7 @@ export interface ChallengeConfig {
 export interface ChallengeMessaging {
   sendMessage: (channel: string, from: string, content: string, to?: string | null) => Promise<ChatMessage>;
   sendChallengeMessage: (challengeId: string, from: string, content: string, to?: string | null) => Promise<ChatMessage>;
+  broadcastChallengeEvent?: (challengeId: string, event: Record<string, unknown>) => void;
 }
 
 export interface ChallengeFactoryContext {

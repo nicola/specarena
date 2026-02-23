@@ -3,16 +3,24 @@ import { ChatStorageAdapter, InMemoryChatStorageAdapter } from "../storage/InMem
 
 export interface ChatEngineOptions {
   storageAdapter?: ChatStorageAdapter;
+  isChannelRevealed?: (channel: string) => Promise<boolean>;
+}
+
+interface ChannelSubscriber {
+  controller: ReadableStreamDefaultController;
+  viewer: string | null;
 }
 
 export class ChatEngine {
   private readonly storageAdapter: ChatStorageAdapter;
+  private readonly isChannelRevealed?: (channel: string) => Promise<boolean>;
   // TODO in the future separate to another service and persist this on db
-  private readonly channelSubscribers: Map<string, Set<ReadableStreamDefaultController>>;
+  private readonly channelSubscribers: Map<string, Set<ChannelSubscriber>>;
 
   constructor(options: ChatEngineOptions = {}) {
     this.storageAdapter = options.storageAdapter ?? new InMemoryChatStorageAdapter();
-    this.channelSubscribers = new Map<string, Set<ReadableStreamDefaultController>>();
+    this.isChannelRevealed = options.isChannelRevealed;
+    this.channelSubscribers = new Map<string, Set<ChannelSubscriber>>();
   }
 
   async clearRuntimeState(): Promise<void> {
@@ -32,32 +40,37 @@ export class ChatEngine {
     return this.storageAdapter.getMessagesForChannel(channel);
   }
 
-  private filterVisibleMessages(messages: ChatMessage[], from: string, index: number): ChatMessage[] {
-    return messages.filter((msg: ChatMessage) =>
-      msg.index !== undefined && msg.index >= index && (!msg.to || msg.to === from || msg.from === from));
+  private redactMessage(msg: ChatMessage): ChatMessage {
+    return { ...msg, content: "", redacted: true };
   }
 
-  private async syncChannel(channel: string, from: string, index: number) {
+  private async syncChannel(channel: string, viewer: string | null, index: number) {
     const messages = await this.getMessagesForChannel(channel);
-    const filteredMessages = this.filterVisibleMessages(messages, from, index);
-    return {
-      messages: filteredMessages,
-      count: filteredMessages.length,
-    };
+    const revealed = (await this.isChannelRevealed?.(channel)) ?? false;
+    const result = messages
+      .filter((msg) => msg.index !== undefined && msg.index >= index)
+      .map((msg) => {
+        if (revealed) return msg;
+        if (!msg.to) return msg;
+        if (viewer && (msg.to === viewer || msg.from === viewer)) return msg;
+        return this.redactMessage(msg);
+      });
+    return { messages: result, count: result.length };
   }
 
-  subscribeToChannel(channel: string, controller: ReadableStreamDefaultController): () => void {
+  subscribeToChannel(channel: string, controller: ReadableStreamDefaultController, viewer?: string | null): () => void {
     if (!this.channelSubscribers.has(channel)) {
       this.channelSubscribers.set(channel, new Set());
     }
-    this.channelSubscribers.get(channel)!.add(controller);
+    const subscriber: ChannelSubscriber = { controller, viewer: viewer ?? null };
+    this.channelSubscribers.get(channel)!.add(subscriber);
 
     return () => {
       const subscribers = this.channelSubscribers.get(channel);
       if (!subscribers) {
         return;
       }
-      subscribers.delete(controller);
+      subscribers.delete(subscriber);
       if (subscribers.size === 0) {
         this.channelSubscribers.delete(channel);
       }
@@ -70,22 +83,56 @@ export class ChatEngine {
       return;
     }
 
-    const data = JSON.stringify({ type: "new_message", message });
-    const messageToSend = `data: ${data}\n\n`;
-    const deadConnections: ReadableStreamDefaultController[] = [];
+    const deadSubscribers: ChannelSubscriber[] = [];
 
-    subscribers.forEach((controller) => {
+    subscribers.forEach((sub) => {
+      let msgToSend = message;
+      if (message.to) {
+        const viewer = sub.viewer;
+        if (!viewer || (message.to !== viewer && message.from !== viewer)) {
+          msgToSend = this.redactMessage(message);
+        }
+      }
+      const data = JSON.stringify({ type: "new_message", message: msgToSend });
+      const encoded = `data: ${data}\n\n`;
       try {
-        controller.enqueue(new TextEncoder().encode(messageToSend));
+        sub.controller.enqueue(new TextEncoder().encode(encoded));
       } catch {
-        deadConnections.push(controller);
+        deadSubscribers.push(sub);
       }
     });
 
-    deadConnections.forEach((controller) => subscribers.delete(controller));
+    deadSubscribers.forEach((sub) => subscribers.delete(sub));
     if (subscribers.size === 0) {
       this.channelSubscribers.delete(channel);
     }
+  }
+
+  broadcastEvent(channel: string, event: Record<string, unknown>): void {
+    const subscribers = this.channelSubscribers.get(channel);
+    if (!subscribers) return;
+
+    const deadSubscribers: ChannelSubscriber[] = [];
+    const encoded = `data: ${JSON.stringify(event)}\n\n`;
+    const bytes = new TextEncoder().encode(encoded);
+
+    subscribers.forEach((sub) => {
+      try {
+        sub.controller.enqueue(bytes);
+      } catch {
+        deadSubscribers.push(sub);
+      }
+    });
+
+    deadSubscribers.forEach((sub) => subscribers.delete(sub));
+    if (subscribers.size === 0) {
+      this.channelSubscribers.delete(channel);
+    }
+  }
+
+  broadcastChallengeEvent(challengeId: string, event: Record<string, unknown>): void {
+    this.broadcastEvent(challengeId, event);
+    this.broadcastEvent(`challenge_${challengeId}`, event);
   }
 
   async sendChallengeMessage(challengeId: string, from: string, content: string, to?: string | null): Promise<ChatMessage> {
@@ -113,12 +160,12 @@ export class ChatEngine {
     return { index: message.index, channel, from, to: to ?? null };
   }
 
-  async chatSync(channel: string, from: string, index: number) {
-    return this.syncChannel(channel, from, index);
+  async chatSync(channel: string, viewer: string | null, index: number) {
+    return this.syncChannel(channel, viewer, index);
   }
 
-  async challengeSync(challengeId: string, from: string, index: number) {
-    return this.syncChannel(`challenge_${challengeId}`, from, index);
+  async challengeSync(challengeId: string, viewer: string | null, index: number) {
+    return this.syncChannel(`challenge_${challengeId}`, viewer, index);
   }
 }
 

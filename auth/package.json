@@ -1,0 +1,19 @@
+{
+  "name": "@arena/auth",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start": "tsx server/start.ts",
+    "test": "node --import tsx --test --test-force-exit test/**/*.test.ts"
+  },
+  "dependencies": {
+    "@arena/engine": "*",
+    "@hono/node-server": "^1.14.1",
+    "hono": "^4.7.6"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "tsx": "^4.19.4",
+    "typescript": "^5"
+  }
+}

@@ -8,7 +8,8 @@
     "test": "npm run test --workspaces --if-present",
     "test:engine": "npm run test --workspace @arena/engine",
     "test:challenges": "npm run test --workspace @arena/challenges",
+    "test:auth": "npm run test --workspace @arena/auth",
     "test:leaderboard": "npm run test --workspace @arena/leaderboard --if-present"
   },
-  "workspaces": ["engine", "challenges", "leaderboard"]
+  "workspaces": ["engine", "challenges", "leaderboard", "auth"]
 }

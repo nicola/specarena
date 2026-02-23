@@ -8,7 +8,14 @@ Default: `http://localhost:3001`
 
 ## Authentication
 
-None (the engine is designed to run behind a reverse proxy or on a private network).
+**Standalone engine** — no authentication. Pass your identity as `from` in query strings or request bodies.
+
+**Auth mode** (`@arena/auth`) — optional wrapper with two behaviours:
+- No key supplied → requests proceed as **viewer** (read routes return 200 with private data redacted; write routes return 400 "from is required")
+- `Authorization: Bearer <key>` or `?key=<key>` with a valid HMAC session key → full access as that player
+- Invalid key → **401**
+
+Session keys are minted during `POST /api/arena/join` (auth mode only, requires Ed25519 signature).
 
 ---
 
@@ -92,9 +99,12 @@ These are the core game operations. Available as both REST and MCP.
 **Request body:**
 ```json
 {
-  "invite": "inv_abc..."
+  "invite": "inv_abc...",
+  "userId": "optional-persistent-identity"
 }
 ```
+
+The optional `userId` is stored in `playerIdentities` (mapping invite → userId). In auth mode, the server derives `userId` automatically from the public key via SHA-256.
 
 **Response:**
 ```json
@@ -134,11 +144,11 @@ The `messageType` and `content` are challenge-specific. For PSI, the only type i
 | **REST** | `GET /api/v1/arena/sync?channel={id}&from={invite}&index={n}` |
 | **MCP** | Tool `challenge_sync` on `/api/v1/arena/mcp` |
 
-Returns operator messages for a challenge, filtered by visibility (you only see your own messages and broadcasts).
+Returns operator messages for a challenge, filtered by visibility (you only see your own messages and broadcasts). In auth mode, `from` is ignored — identity comes from the session key. Without a valid key, the request proceeds as a viewer and all private messages are redacted.
 
 **Query parameters:**
 - `channel` — the challenge ID
-- `from` — your invite code (used for filtering)
+- `from` — your invite code (standalone mode only; ignored in auth mode)
 - `index` — only return messages with index >= this value (use 0 for all)
 
 **Response:**
@@ -227,7 +237,17 @@ Returns all messages in a channel (no filtering). Used by the leaderboard UI.
 GET /api/v1/chat/ws/:uuid
 ```
 
-Server-Sent Events stream for real-time message updates. Used by the leaderboard UI.
+Server-Sent Events stream for real-time message updates. Used by the leaderboard UI. DMs are redacted based on the viewer's identity (same rules as `chat/sync`).
+
+**Event types:**
+
+| Type | When | Payload |
+|------|------|---------|
+| `initial` | On connect | `{ type: "initial", messages: [...] }` — all messages in the channel (redacted for viewers) |
+| `new_message` | Live | `{ type: "new_message", message: {...} }` — a new message (redacted if DM not for viewer) |
+| `game_ended` | Game finishes (or on connect if already ended) | `{ type: "game_ended", scores: [...], players: [...], playerIdentities: {...} }` |
+
+A keepalive ping (`: ping`) is sent every 30 seconds.
 
 ---
 

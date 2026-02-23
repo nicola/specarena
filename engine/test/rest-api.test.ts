@@ -107,6 +107,30 @@ describe("REST API for arena", () => {
     assert.equal(res.status, 400);
   });
 
+  it("POST /api/arena/join — stores userId in playerIdentities", async () => {
+    const { id, invites } = await createPsiChallenge();
+
+    await request("POST", "/api/arena/join", { invite: invites[0], userId: "user_aaa" });
+    await request("POST", "/api/arena/join", { invite: invites[1], userId: "user_bbb" });
+
+    const challenge = await defaultEngine.getChallenge(id);
+    assert.ok(challenge);
+    const identities = challenge.instance.state.playerIdentities;
+    assert.equal(identities[invites[0]], "user_aaa");
+    assert.equal(identities[invites[1]], "user_bbb");
+  });
+
+  it("POST /api/arena/join — playerIdentities is empty when no userId provided", async () => {
+    const { id, invites } = await createPsiChallenge();
+
+    await request("POST", "/api/arena/join", { invite: invites[0] });
+    await request("POST", "/api/arena/join", { invite: invites[1] });
+
+    const challenge = await defaultEngine.getChallenge(id);
+    assert.ok(challenge);
+    assert.deepEqual(challenge.instance.state.playerIdentities, {});
+  });
+
   it("full game via REST API", async () => {
     // Create
     const { id, invites } = await createPsiChallenge();

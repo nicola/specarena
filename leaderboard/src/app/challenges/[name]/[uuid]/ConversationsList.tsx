@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 
 interface ChatMessage {
   channel: string;
@@ -9,16 +9,32 @@ interface ChatMessage {
   content: string;
   index: number;
   timestamp: number;
+  redacted?: boolean;
+}
+
+interface Score {
+  security: number;
+  utility: number;
+}
+
+interface GameEndedData {
+  scores: Score[];
+  players: string[];
+  playerIdentities: Record<string, string>;
 }
 
 interface SSEMessageData {
-  type: 'initial' | 'new_message';
+  type: 'initial' | 'new_message' | 'game_ended';
   messages?: ChatMessage[];
   message?: ChatMessage;
+  scores?: Score[];
+  players?: string[];
+  playerIdentities?: Record<string, string>;
 }
 
 interface ConversationsListProps {
   uuid: string;
+  engineUrl?: string;
 }
 
 // Generate a color based on a string (for consistent avatar colors)
@@ -50,10 +66,18 @@ const getInitials = (name: string): string => {
     .slice(0, 2);
 };
 
-export default function ConversationsList({ uuid }: ConversationsListProps) {
+// Map raw channel names to friendly display labels
+const getChannelDisplayName = (channel: string, uuid: string): string => {
+  if (channel === `challenge_${uuid}`) return "Arena";
+  if (channel === uuid) return "Chat";
+  return channel;
+};
+
+export default function ConversationsList({ uuid, engineUrl = "" }: ConversationsListProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [gameEnded, setGameEnded] = useState<GameEndedData | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
   const challengeEventSourceRef = useRef<EventSource | null>(null);
   const initialLoadCountRef = useRef(0);
@@ -85,6 +109,8 @@ export default function ConversationsList({ uuid }: ConversationsListProps) {
         setError(null);
         setTimeout(scrollToBottom, 100);
       }
+    } else if (data.type === 'game_ended' && data.scores) {
+      setGameEnded({ scores: data.scores, players: data.players || [], playerIdentities: data.playerIdentities || {} });
     } else if (data.type === 'new_message' && data.message) {
       // New message received
       setMessages((prev) => {
@@ -116,8 +142,11 @@ export default function ConversationsList({ uuid }: ConversationsListProps) {
       challengeEventSourceRef.current.close();
     }
 
+    // Connect directly to the engine (bypasses Next.js proxy for SSE)
+    const base = engineUrl;
+
     // Create first EventSource connection for regular uuid
-    const eventSource = new EventSource(`/api/chat/ws/${uuid}`);
+    const eventSource = new EventSource(`${base}/api/chat/ws/${uuid}`);
     eventSourceRef.current = eventSource;
 
     eventSource.onmessage = (event) => {
@@ -132,7 +161,6 @@ export default function ConversationsList({ uuid }: ConversationsListProps) {
     eventSource.onerror = (err) => {
       console.error('EventSource error:', err);
       setError("Connection error. Attempting to reconnect...");
-      // EventSource will automatically attempt to reconnect
     };
 
     eventSource.onopen = () => {
@@ -140,7 +168,7 @@ export default function ConversationsList({ uuid }: ConversationsListProps) {
     };
 
     // Create second EventSource connection for challenge_uuid
-    const challengeEventSource = new EventSource(`/api/chat/ws/challenge_${uuid}`);
+    const challengeEventSource = new EventSource(`${base}/api/chat/ws/challenge_${uuid}`);
     challengeEventSourceRef.current = challengeEventSource;
 
     challengeEventSource.onmessage = (event) => {
@@ -155,13 +183,12 @@ export default function ConversationsList({ uuid }: ConversationsListProps) {
     challengeEventSource.onerror = (err) => {
       console.error('Challenge EventSource error:', err);
       setError("Connection error. Attempting to reconnect...");
-      // EventSource will automatically attempt to reconnect
     };
 
     challengeEventSource.onopen = () => {
       setError(null);
     };
-  }, [uuid, handleMessage]);
+  }, [uuid, engineUrl, handleMessage]);
 
   useEffect(() => {
     // Initialize loading state and connect to both EventSource streams
@@ -205,7 +232,23 @@ export default function ConversationsList({ uuid }: ConversationsListProps) {
 
   // Sort messages chronologically
   const sortedMessages = [...messages].sort((a, b) => a.timestamp - b.timestamp);
-  
+
+  // Build a map from invite codes to "Player N" display names (order of first appearance)
+  const playerMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const msg of sortedMessages) {
+      if (msg.from !== "operator" && !map.has(msg.from)) {
+        map.set(msg.from, `Player ${map.size + 1}`);
+      }
+    }
+    return map;
+  }, [sortedMessages]);
+
+  const displayName = (name: string): string => {
+    if (name === "operator") return "Operator";
+    return playerMap.get(name) ?? name;
+  };
+
   // Helper to get conversation key for a message
   const getConversationKey = (message: ChatMessage): string => {
     if (!!message.to) {
@@ -246,12 +289,24 @@ export default function ConversationsList({ uuid }: ConversationsListProps) {
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="flex items-center justify-between pb-4 border-b border-zinc-200 mb-4">
-        <h3 className="text-xl font-semibold text-zinc-900">Conversations</h3>
+        <div>
+          <h3 className="text-xl font-semibold text-zinc-900">Conversations</h3>
+          <p className="text-xs text-zinc-400 mt-1">
+            Viewing as observer — private messages between agents are redacted.
+          </p>
+        </div>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-green-600 flex items-center gap-1.5 font-medium">
-            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-            Live
-          </span>
+          {gameEnded ? (
+            <span className="text-xs text-zinc-500 flex items-center gap-1.5 font-medium">
+              <span className="w-2 h-2 bg-zinc-500 rounded-full"></span>
+              Game ended
+            </span>
+          ) : (
+            <span className="text-xs text-green-600 flex items-center gap-1.5 font-medium">
+              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+              Live
+            </span>
+          )}
           <button
             onClick={handleRefresh}
             className="text-sm text-zinc-600 hover:text-zinc-900 transition-colors px-2 py-1 rounded hover:bg-zinc-100"
@@ -284,8 +339,14 @@ export default function ConversationsList({ uuid }: ConversationsListProps) {
                 <div className="sticky top-0 bg-white/95 backdrop-blur-sm py-2 z-10 mb-2">
                   <div className="flex items-center gap-2">
                     <div className="h-px flex-1 bg-zinc-200"></div>
-                    <span className="text-xs font-medium text-zinc-500 px-2">
-                      {currentConversation}
+                    <span className="text-xs font-medium text-zinc-500 px-2 flex items-center gap-1">
+                      {message.to
+                        ? <><span title={message.from}>{displayName(message.from)}</span>{" -> "}<span title={message.to}>{displayName(message.to)}</span></>
+                        : getChannelDisplayName(currentConversation, uuid)
+                      }
+                      {(currentConversation === uuid || currentConversation === `challenge_${uuid}`) && (
+                        <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full border border-zinc-300 text-zinc-400 text-[9px] leading-none cursor-default" title={currentConversation}>i</span>
+                      )}
                     </span>
                     <div className="h-px flex-1 bg-zinc-200"></div>
                   </div>
@@ -296,8 +357,8 @@ export default function ConversationsList({ uuid }: ConversationsListProps) {
               <div className={`flex gap-3 group ${showSender ? 'mt-4' : 'mt-1'}`}>
                 {/* Avatar */}
                 {showSender ? (
-                  <div className={`flex-shrink-0 w-8 h-8 rounded-full ${getAvatarColor(message.from)} flex items-center justify-center text-white text-xs font-semibold`}>
-                    {getInitials(message.from)}
+                  <div className={`flex-shrink-0 w-8 h-8 rounded-full ${getAvatarColor(message.from)} flex items-center justify-center text-white text-xs font-semibold`} title={message.from}>
+                    {getInitials(displayName(message.from))}
                   </div>
                 ) : (
                   <div className="w-8"></div>
@@ -307,8 +368,8 @@ export default function ConversationsList({ uuid }: ConversationsListProps) {
                 <div className="flex-1 min-w-0">
                   {showSender && (
                     <div className="flex items-baseline gap-2 mb-1">
-                      <span className="font-semibold text-sm text-zinc-900">
-                        {message.from}
+                      <span className="font-semibold text-sm text-zinc-900 cursor-default" title={message.from}>
+                        {displayName(message.from)}
                       </span>
                       {!isDirectMessage && (
                         <span className="text-xs text-zinc-500 bg-zinc-100 px-1.5 py-0.5 rounded">
@@ -323,17 +384,23 @@ export default function ConversationsList({ uuid }: ConversationsListProps) {
                   
                   {/* Chat Bubble */}
                   <div className={`inline-block max-w-[85%] rounded-2xl px-4 py-2.5 ${
-                    isPrivateMessage
-                      ? showSender 
-                        ? 'bg-zinc-400 text-zinc-100' 
-                        : 'bg-zinc-400 text-zinc-100'
-                      : showSender 
-                        ? 'bg-zinc-100 text-zinc-900' 
-                        : 'bg-zinc-100 text-zinc-800'
+                    message.redacted
+                      ? 'border border-dashed border-zinc-300 bg-transparent text-zinc-400'
+                      : isPrivateMessage
+                        ? 'bg-zinc-400 text-zinc-100'
+                        : showSender
+                          ? 'bg-zinc-100 text-zinc-900'
+                          : 'bg-zinc-100 text-zinc-800'
                   }`}>
-                    <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">
-                      {message.content}
-                    </p>
+                    {message.redacted ? (
+                      <p className="text-sm italic text-zinc-400">
+                        🔒 Private message
+                      </p>
+                    ) : (
+                      <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">
+                        {message.content}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -342,6 +409,45 @@ export default function ConversationsList({ uuid }: ConversationsListProps) {
         })}
         <div ref={messagesEndRef} />
       </div>
+
+      {/* Scores Panel */}
+      {gameEnded && (
+        <div className="mt-6 pt-4 border-t border-zinc-200">
+          <h4 className="text-sm font-semibold text-zinc-900 mb-3">Final Scores</h4>
+          <div className="grid gap-2">
+            {gameEnded.scores.map((score, i) => {
+              const rawName = gameEnded.players[i] || `Player ${i + 1}`;
+              const label = displayName(rawName);
+              const identity = gameEnded.playerIdentities[rawName];
+              return (
+                <div key={i} className="flex items-center gap-3 bg-zinc-50 rounded-lg px-4 py-2.5">
+                  <div className={`flex-shrink-0 w-7 h-7 rounded-full ${getAvatarColor(rawName)} flex items-center justify-center text-white text-xs font-semibold`} title={rawName}>
+                    {getInitials(label)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm font-medium text-zinc-800 block truncate cursor-default" title={rawName}>
+                      {label}
+                    </span>
+                    {identity && (
+                      <span className="text-xs font-mono text-zinc-400 block truncate cursor-default" title={identity}>
+                        {identity.slice(0, 8)}...{identity.slice(-8)}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex gap-4 text-sm">
+                    <span className="text-zinc-600">
+                      Security: <span className="font-semibold text-zinc-900">{score.security}</span>
+                    </span>
+                    <span className="text-zinc-600">
+                      Utility: <span className="font-semibold text-zinc-900">{score.utility}</span>
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

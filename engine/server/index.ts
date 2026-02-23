@@ -9,6 +9,13 @@ import { createChallengeRoutes } from "./routes/challenges";
 import { createInviteRoutes } from "./routes/invites";
 import { createChatRoutes } from "./routes/chat";
 import { createArenaRoutes } from "./routes/arena";
+import { createResolveIdentity } from "./routes/identity";
+
+export { createArenaRoutes } from "./routes/arena";
+export { createChatRoutes } from "./routes/chat";
+export { createChallengeRoutes } from "./routes/challenges";
+export { createInviteRoutes } from "./routes/invites";
+export { createResolveIdentity } from "./routes/identity";
 
 export function registerChallengesFromConfig(engine: ArenaEngine): void {
   const configs: ChallengeConfig[] = JSON.parse(
@@ -32,9 +39,13 @@ export function registerChallengesFromConfig(engine: ArenaEngine): void {
   }
 }
 
-export function createApp(engine: ArenaEngine = defaultEngine): Hono {
+export function createApp(engine: ArenaEngine = defaultEngine, options?: { mcp?: boolean }): Hono {
+  const mcp = options?.mcp ?? true;
   registerChallengesFromConfig(engine);
   const app = new Hono();
+
+  // Health check (before any middleware)
+  app.get("/health", (c) => c.json({ status: "ok" }));
 
   // Global error handler — catches malformed JSON, unexpected throws, etc.
   app.onError((err, c) => {
@@ -52,22 +63,27 @@ export function createApp(engine: ArenaEngine = defaultEngine): Hono {
     return app.fetch(new Request(url.toString(), c.req.raw));
   });
 
+  // Resolve identity from query/body params (standalone mode)
+  app.use("*", createResolveIdentity(engine));
+
   // Mount REST routes
   app.route("/", createChallengeRoutes(engine));
   app.route("/", createInviteRoutes(engine));
-  app.route("/", createChatRoutes(engine.chat));
+  app.route("/", createChatRoutes(engine));
   app.route("/", createArenaRoutes(engine));
 
   // Mount MCP handlers
-  const arenaHandler = createArenaHandler({ basePath: "/api/arena", engine });
-  const chatHandler = createChatHandler({ basePath: "/api/chat", chat: engine.chat });
+  if (mcp) {
+    const arenaHandler = createArenaHandler({ basePath: "/api/arena", engine });
+    const chatHandler = createChatHandler({ basePath: "/api/chat", chat: engine.chat });
 
-  app.all("/api/arena/mcp", (c) => arenaHandler(c.req.raw));
-  app.all("/api/arena/sse", (c) => arenaHandler(c.req.raw));
-  app.all("/api/arena/message", (c) => arenaHandler(c.req.raw));
-  app.all("/api/chat/mcp", (c) => chatHandler(c.req.raw));
-  app.all("/api/chat/sse", (c) => chatHandler(c.req.raw));
-  app.all("/api/chat/message", (c) => chatHandler(c.req.raw));
+    app.all("/api/arena/mcp", (c) => arenaHandler(c.req.raw));
+    app.all("/api/arena/sse", (c) => arenaHandler(c.req.raw));
+    app.all("/api/arena/message", (c) => arenaHandler(c.req.raw));
+    app.all("/api/chat/mcp", (c) => chatHandler(c.req.raw));
+    app.all("/api/chat/sse", (c) => chatHandler(c.req.raw));
+    app.all("/api/chat/message", (c) => chatHandler(c.req.raw));
+  }
 
   return app;
 }

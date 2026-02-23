@@ -287,14 +287,55 @@ describe("PSI game simulation", () => {
     // Sync as player 1 — should only see own messages and broadcasts
     const p1Sync = await challengeSync(challengeId, invite1, 0);
     const p2Private = p1Sync.messages.find(
-      (m) => m.to === invite2 && m.from === "operator"
+      (m: any) => m.to === invite2 && m.from === "operator"
     );
-    assert.equal(p2Private, undefined, "player 1 should not see player 2's private messages");
+    assert.ok(p2Private?.redacted, "player 1 should see player 2's private messages as redacted");
 
     // Player 1 should see their own set
     const ownSet = p1Sync.messages.find(
       (m) => m.to === invite1 && m.content.includes("Your private set")
     );
     assert.ok(ownSet, "player 1 should see their own private set");
+  });
+
+  it("after game ends, challengeSync returns all messages unredacted", async () => {
+    const { id: challengeId, invites } = await createPsiChallenge();
+    const [invite1, invite2] = invites;
+
+    await challengeJoin(invite1);
+    await challengeJoin(invite2);
+
+    const challenge = await getChallengeOrThrow(challengeId);
+
+    // During game: null viewer sees DMs as redacted
+    const midGameSync = await challengeSync(challengeId, null, 0);
+    const redactedDMs = midGameSync.messages.filter((m) => m.redacted);
+    assert.ok(redactedDMs.length > 0, "before game ends, DMs should be redacted for null viewer");
+
+    // Play to completion
+    const gameState = (challenge.instance as any).gameState;
+    const p1Set: Set<number> = gameState.userSets[0];
+    const p2Set: Set<number> = gameState.userSets[1];
+    const intersection = [...p1Set].filter((n) => p2Set.has(n));
+    const guessContent = intersection.join(", ");
+
+    await challengeMessage(challengeId, invite1, "guess", guessContent);
+    await challengeMessage(challengeId, invite2, "guess", guessContent);
+    assert.equal(challenge.instance.state.gameEnded, true);
+
+    // After game ends: null viewer sees everything unredacted
+    const postGameSync = await challengeSync(challengeId, null, 0);
+    const stillRedacted = postGameSync.messages.filter((m) => m.redacted);
+    assert.equal(stillRedacted.length, 0, "after game ends, no messages should be redacted");
+
+    // Verify DM content is actually visible
+    const p1SetMsg = postGameSync.messages.find(
+      (m) => m.to === invite1 && m.content.includes("Your private set")
+    );
+    const p2SetMsg = postGameSync.messages.find(
+      (m) => m.to === invite2 && m.content.includes("Your private set")
+    );
+    assert.ok(p1SetMsg, "player 1's private set should be visible to everyone");
+    assert.ok(p2SetMsg, "player 2's private set should be visible to everyone");
   });
 });

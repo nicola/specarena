@@ -1,27 +1,37 @@
 import { Hono } from "hono";
-import { ChatEngine, defaultChatEngine } from "../../chat/ChatEngine";
+import { ArenaEngine, defaultEngine } from "../../engine";
+import { getIdentity, IdentityEnv } from "./identity";
 
-export function createChatRoutes(chat: ChatEngine = defaultChatEngine) {
-  const app = new Hono();
+export function createChatRoutes(engine: ArenaEngine = defaultEngine) {
+  const app = new Hono<IdentityEnv>();
+  const chat = engine.chat;
 
   // POST /api/chat/send - Send a chat message
   app.post("/api/chat/send", async (c) => {
-    const { channel, from, to, content } = await c.req.json();
-    if (!channel || !from || !content) {
-      return c.json({ error: "channel, from, and content are required" }, 400);
+    const { channel, from: bodyFrom, to, content } = await c.req.json();
+    if (!channel || !content) {
+      return c.json({ error: "channel and content are required" }, 400);
     }
+
+    const from = getIdentity(c);
+    if (!from) {
+      return c.json({ error: "from is required" }, 400);
+    }
+
     return c.json(await chat.chatSend(channel, from, content, to));
   });
 
   // GET /api/chat/sync - Get messages from a channel
   app.get("/api/chat/sync", async (c) => {
     const channel = c.req.query("channel");
-    const from = c.req.query("from");
     const index = parseInt(c.req.query("index") || "0", 10);
-    if (!channel || !from) {
-      return c.json({ error: "channel and from are required" }, 400);
+
+    if (!channel) {
+      return c.json({ error: "channel is required" }, 400);
     }
-    return c.json(await chat.chatSync(channel, from, index));
+
+    const viewer = getIdentity(c);
+    return c.json(await chat.chatSync(channel, viewer, index));
   });
 
   // GET /api/chat/messages/:uuid - get messages
@@ -34,16 +44,30 @@ export function createChatRoutes(chat: ChatEngine = defaultChatEngine) {
   // GET /api/chat/ws/:uuid - SSE stream
   app.get("/api/chat/ws/:uuid", (c) => {
     const uuid = c.req.param("uuid");
+    const viewer = getIdentity(c);
 
     const stream = new ReadableStream({
       async start(controller) {
-        // Send initial messages
-        const initialMessages = await chat.getMessagesForChannel(uuid);
+        // Send initial messages (redacted for non-visible DMs)
+        const { messages: initialMessages } = await chat.chatSync(uuid, viewer, 0);
         const initialData = JSON.stringify({ type: "initial", messages: initialMessages });
         controller.enqueue(new TextEncoder().encode(`data: ${initialData}\n\n`));
 
-        // Subscribe to new messages
-        const unsubscribe = chat.subscribeToChannel(uuid, controller);
+        // If the game has already ended, send game_ended event with scores
+        const challengeId = uuid.startsWith("challenge_") ? uuid.slice(10) : uuid;
+        const challenge = await engine.getChallenge(challengeId);
+        if (challenge?.instance?.state?.gameEnded) {
+          const endedData = JSON.stringify({
+            type: "game_ended",
+            scores: challenge.instance.state.scores,
+            players: challenge.instance.state.players,
+            playerIdentities: challenge.instance.state.playerIdentities,
+          });
+          controller.enqueue(new TextEncoder().encode(`data: ${endedData}\n\n`));
+        }
+
+        // Subscribe to new messages with viewer identity
+        const unsubscribe = chat.subscribeToChannel(uuid, controller, viewer);
 
         // Handle client disconnect
         c.req.raw.signal.addEventListener("abort", () => {

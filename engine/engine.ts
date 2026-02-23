@@ -8,7 +8,6 @@ import {
 } from "./types";
 import { ChatEngine, createChatEngine } from "./chat/ChatEngine";
 import { ArenaStorageAdapter, InMemoryArenaStorageAdapter } from "./storage/InMemoryArenaStorageAdapter";
-
 export interface EngineOptions {
   storageAdapter?: ArenaStorageAdapter;
   chatEngine?: ChatEngine;
@@ -26,7 +25,16 @@ export class ArenaEngine {
     this.challengeFactories = new Map<string, ChallengeFactory>();
     this.challengeOptions = new Map<string, Record<string, unknown>>();
     this.challengeMetadataMap = new Map<string, ChallengeMetadata>();
-    this.chat = options.chatEngine ?? createChatEngine();
+    this.chat = options.chatEngine ?? createChatEngine({
+      isChannelRevealed: async (channel) => {
+        const challengeId = channel.startsWith("challenge_")
+          ? channel.slice("challenge_".length)
+          : null;
+        if (!challengeId) return false;
+        const challenge = await this.getChallenge(challengeId);
+        return challenge?.instance?.state?.gameEnded ?? false;
+      },
+    });
   }
 
   async clearRuntimeState(): Promise<void> {
@@ -137,7 +145,7 @@ export class ArenaEngine {
       .sort((a, b) => b.createdAt - a.createdAt);
   }
 
-  async challengeJoin(invite: string) {
+  async challengeJoin(invite: string, userId?: string) {
     const result = await this.getChallengeFromInvite(invite);
 
     if (!result.success) {
@@ -148,7 +156,7 @@ export class ArenaEngine {
 
     let joinError: string | undefined;
     try {
-      await challenge.instance.join(invite);
+      await challenge.instance.join(invite, userId);
     } catch (error) {
       joinError = error instanceof Error ? error.message : String(error);
     }
@@ -187,8 +195,19 @@ export class ArenaEngine {
     }
   }
 
-  async challengeSync(channel: string, from: string, index: number) {
-    return this.chat.challengeSync(channel, from, index);
+  async getPlayerIdentities(challengeId: string): Promise<Record<string, string> | null> {
+    const challenge = await this.getChallenge(challengeId);
+    if (!challenge?.instance?.state?.gameEnded) return null;
+    return challenge.instance.state.playerIdentities;
+  }
+
+  async resolvePlayerIdentity(challengeId: string, userIndex: number): Promise<string | null> {
+    const challenge = await this.getChallenge(challengeId);
+    return challenge?.instance?.state?.players?.[userIndex] ?? null;
+  }
+
+  async challengeSync(channel: string, viewer: string | null, index: number) {
+    return this.chat.challengeSync(channel, viewer, index);
   }
 }
 

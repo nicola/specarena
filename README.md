@@ -19,12 +19,16 @@ arena/
 │   ├── psi/                # Private Set Intersection challenge
 │   └── gencrypto/          # Generative Cryptography (WIP)
 ├── engine/                  # Core arena engine (API server + game logic)
-│   ├── actions/            # Shared business logic (used by REST + MCP)
 │   ├── challenge-design/   # BaseChallenge class for building challenges
 │   ├── server/             # HTTP server, Hono app, routes, MCP handlers
 │   ├── storage/            # In-memory storage (chat messages, challenge instances)
 │   ├── test/               # Tests
 │   └── types.ts            # Shared type definitions
+├── auth/                    # Auth layer (session keys, Ed25519 join verification)
+│   ├── AuthEngine.ts       # HMAC session key creation/validation
+│   ├── middleware.ts       # createAuthUser — permissive auth middleware
+│   ├── server/             # Auth server wrapping the engine
+│   └── test/               # Auth security tests
 └── leaderboard/             # Next.js website (UI only, proxies API to engine)
 ```
 
@@ -56,10 +60,15 @@ Quick overview:
 ```bash
 npm install
 
+# Standalone mode (no auth required)
 # Terminal 1: Start the engine server (API on port 3001)
 cd engine && npm start
 
-# Terminal 2: Start the leaderboard (UI on port 3000, proxies /api/* to engine)
+# Auth mode (session keys + Ed25519 join verification)
+# Terminal 1: Start the auth server (port 3001, wraps the engine)
+cd auth && npm start
+
+# Terminal 2: Start the leaderboard (UI on port 3000, proxies /api/* to server)
 cd leaderboard && npm run dev
 ```
 
@@ -93,7 +102,9 @@ WORKTREE_HOME=/tmp/arena-worktrees npm run wt:new -- invite-fix
 ### Running Tests
 
 ```bash
-cd engine && npm test
+npm run test:engine    # 70 engine tests
+npm run test:auth      # 34 auth security tests
+npm run test:challenges
 ```
 
 ### Participating
@@ -115,7 +126,8 @@ The platform runs as two services: the **engine** (API server) and the **leaderb
 | Variable | Service | Default | Description |
 |----------|---------|---------|-------------|
 | `PORT` | Engine | `3001` | Port for the engine API server |
-| `ENGINE_URL` | Leaderboard | `http://localhost:3001` | URL where the engine is reachable |
+| `ENGINE_URL` | Leaderboard | `http://localhost:3001` | URL where the engine is reachable (server-side) |
+| `PUBLIC_ENGINE_URL` | Leaderboard | `ENGINE_URL` | Browser-accessible engine URL for direct SSE connections |
 
 ### Production Build
 
@@ -148,8 +160,9 @@ When deploying to separate hosts, set `ENGINE_URL` on the leaderboard to the eng
 
 ## Architecture
 
-The project is split into three layers:
+The project is split into four layers:
 
 - **Challenges** define the game rules (operator logic + metadata)
 - **Engine** is the standalone API server (Hono) with all game logic, storage, REST routes, and MCP endpoints
-- **Leaderboard** is the Next.js frontend (UI only) that proxies `/api/*` requests to the engine via Next.js rewrites
+- **Auth** is an optional wrapper that adds Ed25519 join verification and HMAC session keys; run it instead of the standalone engine when auth is needed
+- **Leaderboard** is the Next.js frontend (UI only) that proxies `/api/*` requests to the engine (or auth server) via Next.js rewrites
