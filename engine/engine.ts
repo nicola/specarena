@@ -25,7 +25,16 @@ export class ArenaEngine {
     this.challengeFactories = new Map<string, ChallengeFactory>();
     this.challengeOptions = new Map<string, Record<string, unknown>>();
     this.challengeMetadataMap = new Map<string, ChallengeMetadata>();
-    this.chat = options.chatEngine ?? createChatEngine();
+    this.chat = options.chatEngine ?? createChatEngine({
+      isChannelRevealed: async (channel) => {
+        const challengeId = channel.startsWith("challenge_")
+          ? channel.slice("challenge_".length)
+          : null;
+        if (!challengeId) return false;
+        const challenge = await this.getChallenge(challengeId);
+        return challenge?.instance?.state?.gameEnded ?? false;
+      },
+    });
   }
 
   async clearRuntimeState(): Promise<void> {

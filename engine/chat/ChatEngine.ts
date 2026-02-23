@@ -3,6 +3,7 @@ import { ChatStorageAdapter, InMemoryChatStorageAdapter } from "../storage/InMem
 
 export interface ChatEngineOptions {
   storageAdapter?: ChatStorageAdapter;
+  isChannelRevealed?: (channel: string) => Promise<boolean>;
 }
 
 interface ChannelSubscriber {
@@ -12,11 +13,13 @@ interface ChannelSubscriber {
 
 export class ChatEngine {
   private readonly storageAdapter: ChatStorageAdapter;
+  private readonly isChannelRevealed?: (channel: string) => Promise<boolean>;
   // TODO in the future separate to another service and persist this on db
   private readonly channelSubscribers: Map<string, Set<ChannelSubscriber>>;
 
   constructor(options: ChatEngineOptions = {}) {
     this.storageAdapter = options.storageAdapter ?? new InMemoryChatStorageAdapter();
+    this.isChannelRevealed = options.isChannelRevealed;
     this.channelSubscribers = new Map<string, Set<ChannelSubscriber>>();
   }
 
@@ -43,9 +46,11 @@ export class ChatEngine {
 
   private async syncChannel(channel: string, viewer: string | null, index: number) {
     const messages = await this.getMessagesForChannel(channel);
+    const revealed = (await this.isChannelRevealed?.(channel)) ?? false;
     const result = messages
       .filter((msg) => msg.index !== undefined && msg.index >= index)
       .map((msg) => {
+        if (revealed) return msg;
         if (!msg.to) return msg;
         if (viewer && (msg.to === viewer || msg.from === viewer)) return msg;
         return this.redactMessage(msg);
