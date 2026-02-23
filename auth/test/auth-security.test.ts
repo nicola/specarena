@@ -283,14 +283,14 @@ describe("Auth security — session key validation on sync route", () => {
 
     // Player 0's own private set message should be visible (not redacted)
     const ownPrivate = data.messages.find(
-      (m: any) => m.to === invites[0] && m.from === "operator" && m.content.includes("Your private set")
+      (m: any) => m.to === `did:key:${keyA.publicKey}` && m.from === "operator" && m.content.includes("Your private set")
     );
     assert.ok(ownPrivate, "should see own private set in cleartext");
     assert.ok(!ownPrivate.redacted, "own messages should not be redacted");
 
     // Player 1's private set message should be redacted
     const otherPrivate = data.messages.find(
-      (m: any) => m.to === invites[1] && m.from === "operator"
+      (m: any) => m.to === `did:key:${keyB.publicKey}` && m.from === "operator"
     );
     assert.ok(otherPrivate?.redacted, "opponent's private messages should be redacted");
   });
@@ -323,7 +323,7 @@ describe("Auth security — chat routes with session keys", () => {
     assert.equal(res.status, 200);
     const data = await res.json();
     // The `from` should be the resolved player identity (the invite code), not something the client chose
-    assert.equal(data.from, invites[0], "identity should be resolved from session key, not client-supplied");
+    assert.equal(data.from, `did:key:${keyA.publicKey}`, "identity should be resolved from session key, not client-supplied");
   });
 
   it("chat send ignores client-supplied 'from' when session key is present", async () => {
@@ -340,6 +340,6 @@ describe("Auth security — chat routes with session keys", () => {
     assert.equal(res.status, 200);
     const data = await res.json();
     // Should use the identity from the session key (player 0), not the body
-    assert.equal(data.from, invites[0], "should use session identity, ignoring client 'from'");
+    assert.equal(data.from, `did:key:${keyA.publicKey}`, "should use session identity, ignoring client 'from'");
   });
 });
