@@ -12,10 +12,22 @@ interface ChatMessage {
   redacted?: boolean;
 }
 
+interface Score {
+  security: number;
+  utility: number;
+}
+
+interface GameEndedData {
+  scores: Score[];
+  players: string[];
+}
+
 interface SSEMessageData {
-  type: 'initial' | 'new_message';
+  type: 'initial' | 'new_message' | 'game_ended';
   messages?: ChatMessage[];
   message?: ChatMessage;
+  scores?: Score[];
+  players?: string[];
 }
 
 interface ConversationsListProps {
@@ -56,6 +68,7 @@ export default function ConversationsList({ uuid, engineUrl = "" }: Conversation
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [gameEnded, setGameEnded] = useState<GameEndedData | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
   const challengeEventSourceRef = useRef<EventSource | null>(null);
   const initialLoadCountRef = useRef(0);
@@ -87,6 +100,8 @@ export default function ConversationsList({ uuid, engineUrl = "" }: Conversation
         setError(null);
         setTimeout(scrollToBottom, 100);
       }
+    } else if (data.type === 'game_ended' && data.scores) {
+      setGameEnded({ scores: data.scores, players: data.players || [] });
     } else if (data.type === 'new_message' && data.message) {
       // New message received
       setMessages((prev) => {
@@ -256,10 +271,16 @@ export default function ConversationsList({ uuid, engineUrl = "" }: Conversation
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-green-600 flex items-center gap-1.5 font-medium">
-            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-            Live
-          </span>
+          {gameEnded ? (
+            <span className="text-xs text-zinc-500 flex items-center gap-1.5 font-medium">
+              Game ended
+            </span>
+          ) : (
+            <span className="text-xs text-green-600 flex items-center gap-1.5 font-medium">
+              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+              Live
+            </span>
+          )}
           <button
             onClick={handleRefresh}
             className="text-sm text-zinc-600 hover:text-zinc-900 transition-colors px-2 py-1 rounded hover:bg-zinc-100"
@@ -356,6 +377,36 @@ export default function ConversationsList({ uuid, engineUrl = "" }: Conversation
         })}
         <div ref={messagesEndRef} />
       </div>
+
+      {/* Scores Panel */}
+      {gameEnded && (
+        <div className="mt-6 pt-4 border-t border-zinc-200">
+          <h4 className="text-sm font-semibold text-zinc-900 mb-3">Final Scores</h4>
+          <div className="grid gap-2">
+            {gameEnded.scores.map((score, i) => {
+              const playerName = gameEnded.players[i] || `Player ${i + 1}`;
+              return (
+                <div key={i} className="flex items-center gap-3 bg-zinc-50 rounded-lg px-4 py-2.5">
+                  <div className={`flex-shrink-0 w-7 h-7 rounded-full ${getAvatarColor(playerName)} flex items-center justify-center text-white text-xs font-semibold`}>
+                    {getInitials(playerName)}
+                  </div>
+                  <span className="text-sm font-medium text-zinc-800 flex-1 min-w-0 truncate">
+                    {playerName}
+                  </span>
+                  <div className="flex gap-4 text-sm">
+                    <span className="text-zinc-600">
+                      Security: <span className="font-semibold text-zinc-900">{score.security}</span>
+                    </span>
+                    <span className="text-zinc-600">
+                      Utility: <span className="font-semibold text-zinc-900">{score.utility}</span>
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

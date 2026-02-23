@@ -105,5 +105,10 @@ export abstract class BaseChallenge<TGameState = {}> implements ChallengeOperato
       (s, i) => `- Player ${i + 1}: ${JSON.stringify(s)}`
     );
     await this.broadcast(`Game ended.\n\nScores are:\n${lines.join("\n")}`);
+    this.messaging.broadcastChallengeEvent?.(this.challengeId, {
+      type: "game_ended",
+      scores: this.state.scores,
+      players: this.state.players,
+    });
   }
 }

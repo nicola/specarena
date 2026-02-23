@@ -313,6 +313,116 @@ describe("Concurrent SSE streams — engine level (no auth)", () => {
     }
   });
 
+  it("game_ended event is broadcast to live viewers on both channels", async () => {
+    const { id, invites } = await createPsiChallenge();
+    await request("POST", "/api/arena/join", { invite: invites[0] });
+    await request("POST", "/api/arena/join", { invite: invites[1] });
+
+    const vBare = await openSSE(id);
+    const vPrefixed = await openSSE(`challenge_${id}`);
+
+    try {
+      await readNextSSEData(vBare.reader, vBare.buf);
+      await readNextSSEData(vPrefixed.reader, vPrefixed.buf);
+
+      // End the game
+      await sendGuess(id, invites[0], "100");
+      await sendGuess(id, invites[1], "100");
+
+      // Drain new_message events until we find game_ended on each stream
+      const findGameEnded = async (reader: any, buf: any) => {
+        for (let i = 0; i < 10; i++) {
+          const ev = await readNextSSEData(reader, buf);
+          if (ev.type === "game_ended") return ev;
+        }
+        throw new Error("game_ended not found");
+      };
+
+      const [endedBare, endedPrefixed] = await Promise.all([
+        findGameEnded(vBare.reader, vBare.buf),
+        findGameEnded(vPrefixed.reader, vPrefixed.buf),
+      ]);
+
+      // Both should have structured scores and players
+      for (const ev of [endedBare, endedPrefixed]) {
+        assert.equal(ev.type, "game_ended");
+        assert.ok(Array.isArray(ev.scores), "scores should be an array");
+        assert.equal(ev.scores.length, 2);
+        assert.ok(typeof ev.scores[0].security === "number");
+        assert.ok(typeof ev.scores[0].utility === "number");
+        assert.ok(Array.isArray(ev.players));
+        assert.equal(ev.players.length, 2);
+      }
+    } finally {
+      vBare.reader.cancel().catch(() => {});
+      vPrefixed.reader.cancel().catch(() => {});
+    }
+  });
+
+  it("late viewer connecting after game ended gets game_ended in SSE stream", async () => {
+    const { id, invites } = await createPsiChallenge();
+    await request("POST", "/api/arena/join", { invite: invites[0] });
+    await request("POST", "/api/arena/join", { invite: invites[1] });
+
+    // End the game first
+    await sendGuess(id, invites[0], "100");
+    await sendGuess(id, invites[1], "100");
+
+    const ch = await defaultEngine.getChallenge(id);
+    assert.equal(ch?.instance?.state?.gameEnded, true);
+
+    // Late viewer connects
+    const viewer = await openSSE(`challenge_${id}`);
+
+    try {
+      const init = await readNextSSEData(viewer.reader, viewer.buf);
+      assert.equal(init.type, "initial");
+
+      const ended = await readNextSSEData(viewer.reader, viewer.buf);
+      assert.equal(ended.type, "game_ended");
+      assert.ok(Array.isArray(ended.scores));
+      assert.equal(ended.scores.length, 2);
+      assert.ok(Array.isArray(ended.players));
+    } finally {
+      viewer.reader.cancel().catch(() => {});
+    }
+  });
+
+  it("stream stays open after game_ended — no stream closure", async () => {
+    const { id, invites } = await createPsiChallenge();
+    await request("POST", "/api/arena/join", { invite: invites[0] });
+    await request("POST", "/api/arena/join", { invite: invites[1] });
+
+    const viewer = await openSSE(`challenge_${id}`);
+
+    try {
+      await readNextSSEData(viewer.reader, viewer.buf);
+
+      // End the game
+      await sendGuess(id, invites[0], "100");
+      await sendGuess(id, invites[1], "100");
+
+      // Drain until game_ended
+      let gameEndedSeen = false;
+      for (let i = 0; i < 10; i++) {
+        const ev = await readNextSSEData(viewer.reader, viewer.buf);
+        if (ev.type === "game_ended") { gameEndedSeen = true; break; }
+      }
+      assert.ok(gameEndedSeen, "game_ended must be received");
+
+      // Stream should still be open — reader.read() should not resolve with done:true
+      const { done } = await Promise.race([
+        viewer.reader.read(),
+        new Promise<{ done: false; value: undefined }>((res) =>
+          setTimeout(() => res({ done: false, value: undefined }), 500)
+        ),
+      ]);
+      assert.equal(done, false, "stream must remain open after game_ended");
+    } finally {
+      viewer.reader.cancel().catch(() => {});
+    }
+  });
+
   it("messages interleaved across two challenges arrive correctly", async () => {
     const c1 = await createPsiChallenge();
     const c2 = await createPsiChallenge();

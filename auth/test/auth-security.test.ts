@@ -583,6 +583,72 @@ describe("Concurrent SSE streams", () => {
     }
   });
 
+  it("game_ended event is received by viewer with structured scores", async () => {
+    const { id, invites } = await createChallenge();
+    const { data: join0 } = await joinWithAuth(invites[0], keyA);
+    const { data: join1 } = await joinWithAuth(invites[1], keyB);
+
+    const res = await request("GET", `/api/chat/ws/challenge_${id}`);
+    const reader = res.body!.getReader();
+    const buf = { s: "" };
+
+    try {
+      const init = await readNextSSEData(reader, buf);
+      assert.equal(init.type, "initial");
+
+      // End the game
+      await authedRequest("POST", "/api/arena/message", join0.sessionKey,
+        { challengeId: id, messageType: "guess", content: "100" });
+      await authedRequest("POST", "/api/arena/message", join1.sessionKey,
+        { challengeId: id, messageType: "guess", content: "100" });
+
+      // Drain events until game_ended
+      let gameEnded: any = null;
+      for (let i = 0; i < 10; i++) {
+        const ev = await readNextSSEData(reader, buf);
+        if (ev.type === "game_ended") { gameEnded = ev; break; }
+      }
+      assert.ok(gameEnded, "game_ended event must be received");
+      assert.ok(Array.isArray(gameEnded.scores), "scores should be an array");
+      assert.equal(gameEnded.scores.length, 2);
+      assert.ok(typeof gameEnded.scores[0].security === "number");
+      assert.ok(typeof gameEnded.scores[0].utility === "number");
+      assert.ok(Array.isArray(gameEnded.players));
+    } finally {
+      reader.cancel().catch(() => {});
+    }
+  });
+
+  it("late viewer gets game_ended after initial for finished game", async () => {
+    const { id, invites } = await createChallenge();
+    const { data: join0 } = await joinWithAuth(invites[0], keyA);
+    const { data: join1 } = await joinWithAuth(invites[1], keyB);
+
+    // End the game first
+    await authedRequest("POST", "/api/arena/message", join0.sessionKey,
+      { challengeId: id, messageType: "guess", content: "100" });
+    await authedRequest("POST", "/api/arena/message", join1.sessionKey,
+      { challengeId: id, messageType: "guess", content: "100" });
+
+    // Late viewer connects
+    const res = await request("GET", `/api/chat/ws/challenge_${id}`);
+    const reader = res.body!.getReader();
+    const buf = { s: "" };
+
+    try {
+      const init = await readNextSSEData(reader, buf);
+      assert.equal(init.type, "initial");
+      assert.ok(init.messages.length > 0);
+
+      const ended = await readNextSSEData(reader, buf);
+      assert.equal(ended.type, "game_ended");
+      assert.ok(Array.isArray(ended.scores));
+      assert.equal(ended.scores.length, 2);
+    } finally {
+      reader.cancel().catch(() => {});
+    }
+  });
+
   it("messages continue flowing during active game", async () => {
     const { id, invites } = await createChallenge();
     const { data: join0 } = await joinWithAuth(invites[0], keyA);
