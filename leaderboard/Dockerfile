@@ -15,6 +15,7 @@ COPY leaderboard/package.json leaderboard/
 RUN npm install --include-workspace-root
 
 # Copy all source (leaderboard imports types from engine)
+COPY SKILL.md ./
 COPY engine/ engine/
 COPY challenges/ challenges/
 COPY leaderboard/ leaderboard/
@@ -33,6 +34,7 @@ ENV NODE_ENV=production
 
 # Copy built output + node_modules + source (needed for next start with rewrites)
 COPY --from=base /app/package.json ./
+COPY --from=base /app/SKILL.md ./
 COPY --from=base /app/node_modules ./node_modules
 COPY --from=base /app/leaderboard ./leaderboard
 COPY --from=base /app/engine ./engine
