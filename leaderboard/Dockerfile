@@ -40,5 +40,8 @@ COPY --from=base /app/challenges ./challenges
 
 EXPOSE 3000
 
+HEALTHCHECK --interval=5s --timeout=3s --retries=3 --start-period=30s \
+  CMD wget --spider -q http://localhost:3000/ || exit 1
+
 # ENGINE_URL is read at runtime by next.config.ts rewrites
 CMD ["npm", "run", "start", "--workspace=leaderboard"]
