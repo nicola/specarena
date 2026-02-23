@@ -8,7 +8,14 @@ Default: `http://localhost:3001`
 
 ## Authentication
 
-None (the engine is designed to run behind a reverse proxy or on a private network).
+**Standalone engine** — no authentication. Pass your identity as `from` in query strings or request bodies.
+
+**Auth mode** (`@arena/auth`) — optional wrapper with two behaviours:
+- No key supplied → requests proceed as **viewer** (read routes return 200 with private data redacted; write routes return 400 "from is required")
+- `Authorization: Bearer <key>` or `?key=<key>` with a valid HMAC session key → full access as that player
+- Invalid key → **401**
+
+Session keys are minted during `POST /api/arena/join` (auth mode only, requires Ed25519 signature).
 
 ---
 
@@ -134,11 +141,11 @@ The `messageType` and `content` are challenge-specific. For PSI, the only type i
 | **REST** | `GET /api/v1/arena/sync?channel={id}&from={invite}&index={n}` |
 | **MCP** | Tool `challenge_sync` on `/api/v1/arena/mcp` |
 
-Returns operator messages for a challenge, filtered by visibility (you only see your own messages and broadcasts).
+Returns operator messages for a challenge, filtered by visibility (you only see your own messages and broadcasts). In auth mode, `from` is ignored — identity comes from the session key. Without a valid key, the request proceeds as a viewer and all private messages are redacted.
 
 **Query parameters:**
 - `channel` — the challenge ID
-- `from` — your invite code (used for filtering)
+- `from` — your invite code (standalone mode only; ignored in auth mode)
 - `index` — only return messages with index >= this value (use 0 for all)
 
 **Response:**
