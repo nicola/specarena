@@ -440,6 +440,80 @@ describe("Viewer-mode redaction — chat/ws SSE endpoint (leaderboard path)", ()
     }
   });
 
+  it("SSE stream sends game_ended and closes for a finished challenge (viewer)", async () => {
+    const { id, invites } = await createChallenge();
+    const { data: join0 } = await joinWithAuth(invites[0], keyA);
+    const { data: join1 } = await joinWithAuth(invites[1], keyB);
+
+    // Complete the game: both players submit one guess each
+    await authedRequest("POST", "/api/arena/message", join0.sessionKey,
+      { challengeId: id, messageType: "guess", content: "100" });
+    await authedRequest("POST", "/api/arena/message", join1.sessionKey,
+      { challengeId: id, messageType: "guess", content: "100" });
+
+    // Confirm game is ended
+    const ch = await engine.getChallenge(id);
+    assert.equal(ch?.instance?.state?.gameEnded, true, "game should be ended");
+
+    // Viewer connects after game is over
+    const res = await request("GET", `/api/chat/ws/challenge_${id}`);
+    assert.equal(res.status, 200);
+
+    const reader = res.body!.getReader();
+    const buf = { s: "" };
+    try {
+      const event1 = await readNextSSEData(reader, buf);
+      assert.equal(event1.type, "initial", "first event must be the initial batch");
+      assert.ok(event1.messages.length > 0, "initial batch must contain game messages");
+
+      const event2 = await readNextSSEData(reader, buf);
+      assert.equal(event2.type, "game_ended", "second event must be game_ended");
+
+      // Stream should be closed after game_ended
+      const { done } = await Promise.race([
+        reader.read(),
+        new Promise<{ done: true; value: undefined }>((res) =>
+          setTimeout(() => res({ done: true, value: undefined }), 500)
+        ),
+      ]);
+      assert.ok(done, "stream should close after game_ended event");
+    } finally {
+      reader.cancel().catch(() => {});
+    }
+  });
+
+  it("SSE stream sends game_ended when game ends mid-stream (viewer)", async () => {
+    const { id, invites } = await createChallenge();
+    const { data: join0 } = await joinWithAuth(invites[0], keyA);
+    const { data: join1 } = await joinWithAuth(invites[1], keyB);
+
+    // Viewer subscribes BEFORE game ends
+    const res = await request("GET", `/api/chat/ws/challenge_${id}`);
+    const reader = res.body!.getReader();
+    const buf = { s: "" };
+    try {
+      // Consume initial batch (empty at this point)
+      const initial = await readNextSSEData(reader, buf);
+      assert.equal(initial.type, "initial");
+
+      // Now complete the game while viewer is connected
+      await authedRequest("POST", "/api/arena/message", join0.sessionKey,
+        { challengeId: id, messageType: "guess", content: "100" });
+      await authedRequest("POST", "/api/arena/message", join1.sessionKey,
+        { challengeId: id, messageType: "guess", content: "100" });
+
+      // Drain events until we see game_ended (broadcasts arrive first)
+      let gameEndedSeen = false;
+      for (let i = 0; i < 10; i++) {
+        const event = await readNextSSEData(reader, buf, 2000);
+        if (event.type === "game_ended") { gameEndedSeen = true; break; }
+      }
+      assert.ok(gameEndedSeen, "game_ended event must be emitted when game finishes");
+    } finally {
+      reader.cancel().catch(() => {});
+    }
+  });
+
   it("live SSE new_message — DM is redacted for viewer", async () => {
     const { id, invites } = await createChallenge();
     const { data: join0 } = await joinWithAuth(invites[0], keyA);
@@ -453,7 +527,7 @@ describe("Viewer-mode redaction — chat/ws SSE endpoint (leaderboard path)", ()
     const buf = { s: "" };
     try {
       // Read initial event — this also ensures the channel subscription is active
-      // (subscribeToChannel is called synchronously after chatSync inside start())
+      // (subscribeToChannel is called before chatSync, so the subscriber is ready)
       const initialEvent = await readNextSSEData(reader, buf);
       assert.equal(initialEvent.type, "initial");
 
@@ -470,6 +544,256 @@ describe("Viewer-mode redaction — chat/ws SSE endpoint (leaderboard path)", ()
       assert.ok(liveEvent.message.to, "event should be a DM (non-null to field)");
       assert.equal(liveEvent.message.redacted, true, "live DM must be redacted for viewer");
       assert.equal(liveEvent.message.content, "", "redacted live DM must have empty content");
+    } finally {
+      reader.cancel().catch(() => {});
+    }
+  });
+});
+
+describe("Concurrent SSE streams", () => {
+  beforeEach(async () => engine.clearRuntimeState());
+
+  /** Reads the next SSE `data:` payload from an open stream reader. */
+  async function readNextSSEData(
+    reader: ReadableStreamDefaultReader<Uint8Array>,
+    buf: { s: string },
+    timeoutMs = 2000
+  ): Promise<any> {
+    const decoder = new TextDecoder();
+    const deadline = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("SSE read timed out")), timeoutMs)
+    );
+    async function drain(): Promise<any> {
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) throw new Error("Stream ended before data event");
+        buf.s += decoder.decode(value, { stream: true });
+        let nl: number;
+        while ((nl = buf.s.indexOf("\n\n")) !== -1) {
+          const block = buf.s.slice(0, nl);
+          buf.s = buf.s.slice(nl + 2);
+          const line = block.split("\n").find((l) => l.startsWith("data: "));
+          if (line) return JSON.parse(line.slice(6));
+        }
+      }
+    }
+    return Promise.race([drain(), deadline]);
+  }
+
+  /** Collects all SSE data events until the stream closes or timeout. */
+  async function collectAllSSEData(
+    reader: ReadableStreamDefaultReader<Uint8Array>,
+    buf: { s: string },
+    timeoutMs = 3000
+  ): Promise<any[]> {
+    const events: any[] = [];
+    const decoder = new TextDecoder();
+    const deadline = Date.now() + timeoutMs;
+    for (;;) {
+      const remaining = deadline - Date.now();
+      if (remaining <= 0) break;
+      try {
+        const readPromise = reader.read();
+        const timeoutPromise = new Promise<{ done: true; value: undefined }>((res) =>
+          setTimeout(() => res({ done: true, value: undefined }), remaining)
+        );
+        const { done, value } = await Promise.race([readPromise, timeoutPromise]);
+        if (done) break;
+        buf.s += decoder.decode(value, { stream: true });
+        let nl: number;
+        while ((nl = buf.s.indexOf("\n\n")) !== -1) {
+          const block = buf.s.slice(0, nl);
+          buf.s = buf.s.slice(nl + 2);
+          const line = block.split("\n").find((l) => l.startsWith("data: "));
+          if (line) events.push(JSON.parse(line.slice(6)));
+        }
+      } catch {
+        break;
+      }
+    }
+    return events;
+  }
+
+  it("multiple viewers receive all messages", async () => {
+    const { id, invites } = await createChallenge();
+    const { data: join0 } = await joinWithAuth(invites[0], keyA);
+    await joinWithAuth(invites[1], keyB);
+
+    // Two viewers subscribe to the same channel
+    const res1 = await request("GET", `/api/chat/ws/challenge_${id}`);
+    const res2 = await request("GET", `/api/chat/ws/challenge_${id}`);
+    const reader1 = res1.body!.getReader();
+    const reader2 = res2.body!.getReader();
+    const buf1 = { s: "" };
+    const buf2 = { s: "" };
+
+    try {
+      // Both get initial event
+      const init1 = await readNextSSEData(reader1, buf1);
+      const init2 = await readNextSSEData(reader2, buf2);
+      assert.equal(init1.type, "initial");
+      assert.equal(init2.type, "initial");
+
+      // Send 3 broadcast messages
+      for (let i = 0; i < 3; i++) {
+        await authedRequest("POST", "/api/chat/send", join0.sessionKey, {
+          channel: `challenge_${id}`,
+          content: `msg-${i}`,
+        });
+      }
+
+      // Both viewers should receive all 3
+      for (let i = 0; i < 3; i++) {
+        const ev1 = await readNextSSEData(reader1, buf1);
+        const ev2 = await readNextSSEData(reader2, buf2);
+        assert.equal(ev1.type, "new_message");
+        assert.equal(ev2.type, "new_message");
+        assert.equal(ev1.message.content, `msg-${i}`);
+        assert.equal(ev2.message.content, `msg-${i}`);
+      }
+    } finally {
+      reader1.cancel().catch(() => {});
+      reader2.cancel().catch(() => {});
+    }
+  });
+
+  it("one viewer disconnecting doesn't break others", async () => {
+    const { id, invites } = await createChallenge();
+    const { data: join0 } = await joinWithAuth(invites[0], keyA);
+    await joinWithAuth(invites[1], keyB);
+
+    const res1 = await request("GET", `/api/chat/ws/challenge_${id}`);
+    const res2 = await request("GET", `/api/chat/ws/challenge_${id}`);
+    const reader1 = res1.body!.getReader();
+    const reader2 = res2.body!.getReader();
+    const buf1 = { s: "" };
+    const buf2 = { s: "" };
+
+    try {
+      await readNextSSEData(reader1, buf1); // initial
+      await readNextSSEData(reader2, buf2); // initial
+
+      // Disconnect viewer 1
+      await reader1.cancel();
+
+      // Send a message — viewer 2 should still receive it
+      await authedRequest("POST", "/api/chat/send", join0.sessionKey, {
+        channel: `challenge_${id}`,
+        content: "after-disconnect",
+      });
+
+      const ev2 = await readNextSSEData(reader2, buf2);
+      assert.equal(ev2.type, "new_message");
+      assert.equal(ev2.message.content, "after-disconnect");
+    } finally {
+      reader1.cancel().catch(() => {});
+      reader2.cancel().catch(() => {});
+    }
+  });
+
+  it("game ending closes streams for all concurrent viewers", async () => {
+    const { id, invites } = await createChallenge();
+    const { data: join0 } = await joinWithAuth(invites[0], keyA);
+    const { data: join1 } = await joinWithAuth(invites[1], keyB);
+
+    // Three viewers subscribe to challenge channel
+    const viewers = await Promise.all([
+      request("GET", `/api/chat/ws/challenge_${id}`),
+      request("GET", `/api/chat/ws/challenge_${id}`),
+      request("GET", `/api/chat/ws/challenge_${id}`),
+    ]);
+    const readers = viewers.map((r) => r.body!.getReader());
+    const bufs = readers.map(() => ({ s: "" }));
+
+    try {
+      // Consume initial events
+      for (let i = 0; i < 3; i++) {
+        const init = await readNextSSEData(readers[i], bufs[i]);
+        assert.equal(init.type, "initial");
+      }
+
+      // End the game
+      await authedRequest("POST", "/api/arena/message", join0.sessionKey,
+        { challengeId: id, messageType: "guess", content: "100" });
+      await authedRequest("POST", "/api/arena/message", join1.sessionKey,
+        { challengeId: id, messageType: "guess", content: "100" });
+
+      // All three should receive game_ended and streams should close
+      for (let i = 0; i < 3; i++) {
+        const events = await collectAllSSEData(readers[i], bufs[i]);
+        const gameEndedEvent = events.find((e) => e.type === "game_ended");
+        assert.ok(gameEndedEvent, `viewer ${i} must receive game_ended`);
+      }
+    } finally {
+      for (const r of readers) r.cancel().catch(() => {});
+    }
+  });
+
+  it("both channels (bare + prefixed) get game_ended", async () => {
+    const { id, invites } = await createChallenge();
+    const { data: join0 } = await joinWithAuth(invites[0], keyA);
+    const { data: join1 } = await joinWithAuth(invites[1], keyB);
+
+    // Subscribe to both bare id and challenge_id channels
+    const resBare = await request("GET", `/api/chat/ws/${id}`);
+    const resPrefixed = await request("GET", `/api/chat/ws/challenge_${id}`);
+    const readerBare = resBare.body!.getReader();
+    const readerPrefixed = resPrefixed.body!.getReader();
+    const bufBare = { s: "" };
+    const bufPrefixed = { s: "" };
+
+    try {
+      // Consume initial events
+      await readNextSSEData(readerBare, bufBare);
+      await readNextSSEData(readerPrefixed, bufPrefixed);
+
+      // End the game
+      await authedRequest("POST", "/api/arena/message", join0.sessionKey,
+        { challengeId: id, messageType: "guess", content: "100" });
+      await authedRequest("POST", "/api/arena/message", join1.sessionKey,
+        { challengeId: id, messageType: "guess", content: "100" });
+
+      // Both channels should receive game_ended
+      const eventsBare = await collectAllSSEData(readerBare, bufBare);
+      const eventsPrefixed = await collectAllSSEData(readerPrefixed, bufPrefixed);
+
+      const gameEndedBare = eventsBare.find((e) => e.type === "game_ended");
+      const gameEndedPrefixed = eventsPrefixed.find((e) => e.type === "game_ended");
+      assert.ok(gameEndedBare, "bare channel must receive game_ended");
+      assert.ok(gameEndedPrefixed, "prefixed channel must receive game_ended");
+    } finally {
+      readerBare.cancel().catch(() => {});
+      readerPrefixed.cancel().catch(() => {});
+    }
+  });
+
+  it("messages continue flowing during active game", async () => {
+    const { id, invites } = await createChallenge();
+    const { data: join0 } = await joinWithAuth(invites[0], keyA);
+    await joinWithAuth(invites[1], keyB);
+
+    const res = await request("GET", `/api/chat/ws/challenge_${id}`);
+    const reader = res.body!.getReader();
+    const buf = { s: "" };
+
+    try {
+      const init = await readNextSSEData(reader, buf);
+      assert.equal(init.type, "initial");
+
+      // Send 3 messages sequentially
+      for (let i = 0; i < 3; i++) {
+        await authedRequest("POST", "/api/chat/send", join0.sessionKey, {
+          channel: `challenge_${id}`,
+          content: `flow-${i}`,
+        });
+      }
+
+      // All 3 arrive as new_message events in order
+      for (let i = 0; i < 3; i++) {
+        const ev = await readNextSSEData(reader, buf);
+        assert.equal(ev.type, "new_message");
+        assert.equal(ev.message.content, `flow-${i}`, `message ${i} should arrive in order`);
+      }
     } finally {
       reader.cancel().catch(() => {});
     }

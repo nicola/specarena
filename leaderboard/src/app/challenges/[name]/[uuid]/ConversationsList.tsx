@@ -13,13 +13,14 @@ interface ChatMessage {
 }
 
 interface SSEMessageData {
-  type: 'initial' | 'new_message';
+  type: 'initial' | 'new_message' | 'game_ended';
   messages?: ChatMessage[];
   message?: ChatMessage;
 }
 
 interface ConversationsListProps {
   uuid: string;
+  engineUrl?: string;
 }
 
 // Generate a color based on a string (for consistent avatar colors)
@@ -51,7 +52,7 @@ const getInitials = (name: string): string => {
     .slice(0, 2);
 };
 
-export default function ConversationsList({ uuid }: ConversationsListProps) {
+export default function ConversationsList({ uuid, engineUrl = "" }: ConversationsListProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -86,6 +87,11 @@ export default function ConversationsList({ uuid }: ConversationsListProps) {
         setError(null);
         setTimeout(scrollToBottom, 100);
       }
+    } else if (data.type === 'game_ended') {
+      // Challenge is over — close both streams so EventSource doesn't reconnect
+      eventSourceRef.current?.close();
+      challengeEventSourceRef.current?.close();
+      setLoading(false);
     } else if (data.type === 'new_message' && data.message) {
       // New message received
       setMessages((prev) => {
@@ -117,8 +123,11 @@ export default function ConversationsList({ uuid }: ConversationsListProps) {
       challengeEventSourceRef.current.close();
     }
 
+    // Connect directly to the engine (bypasses Next.js proxy for SSE)
+    const base = engineUrl;
+
     // Create first EventSource connection for regular uuid
-    const eventSource = new EventSource(`/api/chat/ws/${uuid}`);
+    const eventSource = new EventSource(`${base}/api/chat/ws/${uuid}`);
     eventSourceRef.current = eventSource;
 
     eventSource.onmessage = (event) => {
@@ -133,7 +142,6 @@ export default function ConversationsList({ uuid }: ConversationsListProps) {
     eventSource.onerror = (err) => {
       console.error('EventSource error:', err);
       setError("Connection error. Attempting to reconnect...");
-      // EventSource will automatically attempt to reconnect
     };
 
     eventSource.onopen = () => {
@@ -141,7 +149,7 @@ export default function ConversationsList({ uuid }: ConversationsListProps) {
     };
 
     // Create second EventSource connection for challenge_uuid
-    const challengeEventSource = new EventSource(`/api/chat/ws/challenge_${uuid}`);
+    const challengeEventSource = new EventSource(`${base}/api/chat/ws/challenge_${uuid}`);
     challengeEventSourceRef.current = challengeEventSource;
 
     challengeEventSource.onmessage = (event) => {
@@ -156,13 +164,12 @@ export default function ConversationsList({ uuid }: ConversationsListProps) {
     challengeEventSource.onerror = (err) => {
       console.error('Challenge EventSource error:', err);
       setError("Connection error. Attempting to reconnect...");
-      // EventSource will automatically attempt to reconnect
     };
 
     challengeEventSource.onopen = () => {
       setError(null);
     };
-  }, [uuid, handleMessage]);
+  }, [uuid, engineUrl, handleMessage]);
 
   useEffect(() => {
     // Initialize loading state and connect to both EventSource streams
