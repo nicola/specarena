@@ -136,7 +136,7 @@ export class ArenaEngine {
       .sort((a, b) => b.createdAt - a.createdAt);
   }
 
-  async challengeJoin(invite: string) {
+  async challengeJoin(invite: string, userId?: string) {
     const result = await this.getChallengeFromInvite(invite);
 
     if (!result.success) {
@@ -147,7 +147,7 @@ export class ArenaEngine {
 
     let joinError: string | undefined;
     try {
-      await challenge.instance.join(invite);
+      await challenge.instance.join(userId ?? invite);
     } catch (error) {
       joinError = error instanceof Error ? error.message : String(error);
     }
@@ -155,6 +155,8 @@ export class ArenaEngine {
     if (joinError) {
       return { error: joinError };
     }
+
+    await this.storageAdapter.setChallenge(challenge);
 
     const metadata = this.getChallengeMetadata(challenge.challengeType);
     return {

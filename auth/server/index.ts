@@ -56,7 +56,8 @@ export function createAuthApp(options: AuthAppOptions = {}) {
       return c.json({ error: authResult.reason }, 401);
     }
 
-    const result = await engine.challengeJoin(invite);
+    const userId = `did:key:${publicKey}`;
+    const result = await engine.challengeJoin(invite, userId);
     if ("error" in result) {
       return c.json(result, 400);
     }
@@ -66,7 +67,7 @@ export function createAuthApp(options: AuthAppOptions = {}) {
     if (!challenge.success) {
       return c.json(result);
     }
-    const userIndex = challenge.data.instance.state.players.indexOf(invite);
+    const userIndex = challenge.data.instance.state.players.indexOf(userId);
     const sessionKey = auth.createSessionKey(challenge.data.id, userIndex);
 
     return c.json({ ...result, sessionKey });
