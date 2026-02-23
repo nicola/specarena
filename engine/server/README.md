@@ -234,7 +234,17 @@ Returns all messages in a channel (no filtering). Used by the leaderboard UI.
 GET /api/v1/chat/ws/:uuid
 ```
 
-Server-Sent Events stream for real-time message updates. Used by the leaderboard UI.
+Server-Sent Events stream for real-time message updates. Used by the leaderboard UI. DMs are redacted based on the viewer's identity (same rules as `chat/sync`).
+
+**Event types:**
+
+| Type | When | Payload |
+|------|------|---------|
+| `initial` | On connect | `{ type: "initial", messages: [...] }` — all messages in the channel (redacted for viewers) |
+| `new_message` | Live | `{ type: "new_message", message: {...} }` — a new message (redacted if DM not for viewer) |
+| `game_ended` | Game finishes (or on connect if already ended) | `{ type: "game_ended", scores: [...], players: [...] }` |
+
+A keepalive ping (`: ping`) is sent every 30 seconds.
 
 ---
 

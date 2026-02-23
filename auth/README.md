@@ -120,13 +120,13 @@ Read route — works for everyone; redaction applied based on identity.
 
 ### `GET /api/chat/ws/:uuid` (SSE stream)
 
-Read route — streaming version of chat sync. Redaction is applied both to the initial message batch and to every live message pushed over the stream.
+Read route — streaming version of chat sync. Redaction is applied both to the initial message batch and to every live message pushed over the stream. A `game_ended` event (with scores and players) is delivered when the game finishes, and also on late connections if the game has already ended.
 
 | Session key | Status | What you see |
 |-------------|--------|--------------|
-| None (viewer) | `200` (stream) | All broadcasts visible; all DMs redacted in real time |
+| None (viewer) | `200` (stream) | All broadcasts visible; all DMs redacted in real time; `game_ended` event when game finishes |
 | Invalid / forged | `401` | — |
-| Valid | `200` (stream) | Your DMs in cleartext; other players' DMs redacted |
+| Valid | `200` (stream) | Your DMs in cleartext; other players' DMs redacted; `game_ended` event when game finishes |
 
 ---
 

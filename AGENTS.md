@@ -126,16 +126,20 @@ It composes a `ChatEngine` instance for all operator/chat message transport.
 
 `ChatEngine` handles:
 - channel message append/indexing
-- visibility filtering (`chatSync` + `challengeSync`)
-- SSE subscription fan-out for chat streams
+- visibility filtering (`chatSync` + `challengeSync`) with automatic redaction of DMs not addressed to the viewer
+- SSE subscription fan-out for chat streams (per-subscriber redaction)
+- structured event broadcasting (`broadcastEvent` / `broadcastChallengeEvent`) for non-message SSE events like `game_ended`
 - challenge-channel helpers (`challenge_{id}`)
 
 ### Types (`types.ts`)
-- `ChatMessage` - Message format for the chat system
+- `ChatMessage` - Message format for the chat system (`channel`, `from`, `to?`, `content`, `index?`, `timestamp`, `type?`, `redacted?`)
 - `ChallengeOperator` / `ChallengeOperatorState` - Interface that challenge operators implement (`join`/`message` are async)
 - `Challenge` - A challenge instance (metadata + operator + invites)
 - `Score` - Security + utility score pair
 - `ChallengeMetadata` - Static challenge info from `challenge.json`
+- `ChallengeMessaging` - Messaging interface injected into challenges (`sendMessage`, `sendChallengeMessage`, `broadcastChallengeEvent?`)
+- `ChallengeFactoryContext` - Context passed to challenge factories (contains `messaging`)
+- `ChallengeFactory` - `(challengeId, options?, context?) => ChallengeOperator`
 
 ### Storage Adapters (`storage/`)
 
@@ -243,14 +247,14 @@ The engine loads challenges dynamically at startup — no central registry file 
 
 The Next.js web frontend. Contains only UI pages and components — no API routes. All `/api/*` requests are proxied to the engine server via Next.js rewrites configured in `next.config.ts`.
 
-Server components fetch challenge metadata directly from the engine via `ENGINE_URL` (defaults to `http://localhost:3001`).
+Server components fetch challenge metadata directly from the engine via `ENGINE_URL` (defaults to `http://localhost:3001`). SSE streams connect directly to the engine via `PUBLIC_ENGINE_URL` (falls back to `ENGINE_URL`) to bypass Next.js proxy stalls.
 
 ### Pages
 - `/` - Home with leaderboard graph
 - `/challenges` - Active challenges (fetches metadata from engine)
 - `/challenges/[name]` - Challenge detail + session list
 - `/challenges/[name]/new` - Create new session
-- `/challenges/[name]/[uuid]` - Live session with chat
+- `/challenges/[name]/[uuid]` - Live session with chat (friendly display names, redacted DM placeholders, game ended panel)
 - `/docs` - Documentation
 
 ## Running the Platform
@@ -272,6 +276,9 @@ cd leaderboard && npm run dev
 # Or with a custom port/URL
 PORT=4000 npm start                          # engine or auth server
 ENGINE_URL=http://localhost:4000 npm run dev  # leaderboard
+
+# If the engine URL differs between server and browser (e.g. Docker)
+PUBLIC_ENGINE_URL=https://engine.example.com ENGINE_URL=http://engine:3001 npm run dev
 ```
 
 ### Engine Endpoints
@@ -301,8 +308,8 @@ See [engine/server/README.md](engine/server/README.md) for the full API referenc
 
 ```bash
 npm test                                                         # run all workspace tests (root script)
-npm run test:engine                                              # engine workspace (57 tests)
-npm run test:auth                                                # auth workspace (19 tests)
+npm run test:engine                                              # engine workspace (67 tests)
+npm run test:auth                                                # auth workspace (27 tests)
 npm run test:challenges                                          # challenges workspace
 
 cd engine && npm test                                              # all tests
@@ -325,12 +332,14 @@ Engine test suites use Node's built-in test runner (`node:test`):
 - **`test/invites.test.ts`** — Invite system tests via `app.request()`. Covers GET/POST invite endpoints, status transitions, isolation between challenges.
 - **`test/http-server.test.ts`** — Real HTTP server routing tests (guards route collisions and `/api/v1` rewrites).
 - **`test/mcp-game.test.ts`** — MCP integration tests using `@modelcontextprotocol/sdk` against a real HTTP server. Covers MCP connection, tool listing, full game flow, error cases.
+- **`test/sse-concurrent.test.ts`** — Concurrent SSE tests. Same-challenge concurrency (multiple viewers, disconnect resilience, `game_ended` broadcast) and cross-challenge concurrency (independent message routing, isolated game endings).
 
 Auth test suite (`auth/test/auth-security.test.ts`):
 - Join signature verification (Ed25519, tampered invite, expired timestamp, garbage signature)
 - Session key validation on message route (garbage key, forged key, wrong challenge, wrong user index)
 - Sync route with viewer mode (no key → 200 redacted, forged key → 401, valid key → unredacted own data)
 - Chat routes (no key → 400, valid key → resolved identity, impersonation blocked)
+- SSE redaction for viewer mode (initial batch DMs redacted, broadcasts pass through, live `new_message` events redacted)
 
 Challenge-local tests live under `challenges/<name>/*.test.ts` and run from the `@arena/challenges` workspace.
 
@@ -371,3 +380,7 @@ Each session uses two channels:
 - **Storage**: In-memory async storage adapters (no database)
 - **Frontend**: Next.js 16, React 19, Tailwind CSS 4
 - **RNG**: Deterministic seeded random via Prando
+
+## Scripts
+
+- **`scripts/demo.sh`** — Two autonomous `claude -p` agents play a PSI challenge against each other. Handles URL resolution, SKILL.md loading, challenge creation, agent orchestration with colored output, and a final summary with chat transcript, guesses, scores, and agent stats.
