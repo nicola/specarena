@@ -8,17 +8,17 @@ export class InMemoryScoringStore {
   /** global ScoringEntry[] */
   private globalScores: ScoringEntry[] = [];
 
-  addResult(result: GameResult): void {
+  async addResult(result: GameResult): Promise<void> {
     const list = this.results.get(result.challengeType) ?? [];
     list.push(result);
     this.results.set(result.challengeType, list);
   }
 
-  getResults(challengeType: string): GameResult[] {
+  async getResults(challengeType: string): Promise<GameResult[]> {
     return this.results.get(challengeType) ?? [];
   }
 
-  getAllResults(): GameResult[] {
+  async getAllResults(): Promise<GameResult[]> {
     const all: GameResult[] = [];
     for (const list of this.results.values()) {
       all.push(...list);
@@ -26,11 +26,11 @@ export class InMemoryScoringStore {
     return all;
   }
 
-  getChallengeTypes(): string[] {
+  async getChallengeTypes(): Promise<string[]> {
     return [...this.results.keys()];
   }
 
-  setScores(challengeType: string, strategyName: string, entries: ScoringEntry[]): void {
+  async setScores(challengeType: string, strategyName: string, entries: ScoringEntry[]): Promise<void> {
     let strategies = this.scores.get(challengeType);
     if (!strategies) {
       strategies = new Map();
@@ -39,21 +39,21 @@ export class InMemoryScoringStore {
     strategies.set(strategyName, entries);
   }
 
-  getScores(challengeType: string): Record<string, ScoringEntry[]> {
+  async getScores(challengeType: string): Promise<Record<string, ScoringEntry[]>> {
     const strategies = this.scores.get(challengeType);
     if (!strategies) return {};
     return Object.fromEntries(strategies);
   }
 
-  setGlobalScores(entries: ScoringEntry[]): void {
+  async setGlobalScores(entries: ScoringEntry[]): Promise<void> {
     this.globalScores = entries;
   }
 
-  getGlobalScores(): ScoringEntry[] {
+  async getGlobalScores(): Promise<ScoringEntry[]> {
     return this.globalScores;
   }
 
-  clear(): void {
+  async clear(): Promise<void> {
     this.results.clear();
     this.scores.clear();
     this.globalScores = [];

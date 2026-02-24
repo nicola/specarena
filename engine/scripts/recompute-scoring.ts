@@ -24,13 +24,13 @@ async function main() {
     }
   }
 
-  scoring.recomputeAll(results);
+  await scoring.recomputeAll(results);
 
   console.log(`Recomputed scoring from ${results.length} completed game(s).`);
-  console.log("Global scores:", JSON.stringify(scoring.getGlobalScoring(), null, 2));
+  console.log("Global scores:", JSON.stringify(await scoring.getGlobalScoring(), null, 2));
 
   for (const entry of config.challenges) {
-    const scores = scoring.getScoring(entry.name);
+    const scores = await scoring.getScoring(entry.name);
     if (Object.keys(scores).length > 0) {
       console.log(`\n${entry.name} scores:`, JSON.stringify(scores, null, 2));
     }

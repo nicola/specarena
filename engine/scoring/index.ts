@@ -34,20 +34,20 @@ export class ScoringModule {
   }
 
   /** Recompute scores for a single challenge type using all applicable strategies. */
-  private recomputeChallenge(challengeType: string): void {
-    const results = this.store.getResults(challengeType);
+  private async recomputeChallenge(challengeType: string): Promise<void> {
+    const results = await this.store.getResults(challengeType);
     const strategyNames = this.getStrategiesForChallenge(challengeType);
 
     for (const name of strategyNames) {
       const strategy = this.strategies[name];
       if (!strategy) continue;
       const entries = strategy.compute(results);
-      this.store.setScores(challengeType, name, entries);
+      await this.store.setScores(challengeType, name, entries);
     }
   }
 
   /** Recompute global scores if a global strategy is configured. */
-  private recomputeGlobal(): void {
+  private async recomputeGlobal(): Promise<void> {
     const globalName = this.config.scoring.global;
     if (!globalName) return;
 
@@ -56,8 +56,8 @@ export class ScoringModule {
 
     // Use the first strategy's scores for each challenge type as input to global
     const perChallenge: Record<string, ScoringEntry[]> = {};
-    for (const challengeType of this.store.getChallengeTypes()) {
-      const scores = this.store.getScores(challengeType);
+    for (const challengeType of await this.store.getChallengeTypes()) {
+      const scores = await this.store.getScores(challengeType);
       const strategyNames = this.getStrategiesForChallenge(challengeType);
       // Use the first strategy's output as the representative for global aggregation
       const firstStrategy = strategyNames[0];
@@ -67,7 +67,7 @@ export class ScoringModule {
     }
 
     const globalEntries = globalStrategy.compute(perChallenge);
-    this.store.setGlobalScores(globalEntries);
+    await this.store.setGlobalScores(globalEntries);
   }
 
   /** Returns true if any player userId appears more than once (self-play). */
@@ -77,33 +77,33 @@ export class ScoringModule {
   }
 
   /** Record a game result and recompute scores. Called at game end. */
-  recordGame(result: GameResult): void {
+  async recordGame(result: GameResult): Promise<void> {
     if (ScoringModule.isSelfPlay(result)) return;
-    this.store.addResult(result);
-    this.recomputeChallenge(result.challengeType);
-    this.recomputeGlobal();
+    await this.store.addResult(result);
+    await this.recomputeChallenge(result.challengeType);
+    await this.recomputeGlobal();
   }
 
   /** Catch-up: clear store and recompute from all provided results. */
-  recomputeAll(results: GameResult[]): void {
-    this.store.clear();
+  async recomputeAll(results: GameResult[]): Promise<void> {
+    await this.store.clear();
     for (const result of results) {
       if (ScoringModule.isSelfPlay(result)) continue;
-      this.store.addResult(result);
+      await this.store.addResult(result);
     }
-    for (const challengeType of this.store.getChallengeTypes()) {
-      this.recomputeChallenge(challengeType);
+    for (const challengeType of await this.store.getChallengeTypes()) {
+      await this.recomputeChallenge(challengeType);
     }
-    this.recomputeGlobal();
+    await this.recomputeGlobal();
   }
 
   /** Get per-challenge scores (all strategies). */
-  getScoring(challengeType: string): Record<string, ScoringEntry[]> {
+  async getScoring(challengeType: string): Promise<Record<string, ScoringEntry[]>> {
     return this.store.getScores(challengeType);
   }
 
   /** Get global scores. */
-  getGlobalScoring(): ScoringEntry[] {
+  async getGlobalScoring(): Promise<ScoringEntry[]> {
     return this.store.getGlobalScores();
   }
 

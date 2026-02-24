@@ -100,7 +100,7 @@ export class ArenaEngine {
                 scores: event.scores as any[],
                 players: event.players as string[],
                 playerIdentities: event.playerIdentities as Record<string, string>,
-              });
+              }).catch((err) => console.error("Scoring recordGame failed:", err));
             }
           },
         }
