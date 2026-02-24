@@ -1,38 +1,38 @@
-import type { ScoringStrategy, GameResult, ScoringEntry } from "@arena/engine/scoring/types";
+import type { ScoringStrategy, GameResult } from "@arena/engine/scoring/types";
+import type { ScoringStorageAdapter } from "@arena/engine/scoring";
+
+interface AverageState {
+  sumSecurity: number;
+  sumUtility: number;
+  count: number;
+}
 
 /** Per-challenge strategy: mean security + utility per player across all their games. */
 export const average: ScoringStrategy = {
   name: "average",
 
-  compute(results: GameResult[]): ScoringEntry[] {
-    const acc = new Map<string, { security: number; utility: number; count: number }>();
+  async update(result: GameResult, store: ScoringStorageAdapter): Promise<void> {
+    for (let i = 0; i < result.players.length; i++) {
+      const playerId = result.playerIdentities[result.players[i]];
+      if (!playerId) continue;
 
-    for (const result of results) {
-      for (let i = 0; i < result.players.length; i++) {
-        const playerId = result.playerIdentities[result.players[i]];
-        if (!playerId) continue;
+      const score = result.scores[i];
+      if (!score) continue;
 
-        const score = result.scores[i];
-        if (!score) continue;
+      const prev = await store.getStrategyState<AverageState>(result.challengeType, this.name, playerId);
+      const state: AverageState = {
+        sumSecurity: (prev?.sumSecurity ?? 0) + score.security,
+        sumUtility: (prev?.sumUtility ?? 0) + score.utility,
+        count: (prev?.count ?? 0) + 1,
+      };
 
-        const entry = acc.get(playerId) ?? { security: 0, utility: 0, count: 0 };
-        entry.security += score.security;
-        entry.utility += score.utility;
-        entry.count += 1;
-        acc.set(playerId, entry);
-      }
-    }
-
-    const entries: ScoringEntry[] = [];
-    for (const [playerId, { security, utility, count }] of acc) {
-      entries.push({
+      await store.setStrategyState(result.challengeType, this.name, playerId, state);
+      await store.setScoreEntry(result.challengeType, this.name, {
         playerId,
-        gamesPlayed: count,
-        security: count > 0 ? security / count : 0,
-        utility: count > 0 ? utility / count : 0,
+        gamesPlayed: state.count,
+        security: state.sumSecurity / state.count,
+        utility: state.sumUtility / state.count,
       });
     }
-
-    return entries;
   },
 };
