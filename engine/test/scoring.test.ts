@@ -43,9 +43,9 @@ describe("ScoringModule", () => {
     scoring = new ScoringModule(testConfig, strategies, globalStrategies);
   });
 
-  it("records a game and produces per-challenge scores", () => {
-    scoring.recordGame(makeGameResult());
-    const scores = scoring.getScoring("psi");
+  it("records a game and produces per-challenge scores", async () => {
+    await scoring.recordGame(makeGameResult());
+    const scores = await scoring.getScoring("psi");
 
     assert.ok(scores["average"], "should have average strategy");
     assert.ok(scores["win-rate"], "should have win-rate strategy");
@@ -66,9 +66,9 @@ describe("ScoringModule", () => {
     assert.equal(bob.utility, 1);
   });
 
-  it("computes win-rate correctly for 2-player games", () => {
-    scoring.recordGame(makeGameResult());
-    const scores = scoring.getScoring("psi");
+  it("computes win-rate correctly for 2-player games", async () => {
+    await scoring.recordGame(makeGameResult());
+    const scores = await scoring.getScoring("psi");
     const wr = scores["win-rate"];
 
     const alice = wr.find((e: ScoringEntry) => e.playerId === "user-alice");
@@ -84,15 +84,15 @@ describe("ScoringModule", () => {
     assert.equal(bob.utility, 1);
   });
 
-  it("handles ties in win-rate as 0.5", () => {
+  it("handles ties in win-rate as 0.5", async () => {
     const game = makeGameResult({
       scores: [
         { security: 0.5, utility: 0.5 },
         { security: 0.5, utility: 0.5 },
       ],
     });
-    scoring.recordGame(game);
-    const wr = scoring.getScoring("psi")["win-rate"];
+    await scoring.recordGame(game);
+    const wr = (await scoring.getScoring("psi"))["win-rate"];
 
     const alice = wr.find((e: ScoringEntry) => e.playerId === "user-alice");
     assert.ok(alice);
@@ -100,15 +100,15 @@ describe("ScoringModule", () => {
     assert.equal(alice.utility, 0.5);
   });
 
-  it("averages across multiple games", () => {
-    scoring.recordGame(makeGameResult({
+  it("averages across multiple games", async () => {
+    await scoring.recordGame(makeGameResult({
       gameId: "game-1",
       scores: [
         { security: 1, utility: 1 },
         { security: 0, utility: 0 },
       ],
     }));
-    scoring.recordGame(makeGameResult({
+    await scoring.recordGame(makeGameResult({
       gameId: "game-2",
       scores: [
         { security: 0, utility: 0 },
@@ -116,7 +116,7 @@ describe("ScoringModule", () => {
       ],
     }));
 
-    const avg = scoring.getScoring("psi")["average"];
+    const avg = (await scoring.getScoring("psi"))["average"];
     const alice = avg.find((e: ScoringEntry) => e.playerId === "user-alice");
     const bob = avg.find((e: ScoringEntry) => e.playerId === "user-bob");
 
@@ -131,9 +131,9 @@ describe("ScoringModule", () => {
     assert.equal(bob.utility, 0.5);
   });
 
-  it("produces global scores", () => {
-    scoring.recordGame(makeGameResult());
-    const global = scoring.getGlobalScoring();
+  it("produces global scores", async () => {
+    await scoring.recordGame(makeGameResult());
+    const global = await scoring.getGlobalScoring();
 
     assert.ok(global.length > 0, "should have global scores");
     const alice = global.find((e: ScoringEntry) => e.playerId === "user-alice");
@@ -141,9 +141,9 @@ describe("ScoringModule", () => {
     assert.equal(alice.gamesPlayed, 1);
   });
 
-  it("global-average aggregates across challenge types", () => {
-    scoring.recordGame(makeGameResult({ challengeType: "psi" }));
-    scoring.recordGame(makeGameResult({
+  it("global-average aggregates across challenge types", async () => {
+    await scoring.recordGame(makeGameResult({ challengeType: "psi" }));
+    await scoring.recordGame(makeGameResult({
       challengeType: "other-challenge",
       gameId: "game-2",
       scores: [
@@ -152,7 +152,7 @@ describe("ScoringModule", () => {
       ],
     }));
 
-    const global = scoring.getGlobalScoring();
+    const global = await scoring.getGlobalScoring();
     const alice = global.find((e: ScoringEntry) => e.playerId === "user-alice");
     assert.ok(alice);
     // psi: security=1, utility=0.8; other-challenge: security=0, utility=0
@@ -162,21 +162,21 @@ describe("ScoringModule", () => {
     assert.equal(alice.gamesPlayed, 2);
   });
 
-  it("recomputeAll clears and recomputes from scratch", () => {
-    scoring.recordGame(makeGameResult());
-    scoring.recordGame(makeGameResult({ gameId: "game-extra" }));
+  it("recomputeAll clears and recomputes from scratch", async () => {
+    await scoring.recordGame(makeGameResult());
+    await scoring.recordGame(makeGameResult({ gameId: "game-extra" }));
 
     // Now recompute with just one game
-    scoring.recomputeAll([makeGameResult()]);
-    const avg = scoring.getScoring("psi")["average"];
+    await scoring.recomputeAll([makeGameResult()]);
+    const avg = (await scoring.getScoring("psi"))["average"];
     const alice = avg.find((e: ScoringEntry) => e.playerId === "user-alice");
     assert.ok(alice);
     assert.equal(alice.gamesPlayed, 1);
   });
 
-  it("challenges without explicit scoring get only defaults", () => {
-    scoring.recordGame(makeGameResult({ challengeType: "other-challenge", gameId: "game-other" }));
-    const scores = scoring.getScoring("other-challenge");
+  it("challenges without explicit scoring get only defaults", async () => {
+    await scoring.recordGame(makeGameResult({ challengeType: "other-challenge", gameId: "game-other" }));
+    const scores = await scoring.getScoring("other-challenge");
     assert.ok(scores["average"], "should have default average strategy");
     assert.ok(!scores["win-rate"], "should NOT have win-rate (not in defaults or challenge config)");
   });
@@ -229,23 +229,23 @@ describe("ScoringModule", () => {
     assert.deepEqual(result.scores, [{ security: 1, utility: 1 }]);
   });
 
-  it("same player against different opponents accumulates correctly", () => {
+  it("same player against different opponents accumulates correctly", async () => {
     // Alice vs Bob
-    scoring.recordGame(makeGameResult({
+    await scoring.recordGame(makeGameResult({
       gameId: "game-1",
       scores: [{ security: 1, utility: 1 }, { security: 0, utility: 0 }],
       players: ["inv_a", "inv_b"],
       playerIdentities: { inv_a: "user-alice", inv_b: "user-bob" },
     }));
     // Alice vs Charlie (alice reuses different invite)
-    scoring.recordGame(makeGameResult({
+    await scoring.recordGame(makeGameResult({
       gameId: "game-2",
       scores: [{ security: 0, utility: 0 }, { security: 1, utility: 1 }],
       players: ["inv_c", "inv_d"],
       playerIdentities: { inv_c: "user-alice", inv_d: "user-charlie" },
     }));
 
-    const avg = scoring.getScoring("psi")["average"];
+    const avg = (await scoring.getScoring("psi"))["average"];
     const alice = avg.find((e: ScoringEntry) => e.playerId === "user-alice");
     const bob = avg.find((e: ScoringEntry) => e.playerId === "user-bob");
     const charlie = avg.find((e: ScoringEntry) => e.playerId === "user-charlie");
@@ -262,37 +262,37 @@ describe("ScoringModule", () => {
     assert.equal(charlie.gamesPlayed, 1);
   });
 
-  it("skips players with no identity mapping", () => {
-    scoring.recordGame(makeGameResult({
+  it("skips players with no identity mapping", async () => {
+    await scoring.recordGame(makeGameResult({
       players: ["inv_a", "inv_b"],
       playerIdentities: { inv_a: "user-alice" }, // inv_b has no mapping
     }));
 
-    const avg = scoring.getScoring("psi")["average"];
+    const avg = (await scoring.getScoring("psi"))["average"];
     assert.equal(avg.length, 1, "only alice should appear");
     assert.equal(avg[0].playerId, "user-alice");
   });
 
-  it("getScoring returns empty object for unknown challenge type", () => {
-    const scores = scoring.getScoring("nonexistent");
+  it("getScoring returns empty object for unknown challenge type", async () => {
+    const scores = await scoring.getScoring("nonexistent");
     assert.deepEqual(scores, {});
   });
 
-  it("getGlobalScoring returns empty array with no games", () => {
-    assert.deepEqual(scoring.getGlobalScoring(), []);
+  it("getGlobalScoring returns empty array with no games", async () => {
+    assert.deepEqual(await scoring.getGlobalScoring(), []);
   });
 
-  it("skips self-play games where same userId is on both sides", () => {
-    scoring.recordGame(makeGameResult({
+  it("skips self-play games where same userId is on both sides", async () => {
+    await scoring.recordGame(makeGameResult({
       players: ["inv_a", "inv_b"],
       playerIdentities: { inv_a: "user-alice", inv_b: "user-alice" },
     }));
-    assert.deepEqual(scoring.getScoring("psi"), {});
-    assert.deepEqual(scoring.getGlobalScoring(), []);
+    assert.deepEqual(await scoring.getScoring("psi"), {});
+    assert.deepEqual(await scoring.getGlobalScoring(), []);
   });
 
-  it("recomputeAll also skips self-play games", () => {
-    scoring.recomputeAll([
+  it("recomputeAll also skips self-play games", async () => {
+    await scoring.recomputeAll([
       makeGameResult({
         gameId: "self",
         players: ["inv_a", "inv_b"],
@@ -304,7 +304,7 @@ describe("ScoringModule", () => {
         playerIdentities: { inv_c: "user-alice", inv_d: "user-bob" },
       }),
     ]);
-    const avg = scoring.getScoring("psi")["average"];
+    const avg = (await scoring.getScoring("psi"))["average"];
     const alice = avg.find((e: ScoringEntry) => e.playerId === "user-alice");
     assert.ok(alice);
     assert.equal(alice.gamesPlayed, 1, "only the legit game should count");
@@ -352,13 +352,16 @@ describe("Scoring integration via engine", () => {
 
     assert.equal(challenge.instance.state.gameEnded, true);
 
+    // Give async scoring a tick to complete
+    await new Promise((r) => setTimeout(r, 50));
+
     // Scoring should have been updated
     assert.ok(defaultEngine.scoring, "scoring module should exist");
-    const scores = defaultEngine.scoring!.getScoring("psi");
+    const scores = await defaultEngine.scoring!.getScoring("psi");
     assert.ok(scores["average"], "should have average scores");
     assert.ok(scores["win-rate"], "should have win-rate scores");
 
-    const global = defaultEngine.scoring!.getGlobalScoring();
+    const global = await defaultEngine.scoring!.getGlobalScoring();
     assert.ok(global.length > 0, "should have global scores");
   });
 
@@ -397,6 +400,9 @@ describe("Scoring integration via engine", () => {
       await defaultEngine.challengeMessage(challengeId, invites[1], "guess", intersection.join(", "));
       assert.equal(challenge.instance.state.gameEnded, true);
     }
+
+    // Give async scoring a tick to complete
+    await new Promise((r) => setTimeout(r, 50));
 
     // Check per-challenge scores via API
     const psiRes = await request("GET", "/api/scoring/psi");

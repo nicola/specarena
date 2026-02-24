@@ -5,20 +5,20 @@ export function createScoringRoutes(engine: ArenaEngine): Hono {
   const app = new Hono();
 
   // GET /api/scoring — global scoring
-  app.get("/api/scoring", (c) => {
+  app.get("/api/scoring", async (c) => {
     if (!engine.scoring) {
       return c.json({ error: "Scoring not configured" }, 404);
     }
-    return c.json(engine.scoring.getGlobalScoring());
+    return c.json(await engine.scoring.getGlobalScoring());
   });
 
   // GET /api/scoring/:challengeType — per-challenge scoring (all strategies)
-  app.get("/api/scoring/:challengeType", (c) => {
+  app.get("/api/scoring/:challengeType", async (c) => {
     if (!engine.scoring) {
       return c.json({ error: "Scoring not configured" }, 404);
     }
     const challengeType = c.req.param("challengeType");
-    return c.json(engine.scoring.getScoring(challengeType));
+    return c.json(await engine.scoring.getScoring(challengeType));
   });
 
   return app;
