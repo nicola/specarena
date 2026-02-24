@@ -66,6 +66,7 @@ export interface ChallengeMetadata {
 export interface ChallengeConfig {
   name: string;
   options?: Record<string, unknown>;
+  scoring?: string[];
 }
 
 export interface ChallengeMessaging {
