@@ -75,8 +75,35 @@ export default function LeaderboardGraph({ data = mockData }: LeaderboardGraphPr
       if (!dominated) paretoSet.add(point.name);
     }
 
-    // Only label Pareto frontier points, with nudged positions to avoid overlap
-    const labeled = data.filter((d) => paretoSet.has(d.name));
+    // Label frontier points + near-frontier points
+    // For each non-frontier point, measure how far it is from the frontier line.
+    // The frontier forms a staircase; distance = min over frontier segments.
+    const frontierPoints = data
+      .filter((d) => paretoSet.has(d.name))
+      .sort((a, b) => b.securityPolicy - a.securityPolicy || b.utility - a.utility);
+
+    const labelSet = new Set(paretoSet);
+
+    // Compute how "dominated" each non-frontier point is:
+    // the smallest amount any frontier point beats it by in BOTH dimensions
+    for (const point of data) {
+      if (labelSet.has(point.name)) continue;
+      // Find the closest frontier point by Euclidean distance
+      let minDist = Infinity;
+      for (const fp of frontierPoints) {
+        const dist = Math.hypot(
+          fp.securityPolicy - point.securityPolicy,
+          fp.utility - point.utility
+        );
+        minDist = Math.min(minDist, dist);
+      }
+      // Label if within 0.9 score units of any frontier point
+      if (minDist <= 0.9) {
+        labelSet.add(point.name);
+      }
+    }
+
+    const labeled = data.filter((d) => labelSet.has(d.name));
     const labelPositions = labeled.map((d) => ({
       ...d,
       dx: 0,
