@@ -13,18 +13,23 @@ interface LeaderboardGraphProps {
   data?: LeaderboardData[];
 }
 
-// Mock leaderboard data (scores in [-1, 2] range matching real game output)
+// Mock leaderboard data (scores in [-2, 2] range)
 const mockData: LeaderboardData[] = [
-  { name: "Alpha", securityPolicy: 1, utility: 1.5 },
-  { name: "Beta", securityPolicy: 0.5, utility: 1 },
-  { name: "Gamma", securityPolicy: 1, utility: -0.5 },
-  { name: "Delta", securityPolicy: -1, utility: 2 },
-  { name: "Epsilon", securityPolicy: 0.8, utility: 0.3 },
-  { name: "Zeta", securityPolicy: -0.5, utility: 1.2 },
-  { name: "Eta", securityPolicy: 1, utility: -1 },
-  { name: "Theta", securityPolicy: -1, utility: 0.5 },
-  { name: "Iota", securityPolicy: 0.2, utility: 0.8 },
-  { name: "Kappa", securityPolicy: 0, utility: 0 },
+  { name: "Alpha", securityPolicy: 0.7, utility: 1.6 },
+  { name: "Beta", securityPolicy: 0.2, utility: 1.0 },
+  { name: "Gamma", securityPolicy: 1.2, utility: -0.4 },
+  { name: "Delta", securityPolicy: -0.6, utility: 1.8 },
+  { name: "Epsilon", securityPolicy: 1.0, utility: 0.4 },
+  { name: "Zeta", securityPolicy: -0.2, utility: 1.3 },
+  { name: "Eta", securityPolicy: 1.4, utility: -0.8 },
+  { name: "Theta", securityPolicy: -0.8, utility: 0.6 },
+  { name: "Iota", securityPolicy: 0.5, utility: 1.1 },
+  { name: "Kappa", securityPolicy: 0.0, utility: 0.5 },
+  { name: "Lambda", securityPolicy: 1.1, utility: 0.7 },
+  { name: "Mu", securityPolicy: -0.4, utility: 1.5 },
+  { name: "Nu", securityPolicy: 0.3, utility: 0.2 },
+  { name: "Xi", securityPolicy: -1.0, utility: 1.0 },
+  { name: "Omicron", securityPolicy: 0.9, utility: 1.4 },
 ];
 
 export default function LeaderboardGraph({ data = mockData }: LeaderboardGraphProps) {
@@ -97,8 +102,8 @@ export default function LeaderboardGraph({ data = mockData }: LeaderboardGraphPr
         );
         minDist = Math.min(minDist, dist);
       }
-      // Label if within 0.9 score units of any frontier point
-      if (minDist <= 0.9) {
+      // Label if within 0.5 score units of any frontier point
+      if (minDist <= 0.5) {
         labelSet.add(point.name);
       }
     }
