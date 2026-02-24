@@ -13,23 +13,18 @@ interface LeaderboardGraphProps {
   data?: LeaderboardData[];
 }
 
-// Mock leaderboard data
+// Mock leaderboard data (scores in [-1, 2] range matching real game output)
 const mockData: LeaderboardData[] = [
-  { name: "Alpha", securityPolicy: 85, utility: 92 },
-  { name: "Beta", securityPolicy: 78, utility: 88 },
-  { name: "Gamma", securityPolicy: 92, utility: 75 },
-  { name: "Delta", securityPolicy: 65, utility: 95 },
-  { name: "Epsilon", securityPolicy: 88, utility: 82 },
-  { name: "Zeta", securityPolicy: 72, utility: 90 },
-  { name: "Eta", securityPolicy: 95, utility: 70 },
-  { name: "Theta", securityPolicy: 60, utility: 85 },
-  { name: "Iota", securityPolicy: 82, utility: 88 },
-  { name: "Kappa", securityPolicy: 75, utility: 80 },
-  { name: "Lambda", securityPolicy: 90, utility: 85 },
-  { name: "Mu", securityPolicy: 68, utility: 92 },
-  { name: "Nu", securityPolicy: 80, utility: 78 },
-  { name: "Xi", securityPolicy: 55, utility: 88 },
-  { name: "Omicron", securityPolicy: 88, utility: 90 },
+  { name: "Alpha", securityPolicy: 1, utility: 1.5 },
+  { name: "Beta", securityPolicy: 0.5, utility: 1 },
+  { name: "Gamma", securityPolicy: 1, utility: -0.5 },
+  { name: "Delta", securityPolicy: -1, utility: 2 },
+  { name: "Epsilon", securityPolicy: 0.8, utility: 0.3 },
+  { name: "Zeta", securityPolicy: -0.5, utility: 1.2 },
+  { name: "Eta", securityPolicy: 1, utility: -1 },
+  { name: "Theta", securityPolicy: -1, utility: 0.5 },
+  { name: "Iota", securityPolicy: 0.2, utility: 0.8 },
+  { name: "Kappa", securityPolicy: 0, utility: 0 },
 ];
 
 export default function LeaderboardGraph({ data = mockData }: LeaderboardGraphProps) {
@@ -40,23 +35,18 @@ export default function LeaderboardGraph({ data = mockData }: LeaderboardGraphPr
     const container = plotRef.current;
     if (!container) return;
 
-    // Function to calculate and update plot width
     const updateWidth = () => {
       const containerWidth = container.parentElement?.clientWidth || 800;
-      // Account for padding (p-8 = 2rem = 32px on each side = 64px total)
       const availableWidth = Math.max(400, containerWidth);
       setWidth(availableWidth);
     };
 
-    // Initial width calculation
     updateWidth();
 
-    // Use ResizeObserver to watch for container size changes
     const resizeObserver = new ResizeObserver(() => {
       updateWidth();
     });
 
-    // Observe the parent container
     if (container.parentElement) {
       resizeObserver.observe(container.parentElement);
     }
@@ -70,8 +60,57 @@ export default function LeaderboardGraph({ data = mockData }: LeaderboardGraphPr
     const container = plotRef.current;
     if (!container) return;
 
-    // Clear any existing content first
     container.innerHTML = "";
+
+    // Compute Pareto frontier: points not dominated in both security AND utility
+    const paretoSet = new Set<string>();
+    for (const point of data) {
+      const dominated = data.some(
+        (other) =>
+          other !== point &&
+          other.securityPolicy >= point.securityPolicy &&
+          other.utility >= point.utility &&
+          (other.securityPolicy > point.securityPolicy || other.utility > point.utility)
+      );
+      if (!dominated) paretoSet.add(point.name);
+    }
+
+    // Only label Pareto frontier points, with nudged positions to avoid overlap
+    const labeled = data.filter((d) => paretoSet.has(d.name));
+    const labelPositions = labeled.map((d) => ({
+      ...d,
+      dx: 0,
+      dy: -12,
+    }));
+
+    // Simple overlap avoidance: sort by position and nudge colliding labels
+    const pixelsPerUnitX = width / 4; // domain is [-2,2] = 4 units
+    const pixelsPerUnitY = 400 / 4;
+    const minDistPx = 14; // min vertical pixel distance between labels
+
+    labelPositions.sort((a, b) => {
+      const ax = a.securityPolicy * pixelsPerUnitX;
+      const ay = a.utility * pixelsPerUnitY;
+      const bx = b.securityPolicy * pixelsPerUnitX;
+      const by = b.utility * pixelsPerUnitY;
+      return ax - bx || by - ay;
+    });
+
+    for (let i = 1; i < labelPositions.length; i++) {
+      for (let j = 0; j < i; j++) {
+        const a = labelPositions[j];
+        const b = labelPositions[i];
+        const dxPx = Math.abs(
+          (b.securityPolicy - a.securityPolicy) * pixelsPerUnitX + b.dx - a.dx
+        );
+        const dyPx = Math.abs(
+          (b.utility - a.utility) * pixelsPerUnitY + b.dy - a.dy
+        );
+        if (dxPx < 60 && dyPx < minDistPx) {
+          b.dy = a.dy - minDistPx;
+        }
+      }
+    }
 
     const chart = Plot.plot({
       width: width,
@@ -82,39 +121,43 @@ export default function LeaderboardGraph({ data = mockData }: LeaderboardGraphPr
         fontFamily: "var(--font-jost), Jost, sans-serif",
       },
       x: {
-        label: "Security Policy",
-        domain: [40, 100],
-        ticks: 10,
+        label: "Security",
+        domain: [-2, 2],
+        ticks: 5,
       },
       y: {
         label: "Utility",
-        domain: [40, 100],
+        domain: [-2, 2],
         ticks: 5,
       },
       marks: [
+        // All points as dots
         Plot.dot(data, {
           x: "securityPolicy",
           y: "utility",
-          fill: "#000",
-          r: 4,
+          fill: (d) => paretoSet.has(d.name) ? "#000" : "#a1a1aa",
+          r: (d) => paretoSet.has(d.name) ? 5 : 3,
           tip: {
             format: {
               title: (d) => d.name,
-              // x: (d) => `Security Policy: ${d}`,
-              // y: (d) => `Utility: ${d}`,
+              r: false,
             },
           },
         }),
-        Plot.text(data, {
-          x: "securityPolicy",
-          y: "utility",
-          text: "name",
-          dx: 0,
-          dy: -15,
-          fontSize: 10,
-          fill: "#000",
-          textAnchor: "middle",
-        }),
+        // Labels only for Pareto frontier points
+        ...labelPositions.map((d) =>
+          Plot.text([d], {
+            x: "securityPolicy",
+            y: "utility",
+            text: "name",
+            dx: d.dx,
+            dy: d.dy,
+            fontSize: 10,
+            fill: "#000",
+            fontWeight: "600",
+            textAnchor: "middle",
+          })
+        ),
       ],
     });
 

@@ -9,7 +9,8 @@
     "test:engine": "npm run test --workspace @arena/engine",
     "test:challenges": "npm run test --workspace @arena/challenges",
     "test:auth": "npm run test --workspace @arena/auth",
-    "test:leaderboard": "npm run test --workspace @arena/leaderboard --if-present"
+    "test:leaderboard": "npm run test --workspace @arena/leaderboard --if-present",
+    "test:scoring": "npm run test --workspace @arena/scoring"
   },
   "workspaces": ["engine", "challenges", "leaderboard", "auth", "scoring"]
 }

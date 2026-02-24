@@ -5,8 +5,12 @@
   "exports": {
     ".": "./index.ts"
   },
+  "scripts": {
+    "test": "node --import tsx --test --test-force-exit test/**/*.test.ts"
+  },
   "dependencies": {},
   "devDependencies": {
+    "tsx": "^4.19.4",
     "typescript": "^5"
   }
 }

@@ -18,9 +18,9 @@ async function fetchGlobalScoring() {
     if (!res.ok) return [];
     const data: ScoringEntry[] = await res.json();
     return data.map((entry) => ({
-      name: entry.playerId,
-      securityPolicy: Math.round(entry.security * 100),
-      utility: Math.round(entry.utility * 100),
+      name: entry.playerId.slice(0, 8),
+      securityPolicy: entry.security,
+      utility: entry.utility,
     }));
   } catch {
     return [];
