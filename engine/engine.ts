@@ -40,6 +40,19 @@ export class ArenaEngine {
         const challenge = await this.getChallenge(challengeId);
         return challenge?.instance?.state?.gameEnded ?? false;
       },
+      onChallengeEvent: async (challengeId, event) => {
+        if (event.type !== "game_ended" || !this.scoring) return;
+        const challenge = await this.getChallenge(challengeId);
+        if (!challenge) return;
+        this.scoring.recordGame({
+          gameId: challengeId,
+          challengeType: challenge.challengeType,
+          completedAt: Date.now(),
+          scores: event.scores as any[],
+          players: event.players as string[],
+          playerIdentities: event.playerIdentities as Record<string, string>,
+        }).catch((err) => console.error("Scoring recordGame failed:", err));
+      },
     });
   }
 
@@ -82,31 +95,7 @@ export class ArenaEngine {
     }
 
     const options = this.challengeOptions.get(challengeType);
-
-    // Wrap messaging to hook game_ended events for scoring
-    const scoring = this.scoring;
-    const messaging = scoring
-      ? {
-          ...this.chat,
-          sendMessage: this.chat.sendMessage.bind(this.chat),
-          sendChallengeMessage: this.chat.sendChallengeMessage.bind(this.chat),
-          broadcastChallengeEvent: (challengeId: string, event: Record<string, unknown>) => {
-            this.chat.broadcastChallengeEvent(challengeId, event);
-            if (event.type === "game_ended") {
-              scoring.recordGame({
-                gameId: challengeId,
-                challengeType,
-                completedAt: Date.now(),
-                scores: event.scores as any[],
-                players: event.players as string[],
-                playerIdentities: event.playerIdentities as Record<string, string>,
-              }).catch((err) => console.error("Scoring recordGame failed:", err));
-            }
-          },
-        }
-      : this.chat;
-
-    const instance = factory(id, options, { messaging });
+    const instance = factory(id, options, { messaging: this.chat });
 
     const challenge: Challenge = {
       id,
