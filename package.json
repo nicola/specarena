@@ -11,5 +11,5 @@
     "test:auth": "npm run test --workspace @arena/auth",
     "test:leaderboard": "npm run test --workspace @arena/leaderboard --if-present"
   },
-  "workspaces": ["engine", "challenges", "leaderboard", "auth"]
+  "workspaces": ["engine", "challenges", "leaderboard", "auth", "scoring"]
 }

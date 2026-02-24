@@ -11,9 +11,12 @@ import {
 } from "./types";
 import { ChatEngine, createChatEngine } from "./chat/ChatEngine";
 import { ArenaStorageAdapter, InMemoryArenaStorageAdapter } from "./storage/InMemoryArenaStorageAdapter";
+import { ScoringModule } from "./scoring/index";
+
 export interface EngineOptions {
   storageAdapter?: ArenaStorageAdapter;
   chatEngine?: ChatEngine;
+  scoring?: ScoringModule;
 }
 
 export class ArenaEngine {
@@ -22,12 +25,14 @@ export class ArenaEngine {
   private readonly challengeOptions: Map<string, Record<string, unknown>>;
   private readonly challengeMetadataMap: Map<string, ChallengeMetadata>;
   readonly chat: ChatEngine;
+  scoring: ScoringModule | null;
 
   constructor(options: EngineOptions = {}) {
     this.storageAdapter = options.storageAdapter ?? new InMemoryArenaStorageAdapter();
     this.challengeFactories = new Map<string, ChallengeFactory>();
     this.challengeOptions = new Map<string, Record<string, unknown>>();
     this.challengeMetadataMap = new Map<string, ChallengeMetadata>();
+    this.scoring = options.scoring ?? null;
     this.chat = options.chatEngine ?? createChatEngine({
       isChannelRevealed: async (channel) => {
         const challengeId = fromChallengeChannel(channel);
@@ -77,9 +82,31 @@ export class ArenaEngine {
     }
 
     const options = this.challengeOptions.get(challengeType);
-    const instance = factory(id, options, {
-      messaging: this.chat,
-    });
+
+    // Wrap messaging to hook game_ended events for scoring
+    const scoring = this.scoring;
+    const messaging = scoring
+      ? {
+          ...this.chat,
+          sendMessage: this.chat.sendMessage.bind(this.chat),
+          sendChallengeMessage: this.chat.sendChallengeMessage.bind(this.chat),
+          broadcastChallengeEvent: (challengeId: string, event: Record<string, unknown>) => {
+            this.chat.broadcastChallengeEvent(challengeId, event);
+            if (event.type === "game_ended") {
+              scoring.recordGame({
+                gameId: challengeId,
+                challengeType,
+                completedAt: Date.now(),
+                scores: event.scores as any[],
+                players: event.players as string[],
+                playerIdentities: event.playerIdentities as Record<string, string>,
+              });
+            }
+          },
+        }
+      : this.chat;
+
+    const instance = factory(id, options, { messaging });
 
     const challenge: Challenge = {
       id,

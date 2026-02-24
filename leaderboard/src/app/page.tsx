@@ -3,7 +3,32 @@ import ChallengeCard from "./components/ChallengeCard";
 import Link from "next/link";
 import { ArrowRightIcon } from "@heroicons/react/24/outline";
 
-export default function Home() {
+const engineUrl = process.env.ENGINE_URL || "http://localhost:3001";
+
+interface ScoringEntry {
+  playerId: string;
+  gamesPlayed: number;
+  security: number;
+  utility: number;
+}
+
+async function fetchGlobalScoring() {
+  try {
+    const res = await fetch(`${engineUrl}/api/scoring`, { cache: "no-store" });
+    if (!res.ok) return [];
+    const data: ScoringEntry[] = await res.json();
+    return data.map((entry) => ({
+      name: entry.playerId,
+      securityPolicy: Math.round(entry.security * 100),
+      utility: Math.round(entry.utility * 100),
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export default async function Home() {
+  const leaderboardData = await fetchGlobalScoring();
 
   return (
     <>
@@ -25,7 +50,7 @@ export default function Home() {
         </div>
         {/* Leaderboard Graph */}
         <div className="max-w-4xl mx-auto border border-zinc-900 p-8">
-          <LeaderboardGraph />
+          <LeaderboardGraph data={leaderboardData.length > 0 ? leaderboardData : undefined} />
         </div>
       </section>
     </>
