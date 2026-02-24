@@ -4,6 +4,7 @@ import { ChatStorageAdapter, InMemoryChatStorageAdapter } from "../storage/InMem
 export interface ChatEngineOptions {
   storageAdapter?: ChatStorageAdapter;
   isChannelRevealed?: (channel: string) => Promise<boolean>;
+  onChallengeEvent?: (challengeId: string, event: Record<string, unknown>) => void | Promise<void>;
 }
 
 interface ChannelSubscriber {
@@ -14,12 +15,14 @@ interface ChannelSubscriber {
 export class ChatEngine {
   private readonly storageAdapter: ChatStorageAdapter;
   private readonly isChannelRevealed?: (channel: string) => Promise<boolean>;
+  private readonly onChallengeEvent?: (challengeId: string, event: Record<string, unknown>) => void | Promise<void>;
   // TODO in the future separate to another service and persist this on db
   private readonly channelSubscribers: Map<string, Set<ChannelSubscriber>>;
 
   constructor(options: ChatEngineOptions = {}) {
     this.storageAdapter = options.storageAdapter ?? new InMemoryChatStorageAdapter();
     this.isChannelRevealed = options.isChannelRevealed;
+    this.onChallengeEvent = options.onChallengeEvent;
     this.channelSubscribers = new Map<string, Set<ChannelSubscriber>>();
   }
 
@@ -133,6 +136,7 @@ export class ChatEngine {
   broadcastChallengeEvent(challengeId: string, event: Record<string, unknown>): void {
     this.broadcastEvent(challengeId, event);
     this.broadcastEvent(toChallengeChannel(challengeId), event);
+    this.onChallengeEvent?.(challengeId, event);
   }
 
   async sendChallengeMessage(challengeId: string, from: string, content: string, to?: string | null): Promise<ChatMessage> {
