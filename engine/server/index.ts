@@ -2,7 +2,10 @@ import { readFileSync } from "fs";
 import { join } from "path";
 import { Hono } from "hono";
 import { ArenaEngine, defaultEngine } from "../engine";
-import { ChallengeConfig, ChallengeFactory, ChallengeMetadata } from "../types";
+import { ChallengeFactory, ChallengeMetadata } from "../types";
+import { ScoringModule } from "../scoring/index";
+import type { EngineConfig } from "../scoring/types";
+import { strategies, globalStrategies } from "@arena/scoring";
 import { createArenaHandler } from "./mcp/arena";
 import { createChatHandler } from "./mcp/chat";
 import { createChallengeRoutes } from "./routes/challenges";
@@ -10,38 +13,49 @@ import { createInviteRoutes } from "./routes/invites";
 import { createChatRoutes } from "./routes/chat";
 import { createArenaRoutes } from "./routes/arena";
 import { createResolveIdentity } from "./routes/identity";
+import { createScoringRoutes } from "./routes/scoring";
 
 export { createArenaRoutes } from "./routes/arena";
 export { createChatRoutes } from "./routes/chat";
 export { createChallengeRoutes } from "./routes/challenges";
 export { createInviteRoutes } from "./routes/invites";
 export { createResolveIdentity } from "./routes/identity";
+export { createScoringRoutes } from "./routes/scoring";
 
-export function registerChallengesFromConfig(engine: ArenaEngine): void {
-  const configs: ChallengeConfig[] = JSON.parse(
-    readFileSync(join(__dirname, "..", "challenges.json"), "utf-8")
+export function loadConfig(): EngineConfig {
+  return JSON.parse(
+    readFileSync(join(__dirname, "..", "config.json"), "utf-8")
   );
+}
 
+export function registerChallengesFromConfig(engine: ArenaEngine, config?: EngineConfig): void {
+  const configs = config ?? loadConfig();
   const challengesDir = join(__dirname, "..", "..", "challenges");
 
-  for (const config of configs) {
+  for (const entry of configs.challenges) {
     const metadata: ChallengeMetadata = JSON.parse(
-      readFileSync(join(challengesDir, config.name, "challenge.json"), "utf-8")
+      readFileSync(join(challengesDir, entry.name, "challenge.json"), "utf-8")
     );
-    engine.registerChallengeMetadata(config.name, metadata);
+    engine.registerChallengeMetadata(entry.name, metadata);
 
     // Dynamic import: each challenge exports a createChallenge factory
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const mod = require(join(challengesDir, config.name, "index.ts")) as { createChallenge: ChallengeFactory };
+    const mod = require(join(challengesDir, entry.name, "index.ts")) as { createChallenge: ChallengeFactory };
     if (mod.createChallenge) {
-      engine.registerChallengeFactory(config.name, mod.createChallenge, config.options);
+      engine.registerChallengeFactory(entry.name, mod.createChallenge, entry.options);
     }
   }
 }
 
 export function createApp(engine: ArenaEngine = defaultEngine, options?: { mcp?: boolean }): Hono {
   const mcp = options?.mcp ?? true;
-  registerChallengesFromConfig(engine);
+
+  // Load config and initialize scoring
+  const config = loadConfig();
+  if (!engine.scoring) {
+    engine.scoring = new ScoringModule(config, strategies, globalStrategies);
+  }
+  registerChallengesFromConfig(engine, config);
   const app = new Hono();
 
   // Health check (before any middleware)
@@ -78,6 +92,7 @@ export function createApp(engine: ArenaEngine = defaultEngine, options?: { mcp?:
   app.route("/", createInviteRoutes(engine));
   app.route("/", createChatRoutes(engine));
   app.route("/", createArenaRoutes(engine));
+  app.route("/", createScoringRoutes(engine));
 
   // Mount MCP handlers
   if (mcp) {

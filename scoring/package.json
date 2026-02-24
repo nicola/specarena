@@ -1,0 +1,12 @@
+{
+  "name": "@arena/scoring",
+  "version": "0.1.0",
+  "private": true,
+  "exports": {
+    ".": "./index.ts"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5"
+  }
+}
