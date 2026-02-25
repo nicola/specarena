@@ -10,7 +10,7 @@ function parseSet(content: string): Set<number> {
 }
 
 function createPsiWithChat(challengeId: string) {
-  const chat = createChatEngine({ storageAdapter: new InMemoryChatStorageAdapter() });
+  const chat = createChatEngine({ storageAdapter: new InMemoryChatStorageAdapter(), isChannelRevealed: async () => false });
   const operator = createChallenge(challengeId, undefined, { messaging: chat });
   return { operator, chat };
 }

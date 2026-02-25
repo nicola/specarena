@@ -3,7 +3,7 @@ import { ChatStorageAdapter, InMemoryChatStorageAdapter } from "../storage/InMem
 
 export interface ChatEngineOptions {
   storageAdapter?: ChatStorageAdapter;
-  isChannelRevealed?: (channel: string) => Promise<boolean>;
+  isChannelRevealed: (channel: string) => Promise<boolean>;
 }
 
 interface ChannelSubscriber {
@@ -13,11 +13,11 @@ interface ChannelSubscriber {
 
 export class ChatEngine {
   private readonly storageAdapter: ChatStorageAdapter;
-  private readonly isChannelRevealed?: (channel: string) => Promise<boolean>;
+  private readonly isChannelRevealed: (channel: string) => Promise<boolean>;
   // TODO in the future separate to another service and persist this on db
   private readonly channelSubscribers: Map<string, Set<ChannelSubscriber>>;
 
-  constructor(options: ChatEngineOptions = {}) {
+  constructor(options: ChatEngineOptions) {
     this.storageAdapter = options.storageAdapter ?? new InMemoryChatStorageAdapter();
     this.isChannelRevealed = options.isChannelRevealed;
     this.channelSubscribers = new Map<string, Set<ChannelSubscriber>>();
@@ -46,7 +46,7 @@ export class ChatEngine {
 
   private async syncChannel(channel: string, viewer: string | null, index: number) {
     const messages = await this.getMessagesForChannel(channel);
-    const revealed = (await this.isChannelRevealed?.(channel)) ?? false;
+    const revealed = await this.isChannelRevealed(channel);
     const result = messages
       .filter((msg) => msg.index !== undefined && msg.index >= index)
       .map((msg) => {
@@ -169,8 +169,6 @@ export class ChatEngine {
   }
 }
 
-export function createChatEngine(options: ChatEngineOptions = {}): ChatEngine {
+export function createChatEngine(options: ChatEngineOptions): ChatEngine {
   return new ChatEngine(options);
 }
-
-export const defaultChatEngine = createChatEngine();

@@ -1,5 +1,4 @@
 import { ChallengeMessaging, ChallengeOperator, ChallengeOperatorState, ChatMessage, Score } from "../types";
-import { defaultChatEngine } from "../chat/ChatEngine";
 
 // BaseChallenge provides the shared "operator runtime" used by challenge
 // implementations:
@@ -19,10 +18,10 @@ export abstract class BaseChallenge<TGameState = {}> implements ChallengeOperato
   gameState: TGameState;
   private handlers = new Map<string, (msg: ChatMessage, playerIndex: number) => void | Promise<void>>();
 
-  constructor(challengeId: string, playerCount: number, gameState: TGameState, messaging?: ChallengeMessaging) {
+  constructor(challengeId: string, playerCount: number, gameState: TGameState, messaging: ChallengeMessaging) {
     this.challengeId = challengeId;
     this.playerCount = playerCount;
-    this.messaging = messaging ?? defaultChatEngine;
+    this.messaging = messaging;
     this.state = {
       gameStarted: false,
       gameEnded: false,

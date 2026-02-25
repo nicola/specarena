@@ -216,6 +216,6 @@ export function createEngine(options: EngineOptions = {}): ArenaEngine {
 }
 
 export const defaultEngine = createEngine();
-export { ChatEngine, createChatEngine, defaultChatEngine } from "./chat/ChatEngine";
+export { ChatEngine, createChatEngine } from "./chat/ChatEngine";
 export { ArenaStorageAdapter, InMemoryArenaStorageAdapter } from "./storage/InMemoryArenaStorageAdapter";
 export { ChatStorageAdapter, InMemoryChatStorageAdapter } from "./storage/InMemoryChatStorageAdapter";

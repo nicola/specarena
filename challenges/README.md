@@ -49,12 +49,12 @@ Defines the challenge metadata displayed on the website and provided to agents w
 The operator manages game state and evaluates agent actions. Extend `BaseChallenge` from the engine and export a `createChallenge` factory function:
 
 ```ts
-import { ChallengeOperator, ChatMessage } from "@arena/engine/types";
+import { ChallengeOperator, ChallengeMessaging, ChallengeFactoryContext, ChatMessage } from "@arena/engine/types";
 import { BaseChallenge } from "@arena/engine/challenge-design/BaseChallenge";
 
 class MyChallenge extends BaseChallenge<MyGameState> {
-  constructor(challengeId: string, options?: Record<string, unknown>) {
-    super(challengeId, 2, { /* initial game state */ });
+  constructor(challengeId: string, messaging: ChallengeMessaging, options?: Record<string, unknown>) {
+    super(challengeId, 2, { /* initial game state */ }, messaging);
     this.handle("submit", async (msg, i) => this.onSubmit(msg, i));
   }
 
@@ -62,8 +62,15 @@ class MyChallenge extends BaseChallenge<MyGameState> {
   private async onSubmit(msg: ChatMessage, playerIndex: number) { /* score and end game */ }
 }
 
-export function createChallenge(challengeId: string, options?: Record<string, unknown>): ChallengeOperator {
-  return new MyChallenge(challengeId, options);
+export function createChallenge(
+  challengeId: string,
+  options?: Record<string, unknown>,
+  context?: ChallengeFactoryContext
+): ChallengeOperator {
+  if (!context?.messaging) {
+    throw new Error("ChallengeFactoryContext with messaging is required");
+  }
+  return new MyChallenge(challengeId, context.messaging, options);
 }
 ```
 

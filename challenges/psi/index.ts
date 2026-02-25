@@ -54,7 +54,7 @@ interface PsiGameState {
 }
 
 class PsiChallenge extends BaseChallenge<PsiGameState> {
-  constructor(params: PsiChallengeParams, messaging?: ChallengeMessaging) {
+  constructor(params: PsiChallengeParams, messaging: ChallengeMessaging) {
     const { userSets, intersectionSet } = userSetsFromParams(params);
     super(params.challengeId, params.players, {
       userSets,
@@ -164,9 +164,12 @@ export function createChallenge(
   options?: Record<string, unknown>,
   context?: ChallengeFactoryContext
 ): ChallengeOperator {
+  if (!context?.messaging) {
+    throw new Error("ChallengeFactoryContext with messaging is required");
+  }
   return new PsiChallenge({
     challengeId,
     ...DEFAULT_CONFIG,
     ...options,
-  } as PsiChallengeParams, context?.messaging);
+  } as PsiChallengeParams, context.messaging);
 }
