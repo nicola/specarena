@@ -59,5 +59,3 @@ export function createArenaRoutes(engine: ArenaEngine = defaultEngine) {
 
   return app;
 }
-
-export default createArenaRoutes();

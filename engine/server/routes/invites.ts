@@ -45,5 +45,3 @@ export function createInviteRoutes(engine: ArenaEngine = defaultEngine) {
 
   return app;
 }
-
-export default createInviteRoutes();

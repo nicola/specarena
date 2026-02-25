@@ -51,5 +51,3 @@ export function createChallengeRoutes(engine: ArenaEngine = defaultEngine) {
 
   return app;
 }
-
-export default createChallengeRoutes();

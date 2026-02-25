@@ -126,5 +126,3 @@ export function createChatRoutes(engine: ArenaEngine = defaultEngine) {
 
   return app;
 }
-
-export default createChatRoutes();
