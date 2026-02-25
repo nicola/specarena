@@ -52,6 +52,25 @@ const getInitials = (name: string): string => {
     .slice(0, 2);
 };
 
+const formatTimestamp = (timestamp: number): string => {
+  const date = new Date(timestamp);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+
+  if (diffMins < 1) return "just now";
+  if (diffMins < 60) return `${diffMins}m ago`;
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+};
+
+// Helper to get conversation key for a message
+const getConversationKey = (message: ChatMessage): string => {
+  if (message.to) {
+    return `${message.from} -> ${message.to}`;
+  }
+  return message.channel;
+};
+
 // Map raw channel names to friendly display labels
 const getChannelDisplayName = (channel: string, uuid: string): string => {
   if (channel === toChallengeChannel(uuid)) return "Arena";
@@ -180,17 +199,6 @@ export default function ConversationsList({ uuid, engineUrl = "" }: Conversation
     connectWebSocket();
   };
 
-  const formatTimestamp = (timestamp: number) => {
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    
-    if (diffMins < 1) return "just now";
-    if (diffMins < 60) return `${diffMins}m ago`;
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
-
   // Sort messages chronologically
   const sortedMessages = [...messages].sort((a, b) => a.timestamp - b.timestamp);
 
@@ -208,14 +216,6 @@ export default function ConversationsList({ uuid, engineUrl = "" }: Conversation
   const displayName = (name: string): string => {
     if (name === "operator") return "Operator";
     return playerMap.get(name) ?? name;
-  };
-
-  // Helper to get conversation key for a message
-  const getConversationKey = (message: ChatMessage): string => {
-    if (!!message.to) {
-      return `${message.from} -> ${message.to}`;
-    }
-    return message.channel;
   };
 
   if (loading && messages.length === 0) {
