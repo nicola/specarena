@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
-import type { ChatMessage, Score } from "@arena/engine/types";
+import { CHALLENGE_CHANNEL_PREFIX, toChallengeChannel, type ChatMessage, type Score } from "@arena/engine/types";
 
 interface GameEndedData {
   scores: Score[];
@@ -51,9 +51,6 @@ const getInitials = (name: string): string => {
     .toUpperCase()
     .slice(0, 2);
 };
-
-const CHALLENGE_CHANNEL_PREFIX = "challenge_";
-const toChallengeChannel = (id: string) => `${CHALLENGE_CHANNEL_PREFIX}${id}`;
 
 // Map raw channel names to friendly display labels
 const getChannelDisplayName = (channel: string, uuid: string): string => {
