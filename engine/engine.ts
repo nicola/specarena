@@ -1,5 +1,3 @@
-import { v4 as uuidv4 } from "uuid";
-
 const STALE_CHALLENGE_TIMEOUT_MS = 10 * 60 * 1000;
 
 import {
@@ -87,7 +85,7 @@ export class ArenaEngine {
       name: challengeType,
       createdAt: Date.now(),
       challengeType,
-      invites: [`inv_${uuidv4()}`, `inv_${uuidv4()}`],
+      invites: [`inv_${crypto.randomUUID()}`, `inv_${crypto.randomUUID()}`],
       instance,
     };
 
