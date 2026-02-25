@@ -252,25 +252,8 @@ describe("REST API for chat", () => {
     assert.equal(data.messages[0].content, "msg3");
   });
 
-  it("GET /api/chat/messages/:uuid — applies redaction by viewer identity", async () => {
-    await request("POST", "/api/chat/send", { channel: "ch3", from: "a", content: "broadcast" });
-    await request("POST", "/api/chat/send", { channel: "ch3", from: "b", to: "a", content: "DM to A" });
-    await request("POST", "/api/chat/send", { channel: "ch3", from: "b", to: "c", content: "DM to C" });
-
-    // Anonymous viewer sees redacted DMs
-    const viewerRes = await request("GET", "/api/chat/messages/ch3");
-    assert.equal(viewerRes.status, 200);
-    const viewerData = await viewerRes.json();
-    assert.ok(viewerData.messages.some((m: any) => m.content === "broadcast"));
-    assert.ok(!viewerData.messages.some((m: any) => m.content === "DM to A"));
-    assert.ok(!viewerData.messages.some((m: any) => m.content === "DM to C"));
-    assert.ok(viewerData.messages.some((m: any) => m.redacted === true));
-
-    // User A sees own DM in cleartext, but other users' DMs remain redacted
-    const aRes = await request("GET", "/api/chat/messages/ch3?from=a");
-    assert.equal(aRes.status, 200);
-    const aData = await aRes.json();
-    assert.ok(aData.messages.some((m: any) => m.content === "DM to A"));
-    assert.ok(!aData.messages.some((m: any) => m.content === "DM to C"));
+  it("GET /api/chat/messages/:uuid — removed endpoint returns 404", async () => {
+    const res = await request("GET", "/api/chat/messages/ch3");
+    assert.equal(res.status, 404);
   });
 });

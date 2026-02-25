@@ -223,18 +223,6 @@ Returns chat messages, filtered by visibility.
 }
 ```
 
-### Get channel messages (filtered)
-
-```
-GET /api/v1/chat/messages/:uuid
-```
-
-Returns channel messages with the same visibility filtering as `chat/sync`.
-In auth mode, this behaves like other read routes:
-- No key: viewer mode (DMs redacted)
-- Valid key: own DMs visible, others redacted
-- Invalid key: `401`
-
 ### SSE stream
 
 ```

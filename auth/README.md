@@ -130,18 +130,6 @@ Read route — streaming version of chat sync. Redaction is applied both to the 
 
 ---
 
-### `GET /api/chat/messages/:uuid`
-
-Read route — non-streaming channel history with the same redaction rules as `GET /api/chat/sync`.
-
-| Session key | Status | What you see |
-|-------------|--------|--------------|
-| None (viewer) | `200` | All broadcasts visible; all DMs redacted |
-| Invalid / forged | `401` | — |
-| Valid | `200` | Your DMs in cleartext; other players' DMs redacted |
-
----
-
 ### Challenge management (`/api/challenges/*`, `/api/metadata/*`, `/api/invites/*`)
 
 No auth protection on any of these. Publicly accessible regardless of session key.

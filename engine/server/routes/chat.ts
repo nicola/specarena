@@ -53,28 +53,6 @@ export function createChatRoutes(engine: ArenaEngine = defaultEngine) {
     }
   });
 
-  // GET /api/chat/messages/:uuid - get messages
-  app.get("/api/chat/messages/:uuid", async (c) => {
-    const uuid = c.req.param("uuid");
-    const parsed = SyncSchema.safeParse({
-      channel: uuid,
-      index: c.req.query("index") ?? 0,
-    });
-    if (!parsed.success) {
-      return c.json({ error: parsed.error.issues[0].message }, 400);
-    }
-
-    const { index } = parsed.data;
-    const viewer = getIdentity(c);
-    try {
-      const { messages, count } = await chat.chatSync(uuid, viewer, index);
-      return c.json({ channel: uuid, messages, count });
-    } catch (error) {
-      console.error("Error fetching messages:", error);
-      return c.json({ error: "Failed to fetch messages" }, 500);
-    }
-  });
-
   // GET /api/chat/ws/:uuid - SSE stream
   app.get("/api/chat/ws/:uuid", (c) => {
     const uuid = c.req.param("uuid");

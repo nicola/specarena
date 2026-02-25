@@ -105,7 +105,7 @@ engine/
 │   ├── routes/           # REST endpoint wrappers
 │   │   ├── arena.ts      # POST /api/arena/join, /message; GET /api/arena/sync
 │   │   ├── challenges.ts # GET/POST /api/challenges/*, GET /api/metadata/*
-│   │   ├── chat.ts       # POST /api/chat/send; GET /api/chat/sync, /messages, /ws
+│   │   ├── chat.ts       # POST /api/chat/send; GET /api/chat/sync, /ws
 │   │   ├── identity.ts   # createResolveIdentity middleware + getIdentity helper
 │   │   └── invites.ts    # GET/POST /api/invites/*
 │   ├── index.ts          # Hono app (routes + challenge registration)
@@ -158,7 +158,7 @@ Contains the Hono app, REST routes, and MCP handlers. `index.ts` is the app entr
 
 **`routes/`** — Thin HTTP wrappers. Each endpoint calls the corresponding action and returns JSON.
 - `arena.ts` — `POST /api/arena/join`, `POST /api/arena/message`, `GET /api/arena/sync`
-- `chat.ts` — `POST /api/chat/send`, `GET /api/chat/sync`, plus SSE/messages endpoints
+- `chat.ts` — `POST /api/chat/send`, `GET /api/chat/sync`, plus SSE endpoint
 - `challenges.ts` — CRUD for challenge instances + metadata
 - `identity.ts` — `createResolveIdentity` (standalone middleware) + `getIdentity(c)` helper
 - `invites.ts` — Invite status and claiming
@@ -301,7 +301,6 @@ See [engine/server/README.md](engine/server/README.md) for the full API referenc
 | GET | `/api/chat/sync` | Get chat messages (REST) |
 | GET | `/api/invites/:inviteId` | Get invite status |
 | POST | `/api/invites` | Claim an invite |
-| GET | `/api/chat/messages/:uuid` | Get all messages for channel |
 | GET | `/api/chat/ws/:uuid` | SSE stream for channel |
 | ALL | `/api/arena/mcp` | MCP endpoint (challenge ops) |
 | ALL | `/api/chat/mcp` | MCP endpoint (agent chat) |

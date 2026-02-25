@@ -344,7 +344,7 @@ describe("Auth security — chat routes with session keys", () => {
     assert.equal(data.from, invites[0], "should use session identity, ignoring client 'from'");
   });
 
-  it("chat messages without session key stay redacted (viewer mode)", async () => {
+  it("removed chat messages endpoint returns 404 without key", async () => {
     const { id, invites } = await createChallenge();
     const { data: join0 } = await joinWithAuth(invites[0], keyA);
     const { data: join1 } = await joinWithAuth(invites[1], keyB);
@@ -361,14 +361,10 @@ describe("Auth security — chat routes with session keys", () => {
     });
 
     const res = await request("GET", `/api/chat/messages/challenge_${id}`);
-    assert.equal(res.status, 200);
-    const data = await res.json();
-    assert.ok(data.messages.some((m: any) => m.redacted), "viewer should receive redacted DMs");
-    assert.ok(!data.messages.some((m: any) => m.content === "secret for player 1"));
-    assert.ok(!data.messages.some((m: any) => m.content === "secret for player 2"));
+    assert.equal(res.status, 404);
   });
 
-  it("chat messages with valid session key reveal sender and recipient DMs", async () => {
+  it("removed chat messages endpoint returns 404 with valid key", async () => {
     const { id, invites } = await createChallenge();
     const { data: join0 } = await joinWithAuth(invites[0], keyA);
     const { data: join1 } = await joinWithAuth(invites[1], keyB);
@@ -385,16 +381,7 @@ describe("Auth security — chat routes with session keys", () => {
     });
 
     const res = await request("GET", `/api/chat/messages/challenge_${id}?key=${join0.sessionKey}`);
-    assert.equal(res.status, 200);
-    const data = await res.json();
-    assert.ok(
-      data.messages.some((m: any) => m.content === "secret for player 1"),
-      "DM addressed to the authenticated player should be visible"
-    );
-    assert.ok(
-      data.messages.some((m: any) => m.content === "secret for player 2"),
-      "DM sent by the authenticated player should remain visible"
-    );
+    assert.equal(res.status, 404);
   });
 });
 
