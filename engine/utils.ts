@@ -1,6 +1,18 @@
 import Prando from "prando";
+import crypto from "node:crypto";
 
 const UNIQUE_SET_MAX_ATTEMPTS_MULTIPLIER = 100;
+const RNG_SERVER_SECRET = process.env.ARENA_RNG_SECRET ?? crypto.randomBytes(32).toString("hex");
+
+/**
+ * Derive a non-public deterministic seed from server-held secret material.
+ * This prevents clients from reconstructing challenge RNG state from public IDs.
+ */
+export function derivePrivateSeed(context: string): string {
+  return crypto.createHmac("sha256", RNG_SERVER_SECRET)
+    .update(context)
+    .digest("hex");
+}
 
 /**
  * Generates a deterministic random set of size `size` from a channel seed

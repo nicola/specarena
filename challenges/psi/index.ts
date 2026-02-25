@@ -1,4 +1,4 @@
-import { generateRandomSetFromSeed } from "@arena/engine/utils";
+import { derivePrivateSeed, generateRandomSetFromSeed } from "@arena/engine/utils";
 import { ChallengeFactoryContext, ChallengeOperatorError, ChatMessage, ChallengeMessaging, ChallengeOperator } from "@arena/engine/types";
 import { BaseChallenge } from "@arena/engine/challenge-design/BaseChallenge";
 
@@ -130,10 +130,11 @@ class PsiChallenge extends BaseChallenge<PsiGameState> {
 
 function userSetsFromParams(params: PsiChallengeParams): { userSets: Set<number>[], intersectionSet: Set<number> } {
   const { challengeId, players, range, intersectionSize, setSize } = params;
-  const channelSeed = "challenge_" + challengeId;
+  const privateSeedBase = derivePrivateSeed(`psi:${challengeId}`);
+
   // Generate random intersection
   const intersectionSet = generateRandomSetFromSeed(
-    channelSeed,
+    `${privateSeedBase}:intersection`,
     intersectionSize,
     range[0],
     range[1]
@@ -142,7 +143,7 @@ function userSetsFromParams(params: PsiChallengeParams): { userSets: Set<number>
   // Generate random user sets
   const userSets = [...Array(players)]
     .map((_, i) => generateRandomSetFromSeed(
-      channelSeed + "_user_" + i,
+      `${privateSeedBase}:user:${i}`,
       setSize,
       range[0],
       range[1]

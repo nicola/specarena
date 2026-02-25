@@ -1,6 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { createChatEngine, InMemoryChatStorageAdapter } from "@arena/engine/engine";
+import { generateRandomSetFromSeed } from "@arena/engine/utils";
 import { createChallenge } from "./index";
 
 function parseSet(content: string): Set<number> {
@@ -13,6 +14,10 @@ function createPsiWithChat(challengeId: string) {
   const chat = createChatEngine({ storageAdapter: new InMemoryChatStorageAdapter() });
   const operator = createChallenge(challengeId, undefined, { messaging: chat });
   return { operator, chat };
+}
+
+function eqSet(a: Set<number>, b: Set<number>): boolean {
+  return a.size === b.size && [...a].every((x) => b.has(x));
 }
 
 describe("PSI challenge with ChatEngine only", () => {
@@ -66,5 +71,42 @@ describe("PSI challenge with ChatEngine only", () => {
 
     const publicMessages = await chat.getMessagesForChallengeChannel(challengeId);
     assert.ok(publicMessages.some((m) => m.content.includes("sent a guess")));
+  });
+
+  it("cannot reconstruct player sets from challengeId using public deterministic seeds", async () => {
+    const challengeId = "psi_public_seed_attack";
+    const player1 = "invite_1";
+    const player2 = "invite_2";
+
+    const { operator, chat } = createPsiWithChat(challengeId);
+
+    await operator.join(player1);
+    await operator.join(player2);
+
+    const sync1 = (await chat.challengeSync(challengeId, player1, 0)).messages;
+    const sync2 = (await chat.challengeSync(challengeId, player2, 0)).messages;
+
+    const p1SetMsg = sync1.find((m) => m.to === player1 && m.content.includes("Your private set"));
+    const p2SetMsg = sync2.find((m) => m.to === player2 && m.content.includes("Your private set"));
+    assert.ok(p1SetMsg);
+    assert.ok(p2SetMsg);
+
+    const actualP1 = parseSet(p1SetMsg!.content);
+    const actualP2 = parseSet(p2SetMsg!.content);
+
+    // This reproduces the previous vulnerable approach based only on challengeId.
+    const publicSeed = `challenge_${challengeId}`;
+    const guessedIntersection = generateRandomSetFromSeed(publicSeed, 3, 100, 900);
+    const guessedP1 = new Set([
+      ...generateRandomSetFromSeed(`${publicSeed}_user_0`, 10, 100, 900),
+      ...guessedIntersection,
+    ]);
+    const guessedP2 = new Set([
+      ...generateRandomSetFromSeed(`${publicSeed}_user_1`, 10, 100, 900),
+      ...guessedIntersection,
+    ]);
+
+    assert.equal(eqSet(actualP1, guessedP1), false);
+    assert.equal(eqSet(actualP2, guessedP2), false);
   });
 });
