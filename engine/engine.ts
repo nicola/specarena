@@ -46,9 +46,9 @@ export class ArenaEngine {
           gameId: challengeId,
           challengeType: challenge.challengeType,
           completedAt: Date.now(),
-          scores: event.scores as any[],
-          players: event.players as string[],
-          playerIdentities: event.playerIdentities as Record<string, string>,
+          scores: event.state.scores,
+          players: event.state.players,
+          playerIdentities: event.state.playerIdentities,
         }).catch((err) => console.error("Scoring recordGame failed:", err));
       },
     });

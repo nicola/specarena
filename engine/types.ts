@@ -69,10 +69,15 @@ export interface ChallengeConfig {
   scoring?: string[];
 }
 
+export type ChallengeEvent = {
+  type: "game_ended";
+  state: ChallengeOperatorState;
+};
+
 export interface ChallengeMessaging {
   sendMessage: (channel: string, from: string, content: string, to?: string | null) => Promise<ChatMessage>;
   sendChallengeMessage: (challengeId: string, from: string, content: string, to?: string | null) => Promise<ChatMessage>;
-  broadcastChallengeEvent?: (challengeId: string, event: Record<string, unknown>) => void;
+  broadcastChallengeEvent?: (challengeId: string, event: ChallengeEvent) => void;
 }
 
 export interface ChallengeFactoryContext {

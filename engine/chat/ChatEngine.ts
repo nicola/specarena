@@ -1,10 +1,10 @@
-import { ChatMessage, toChallengeChannel } from "../types";
+import { ChallengeEvent, ChatMessage, toChallengeChannel } from "../types";
 import { ChatStorageAdapter, InMemoryChatStorageAdapter } from "../storage/InMemoryChatStorageAdapter";
 
 export interface ChatEngineOptions {
   storageAdapter?: ChatStorageAdapter;
   isChannelRevealed?: (channel: string) => Promise<boolean>;
-  onChallengeEvent?: (challengeId: string, event: Record<string, unknown>) => void | Promise<void>;
+  onChallengeEvent?: (challengeId: string, event: ChallengeEvent) => void | Promise<void>;
 }
 
 interface ChannelSubscriber {
@@ -15,7 +15,7 @@ interface ChannelSubscriber {
 export class ChatEngine {
   private readonly storageAdapter: ChatStorageAdapter;
   private readonly isChannelRevealed?: (channel: string) => Promise<boolean>;
-  private readonly onChallengeEvent?: (challengeId: string, event: Record<string, unknown>) => void | Promise<void>;
+  private readonly onChallengeEvent?: (challengeId: string, event: ChallengeEvent) => void | Promise<void>;
   // TODO in the future separate to another service and persist this on db
   private readonly channelSubscribers: Map<string, Set<ChannelSubscriber>>;
 
@@ -133,7 +133,7 @@ export class ChatEngine {
     }
   }
 
-  broadcastChallengeEvent(challengeId: string, event: Record<string, unknown>): void {
+  broadcastChallengeEvent(challengeId: string, event: ChallengeEvent): void {
     this.broadcastEvent(challengeId, event);
     this.broadcastEvent(toChallengeChannel(challengeId), event);
     this.onChallengeEvent?.(challengeId, event);

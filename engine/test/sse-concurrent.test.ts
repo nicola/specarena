@@ -346,12 +346,12 @@ describe("Concurrent SSE streams — engine level (no auth)", () => {
       // Both should have structured scores and players
       for (const ev of [endedBare, endedPrefixed]) {
         assert.equal(ev.type, "game_ended");
-        assert.ok(Array.isArray(ev.scores), "scores should be an array");
-        assert.equal(ev.scores.length, 2);
-        assert.ok(typeof ev.scores[0].security === "number");
-        assert.ok(typeof ev.scores[0].utility === "number");
-        assert.ok(Array.isArray(ev.players));
-        assert.equal(ev.players.length, 2);
+        assert.ok(Array.isArray(ev.state.scores), "scores should be an array");
+        assert.equal(ev.state.scores.length, 2);
+        assert.ok(typeof ev.state.scores[0].security === "number");
+        assert.ok(typeof ev.state.scores[0].utility === "number");
+        assert.ok(Array.isArray(ev.state.players));
+        assert.equal(ev.state.players.length, 2);
       }
     } finally {
       vBare.reader.cancel().catch(() => {});
@@ -380,9 +380,9 @@ describe("Concurrent SSE streams — engine level (no auth)", () => {
 
       const ended = await readNextSSEData(viewer.reader, viewer.buf);
       assert.equal(ended.type, "game_ended");
-      assert.ok(Array.isArray(ended.scores));
-      assert.equal(ended.scores.length, 2);
-      assert.ok(Array.isArray(ended.players));
+      assert.ok(Array.isArray(ended.state.scores));
+      assert.equal(ended.state.scores.length, 2);
+      assert.ok(Array.isArray(ended.state.players));
     } finally {
       viewer.reader.cancel().catch(() => {});
     }
