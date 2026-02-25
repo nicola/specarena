@@ -3,6 +3,7 @@ export type { Score, GameResult, ScoringEntry, ScoringStrategy, GlobalScoringStr
 export interface ScoringConfig {
   default: string[];
   global?: string;
+  globalSource?: string; // which per-challenge strategy feeds the global aggregation (defaults to first in default[])
 }
 
 export interface ChallengeConfigEntry {
