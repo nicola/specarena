@@ -30,7 +30,8 @@ A completed game distilled to data. Matches the `game_ended` event payload.
 interface GameResult {
   gameId: string;                          // Challenge UUID
   challengeType: string;                   // e.g. "psi"
-  completedAt: number;                     // epoch ms
+  createdAt: number;                       // epoch ms — when the challenge was created (set by ArenaEngine.createChallenge)
+  completedAt: number;                     // epoch ms — when the game ended (set by BaseChallenge.endGame)
   scores: Score[];                         // { security, utility } per player position
   players: string[];                       // invite codes in join order
   playerIdentities: Record<string, string>; // invite → userId (persistent hash)

@@ -7,6 +7,7 @@ export interface Score {
 export interface GameResult {
   gameId: string;
   challengeType: string;
+  createdAt: number;
   completedAt: number;
   scores: Score[];
   players: string[];

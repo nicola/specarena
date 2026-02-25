@@ -47,6 +47,7 @@ export class ArenaEngine {
         this.scoring.recordGame({
           gameId: challengeId,
           challengeType: challenge.challengeType,
+          createdAt: challenge.createdAt,
           completedAt: Date.now(),
           scores: event.scores as any[],
           players: event.players as string[],

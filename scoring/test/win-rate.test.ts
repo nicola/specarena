@@ -12,6 +12,7 @@ function makeGame(
   return {
     gameId: crypto.randomUUID(),
     challengeType: "psi",
+    createdAt: Date.now(),
     completedAt: Date.now(),
     scores: [p0, p1],
     players: ["inv_a", "inv_b"],
@@ -124,6 +125,7 @@ describe("win-rate strategy", () => {
       {
         gameId: "g1",
         challengeType: "psi",
+        createdAt: Date.now(),
         completedAt: Date.now(),
         scores: [{ security: 1, utility: 1 }],
         players: ["inv_a"],
@@ -139,6 +141,7 @@ describe("win-rate strategy", () => {
       {
         gameId: "g1",
         challengeType: "psi",
+        createdAt: Date.now(),
         completedAt: Date.now(),
         scores: [{ security: 1, utility: 1 }, { security: -1, utility: -1 }],
         players: ["inv_a", "inv_b"],
