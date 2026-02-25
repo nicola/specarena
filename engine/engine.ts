@@ -5,6 +5,7 @@ import {
   ChallengeError,
   ChallengeFactory,
   ChallengeMetadata,
+  ChallengeOperatorError,
   Result,
   fromChallengeChannel,
 } from "./types";
@@ -150,15 +151,13 @@ export class ArenaEngine {
 
     const challenge = result.data;
 
-    let joinError: string | undefined;
     try {
       await challenge.instance.join(invite, userId);
     } catch (error) {
-      joinError = error instanceof Error ? error.message : String(error);
-    }
-
-    if (joinError) {
-      return { error: joinError };
+      if (error instanceof ChallengeOperatorError) {
+        return { error: error.message, code: error.code };
+      }
+      return { error: error instanceof Error ? error.message : String(error) };
     }
 
     const metadata = this.getChallengeMetadata(challenge.challengeType);
@@ -187,6 +186,9 @@ export class ArenaEngine {
       });
       return { ok: "Message sent" };
     } catch (error) {
+      if (error instanceof ChallengeOperatorError) {
+        return { error: error.message, code: error.code };
+      }
       return { error: error instanceof Error ? error.message : String(error) };
     }
   }

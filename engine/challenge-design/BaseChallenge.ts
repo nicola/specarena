@@ -1,4 +1,4 @@
-import { ChallengeMessaging, ChallengeOperator, ChallengeOperatorState, ChatMessage, Score } from "../types";
+import { ChallengeMessaging, ChallengeOperator, ChallengeOperatorError, ChallengeOperatorState, ChatMessage, Score } from "../types";
 import { defaultChatEngine } from "../chat/ChatEngine";
 
 // BaseChallenge provides the shared "operator runtime" used by challenge
@@ -39,7 +39,7 @@ export abstract class BaseChallenge<TGameState = {}> implements ChallengeOperato
   // Once playerCount is reached, the game transitions to started.
   async join(invite: string, userId?: string): Promise<void> {
     if (this.state.players.includes(invite)) {
-      throw new Error("ERR_INVITE_ALREADY_USED: This invite has already been used.");
+      throw new ChallengeOperatorError("INVITE_ALREADY_USED", "This invite has already been used.");
     }
 
     if (userId) {
@@ -65,12 +65,12 @@ export abstract class BaseChallenge<TGameState = {}> implements ChallengeOperato
 
     const playerIndex = this.state.players.indexOf(message.from);
     if (playerIndex === -1) {
-      throw new Error("ERR_PLAYER_NOT_FOUND: Player not found.");
+      throw new ChallengeOperatorError("PLAYER_NOT_FOUND", "Player not found.");
     }
 
     const handler = this.handlers.get(message.type ?? "");
     if (!handler) {
-      throw new Error(`Unknown challenge method: ${message.type}`);
+      throw new ChallengeOperatorError("UNKNOWN_METHOD", `Unknown challenge method: ${message.type}`);
     }
 
     await handler(message, playerIndex);

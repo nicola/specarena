@@ -1,5 +1,5 @@
 import { generateRandomSetFromSeed } from "@arena/engine/utils";
-import { ChallengeFactoryContext, ChatMessage, ChallengeMessaging, ChallengeOperator } from "@arena/engine/types";
+import { ChallengeFactoryContext, ChallengeOperatorError, ChatMessage, ChallengeMessaging, ChallengeOperator } from "@arena/engine/types";
 import { BaseChallenge } from "@arena/engine/challenge-design/BaseChallenge";
 
 // Utility scores for the guessing player
@@ -75,15 +75,15 @@ class PsiChallenge extends BaseChallenge<PsiGameState> {
     const otherPlayer = 1 - sender;
 
     if (!guess) {
-      throw new Error("ERR_INVALID_GUESS: Invalid guess format.");
+      throw new ChallengeOperatorError("INVALID_GUESS", "Invalid guess format.");
     }
 
     if (this.gameState.guesses[sender].size > 0) {
-      throw new Error("ERR_DUPLICATE_GUESS: Guess already made.");
+      throw new ChallengeOperatorError("DUPLICATE_GUESS", "Guess already made.");
     }
 
     if (guess.size > this.gameState.userSets[otherPlayer].size) {
-      throw new Error("ERR_GUESS_TOO_LARGE: Guess too large.");
+      throw new ChallengeOperatorError("GUESS_TOO_LARGE", "Guess too large.");
     }
 
     const target = setIntersection(this.gameState.userSets[sender], this.gameState.userSets[otherPlayer]);

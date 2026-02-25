@@ -195,7 +195,7 @@ describe("PSI game via MCP protocol", () => {
     await chat.close();
   });
 
-  it("MCP error: duplicate join returns error", async () => {
+  it("MCP error: duplicate join returns INVITE_ALREADY_USED error code", async () => {
     const arena = await createArenaClient();
 
     const createRes = await fetch(`${baseUrl}/api/challenges/psi`, { method: "POST" });
@@ -205,10 +205,7 @@ describe("PSI game via MCP protocol", () => {
 
     // Join again with same invite → error
     const result = await callTool(arena, "challenge_join", { invite: invites[0] });
-    assert.ok(
-      JSON.stringify(result).includes("ERR_INVITE_ALREADY_USED"),
-      "duplicate join should return error"
-    );
+    assert.equal(result.code, "INVITE_ALREADY_USED", "duplicate join should return structured error code");
 
     await arena.close();
   });

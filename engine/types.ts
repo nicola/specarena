@@ -48,6 +48,13 @@ export interface Challenge {
   instance: ChallengeOperator;
 }
 
+export class ChallengeOperatorError extends Error {
+  constructor(public readonly code: string, message: string) {
+    super(message);
+    this.name = "ChallengeOperatorError";
+  }
+}
+
 export enum ChallengeError {
   NOT_FOUND = 'NOT_FOUND',
   INVITE_ALREADY_USED = 'INVITE_ALREADY_USED',

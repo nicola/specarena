@@ -236,7 +236,7 @@ describe("PSI game simulation", () => {
     assert.equal(challenge.instance.state.scores[1].security, 1, "no extra leak → security=1");
   });
 
-  it("duplicate guess throws ERR_DUPLICATE_GUESS", async () => {
+  it("duplicate guess returns DUPLICATE_GUESS error code", async () => {
     const { id: challengeId, invites } = await createPsiChallenge();
     const [invite1, invite2] = invites;
 
@@ -248,10 +248,10 @@ describe("PSI game simulation", () => {
     // Second guess returns error (not throw — actions don't throw)
     const result = await challengeMessage(challengeId, invite1, "guess", "400 500 600");
     assert.ok("error" in result);
-    assert.ok(result.error!.includes("ERR_DUPLICATE_GUESS"));
+    assert.equal((result as any).code, "DUPLICATE_GUESS");
   });
 
-  it("joining with same invite twice returns error", async () => {
+  it("joining with same invite twice returns INVITE_ALREADY_USED error code", async () => {
     const { invites } = await createPsiChallenge();
 
     await challengeJoin(invites[0]);
@@ -259,7 +259,7 @@ describe("PSI game simulation", () => {
     // Second join returns error
     const result = await challengeJoin(invites[0]);
     assert.ok("error" in result);
-    assert.ok(result.error!.includes("ERR_INVITE_ALREADY_USED"));
+    assert.equal((result as any).code, "INVITE_ALREADY_USED");
   });
 
   it("guessing before game starts sends error message", async () => {
