@@ -32,6 +32,8 @@ describe("Stale challenge garbage collection", () => {
     assert.ok(instance);
 
     instance.createdAt = Date.now() - STALE_MS;
+    const removed = await defaultEngine.pruneStaleChallenges();
+    assert.equal(removed, 1);
 
     const typed = await defaultEngine.getChallengesByType("psi");
     assert.ok(!typed.some((c) => c.id === challenge.id));
@@ -53,6 +55,7 @@ describe("Stale challenge garbage collection", () => {
     assert.equal(instance.instance.state.gameStarted, true);
 
     instance.createdAt = Date.now() - STALE_MS;
+    await defaultEngine.pruneStaleChallenges();
 
     const typed = await defaultEngine.getChallengesByType("psi");
     assert.ok(typed.some((c) => c.id === challenge.id));
@@ -66,8 +69,7 @@ describe("Stale challenge garbage collection", () => {
     await defaultEngine.chat.sendMessage(challenge.id, "a", "public");
     await defaultEngine.chat.sendMessage(toChallengeChannel(challenge.id), "operator", "private", "a");
     instance.createdAt = Date.now() - STALE_MS;
-
-    await defaultEngine.getChallengesByType("psi");
+    await defaultEngine.pruneStaleChallenges();
 
     const publicChannel = await defaultEngine.chat.getMessagesForChannel(challenge.id);
     const privateChannel = await defaultEngine.chat.getMessagesForChannel(toChallengeChannel(challenge.id));

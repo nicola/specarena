@@ -71,11 +71,11 @@ export class ArenaEngine {
     return !gameStarted && challenge.createdAt < cutoff;
   }
 
-  private async pruneStaleChallenges(now: number = Date.now()): Promise<void> {
+  async pruneStaleChallenges(now: number = Date.now()): Promise<number> {
     const challenges = await this.storageAdapter.listChallenges();
     const stale = challenges.filter((challenge) => this.isChallengeStale(challenge, now));
     if (stale.length === 0) {
-      return;
+      return 0;
     }
 
     await Promise.all(
@@ -85,15 +85,15 @@ export class ArenaEngine {
         await this.chat.deleteChannel(toChallengeChannel(challenge.id));
       }),
     );
+
+    return stale.length;
   }
 
   async listChallenges(): Promise<Challenge[]> {
-    await this.pruneStaleChallenges();
     return this.storageAdapter.listChallenges();
   }
 
   async createChallenge(challengeType: string): Promise<Challenge> {
-    await this.pruneStaleChallenges();
     const id = crypto.randomUUID();
     const factory = this.challengeFactories.get(challengeType);
 
@@ -139,7 +139,6 @@ export class ArenaEngine {
   }
 
   async getChallengeFromInvite(invite: string): Promise<Result<Challenge>> {
-    await this.pruneStaleChallenges();
     const challenge = (await this.storageAdapter.listChallenges())
       .find((c) => c.invites.includes(invite));
     if (challenge) {
@@ -168,7 +167,6 @@ export class ArenaEngine {
   }
 
   async getChallengesByType(challengeType: string): Promise<Challenge[]> {
-    await this.pruneStaleChallenges();
     return (await this.storageAdapter.listChallenges())
       .filter((c) => c.challengeType === challengeType)
       .sort((a, b) => b.createdAt - a.createdAt);
