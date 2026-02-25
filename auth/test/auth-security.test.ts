@@ -557,11 +557,12 @@ describe("Concurrent SSE streams", () => {
         if (ev.type === "game_ended") { gameEnded = ev; break; }
       }
       assert.ok(gameEnded, "game_ended event must be received");
-      assert.ok(Array.isArray(gameEnded.scores), "scores should be an array");
-      assert.equal(gameEnded.scores.length, 2);
-      assert.ok(typeof gameEnded.scores[0].security === "number");
-      assert.ok(typeof gameEnded.scores[0].utility === "number");
-      assert.ok(Array.isArray(gameEnded.players));
+      assert.ok(gameEnded.data, "should have a data envelope");
+      assert.ok(Array.isArray(gameEnded.data.scores), "scores should be an array");
+      assert.equal(gameEnded.data.scores.length, 2);
+      assert.ok(typeof gameEnded.data.scores[0].security === "number");
+      assert.ok(typeof gameEnded.data.scores[0].utility === "number");
+      assert.ok(Array.isArray(gameEnded.data.players));
     } finally {
       reader.cancel().catch(() => {});
     }
@@ -590,8 +591,9 @@ describe("Concurrent SSE streams", () => {
 
       const ended = await readNextSSEData(reader, buf);
       assert.equal(ended.type, "game_ended");
-      assert.ok(Array.isArray(ended.scores));
-      assert.equal(ended.scores.length, 2);
+      assert.ok(ended.data, "should have a data envelope");
+      assert.ok(Array.isArray(ended.data.scores));
+      assert.equal(ended.data.scores.length, 2);
     } finally {
       reader.cancel().catch(() => {});
     }
@@ -686,9 +688,10 @@ describe("Player identities — stored after authenticated join", () => {
         if (ev.type === "game_ended") { gameEnded = ev; break; }
       }
       assert.ok(gameEnded, "game_ended event must be received");
-      assert.ok(gameEnded.playerIdentities, "game_ended must include playerIdentities");
-      assert.equal(gameEnded.playerIdentities[invites[0]], hashPublicKey(keyA.publicKey));
-      assert.equal(gameEnded.playerIdentities[invites[1]], hashPublicKey(keyB.publicKey));
+      assert.ok(gameEnded.data, "should have a data envelope");
+      assert.ok(gameEnded.data.playerIdentities, "game_ended must include playerIdentities");
+      assert.equal(gameEnded.data.playerIdentities[invites[0]], hashPublicKey(keyA.publicKey));
+      assert.equal(gameEnded.data.playerIdentities[invites[1]], hashPublicKey(keyB.publicKey));
     } finally {
       reader.cancel().catch(() => {});
     }
