@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 
 const UNIQUE_SET_MAX_ATTEMPTS_MULTIPLIER = 100;
 const RNG_SERVER_SECRET = process.env.ARENA_RNG_SECRET ?? crypto.randomBytes(32).toString("hex");
+const RNG_CONTEXT_PREFIX = "arena:v1";
 
 /**
  * Derive a non-public deterministic seed from server-held secret material.
@@ -10,7 +11,7 @@ const RNG_SERVER_SECRET = process.env.ARENA_RNG_SECRET ?? crypto.randomBytes(32)
  */
 export function derivePrivateSeed(context: string): string {
   return crypto.createHmac("sha256", RNG_SERVER_SECRET)
-    .update(context)
+    .update(`${RNG_CONTEXT_PREFIX}:${context}`)
     .digest("hex");
 }
 
