@@ -8,17 +8,19 @@
 
 ## Critical
 
-### 1. Race condition in concurrent `recordGame`
+### 1. ~~Race condition in concurrent `recordGame`~~ FIXED
 
 **`engine/engine.ts:42-52`**
 
-`recordGame` is fire-and-forget (`.catch()` but not `await`-ed). Two games ending simultaneously for the same player can interleave: both read `count: 5`, both write `count: 6`, correct answer is `count: 7`. The in-memory store has no transactional guarantees.
+Fixed in #85 and #86.
+
+`recordGame` is still fire-and-forget from the event hook, but scoring updates are now serialized at the storage boundary (`ScoringStorageAdapter.transaction` + `InMemoryScoringStore` transaction queue), so concurrent completions no longer lose increments.
 
 ```typescript
 this.scoring.recordGame({ ... }).catch((err) => console.error(...));
 ```
 
-**Fix:** Add a promise chain / simple mutex in `ScoringModule.recordGame`, or `await` it.
+Also fixed the flaky timing dependency in tests by exposing `waitForIdle()` and replacing `setTimeout(50)` waits.
 
 ---
 
@@ -76,7 +78,7 @@ If either contains `:`, keys collide. Currently config-controlled so low risk.
 
 **Fix:** Shallow-copy arrays/objects in the return.
 
-### 9. Test timing is flaky
+### 9. ~~Test timing is flaky~~ FIXED
 
 **`engine/test/scoring.test.ts:356, 405`**
 
@@ -84,9 +86,7 @@ If either contains `:`, keys collide. Currently config-controlled so low risk.
 await new Promise((r) => setTimeout(r, 50));
 ```
 
-Fire-and-forget scoring means tests use a 50ms sleep. Flaky on slow CI.
-
-**Fix:** Expose a way to `await` scoring completion (resolves with fixing #1).
+Fixed in #85. Scoring tests now call `waitForIdle()` instead of sleeping.
 
 ### 10. ~~Error message leakage~~ FIXED
 
@@ -126,7 +126,7 @@ Strategy names referenced in config are not checked against registered strategie
 
 | # | Issue | Severity | Status |
 |---|-------|----------|--------|
-| 1 | Race condition in `recordGame` | Critical | Open |
+| 1 | Race condition in `recordGame` | Critical | **Fixed** #85 #86 |
 | 2 | `completedAt` uses creation time | Medium | **Fixed** #79 #80 |
 | 3 | Implicit global strategy ordering | Medium | **Fixed** #81 |
 | 4 | Circular package dependency | Medium | **Fixed** #78 |
@@ -134,7 +134,7 @@ Strategy names referenced in config are not checked against registered strategie
 | 6 | Unvalidated `:challengeType` param | Low | **Fixed** #73 |
 | 7 | Composite key collision | Low | Open |
 | 8 | Shared references in `challengeToGameResult` | Low | Open |
-| 9 | Flaky test timing | Low | Open |
+| 9 | Flaky test timing | Low | **Fixed** #85 |
 | 10 | Error message leakage | Low | **Fixed** #70 |
 | 11 | Mutable public `scoring` field | Informational | Open |
 | 12 | No config validation at construction | Informational | Open |
