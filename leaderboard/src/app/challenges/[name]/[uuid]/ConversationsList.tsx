@@ -71,6 +71,11 @@ export default function ConversationsList({ uuid, engineUrl = "" }: Conversation
   const challengeEventSourceRef = useRef<EventSource | null>(null);
   const initialLoadCountRef = useRef(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const retryCountRef = useRef(0);
+  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const connectRef = useRef<() => void>(() => {});
+
+  const MAX_RETRIES = 5;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -83,7 +88,7 @@ export default function ConversationsList({ uuid, engineUrl = "" }: Conversation
         // Merge with existing messages, avoiding duplicates
         const existingChannels = new Set(prev.map(msg => `${msg.channel}-${msg.index}`));
         const newMessages = (data.messages || []).filter(
-          (msg: ChatMessage): msg is ChatMessage => 
+          (msg: ChatMessage): msg is ChatMessage =>
             msg !== undefined && !existingChannels.has(`${msg.channel}-${msg.index}`)
         );
         const merged = [...prev, ...newMessages];
@@ -91,7 +96,7 @@ export default function ConversationsList({ uuid, engineUrl = "" }: Conversation
         merged.sort((a, b) => a.timestamp - b.timestamp);
         return merged;
       });
-      
+
       initialLoadCountRef.current += 1;
       if (initialLoadCountRef.current >= 2) {
         setLoading(false);
@@ -123,21 +128,39 @@ export default function ConversationsList({ uuid, engineUrl = "" }: Conversation
     const es = new EventSource(url);
     es.onmessage = (event) => {
       try {
+        retryCountRef.current = 0;
         onMessage(JSON.parse(event.data));
       } catch (err) {
         console.error('Error parsing SSE message:', err);
       }
     };
     es.onerror = () => {
-      setError("Connection error. Attempting to reconnect...");
+      es.close();
+      if (retryCountRef.current < MAX_RETRIES) {
+        const delay = Math.min(1000 * Math.pow(2, retryCountRef.current), 30000);
+        retryCountRef.current++;
+        setError(`Reconnecting... (attempt ${retryCountRef.current}/${MAX_RETRIES})`);
+        retryTimeoutRef.current = setTimeout(() => {
+          connectRef.current();
+        }, delay);
+      } else {
+        setError("Connection lost");
+      }
     };
     es.onopen = () => {
+      retryCountRef.current = 0;
       setError(null);
     };
     return es;
   }, []);
 
   const connectWebSocket = useCallback(() => {
+    // Clear any pending retry timeout
+    if (retryTimeoutRef.current) {
+      clearTimeout(retryTimeoutRef.current);
+      retryTimeoutRef.current = null;
+    }
+
     // Reset initial load counter
     initialLoadCountRef.current = 0;
 
@@ -154,6 +177,16 @@ export default function ConversationsList({ uuid, engineUrl = "" }: Conversation
     challengeEventSourceRef.current = connectSSE(`${base}/api/chat/ws/${toChallengeChannel(uuid)}`, handleMessage);
   }, [uuid, engineUrl, handleMessage, connectSSE]);
 
+  // Keep connectRef in sync so the SSE error handler can call it without circular deps
+  connectRef.current = connectWebSocket;
+
+  const handleReconnect = useCallback(() => {
+    retryCountRef.current = 0;
+    setError(null);
+    setLoading(true);
+    connectWebSocket();
+  }, [connectWebSocket]);
+
   useEffect(() => {
     // Initialize loading state and connect to both EventSource streams
     // Note: Setting loading state synchronously here is necessary for connection initialization
@@ -163,6 +196,10 @@ export default function ConversationsList({ uuid, engineUrl = "" }: Conversation
 
     // Cleanup on unmount
     return () => {
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+        retryTimeoutRef.current = null;
+      }
       if (eventSourceRef.current) {
         eventSourceRef.current.close();
         eventSourceRef.current = null;
@@ -179,6 +216,8 @@ export default function ConversationsList({ uuid, engineUrl = "" }: Conversation
   }, [messages]);
 
   const handleRefresh = () => {
+    retryCountRef.current = 0;
+    setError(null);
     setLoading(true);
     connectWebSocket();
   };
@@ -230,11 +269,19 @@ export default function ConversationsList({ uuid, engineUrl = "" }: Conversation
     );
   }
 
-  if (error) {
+  if (error && messages.length === 0) {
     return (
-      <div className="p-4 text-center text-red-600 bg-red-50 rounded-lg border border-red-200">
-        <p className="font-medium">Connection Error</p>
-        <p className="text-sm mt-1">{error}</p>
+      <div className="p-4 text-center rounded-lg border border-red-200 bg-red-50">
+        <p className="font-medium text-red-600">{error === "Connection lost" ? "Connection Lost" : "Connecting"}</p>
+        <p className="text-sm mt-1 text-red-600">{error}</p>
+        {error === "Connection lost" && (
+          <button
+            onClick={handleReconnect}
+            className="mt-3 px-4 py-1.5 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors"
+          >
+            Reconnect
+          </button>
+        )}
       </div>
     );
   }
@@ -279,6 +326,21 @@ export default function ConversationsList({ uuid, engineUrl = "" }: Conversation
           </button>
         </div>
       </div>
+
+      {/* Connection status banner (shown when messages already loaded) */}
+      {error && messages.length > 0 && (
+        <div className="mb-4 p-2 text-center text-sm rounded-lg border border-amber-200 bg-amber-50 text-amber-700 flex items-center justify-center gap-2">
+          <span>{error}</span>
+          {error === "Connection lost" && (
+            <button
+              onClick={handleReconnect}
+              className="px-2 py-0.5 text-xs font-medium text-white bg-amber-600 rounded hover:bg-amber-700 transition-colors"
+            >
+              Reconnect
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Messages Container */}
       <div className="flex-1 overflow-y-auto space-y-6 pr-2">
