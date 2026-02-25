@@ -14,6 +14,7 @@ export class ScoringModule {
   private readonly strategies: Record<string, ScoringStrategy>;
   private readonly globalStrategies: Record<string, GlobalScoringStrategy>;
   private readonly store: ScoringStorageAdapter;
+  private queue: Promise<void> = Promise.resolve();
 
   constructor(
     config: EngineConfig,
@@ -66,21 +67,37 @@ export class ScoringModule {
     return new Set(userIds).size < userIds.length;
   }
 
+  /** Ensure scoring mutations are applied sequentially. */
+  private runExclusive(task: () => Promise<void>): Promise<void> {
+    const run = this.queue.then(task, task);
+    this.queue = run.catch(() => undefined);
+    return run;
+  }
+
   /** Record a game result and incrementally update scores. Called at game end. */
   async recordGame(result: GameResult): Promise<void> {
-    if (ScoringModule.isSelfPlay(result)) return;
-    await this.updateChallenge(result);
-    await this.updateGlobal(result);
+    return this.runExclusive(async () => {
+      if (ScoringModule.isSelfPlay(result)) return;
+      await this.updateChallenge(result);
+      await this.updateGlobal(result);
+    });
   }
 
   /** Catch-up: clear store and recompute from all provided results. */
   async recomputeAll(results: GameResult[]): Promise<void> {
-    await this.store.clear();
-    for (const result of results) {
-      if (ScoringModule.isSelfPlay(result)) continue;
-      await this.updateChallenge(result);
-      await this.updateGlobal(result);
-    }
+    return this.runExclusive(async () => {
+      await this.store.clear();
+      for (const result of results) {
+        if (ScoringModule.isSelfPlay(result)) continue;
+        await this.updateChallenge(result);
+        await this.updateGlobal(result);
+      }
+    });
+  }
+
+  /** Wait for all queued scoring work to finish. */
+  async waitForIdle(): Promise<void> {
+    await this.queue;
   }
 
   /** Get per-challenge scores (all strategies). */
