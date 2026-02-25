@@ -1,21 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
-
-interface ChatMessage {
-  channel: string;
-  from: string;
-  to: string | null;
-  content: string;
-  index: number;
-  timestamp: number;
-  redacted?: boolean;
-}
-
-interface Score {
-  security: number;
-  utility: number;
-}
+import type { ChatMessage, Score } from "@arena/engine/types";
 
 interface GameEndedData {
   scores: Score[];
