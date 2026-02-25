@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { ArenaEngine, defaultEngine } from "../../engine";
 import { fromChallengeChannel } from "../../types";
+import { ChatSendSchema, SyncSchema } from "../schemas";
 import { getIdentity, IdentityEnv } from "./identity";
 
 const SSE_KEEPALIVE_INTERVAL_MS = 30_000;
@@ -11,10 +12,13 @@ export function createChatRoutes(engine: ArenaEngine = defaultEngine) {
 
   // POST /api/chat/send - Send a chat message
   app.post("/api/chat/send", async (c) => {
-    const { channel, from: bodyFrom, to, content } = await c.req.json();
-    if (!channel || !content) {
-      return c.json({ error: "channel and content are required" }, 400);
+    const body = await c.req.json();
+    const parsed = ChatSendSchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json({ error: parsed.error.issues[0].message }, 400);
     }
+
+    const { channel, content, to } = parsed.data;
 
     const from = getIdentity(c);
     if (!from) {
@@ -31,13 +35,15 @@ export function createChatRoutes(engine: ArenaEngine = defaultEngine) {
 
   // GET /api/chat/sync - Get messages from a channel
   app.get("/api/chat/sync", async (c) => {
-    const channel = c.req.query("channel");
-    const index = parseInt(c.req.query("index") || "0", 10);
-
-    if (!channel) {
-      return c.json({ error: "channel is required" }, 400);
+    const parsed = SyncSchema.safeParse({
+      channel: c.req.query("channel"),
+      index: c.req.query("index") ?? 0,
+    });
+    if (!parsed.success) {
+      return c.json({ error: parsed.error.issues[0].message }, 400);
     }
 
+    const { channel, index } = parsed.data;
     const viewer = getIdentity(c);
     try {
       return c.json(await chat.chatSync(channel, viewer, index));
