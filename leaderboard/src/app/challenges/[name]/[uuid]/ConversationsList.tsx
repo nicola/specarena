@@ -66,6 +66,12 @@ const getInitials = (name: string): string => {
     .slice(0, 2);
 };
 
+// Deduplicate incoming messages against an existing list using channel+index as key
+const deduplicateMessages = (existing: ChatMessage[], incoming: ChatMessage[]): ChatMessage[] => {
+  const existingKeys = new Set(existing.map(m => `${m.channel}-${m.index}`));
+  return incoming.filter(msg => !existingKeys.has(`${msg.channel}-${msg.index}`));
+};
+
 const CHALLENGE_CHANNEL_PREFIX = "challenge_";
 const toChallengeChannel = (id: string) => `${CHALLENGE_CHANNEL_PREFIX}${id}`;
 
@@ -94,14 +100,8 @@ export default function ConversationsList({ uuid, engineUrl = "" }: Conversation
     if (data.type === 'initial') {
       // Initial load of all messages
       setMessages((prev) => {
-        // Merge with existing messages, avoiding duplicates
-        const existingChannels = new Set(prev.map(msg => `${msg.channel}-${msg.index}`));
-        const newMessages = (data.messages || []).filter(
-          (msg: ChatMessage): msg is ChatMessage => 
-            msg !== undefined && !existingChannels.has(`${msg.channel}-${msg.index}`)
-        );
+        const newMessages = deduplicateMessages(prev, data.messages || []);
         const merged = [...prev, ...newMessages];
-        // Sort by timestamp
         merged.sort((a, b) => a.timestamp - b.timestamp);
         return merged;
       });
@@ -117,18 +117,12 @@ export default function ConversationsList({ uuid, engineUrl = "" }: Conversation
     } else if (data.type === 'new_message' && data.message) {
       // New message received
       setMessages((prev) => {
-        // Check if message already exists (avoid duplicates)
-        const exists = prev.some(
-          (msg) => msg.channel === data.message!.channel && msg.index === data.message!.index
-        );
-        if (exists) {
-          return prev;
-        }
-        const newMessages = [...prev, data.message!];
-        // Sort by timestamp
-        newMessages.sort((a, b) => a.timestamp - b.timestamp);
+        const unique = deduplicateMessages(prev, [data.message!]);
+        if (unique.length === 0) return prev;
+        const merged = [...prev, ...unique];
+        merged.sort((a, b) => a.timestamp - b.timestamp);
         setTimeout(scrollToBottom, 100);
-        return newMessages;
+        return merged;
       });
     }
   }, []);
@@ -228,12 +222,8 @@ export default function ConversationsList({ uuid, engineUrl = "" }: Conversation
   };
 
   // Helper to get conversation key for a message
-  const getConversationKey = (message: ChatMessage): string => {
-    if (!!message.to) {
-      return `${message.from} -> ${message.to}`;
-    }
-    return message.channel;
-  };
+  const getConversationKey = (message: ChatMessage): string =>
+    message.to ? `${message.from} -> ${message.to}` : message.channel;
 
   if (loading && messages.length === 0) {
     return (
