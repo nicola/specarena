@@ -352,9 +352,6 @@ describe("Scoring integration via engine", () => {
 
     assert.equal(challenge.instance.state.gameEnded, true);
 
-    // Give async scoring a tick to complete
-    await new Promise((r) => setTimeout(r, 50));
-
     // Scoring should have been updated
     assert.ok(defaultEngine.scoring, "scoring module should exist");
     const scores = await defaultEngine.scoring!.getScoring("psi");
@@ -400,9 +397,6 @@ describe("Scoring integration via engine", () => {
       await defaultEngine.challengeMessage(challengeId, invites[1], "guess", intersection.join(", "));
       assert.equal(challenge.instance.state.gameEnded, true);
     }
-
-    // Give async scoring a tick to complete
-    await new Promise((r) => setTimeout(r, 50));
 
     // Check per-challenge scores via API
     const psiRes = await request("GET", "/api/scoring/psi");

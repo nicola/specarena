@@ -77,7 +77,7 @@ export type ChallengeEvent = {
 export interface ChallengeMessaging {
   sendMessage: (channel: string, from: string, content: string, to?: string | null) => Promise<ChatMessage>;
   sendChallengeMessage: (challengeId: string, from: string, content: string, to?: string | null) => Promise<ChatMessage>;
-  broadcastChallengeEvent?: (challengeId: string, event: ChallengeEvent) => void;
+  broadcastChallengeEvent?: (challengeId: string, event: ChallengeEvent) => void | Promise<void>;
 }
 
 export interface ChallengeFactoryContext {

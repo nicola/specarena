@@ -42,14 +42,18 @@ export class ArenaEngine {
         if (event.type !== "game_ended" || !this.scoring) return;
         const challenge = await this.getChallenge(challengeId);
         if (!challenge) return;
-        this.scoring.recordGame({
-          gameId: challengeId,
-          challengeType: challenge.challengeType,
-          completedAt: Date.now(),
-          scores: event.state.scores,
-          players: event.state.players,
-          playerIdentities: event.state.playerIdentities,
-        }).catch((err) => console.error("Scoring recordGame failed:", err));
+        try {
+          await this.scoring.recordGame({
+            gameId: challengeId,
+            challengeType: challenge.challengeType,
+            completedAt: Date.now(),
+            scores: event.state.scores,
+            players: event.state.players,
+            playerIdentities: event.state.playerIdentities,
+          });
+        } catch (err) {
+          console.error("Scoring recordGame failed:", err);
+        }
       },
     });
   }

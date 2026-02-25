@@ -133,10 +133,10 @@ export class ChatEngine {
     }
   }
 
-  broadcastChallengeEvent(challengeId: string, event: ChallengeEvent): void {
+  async broadcastChallengeEvent(challengeId: string, event: ChallengeEvent): Promise<void> {
     this.broadcastEvent(challengeId, event);
     this.broadcastEvent(toChallengeChannel(challengeId), event);
-    this.onChallengeEvent?.(challengeId, event);
+    await this.onChallengeEvent?.(challengeId, event);
   }
 
   async sendChallengeMessage(challengeId: string, from: string, content: string, to?: string | null): Promise<ChatMessage> {
