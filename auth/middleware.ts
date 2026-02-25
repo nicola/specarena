@@ -20,6 +20,7 @@ async function getChallengeIdFromRequest(c: Context): Promise<string | null> {
       const body = await cloned.json();
       challengeId = body.challengeId || body.channel;
     } catch {
+      // Expected for GET requests or non-JSON bodies; fall through to URL param check
     }
   }
 
