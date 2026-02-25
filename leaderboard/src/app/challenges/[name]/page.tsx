@@ -3,12 +3,11 @@ import ChallengesList from "@/app/components/ChallengesList";
 import Link from "next/link";
 import { Metadata } from "next";
 import { ChallengeMetadata } from "@arena/engine/types";
-
-const engineUrl = process.env.ENGINE_URL || "http://localhost:3001";
+import { ENGINE_URL } from "@/lib/config";
 
 async function fetchMetadata(name: string): Promise<ChallengeMetadata | null> {
   try {
-    const res = await fetch(`${engineUrl}/api/metadata/${name}`, { cache: "no-store" });
+    const res = await fetch(`${ENGINE_URL}/api/metadata/${name}`, { cache: "no-store" });
     if (!res.ok) return null;
     return await res.json();
   } catch {
@@ -38,7 +37,7 @@ export default async function ChallengePage({ params }: { params: Promise<{ name
   // Fetch all challenges for this challenge type from the API
   let challengesList: Array<{ id: string; name: string; createdAt: number; challengeType: string; invites: string[] }> = [];
   try {
-    const response = await fetch(`${engineUrl}/api/challenges/${name}`, {
+    const response = await fetch(`${ENGINE_URL}/api/challenges/${name}`, {
       cache: 'no-store',
     });
     if (response.ok) {

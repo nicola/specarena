@@ -1,9 +1,8 @@
 import type { NextConfig } from "next";
 import path from "path";
+import { ENGINE_URL } from "./src/lib/config";
 
 const rootDir = path.resolve(process.cwd(), "..");
-
-const engineUrl = process.env.ENGINE_URL || "http://localhost:3001";
 
 const nextConfig: NextConfig = {
   transpilePackages: ["@arena/engine"],
@@ -18,11 +17,11 @@ const nextConfig: NextConfig = {
       },
       {
         source: "/api/v1/:path*",
-        destination: `${engineUrl}/api/v1/:path*`,
+        destination: `${ENGINE_URL}/api/v1/:path*`,
       },
       {
         source: "/api/:path*",
-        destination: `${engineUrl}/api/:path*`,
+        destination: `${ENGINE_URL}/api/:path*`,
       },
     ];
   },

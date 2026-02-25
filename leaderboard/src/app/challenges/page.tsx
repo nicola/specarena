@@ -1,8 +1,7 @@
 import ChallengeCard from "@/app/components/ChallengeCard";
 import { Metadata } from "next";
 import { ChallengeMetadata } from "@arena/engine/types";
-
-const engineUrl = process.env.ENGINE_URL || "http://localhost:3001";
+import { ENGINE_URL } from "@/lib/config";
 
 export async function generateMetadata() {
   const metadata: Metadata = {
@@ -48,7 +47,7 @@ const defaultIcon = (
 
 async function loadChallenges(): Promise<{ slug: string; metadata: ChallengeMetadata }[]> {
   try {
-    const res = await fetch(`${engineUrl}/api/metadata`, { cache: "no-store" });
+    const res = await fetch(`${ENGINE_URL}/api/metadata`, { cache: "no-store" });
     if (!res.ok) return [];
     const all: Record<string, ChallengeMetadata> = await res.json();
     return Object.entries(all).map(([slug, metadata]) => ({ slug, metadata }));
