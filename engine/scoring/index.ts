@@ -36,18 +36,18 @@ export class ScoringModule {
   }
 
   /** Incrementally update per-challenge scores for a single game result. */
-  private async updateChallenge(result: GameResult): Promise<void> {
+  private async updateChallenge(result: GameResult, store: ScoringStorageAdapter): Promise<void> {
     const strategyNames = this.getStrategiesForChallenge(result.challengeType);
 
     for (const name of strategyNames) {
       const strategy = this.strategies[name];
       if (!strategy) continue;
-      await strategy.update(result, this.store);
+      await strategy.update(result, store);
     }
   }
 
   /** Incrementally update global scores for a single game result. */
-  private async updateGlobal(result: GameResult): Promise<void> {
+  private async updateGlobal(result: GameResult, store: ScoringStorageAdapter): Promise<void> {
     const globalName = this.config.scoring.global;
     if (!globalName) return;
 
@@ -57,7 +57,7 @@ export class ScoringModule {
     const source = this.config.scoring.globalSource ?? this.config.scoring.default[0];
     if (!source) return;
 
-    await globalStrategy.update(result, this.store, source);
+    await globalStrategy.update(result, store, source);
   }
 
   /** Returns true if any player userId appears more than once (self-play). */
@@ -68,28 +68,40 @@ export class ScoringModule {
 
   /** Record a game result and incrementally update scores. Called at game end. */
   async recordGame(result: GameResult): Promise<void> {
-    if (ScoringModule.isSelfPlay(result)) return;
-    await this.updateChallenge(result);
-    await this.updateGlobal(result);
+    return this.store.transaction(async (tx) => {
+      if (ScoringModule.isSelfPlay(result)) return;
+      await this.updateChallenge(result, tx);
+      await this.updateGlobal(result, tx);
+    });
   }
 
   /** Catch-up: clear store and recompute from all provided results. */
   async recomputeAll(results: GameResult[]): Promise<void> {
-    await this.store.clear();
-    for (const result of results) {
-      if (ScoringModule.isSelfPlay(result)) continue;
-      await this.updateChallenge(result);
-      await this.updateGlobal(result);
-    }
+    return this.store.transaction(async (tx) => {
+      await tx.clear();
+      for (const result of results) {
+        if (ScoringModule.isSelfPlay(result)) continue;
+        await this.updateChallenge(result, tx);
+        await this.updateGlobal(result, tx);
+      }
+    });
+  }
+
+  /** Wait for all queued scoring work to finish. */
+  async waitForIdle(): Promise<void> {
+    await this.store.waitForIdle();
   }
 
   /** Get per-challenge scores (all strategies). */
   async getScoring(challengeType: string): Promise<Record<string, ScoringEntry[]>> {
+    // Intentionally non-blocking: leaderboard reads may be slightly stale but avoid waiting behind write bursts.
+    // If strict read-after-write is needed again, reintroduce `await this.store.waitForIdle()` here.
     return this.store.getScores(challengeType);
   }
 
   /** Get global scores. */
   async getGlobalScoring(): Promise<ScoringEntry[]> {
+    // Intentionally non-blocking for the same eventual-consistency tradeoff as getScoring().
     return this.store.getGlobalScores();
   }
 

@@ -310,6 +310,22 @@ describe("ScoringModule", () => {
     assert.ok(alice);
     assert.equal(alice.gamesPlayed, 1, "only the legit game should count");
   });
+
+  it("serializes concurrent recordGame calls without lost updates", async () => {
+    const games = 25;
+    await Promise.all(
+      Array.from({ length: games }, (_, i) => scoring.recordGame(makeGameResult({ gameId: `g-${i}` }))),
+    );
+
+    const avg = (await scoring.getScoring("psi"))["average"];
+    const alice = avg.find((e: ScoringEntry) => e.playerId === "user-alice");
+    const bob = avg.find((e: ScoringEntry) => e.playerId === "user-bob");
+
+    assert.ok(alice);
+    assert.ok(bob);
+    assert.equal(alice.gamesPlayed, games);
+    assert.equal(bob.gamesPlayed, games);
+  });
 });
 
 // --- Integration: scoring hook in engine ---
@@ -353,8 +369,7 @@ describe("Scoring integration via engine", () => {
 
     assert.equal(challenge.instance.state.gameEnded, true);
 
-    // Give async scoring a tick to complete
-    await new Promise((r) => setTimeout(r, 50));
+    await defaultEngine.scoring!.waitForIdle();
 
     // Scoring should have been updated
     assert.ok(defaultEngine.scoring, "scoring module should exist");
@@ -409,8 +424,7 @@ describe("Scoring integration via engine", () => {
       assert.equal(challenge.instance.state.gameEnded, true);
     }
 
-    // Give async scoring a tick to complete
-    await new Promise((r) => setTimeout(r, 50));
+    await defaultEngine.scoring!.waitForIdle();
 
     // Check per-challenge scores via API
     const psiRes = await request("GET", "/api/scoring/psi");
