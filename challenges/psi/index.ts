@@ -1,5 +1,6 @@
+import { z } from "zod";
 import { generateRandomSetFromSeed } from "@arena/engine/utils";
-import { ChallengeFactoryContext, ChatMessage, ChallengeMessaging, ChallengeOperator } from "@arena/engine/types";
+import { ChallengeFactory, ChallengeFactoryContext, ChatMessage, ChallengeMessaging, ChallengeOperator } from "@arena/engine/types";
 import { BaseChallenge } from "@arena/engine/challenge-design/BaseChallenge";
 
 // Utility scores for the guessing player
@@ -159,14 +160,30 @@ const DEFAULT_CONFIG = {
   setSize: 10,
 };
 
+export const PsiOptionsSchema = z.object({
+  players: z.number().int().min(2).optional(),
+  range: z.tuple([z.number().int(), z.number().int()]).optional(),
+  intersectionSize: z.number().int().min(1).optional(),
+  setSize: z.number().int().min(1).optional(),
+}).passthrough();
+
 export function createChallenge(
   challengeId: string,
   options?: Record<string, unknown>,
   context?: ChallengeFactoryContext
 ): ChallengeOperator {
+  const parsed = PsiOptionsSchema.safeParse(options ?? {});
+  if (!parsed.success) {
+    throw new Error(`Invalid PSI options: ${parsed.error.message}`);
+  }
   return new PsiChallenge({
     challengeId,
     ...DEFAULT_CONFIG,
-    ...options,
+    ...parsed.data,
   } as PsiChallengeParams, context?.messaging);
 }
+
+export const psiFactory: ChallengeFactory = {
+  create: createChallenge,
+  optionsSchema: PsiOptionsSchema,
+};

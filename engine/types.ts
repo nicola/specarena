@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 export const CHALLENGE_CHANNEL_PREFIX = "challenge_";
 export const toChallengeChannel = (id: string) => `${CHALLENGE_CHANNEL_PREFIX}${id}`;
 export const fromChallengeChannel = (channel: string): string | null =>
@@ -78,11 +80,16 @@ export interface ChallengeFactoryContext {
   messaging: ChallengeMessaging;
 }
 
-export type ChallengeFactory = (
+export type ChallengeFactoryFn = (
   challengeId: string,
   options?: Record<string, unknown>,
   context?: ChallengeFactoryContext
 ) => ChallengeOperator;
+
+export type ChallengeFactory = ChallengeFactoryFn | {
+  create: ChallengeFactoryFn;
+  optionsSchema?: z.ZodType;
+};
 
 export type Result<T, E = ChallengeError> =
   | { success: true; data: T }

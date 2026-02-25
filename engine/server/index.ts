@@ -2,7 +2,7 @@ import { readFileSync } from "fs";
 import { join } from "path";
 import { Hono } from "hono";
 import { ArenaEngine, defaultEngine } from "../engine";
-import { ChallengeConfig, ChallengeFactory, ChallengeMetadata } from "../types";
+import { ChallengeConfig, ChallengeFactory, ChallengeFactoryFn, ChallengeMetadata } from "../types";
 import { createArenaHandler } from "./mcp/arena";
 import { createChatHandler } from "./mcp/chat";
 import { createChallengeRoutes } from "./routes/challenges";
@@ -30,10 +30,23 @@ export function registerChallengesFromConfig(engine: ArenaEngine): void {
     );
     engine.registerChallengeMetadata(config.name, metadata);
 
-    // Dynamic import: each challenge exports a createChallenge factory
+    // Dynamic import: each challenge may export a factory descriptor or a bare createChallenge function
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const mod = require(join(challengesDir, config.name, "index.ts")) as { createChallenge: ChallengeFactory };
-    if (mod.createChallenge) {
+    const mod = require(join(challengesDir, config.name, "index.ts")) as {
+      createChallenge?: ChallengeFactoryFn;
+      psiFactory?: ChallengeFactory;
+      [key: string]: unknown;
+    };
+
+    // Prefer a named *Factory export (e.g. psiFactory) for schema-aware registration
+    const factoryExport = Object.values(mod).find(
+      (v): v is Exclude<ChallengeFactory, ChallengeFactoryFn> =>
+        typeof v === "object" && v !== null && "create" in v
+    );
+
+    if (factoryExport) {
+      engine.registerChallengeFactory(config.name, factoryExport, config.options);
+    } else if (mod.createChallenge) {
       engine.registerChallengeFactory(config.name, mod.createChallenge, config.options);
     }
   }

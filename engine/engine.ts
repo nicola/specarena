@@ -76,7 +76,17 @@ export class ArenaEngine {
     }
 
     const options = this.challengeOptions.get(challengeType);
-    const instance = factory(id, options, {
+    const create = typeof factory === "function" ? factory : factory.create;
+    const schema = typeof factory === "function" ? undefined : factory.optionsSchema;
+
+    if (schema) {
+      const result = schema.safeParse(options ?? {});
+      if (!result.success) {
+        throw new Error(`Invalid options for challenge "${challengeType}": ${result.error.message}`);
+      }
+    }
+
+    const instance = create(id, options, {
       messaging: this.chat,
     });
 
