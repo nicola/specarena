@@ -57,22 +57,26 @@ export function hashPublicKey(publicKeyHex: string): string {
   return crypto.createHash("sha256").update(publicKeyHex).digest("hex");
 }
 
-export function parseSessionKey(key: string): { userIndex: number; hmac: string } | null {
-  // Session Key has the format: "s_" +  index + "." + hmac
+export function parseSessionKey(key: string): { userIndex: number; expiresAt: number; hmac: string } | null {
+  // Session key format: s_<userIndex>.<expiresAtMs>.<hmac>
 
   if (!key || !key.startsWith("s_")) {
     return null;
   }
 
-  const [_s, session] = key.split("_")
-  const [userIndexStr, hmac] = session.split(".")
+  const [_s, session] = key.split("_");
+  const [userIndexStr, expiresAtStr, hmac] = session.split(".");
   const userIndex = parseInt(userIndexStr, 10);
+  const expiresAt = parseInt(expiresAtStr, 10);
 
   if (isNaN(userIndex)) {
+    return null;
+  }
+  if (isNaN(expiresAt) || expiresAt <= 0) {
     return null;
   }
   if (!hmac || !/^[a-f0-9]{64}$/.test(hmac)) {
     return null;
   }
-  return { userIndex, hmac };
+  return { userIndex, expiresAt, hmac };
 }

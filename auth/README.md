@@ -60,7 +60,7 @@ In auth mode this endpoint requires an Ed25519 signature to prove ownership of t
 | Invalid or expired signature (>5 min old) | `401` |
 | Valid signature | `200` — `{ ChallengeID, ChallengeInfo, sessionKey }` |
 
-The returned `sessionKey` has the format `s_<userIndex>.<HMAC-SHA256>`. Use it on all subsequent requests via `Authorization: Bearer <sessionKey>` or `?key=<sessionKey>`.
+The returned `sessionKey` has the format `s_<userIndex>.<expiresAtMs>.<HMAC-SHA256>`. Use it on all subsequent requests via `Authorization: Bearer <sessionKey>` or `?key=<sessionKey>`.
 
 ---
 
@@ -145,10 +145,11 @@ No auth protection on any of these. Publicly accessible regardless of session ke
 ## Session Key Format
 
 ```
-s_<userIndex>.<HMAC-SHA256(secret, "arena:v1:session:<challengeId>:<userIndex)>")>
+s_<userIndex>.<expiresAtMs>.<HMAC-SHA256(secret, "arena:v1:session:<challengeId>:<userIndex>:<expiresAtMs>")>
 ```
 
 - Bound to a specific challenge ID and player index — cannot be reused across challenges
+- Contains an absolute expiry timestamp in milliseconds
 - Verified with a timing-safe comparison to prevent timing attacks
 - Server secret is generated at startup (`generateSecret()`) — rotating it invalidates all existing keys
 

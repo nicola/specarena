@@ -8,7 +8,7 @@ import { readNextSSEData } from "../../engine/test/helpers/sse";
 // --- Auth-enabled engine + app ---
 
 const secret = generateSecret();
-const { app, engine } = createAuthApp({ secret });
+const { app, engine, auth } = createAuthApp({ secret });
 
 // Two independent key pairs (simulating two different clients)
 const keyA = generateKeyPair();
@@ -29,6 +29,10 @@ async function request(method: string, path: string, body?: object, headers?: Re
 
 function authedRequest(method: string, path: string, sessionKey: string, body?: object) {
   return request(method, path, body, { Authorization: `Bearer ${sessionKey}` });
+}
+
+function forgedSessionKey(userIndex = 0, expiresAt = Date.now() + 60_000) {
+  return `s_${userIndex}.${expiresAt}.${"ab".repeat(32)}`;
 }
 
 async function createChallenge() {
@@ -168,8 +172,37 @@ describe("Auth security — session key validation on message route", () => {
     await joinWithAuth(invites[1], keyB);
 
     // Construct a plausible-looking key with the right format but wrong HMAC
-    const forgedKey = "s_0." + "ab".repeat(32);
+    const forgedKey = forgedSessionKey(0);
     const res = await authedRequest("POST", "/api/arena/message", forgedKey, {
+      challengeId: id,
+      messageType: "guess",
+      content: "100",
+    });
+    assert.equal(res.status, 401);
+  });
+
+  it("rejects message with expired session key", async () => {
+    const { id, invites } = await createChallenge();
+    await joinWithAuth(invites[0], keyA);
+    await joinWithAuth(invites[1], keyB);
+
+    const expiredKey = auth.createSessionKey(id, 0, Date.now() - (24 * 60 * 60 * 1000) - 1);
+    const res = await authedRequest("POST", "/api/arena/message", expiredKey, {
+      challengeId: id,
+      messageType: "guess",
+      content: "100",
+    });
+    assert.equal(res.status, 401);
+  });
+
+  it("rejects message with revoked session key", async () => {
+    const { id, invites } = await createChallenge();
+    const { data: join0 } = await joinWithAuth(invites[0], keyA);
+    await joinWithAuth(invites[1], keyB);
+
+    auth.revokeSessionKey(join0.sessionKey);
+
+    const res = await authedRequest("POST", "/api/arena/message", join0.sessionKey, {
       challengeId: id,
       messageType: "guess",
       content: "100",
@@ -255,7 +288,7 @@ describe("Auth security — session key validation on sync route", () => {
     await joinWithAuth(invites[0], keyA);
     await joinWithAuth(invites[1], keyB);
 
-    const forgedKey = "s_0." + "ab".repeat(32);
+    const forgedKey = forgedSessionKey(0);
     const res = await request("GET", `/api/arena/sync?channel=${id}&index=0&key=${forgedKey}`);
     assert.equal(res.status, 401);
   });

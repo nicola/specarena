@@ -3,12 +3,17 @@ import crypto from "node:crypto";
 
 const PROTOCOL_VERSION = "arena:v1";
 const TIMESTAMP_WINDOW_MS = 5 * 60 * 1000;
+const DEFAULT_SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 
 export class AuthEngine {
   private readonly secret: string;
+  private readonly sessionTtlMs: number;
+  private readonly revokedSessionKeys: Set<string>;
 
-  constructor(secret: string) {
+  constructor(secret: string, options?: { sessionTtlMs?: number }) {
     this.secret = secret;
+    this.sessionTtlMs = options?.sessionTtlMs ?? DEFAULT_SESSION_TTL_MS;
+    this.revokedSessionKeys = new Set<string>();
   }
 
   authenticateJoin(
@@ -29,13 +34,19 @@ export class AuthEngine {
   }
 
   /**
-   * Create a session key: `s_<userIndex>.<HMAC-SHA256(secret, challengeId:userIndex)>`
+   * Create a session key:
+   * `s_<userIndex>.<expiresAtMs>.<HMAC-SHA256(secret, challengeId:userIndex:expiresAtMs)>`
    */
-  createSessionKey(challengeId: string, userIndex: number): string {
+  createSessionKey(challengeId: string, userIndex: number, nowMs: number = Date.now()): string {
+    const expiresAt = nowMs + this.sessionTtlMs;
     const hmac = crypto.createHmac("sha256", this.secret)
-      .update(`${PROTOCOL_VERSION}:session:${challengeId}:${userIndex}`)
+      .update(`${PROTOCOL_VERSION}:session:${challengeId}:${userIndex}:${expiresAt}`)
       .digest("hex");
-    return `s_${userIndex}.${hmac}`;
+    return `s_${userIndex}.${expiresAt}.${hmac}`;
+  }
+
+  revokeSessionKey(key: string): void {
+    this.revokedSessionKeys.add(key);
   }
 
   /**
@@ -46,9 +57,15 @@ export class AuthEngine {
     if (!parsed) {
       return { valid: false };
     }
+    if (parsed.expiresAt < Date.now()) {
+      return { valid: false };
+    }
+    if (this.revokedSessionKeys.has(key)) {
+      return { valid: false };
+    }
 
     const expected = crypto.createHmac("sha256", this.secret)
-      .update(`${PROTOCOL_VERSION}:session:${challengeId}:${parsed.userIndex}`)
+      .update(`${PROTOCOL_VERSION}:session:${challengeId}:${parsed.userIndex}:${parsed.expiresAt}`)
       .digest("hex");
     const a = Buffer.from(parsed.hmac, "hex");
     const b = Buffer.from(expected, "hex");

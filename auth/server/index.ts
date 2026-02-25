@@ -11,12 +11,13 @@ import { createAuthUser } from "../middleware";
 export interface AuthAppOptions {
   secret?: string;
   engine?: ArenaEngine;
+  sessionTtlMs?: number;
 }
 
 export function createAuthApp(options: AuthAppOptions = {}) {
   const secret = options.secret ?? generateSecret();
   const engine = options.engine ?? createEngine();
-  const auth = new AuthEngine(secret);
+  const auth = new AuthEngine(secret, { sessionTtlMs: options.sessionTtlMs });
 
   const app = new Hono();
 
