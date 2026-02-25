@@ -9,6 +9,8 @@ export class InMemoryScoringStore implements ScoringStorageAdapter {
   private strategyState = new Map<string, Map<string, unknown>>();
   /** playerId → state */
   private globalStrategyState = new Map<string, unknown>();
+  /** Serializes scoring write transactions. */
+  private transactionQueue: Promise<void> = Promise.resolve();
 
   async getScores(challengeType: string): Promise<Record<string, ScoringEntry[]>> {
     const strategies = this.scores.get(challengeType);
@@ -29,6 +31,16 @@ export class InMemoryScoringStore implements ScoringStorageAdapter {
     this.globalScores.clear();
     this.strategyState.clear();
     this.globalStrategyState.clear();
+  }
+
+  async transaction<T>(fn: (store: ScoringStorageAdapter) => Promise<T>): Promise<T> {
+    const run = this.transactionQueue.then(() => fn(this), () => fn(this));
+    this.transactionQueue = run.then(() => undefined, () => undefined);
+    return run;
+  }
+
+  async waitForIdle(): Promise<void> {
+    await this.transactionQueue;
   }
 
   async getStrategyState<T>(challengeType: string, strategyName: string, playerId: string): Promise<T | undefined> {
