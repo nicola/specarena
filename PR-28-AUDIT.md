@@ -38,19 +38,9 @@ Fixed in #81. Added `scoring.globalSource` to config to explicitly declare which
 
 Fixed in #78. Scoring types, interfaces, and `InMemoryScoringStore` moved into `@arena/scoring`. Engine re-exports for backward compatibility. Dependency is now one-way: `engine -> scoring`.
 
-### 5. `as any` type escape in scoring hook
+### 5. ~~`as any` type escape in scoring hook~~ FIXED
 
-**`engine/engine.ts:49`**
-
-```typescript
-scores: event.scores as any[],
-players: event.players as string[],
-playerIdentities: event.playerIdentities as Record<string, string>,
-```
-
-`event` is `Record<string, unknown>`. `as any` bypasses type safety -- malformed `game_ended` events silently corrupt incremental state (partial writes before strategies throw).
-
-**Fix:** Add a runtime shape check (Zod schema or guard function) before passing into `recordGame`.
+Fixed in #95. Replaced `Record<string, unknown>` with a typed `ChallengeEvent` discriminated union (`GameEndedEvent`). The `onChallengeEvent` handler now uses `ScoringModule.challengeToGameResult(challenge)` instead of manually extracting fields with `as any` casts.
 
 ---
 
@@ -130,7 +120,7 @@ Strategy names referenced in config are not checked against registered strategie
 | 2 | `completedAt` uses creation time | Medium | **Fixed** #79 #80 |
 | 3 | Implicit global strategy ordering | Medium | **Fixed** #81 |
 | 4 | Circular package dependency | Medium | **Fixed** #78 |
-| 5 | `as any` type escape in scoring hook | Medium | Open |
+| 5 | `as any` type escape in scoring hook | Medium | **Fixed** #95 |
 | 6 | Unvalidated `:challengeType` param | Low | **Fixed** #73 |
 | 7 | Composite key collision | Low | Open |
 | 8 | Shared references in `challengeToGameResult` | Low | Open |
