@@ -1,6 +1,7 @@
-import { describe, it } from "node:test";
+import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { average } from "../average";
+import { InMemoryScoringStore } from "@arena/engine/scoring";
 import type { GameResult } from "@arena/engine/scoring/types";
 
 function makeGame(
@@ -20,13 +21,27 @@ function makeGame(
 }
 
 describe("average strategy", () => {
-  it("returns empty for no results", () => {
-    const entries = average.compute([]);
+  let store: InMemoryScoringStore;
+
+  beforeEach(() => {
+    store = new InMemoryScoringStore();
+  });
+
+  async function computeEntries(games: GameResult[]) {
+    for (const game of games) {
+      await average.update(game, store);
+    }
+    const scores = await store.getScores("psi");
+    return scores["average"] ?? [];
+  }
+
+  it("returns empty for no results", async () => {
+    const entries = await computeEntries([]);
     assert.deepStrictEqual(entries, []);
   });
 
-  it("single game — scores are the averages", () => {
-    const entries = average.compute([
+  it("single game — scores are the averages", async () => {
+    const entries = await computeEntries([
       makeGame({ security: 1, utility: 1 }, { security: -1, utility: -1 }),
     ]);
 
@@ -42,8 +57,8 @@ describe("average strategy", () => {
     assert.equal(bob.gamesPlayed, 1);
   });
 
-  it("two games — averages the scores", () => {
-    const entries = average.compute([
+  it("two games — averages the scores", async () => {
+    const entries = await computeEntries([
       makeGame({ security: 1, utility: 1 }, { security: -1, utility: -1 }),
       makeGame({ security: -1, utility: -1 }, { security: 1, utility: 1 }),
     ]);
@@ -60,8 +75,8 @@ describe("average strategy", () => {
     assert.equal(bob.gamesPlayed, 2);
   });
 
-  it("asymmetric scores average correctly", () => {
-    const entries = average.compute([
+  it("asymmetric scores average correctly", async () => {
+    const entries = await computeEntries([
       makeGame({ security: 1, utility: 2 }, { security: -1, utility: 0 }),
       makeGame({ security: 1, utility: 0 }, { security: -1, utility: 2 }),
     ]);
@@ -75,8 +90,8 @@ describe("average strategy", () => {
     assert.equal(bob.utility, 1);
   });
 
-  it("skips players without identity", () => {
-    const entries = average.compute([
+  it("skips players without identity", async () => {
+    const entries = await computeEntries([
       {
         gameId: "g1",
         challengeType: "psi",
@@ -91,8 +106,8 @@ describe("average strategy", () => {
     assert.equal(entries[0].playerId, "alice");
   });
 
-  it("three games with different opponents", () => {
-    const entries = average.compute([
+  it("three games with different opponents", async () => {
+    const entries = await computeEntries([
       makeGame({ security: 1, utility: 1 }, { security: -1, utility: -1 }),
       {
         gameId: "g2",

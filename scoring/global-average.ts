@@ -1,33 +1,63 @@
-import type { GlobalScoringStrategy, ScoringEntry } from "@arena/engine/scoring/types";
+import type { GlobalScoringStrategy, GameResult } from "@arena/engine/scoring/types";
+import type { ScoringStorageAdapter } from "@arena/engine/scoring";
+
+interface ChallengeSnapshot {
+  security: number;
+  utility: number;
+  gamesPlayed: number;
+}
+
+interface GlobalAvgState {
+  sumSecurity: number;
+  sumUtility: number;
+  challengeCount: number;
+  totalGames: number;
+  prevScores: Record<string, ChallengeSnapshot>;
+}
 
 /** Global strategy: averages per-challenge security and utility per player. Sums gamesPlayed. */
 export const globalAverage: GlobalScoringStrategy = {
   name: "global-average",
 
-  compute(perChallenge: Record<string, ScoringEntry[]>): ScoringEntry[] {
-    const acc = new Map<string, { security: number; utility: number; challengeCount: number; gamesPlayed: number }>();
-
-    for (const entries of Object.values(perChallenge)) {
-      for (const entry of entries) {
-        const cur = acc.get(entry.playerId) ?? { security: 0, utility: 0, challengeCount: 0, gamesPlayed: 0 };
-        cur.security += entry.security;
-        cur.utility += entry.utility;
-        cur.challengeCount += 1;
-        cur.gamesPlayed += entry.gamesPlayed;
-        acc.set(entry.playerId, cur);
-      }
+  async update(result: GameResult, store: ScoringStorageAdapter, challengeStrategyName: string): Promise<void> {
+    const playerIds = new Set<string>();
+    for (const invite of result.players) {
+      const pid = result.playerIdentities[invite];
+      if (pid) playerIds.add(pid);
     }
 
-    const result: ScoringEntry[] = [];
-    for (const [playerId, { security, utility, challengeCount, gamesPlayed }] of acc) {
-      result.push({
+    for (const playerId of playerIds) {
+      const current = await store.getScoreEntry(result.challengeType, challengeStrategyName, playerId);
+      if (!current) continue;
+
+      const state = await store.getGlobalStrategyState<GlobalAvgState>(playerId)
+        ?? { sumSecurity: 0, sumUtility: 0, challengeCount: 0, totalGames: 0, prevScores: {} };
+
+      const prev = state.prevScores[result.challengeType];
+      if (prev) {
+        state.sumSecurity += current.security - prev.security;
+        state.sumUtility += current.utility - prev.utility;
+        state.totalGames += current.gamesPlayed - prev.gamesPlayed;
+      } else {
+        state.sumSecurity += current.security;
+        state.sumUtility += current.utility;
+        state.totalGames += current.gamesPlayed;
+        state.challengeCount += 1;
+      }
+
+      state.prevScores[result.challengeType] = {
+        security: current.security,
+        utility: current.utility,
+        gamesPlayed: current.gamesPlayed,
+      };
+
+      await store.setGlobalStrategyState(playerId, state);
+      await store.setGlobalScoreEntry({
         playerId,
-        gamesPlayed,
-        security: challengeCount > 0 ? security / challengeCount : 0,
-        utility: challengeCount > 0 ? utility / challengeCount : 0,
+        gamesPlayed: state.totalGames,
+        security: state.challengeCount > 0 ? state.sumSecurity / state.challengeCount : 0,
+        utility: state.challengeCount > 0 ? state.sumUtility / state.challengeCount : 0,
       });
     }
-
-    return result;
   },
 };
