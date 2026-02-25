@@ -6,7 +6,7 @@
     ".": "./index.ts"
   },
   "scripts": {
-    "test": "node --import tsx --test --test-force-exit test/**/*.test.ts"
+    "test": "node --import tsx --test --test-force-exit test/*.test.ts"
   },
   "dependencies": {},
   "devDependencies": {
