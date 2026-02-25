@@ -103,7 +103,8 @@ export class ScoringModule {
     return {
       gameId: challenge.id,
       challengeType: challenge.challengeType,
-      completedAt: state.completedAt ?? challenge.createdAt,
+      createdAt: challenge.createdAt,
+      completedAt: state.completedAt ?? Date.now(),
       scores: state.scores,
       players: state.players,
       playerIdentities: state.playerIdentities,

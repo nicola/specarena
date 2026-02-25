@@ -23,6 +23,7 @@ function makeGameResult(overrides: Partial<GameResult> = {}): GameResult {
   return {
     gameId: "game-1",
     challengeType: "psi",
+    createdAt: Date.now(),
     completedAt: Date.now(),
     scores: [
       { security: 1, utility: 0.8 },

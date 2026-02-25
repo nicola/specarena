@@ -13,6 +13,7 @@ function makeGame(
   return {
     gameId: crypto.randomUUID(),
     challengeType: "psi",
+    createdAt: Date.now(),
     completedAt: Date.now(),
     scores: [p0, p1],
     players: ["inv_a", "inv_b"],
@@ -90,6 +91,7 @@ describe("global-average strategy", () => {
       {
         gameId: crypto.randomUUID(),
         challengeType: "gencrypto",
+        createdAt: Date.now(),
         completedAt: Date.now(),
         scores: [{ security: 0.5, utility: 0.5 }, { security: -0.5, utility: -0.5 }],
         players: ["inv_c", "inv_d"],
