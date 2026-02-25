@@ -343,15 +343,16 @@ describe("Concurrent SSE streams — engine level (no auth)", () => {
         findGameEnded(vPrefixed.reader, vPrefixed.buf),
       ]);
 
-      // Both should have structured scores and players
+      // Both should have structured data envelope
       for (const ev of [endedBare, endedPrefixed]) {
         assert.equal(ev.type, "game_ended");
-        assert.ok(Array.isArray(ev.scores), "scores should be an array");
-        assert.equal(ev.scores.length, 2);
-        assert.ok(typeof ev.scores[0].security === "number");
-        assert.ok(typeof ev.scores[0].utility === "number");
-        assert.ok(Array.isArray(ev.players));
-        assert.equal(ev.players.length, 2);
+        assert.ok(ev.data, "should have a data envelope");
+        assert.ok(Array.isArray(ev.data.scores), "scores should be an array");
+        assert.equal(ev.data.scores.length, 2);
+        assert.ok(typeof ev.data.scores[0].security === "number");
+        assert.ok(typeof ev.data.scores[0].utility === "number");
+        assert.ok(Array.isArray(ev.data.players));
+        assert.equal(ev.data.players.length, 2);
       }
     } finally {
       vBare.reader.cancel().catch(() => {});
@@ -380,9 +381,10 @@ describe("Concurrent SSE streams — engine level (no auth)", () => {
 
       const ended = await readNextSSEData(viewer.reader, viewer.buf);
       assert.equal(ended.type, "game_ended");
-      assert.ok(Array.isArray(ended.scores));
-      assert.equal(ended.scores.length, 2);
-      assert.ok(Array.isArray(ended.players));
+      assert.ok(ended.data, "should have a data envelope");
+      assert.ok(Array.isArray(ended.data.scores));
+      assert.equal(ended.data.scores.length, 2);
+      assert.ok(Array.isArray(ended.data.players));
     } finally {
       viewer.reader.cancel().catch(() => {});
     }

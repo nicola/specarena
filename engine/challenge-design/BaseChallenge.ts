@@ -113,9 +113,7 @@ export abstract class BaseChallenge<TGameState = {}> implements ChallengeOperato
     await this.broadcast(`Game ended.\n\nScores are:\n${lines.join("\n")}`);
     this.messaging.broadcastChallengeEvent?.(this.challengeId, {
       type: "game_ended",
-      scores: this.state.scores,
-      players: this.state.players,
-      playerIdentities: this.state.playerIdentities,
+      data: this.state,
     });
   }
 }
