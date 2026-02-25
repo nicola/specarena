@@ -4,14 +4,18 @@ export interface ArenaStorageAdapter {
   clearRuntimeState(): Promise<void>;
   listChallenges(): Promise<Challenge[]>;
   getChallenge(challengeId: string): Promise<Challenge | undefined>;
+  getChallengeFromInvite(invite: string): Promise<Challenge | undefined>;
   setChallenge(challenge: Challenge): Promise<void>;
+  deleteChallenge(challengeId: string): Promise<void>;
 }
 
 export class InMemoryArenaStorageAdapter implements ArenaStorageAdapter {
   private challengesById: Record<string, Challenge> = {};
+  private inviteToChallengeId: Record<string, string> = {};
 
   async clearRuntimeState(): Promise<void> {
     this.challengesById = {};
+    this.inviteToChallengeId = {};
   }
 
   async listChallenges(): Promise<Challenge[]> {
@@ -22,7 +26,26 @@ export class InMemoryArenaStorageAdapter implements ArenaStorageAdapter {
     return this.challengesById[challengeId];
   }
 
+  async getChallengeFromInvite(invite: string): Promise<Challenge | undefined> {
+    const challengeId = this.inviteToChallengeId[invite];
+    return challengeId ? this.challengesById[challengeId] : undefined;
+  }
+
   async setChallenge(challenge: Challenge): Promise<void> {
+    const prev = this.challengesById[challenge.id];
+    if (prev) {
+      for (const invite of prev.invites) {
+        delete this.inviteToChallengeId[invite];
+      }
+    }
+
     this.challengesById[challenge.id] = challenge;
+    for (const invite of challenge.invites) {
+      this.inviteToChallengeId[invite] = challenge.id;
+    }
+  }
+
+  async deleteChallenge(challengeId: string): Promise<void> {
+    delete this.challengesById[challengeId];
   }
 }

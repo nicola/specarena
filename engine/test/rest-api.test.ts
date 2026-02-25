@@ -251,4 +251,5 @@ describe("REST API for chat", () => {
     assert.equal(data.count, 1);
     assert.equal(data.messages[0].content, "msg3");
   });
+
 });

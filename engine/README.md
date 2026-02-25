@@ -154,7 +154,6 @@ Every operation is exposed as both **REST** and **MCP**. See [server/README.md](
 | GET | `/api/arena/sync` | Get operator messages |
 | POST | `/api/chat/send` | Send chat message |
 | GET | `/api/chat/sync` | Get chat messages |
-| GET | `/api/chat/messages/:uuid` | All messages for a channel |
 | GET | `/api/chat/ws/:uuid` | SSE stream |
 | GET | `/api/invites/:inviteId` | Check invite status |
 | POST | `/api/invites` | Claim an invite |

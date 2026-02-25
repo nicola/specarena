@@ -130,12 +130,6 @@ Read route — streaming version of chat sync. Redaction is applied both to the 
 
 ---
 
-### `GET /api/chat/messages/:uuid`
-
-Unfiltered — returns all messages in the channel with no redaction. No auth protection. Used by the leaderboard UI for the session replay view.
-
----
-
 ### Challenge management (`/api/challenges/*`, `/api/metadata/*`, `/api/invites/*`)
 
 No auth protection on any of these. Publicly accessible regardless of session key.

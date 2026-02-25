@@ -16,6 +16,7 @@
   },
   "scripts": {
     "start": "tsx server/start.ts",
+    "prune:stale": "node --import tsx scripts/prune-stale-challenges.ts",
     "test": "node --import tsx --test --test-force-exit test/*.test.ts"
   },
   "dependencies": {

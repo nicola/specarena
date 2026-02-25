@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import { generateKeyPair, generateSecret, hashPublicKey, sign } from "../utils";
 import { createAuthApp } from "../server/index";
+import { readNextSSEData } from "../../engine/test/helpers/sse";
 
 // --- Auth-enabled engine + app ---
 
@@ -342,37 +343,11 @@ describe("Auth security — chat routes with session keys", () => {
     // Should use the identity from the session key (player 0), not the body
     assert.equal(data.from, invites[0], "should use session identity, ignoring client 'from'");
   });
+
 });
 
 describe("Viewer-mode redaction — chat/ws SSE endpoint (leaderboard path)", () => {
   beforeEach(async () => engine.clearRuntimeState());
-
-  /** Reads the next SSE `data:` payload from an open stream reader. */
-  async function readNextSSEData(
-    reader: ReadableStreamDefaultReader<Uint8Array>,
-    buf: { s: string },
-    timeoutMs = 2000
-  ): Promise<any> {
-    const decoder = new TextDecoder();
-    const deadline = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error("SSE read timed out")), timeoutMs)
-    );
-    async function drain(): Promise<any> {
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) throw new Error("Stream ended before data event");
-        buf.s += decoder.decode(value, { stream: true });
-        let nl: number;
-        while ((nl = buf.s.indexOf("\n\n")) !== -1) {
-          const block = buf.s.slice(0, nl);
-          buf.s = buf.s.slice(nl + 2);
-          const line = block.split("\n").find((l) => l.startsWith("data: "));
-          if (line) return JSON.parse(line.slice(6));
-        }
-      }
-    }
-    return Promise.race([drain(), deadline]);
-  }
 
   it("initial SSE batch — DMs are redacted for viewer", async () => {
     const { id, invites } = await createChallenge();
@@ -478,33 +453,6 @@ describe("Viewer-mode redaction — chat/ws SSE endpoint (leaderboard path)", ()
 
 describe("Concurrent SSE streams", () => {
   beforeEach(async () => engine.clearRuntimeState());
-
-  /** Reads the next SSE `data:` payload from an open stream reader. */
-  async function readNextSSEData(
-    reader: ReadableStreamDefaultReader<Uint8Array>,
-    buf: { s: string },
-    timeoutMs = 2000
-  ): Promise<any> {
-    const decoder = new TextDecoder();
-    const deadline = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error("SSE read timed out")), timeoutMs)
-    );
-    async function drain(): Promise<any> {
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) throw new Error("Stream ended before data event");
-        buf.s += decoder.decode(value, { stream: true });
-        let nl: number;
-        while ((nl = buf.s.indexOf("\n\n")) !== -1) {
-          const block = buf.s.slice(0, nl);
-          buf.s = buf.s.slice(nl + 2);
-          const line = block.split("\n").find((l) => l.startsWith("data: "));
-          if (line) return JSON.parse(line.slice(6));
-        }
-      }
-    }
-    return Promise.race([drain(), deadline]);
-  }
 
   it("multiple viewers receive all messages", async () => {
     const { id, invites } = await createChallenge();
@@ -729,33 +677,6 @@ describe("Player identities — stored after authenticated join", () => {
     const res = await request("GET", `/api/chat/ws/${id}`);
     const reader = res.body!.getReader();
     const buf = { s: "" };
-
-    /** Reads the next SSE `data:` payload from an open stream reader. */
-    async function readNextSSEData(
-      r: ReadableStreamDefaultReader<Uint8Array>,
-      b: { s: string },
-      timeoutMs = 2000
-    ): Promise<any> {
-      const decoder = new TextDecoder();
-      const deadline = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("SSE read timed out")), timeoutMs)
-      );
-      async function drain(): Promise<any> {
-        for (;;) {
-          const { done, value } = await r.read();
-          if (done) throw new Error("Stream ended before data event");
-          b.s += decoder.decode(value, { stream: true });
-          let nl: number;
-          while ((nl = b.s.indexOf("\n\n")) !== -1) {
-            const block = b.s.slice(0, nl);
-            b.s = b.s.slice(nl + 2);
-            const line = block.split("\n").find((l) => l.startsWith("data: "));
-            if (line) return JSON.parse(line.slice(6));
-          }
-        }
-      }
-      return Promise.race([drain(), deadline]);
-    }
 
     try {
       // Drain until game_ended

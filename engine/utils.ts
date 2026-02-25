@@ -1,6 +1,17 @@
+import crypto from "node:crypto";
 import Prando from "prando";
 
 const UNIQUE_SET_MAX_ATTEMPTS_MULTIPLIER = 100;
+
+const RNG_SERVER_SECRET =
+  process.env.ARENA_RNG_SECRET ?? crypto.randomBytes(32).toString("hex");
+
+export function derivePrivateSeed(context: string): string {
+  return crypto
+    .createHmac("sha256", RNG_SERVER_SECRET)
+    .update(`arena:v1:rng:${context}`)
+    .digest("hex");
+}
 
 /**
  * Generates a deterministic random set of size `size` from a channel seed

@@ -172,7 +172,7 @@ export default function LeaderboardGraph({ data = mockData }: LeaderboardGraphPr
           tip: {
             format: {
               title: (d) => d.name,
-              r: false,
+              r: false
             },
           },
         }),

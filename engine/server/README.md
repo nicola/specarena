@@ -223,14 +223,6 @@ Returns chat messages, filtered by visibility.
 }
 ```
 
-### Get all messages (unfiltered)
-
-```
-GET /api/v1/chat/messages/:uuid
-```
-
-Returns all messages in a channel (no filtering). Used by the leaderboard UI.
-
 ### SSE stream
 
 ```

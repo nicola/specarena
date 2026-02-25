@@ -43,6 +43,11 @@ export class ChatEngine {
     return this.storageAdapter.getMessagesForChannel(channel);
   }
 
+  async deleteChannel(channel: string): Promise<void> {
+    await this.storageAdapter.deleteChannel(channel);
+    this.channelSubscribers.delete(channel);
+  }
+
   private redactMessage(msg: ChatMessage): ChatMessage {
     return { ...msg, content: "", redacted: true };
   }
