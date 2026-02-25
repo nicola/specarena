@@ -8,6 +8,7 @@
   ],
   "scoring": {
     "default": ["average"],
-    "global": "global-average"
+    "global": "global-average",
+    "globalSource": "average"
   }
 }
