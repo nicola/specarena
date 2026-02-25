@@ -94,13 +94,14 @@ export class ScoringModule {
 
   /** Get per-challenge scores (all strategies). */
   async getScoring(challengeType: string): Promise<Record<string, ScoringEntry[]>> {
-    await this.store.waitForIdle();
+    // Intentionally non-blocking: leaderboard reads may be slightly stale but avoid waiting behind write bursts.
+    // If strict read-after-write is needed again, reintroduce `await this.store.waitForIdle()` here.
     return this.store.getScores(challengeType);
   }
 
   /** Get global scores. */
   async getGlobalScoring(): Promise<ScoringEntry[]> {
-    await this.store.waitForIdle();
+    // Intentionally non-blocking for the same eventual-consistency tradeoff as getScoring().
     return this.store.getGlobalScores();
   }
 
