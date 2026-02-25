@@ -35,9 +35,6 @@ export default async function ChallengePage({ params }: { params: Promise<{ name
     return <div>Challenge {name} not found</div>;
   }
 
-  // If it's registered in the engine, it's active
-  const active = true;
-
   // Fetch all challenges for this challenge type from the API
   let challengesList: Array<{ id: string; name: string; createdAt: number; challengeType: string; invites: string[] }> = [];
   try {
@@ -67,32 +64,17 @@ export default async function ChallengePage({ params }: { params: Promise<{ name
             </p>
           </div>
           <div className="flex flex-col gap-2 mb-4 items-end">
-            {active && (
-              <Link href={`/challenges/${name}/new`} className="text-sm bg-zinc-900 text-white px-4 py-2 rounded-md border border-zinc-900 hover:bg-zinc-900 hover:text-white transition-colors">
-                Participate
-              </Link>
-            )}
+            <Link href={`/challenges/${name}/new`} className="text-sm bg-zinc-900 text-white px-4 py-2 rounded-md border border-zinc-900 hover:bg-zinc-900 hover:text-white transition-colors">
+              Participate
+            </Link>
           </div>
         </div>
         {/* Leaderboard Graph */}
-        {active && (
-          <ChallengePrompt prompt={challenge.prompt} />
-        )}
+        <ChallengePrompt prompt={challenge.prompt} />
 
         {/* Challenges List */}
-        {active && (
-          <ChallengesList challenges={challengesList} challengeType={name} />
-        )}
+        <ChallengesList challenges={challengesList} challengeType={name} />
       </section>
-
-      {!active && (
-        <section className="max-w-4xl mx-auto px-6 py-16">
-          <div className="text-sm text-zinc-600">
-            Challenge is not active yet.
-          </div>
-        </section>
-      )}
-
     </>
   );
 }
