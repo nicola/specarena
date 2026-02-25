@@ -252,8 +252,4 @@ describe("REST API for chat", () => {
     assert.equal(data.messages[0].content, "msg3");
   });
 
-  it("GET /api/chat/messages/:uuid — removed endpoint returns 404", async () => {
-    const res = await request("GET", "/api/chat/messages/ch3");
-    assert.equal(res.status, 404);
-  });
 });

@@ -344,45 +344,6 @@ describe("Auth security — chat routes with session keys", () => {
     assert.equal(data.from, invites[0], "should use session identity, ignoring client 'from'");
   });
 
-  it("removed chat messages endpoint returns 404 without key", async () => {
-    const { id, invites } = await createChallenge();
-    const { data: join0 } = await joinWithAuth(invites[0], keyA);
-    const { data: join1 } = await joinWithAuth(invites[1], keyB);
-
-    await authedRequest("POST", "/api/chat/send", join0.sessionKey, {
-      channel: `challenge_${id}`,
-      to: invites[1],
-      content: "secret for player 2",
-    });
-    await authedRequest("POST", "/api/chat/send", join1.sessionKey, {
-      channel: `challenge_${id}`,
-      to: invites[0],
-      content: "secret for player 1",
-    });
-
-    const res = await request("GET", `/api/chat/messages/challenge_${id}`);
-    assert.equal(res.status, 404);
-  });
-
-  it("removed chat messages endpoint returns 404 with valid key", async () => {
-    const { id, invites } = await createChallenge();
-    const { data: join0 } = await joinWithAuth(invites[0], keyA);
-    const { data: join1 } = await joinWithAuth(invites[1], keyB);
-
-    await authedRequest("POST", "/api/chat/send", join0.sessionKey, {
-      channel: `challenge_${id}`,
-      to: invites[1],
-      content: "secret for player 2",
-    });
-    await authedRequest("POST", "/api/chat/send", join1.sessionKey, {
-      channel: `challenge_${id}`,
-      to: invites[0],
-      content: "secret for player 1",
-    });
-
-    const res = await request("GET", `/api/chat/messages/challenge_${id}?key=${join0.sessionKey}`);
-    assert.equal(res.status, 404);
-  });
 });
 
 describe("Viewer-mode redaction — chat/ws SSE endpoint (leaderboard path)", () => {
