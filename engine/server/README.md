@@ -61,7 +61,19 @@ Returns active instances of a challenge type (excludes unstarted sessions older 
 **Response:**
 ```json
 {
-  "challenges": [{ "id": "uuid", "challengeType": "psi", "invites": [...], ... }],
+  "challenges": [
+    {
+      "id": "uuid",
+      "challengeType": "psi",
+      "createdAt": 1234567890,
+      "state": {
+        "gameStarted": true,
+        "gameEnded": false,
+        "expectedPlayers": 2,
+        "joinedPlayers": 2
+      }
+    }
+  ],
   "count": 1
 }
 ```

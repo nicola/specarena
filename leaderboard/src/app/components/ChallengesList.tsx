@@ -1,24 +1,8 @@
 import Link from "next/link";
-
-interface ChallengeInstance {
-  id: string;
-  name: string;
-  createdAt: number;
-  challengeType: string;
-  invites: string[];
-  instance?: {
-    players: number;
-    state?: {
-      gameStarted?: boolean;
-      gameEnded?: boolean;
-      players: string[];
-      playerIdentities?: Record<string, string>;
-    };
-  };
-}
+import { ChallengeListItem } from "@arena/engine/types";
 
 interface ChallengesListProps {
-  challenges: ChallengeInstance[];
+  challenges: ChallengeListItem[];
   challengeType: string;
 }
 
@@ -32,11 +16,11 @@ const formatDate = (timestamp: number) => {
   });
 };
 
-const getGameStatus = (challengeInstance: ChallengeInstance) => {
-  const gameStarted = challengeInstance.instance?.state?.gameStarted ?? false;
-  const gameEnded = challengeInstance.instance?.state?.gameEnded ?? false;
-  const expectedPlayers = challengeInstance.instance?.players;
-  const currentPlayers = challengeInstance.instance?.state?.players?.length;
+const getGameStatus = (challengeInstance: ChallengeListItem) => {
+  const gameStarted = challengeInstance.state.gameStarted;
+  const gameEnded = challengeInstance.state.gameEnded;
+  const expectedPlayers = challengeInstance.state.expectedPlayers;
+  const currentPlayers = challengeInstance.state.joinedPlayers;
   const waitingForPlayers = expectedPlayers && currentPlayers
     && currentPlayers > 0
     && currentPlayers < expectedPlayers;
@@ -109,9 +93,9 @@ export default function ChallengesList({ challenges, challengeType }: Challenges
                   <p className="text-sm text-zinc-600 text-xs">
                     Created {formatDate(challengeInstance.createdAt)}
                   </p>
-                  {challengeInstance.instance?.state?.gameEnded && challengeInstance.instance.state.playerIdentities && Object.keys(challengeInstance.instance.state.playerIdentities).length > 0 && (
+                  {challengeInstance.state.gameEnded && challengeInstance.state.playerIdentities && Object.keys(challengeInstance.state.playerIdentities).length > 0 && (
                     <div className="flex gap-2 mt-1">
-                      {Object.values(challengeInstance.instance.state.playerIdentities).map((id, idx) => (
+                      {Object.values(challengeInstance.state.playerIdentities).map((id, idx) => (
                         <span key={idx} className="text-xs font-mono text-zinc-400" title={id}>
                           {id.slice(0, 8)}...
                         </span>

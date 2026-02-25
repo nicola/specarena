@@ -26,6 +26,33 @@ async function createPsiChallenge() {
 
 // --- Tests ---
 
+describe("REST API for challenges", () => {
+  beforeEach(async () => clearState());
+
+  it("GET /api/challenges/:name returns public DTOs (no internal instance/invites)", async () => {
+    const created = await createPsiChallenge();
+
+    const res = await request("GET", "/api/challenges/psi");
+    assert.equal(res.status, 200);
+
+    const data = await res.json();
+    assert.ok(Array.isArray(data.challenges));
+    const row = data.challenges.find((ch: any) => ch.id === created.id);
+    assert.ok(row);
+    assert.equal(row.id, created.id);
+    assert.equal(row.challengeType, "psi");
+    assert.equal(typeof row.createdAt, "number");
+
+    assert.ok(!("instance" in row), "internal runtime instance should not be exposed");
+    assert.ok(!("invites" in row), "invite codes should not be exposed in list responses");
+
+    assert.equal(typeof row.state.gameStarted, "boolean");
+    assert.equal(typeof row.state.gameEnded, "boolean");
+    assert.equal(typeof row.state.expectedPlayers, "number");
+    assert.equal(typeof row.state.joinedPlayers, "number");
+  });
+});
+
 describe("REST API for arena", () => {
   beforeEach(async () => clearState());
 

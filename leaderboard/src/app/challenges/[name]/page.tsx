@@ -2,7 +2,7 @@ import ChallengePrompt from "@/app/components/ChallengePrompt";
 import ChallengesList from "@/app/components/ChallengesList";
 import Link from "next/link";
 import { Metadata } from "next";
-import { ChallengeMetadata } from "@arena/engine/types";
+import { ChallengeListItem, ChallengeMetadata } from "@arena/engine/types";
 import { ENGINE_URL } from "@/lib/config";
 
 async function fetchMetadata(name: string): Promise<ChallengeMetadata | null> {
@@ -35,7 +35,7 @@ export default async function ChallengePage({ params }: { params: Promise<{ name
   }
 
   // Fetch all challenges for this challenge type from the API
-  let challengesList: Array<{ id: string; name: string; createdAt: number; challengeType: string; invites: string[] }> = [];
+  let challengesList: ChallengeListItem[] = [];
   try {
     const response = await fetch(`${ENGINE_URL}/api/challenges/${name}`, {
       cache: 'no-store',

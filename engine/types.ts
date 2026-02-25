@@ -48,6 +48,30 @@ export interface Challenge {
   instance: ChallengeOperator;
 }
 
+export interface ChallengePublicState {
+  gameStarted: boolean;
+  gameEnded: boolean;
+  expectedPlayers: number;
+  joinedPlayers: number;
+  playerIdentities?: Record<string, string>;
+}
+
+export interface ChallengeListItem {
+  id: string;
+  name: string;
+  createdAt: number;
+  challengeType: string;
+  state: ChallengePublicState;
+}
+
+export interface CreateChallengeResponse {
+  id: string;
+  name: string;
+  createdAt: number;
+  challengeType: string;
+  invites: string[];
+}
+
 export class ChallengeOperatorError extends Error {
   constructor(public readonly code: string, message: string) {
     super(message);
