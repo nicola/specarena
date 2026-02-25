@@ -6,7 +6,7 @@ export default function Header() {
       <div className="max-w-4xl mx-auto px-6 py-4">
         <div className="flex items-center justify-between gap-6">
           <div className="flex items-center gap-6">
-            <div className="h-8  from-blue-600 to-purple-600 rounded-lg flex items-center justify-center px-3">
+            <div className="h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center px-3">
               <Link href="/">
               <span className="text-zinc-900 font-medium" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
                 AR
