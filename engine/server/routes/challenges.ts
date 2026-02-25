@@ -40,13 +40,11 @@ export function createChallengeRoutes(engine: ArenaEngine = defaultEngine) {
   // POST /api/challenges/:name - create challenge
   app.post("/api/challenges/:name", async (c) => {
     const name = c.req.param("name");
-    try {
-      const challenge = await engine.createChallenge(name);
-      return c.json(challenge);
-    } catch (error) {
-      console.error("Error creating challenge:", error);
-      return c.json({ error: "Failed to create challenge" }, 500);
+    const result = await engine.createChallenge(name);
+    if (!result.success) {
+      return c.json({ error: result.message }, 400);
     }
+    return c.json(result.data);
   });
 
   return app;

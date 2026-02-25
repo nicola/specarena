@@ -14,9 +14,11 @@ export function createArenaHandler(options: { redisUrl?: string; basePath?: stri
           invite: z.string().describe("The invite code to join the challenge"),
           userId: z.string().optional().describe("Optional persistent user identity URI"),
         },
-        async ({ invite, userId }) => ({
-          content: [{ type: "text", text: JSON.stringify(await engine.challengeJoin(invite, userId)) }],
-        })
+        async ({ invite, userId }) => {
+          const result = await engine.challengeJoin(invite, userId);
+          const payload = result.success ? result.data : { error: result.message };
+          return { content: [{ type: "text", text: JSON.stringify(payload) }] };
+        }
       );
 
       server.tool(
@@ -28,9 +30,11 @@ export function createArenaHandler(options: { redisUrl?: string; basePath?: stri
           messageType: z.string().describe("The type of message to send"),
           content: z.string().describe("The content of the message, send it as a string"),
         },
-        async ({ challengeId, from, messageType, content }) => ({
-          content: [{ type: "text", text: JSON.stringify(await engine.challengeMessage(challengeId, from, messageType, content)) }],
-        })
+        async ({ challengeId, from, messageType, content }) => {
+          const result = await engine.challengeMessage(challengeId, from, messageType, content);
+          const payload = result.success ? result.data : { error: result.message };
+          return { content: [{ type: "text", text: JSON.stringify(payload) }] };
+        }
       );
 
       server.tool(

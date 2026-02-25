@@ -14,10 +14,10 @@ export function createArenaRoutes(engine: ArenaEngine = defaultEngine) {
     }
 
     const result = await engine.challengeJoin(invite, userId);
-    if ("error" in result) {
-      return c.json(result, 400);
+    if (!result.success) {
+      return c.json({ error: result.message }, 400);
     }
-    return c.json(result);
+    return c.json(result.data);
   });
 
   // POST /api/arena/message - Send a message to the challenge operator
@@ -33,10 +33,10 @@ export function createArenaRoutes(engine: ArenaEngine = defaultEngine) {
     }
 
     const result = await engine.challengeMessage(challengeId, from, messageType || "", content);
-    if ("error" in result) {
-      return c.json(result, 400);
+    if (!result.success) {
+      return c.json({ error: result.message }, 400);
     }
-    return c.json(result);
+    return c.json(result.data);
   });
 
   // GET /api/arena/sync - Get messages from the challenge operator

@@ -51,6 +51,8 @@ export interface Challenge {
 export enum ChallengeError {
   NOT_FOUND = 'NOT_FOUND',
   INVITE_ALREADY_USED = 'INVITE_ALREADY_USED',
+  JOIN_FAILED = 'JOIN_FAILED',
+  MESSAGE_FAILED = 'MESSAGE_FAILED',
 }
 
 export interface ChallengeMetadata {

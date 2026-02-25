@@ -67,12 +67,12 @@ export class ArenaEngine {
     return this.storageAdapter.listChallenges();
   }
 
-  async createChallenge(challengeType: string): Promise<Challenge> {
+  async createChallenge(challengeType: string): Promise<Result<Challenge>> {
     const id = crypto.randomUUID();
     const factory = this.challengeFactories.get(challengeType);
 
     if (!factory) {
-      throw new Error(`Unknown challenge type: ${challengeType}`);
+      return { success: false, error: ChallengeError.NOT_FOUND, message: `Unknown challenge type: ${challengeType}` };
     }
 
     const options = this.challengeOptions.get(challengeType);
@@ -90,7 +90,7 @@ export class ArenaEngine {
     };
 
     await this.storageAdapter.setChallenge(challenge);
-    return challenge;
+    return { success: true, data: challenge };
   }
 
   private isInviteFree(challenge: Challenge, invite: string): boolean {
@@ -141,40 +141,36 @@ export class ArenaEngine {
       .sort((a, b) => b.createdAt - a.createdAt);
   }
 
-  async challengeJoin(invite: string, userId?: string) {
+  async challengeJoin(invite: string, userId?: string): Promise<Result<{ ChallengeID: string; ChallengeInfo: ChallengeMetadata | undefined }>> {
     const result = await this.getChallengeFromInvite(invite);
 
     if (!result.success) {
-      return { error: result.message };
+      return result;
     }
 
     const challenge = result.data;
 
-    let joinError: string | undefined;
     try {
       await challenge.instance.join(invite, userId);
     } catch (error) {
-      joinError = error instanceof Error ? error.message : String(error);
-    }
-
-    if (joinError) {
-      return { error: joinError };
+      const message = error instanceof Error ? error.message : String(error);
+      return { success: false, error: ChallengeError.JOIN_FAILED, message };
     }
 
     const metadata = this.getChallengeMetadata(challenge.challengeType);
     return {
-      ChallengeID: challenge.id,
-      ChallengeInfo: metadata,
+      success: true,
+      data: { ChallengeID: challenge.id, ChallengeInfo: metadata },
     };
   }
 
-  async challengeMessage(challengeId: string, from: string, messageType: string, content: string) {
+  async challengeMessage(challengeId: string, from: string, messageType: string, content: string): Promise<Result<{ ok: string }>> {
     const challenge = await this.getChallenge(challengeId);
 
     await this.chat.sendChallengeMessage(challengeId, from, (messageType ? `(${messageType}) ` : "") + content, "operator");
 
     if (!challenge || !challenge.instance) {
-      return { error: "Challenge not found" };
+      return { success: false, error: ChallengeError.NOT_FOUND, message: "Challenge not found" };
     }
 
     try {
@@ -185,9 +181,10 @@ export class ArenaEngine {
         content,
         timestamp: Date.now(),
       });
-      return { ok: "Message sent" };
+      return { success: true, data: { ok: "Message sent" } };
     } catch (error) {
-      return { error: error instanceof Error ? error.message : String(error) };
+      const message = error instanceof Error ? error.message : String(error);
+      return { success: false, error: ChallengeError.MESSAGE_FAILED, message };
     }
   }
 
