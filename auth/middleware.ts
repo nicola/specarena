@@ -1,18 +1,11 @@
 import { Context, Next } from "hono";
 import { ArenaEngine } from "@arena/engine/engine";
+import { fromChallengeChannel } from "@arena/engine/types";
 import { AuthEngine } from "./AuthEngine";
-import { parseSessionKey } from "./utils";
 
 function extractBearerToken(header: string | undefined): string | undefined {
   if (!header?.startsWith("Bearer ")) return undefined;
   return header.slice(7);
-}
-
-function deriveChallengeId(value: string): string {
-  if (value.startsWith("challenge_")) {
-    return value.slice("challenge_".length);
-  }
-  return value;
 }
 
 async function getChallengeIdFromRequest(c: Context): Promise<string | null> {
@@ -42,7 +35,7 @@ async function getChallengeIdFromRequest(c: Context): Promise<string | null> {
     return null;
   }
 
-  challengeId = deriveChallengeId(challengeId);
+  challengeId = fromChallengeChannel(challengeId) ?? challengeId;
   return challengeId;
 }
 
