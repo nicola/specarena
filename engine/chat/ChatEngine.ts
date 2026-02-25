@@ -77,26 +77,26 @@ export class ChatEngine {
     };
   }
 
-  private notifyChannelSubscribers(channel: string, message: ChatMessage): void {
+  /**
+   * Deliver encoded bytes to all subscribers of a channel, removing any
+   * subscribers whose controllers have been closed (dead).
+   *
+   * @param channel  The channel whose subscribers should be notified.
+   * @param encode   A callback that returns the bytes to enqueue for each
+   *                 subscriber.  Returning `null` skips that subscriber.
+   */
+  private deliverToSubscribers(
+    channel: string,
+    encode: (sub: ChannelSubscriber) => Uint8Array,
+  ): void {
     const subscribers = this.channelSubscribers.get(channel);
-    if (!subscribers) {
-      return;
-    }
+    if (!subscribers) return;
 
     const deadSubscribers: ChannelSubscriber[] = [];
 
     subscribers.forEach((sub) => {
-      let msgToSend = message;
-      if (message.to) {
-        const viewer = sub.viewer;
-        if (!viewer || (message.to !== viewer && message.from !== viewer)) {
-          msgToSend = this.redactMessage(message);
-        }
-      }
-      const data = JSON.stringify({ type: "new_message", message: msgToSend });
-      const encoded = `data: ${data}\n\n`;
       try {
-        sub.controller.enqueue(new TextEncoder().encode(encoded));
+        sub.controller.enqueue(encode(sub));
       } catch {
         deadSubscribers.push(sub);
       }
@@ -108,26 +108,25 @@ export class ChatEngine {
     }
   }
 
-  broadcastEvent(channel: string, event: Record<string, unknown>): void {
-    const subscribers = this.channelSubscribers.get(channel);
-    if (!subscribers) return;
+  private notifyChannelSubscribers(channel: string, message: ChatMessage): void {
+    const encoder = new TextEncoder();
 
-    const deadSubscribers: ChannelSubscriber[] = [];
-    const encoded = `data: ${JSON.stringify(event)}\n\n`;
-    const bytes = new TextEncoder().encode(encoded);
-
-    subscribers.forEach((sub) => {
-      try {
-        sub.controller.enqueue(bytes);
-      } catch {
-        deadSubscribers.push(sub);
+    this.deliverToSubscribers(channel, (sub) => {
+      let msgToSend = message;
+      if (message.to) {
+        const viewer = sub.viewer;
+        if (!viewer || (message.to !== viewer && message.from !== viewer)) {
+          msgToSend = this.redactMessage(message);
+        }
       }
+      const data = JSON.stringify({ type: "new_message", message: msgToSend });
+      return encoder.encode(`data: ${data}\n\n`);
     });
+  }
 
-    deadSubscribers.forEach((sub) => subscribers.delete(sub));
-    if (subscribers.size === 0) {
-      this.channelSubscribers.delete(channel);
-    }
+  broadcastEvent(channel: string, event: Record<string, unknown>): void {
+    const bytes = new TextEncoder().encode(`data: ${JSON.stringify(event)}\n\n`);
+    this.deliverToSubscribers(channel, () => bytes);
   }
 
   broadcastChallengeEvent(challengeId: string, event: Record<string, unknown>): void {
