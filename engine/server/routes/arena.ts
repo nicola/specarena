@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { ArenaEngine, defaultEngine } from "../../engine";
 import { JoinSchema, MessageSchema, SyncSchema } from "../schemas";
+import { errorResponse, internalRouteError, validationError } from "./errors";
 import { getIdentity, IdentityEnv } from "./identity";
 
 export function createArenaRoutes(engine: ArenaEngine = defaultEngine) {
@@ -11,7 +12,7 @@ export function createArenaRoutes(engine: ArenaEngine = defaultEngine) {
     const body = await c.req.json();
     const parsed = JoinSchema.safeParse(body);
     if (!parsed.success) {
-      return c.json({ error: parsed.error.issues[0].message }, 400);
+      return validationError(c, parsed.error.issues[0].message);
     }
 
     const { invite, userId } = parsed.data;
@@ -27,14 +28,14 @@ export function createArenaRoutes(engine: ArenaEngine = defaultEngine) {
     const body = await c.req.json();
     const parsed = MessageSchema.safeParse(body);
     if (!parsed.success) {
-      return c.json({ error: parsed.error.issues[0].message }, 400);
+      return validationError(c, parsed.error.issues[0].message);
     }
 
     const { challengeId, content, messageType } = parsed.data;
 
     const from = getIdentity(c);
     if (!from) {
-      return c.json({ error: "from is required" }, 400);
+      return errorResponse(c, 400, "MISSING_FROM", "from is required");
     }
 
     const result = await engine.challengeMessage(challengeId, from, messageType || "", content);
@@ -51,7 +52,7 @@ export function createArenaRoutes(engine: ArenaEngine = defaultEngine) {
       index: c.req.query("index") ?? 0,
     });
     if (!parsed.success) {
-      return c.json({ error: parsed.error.issues[0].message }, 400);
+      return validationError(c, parsed.error.issues[0].message);
     }
 
     const { channel, index } = parsed.data;
@@ -59,8 +60,7 @@ export function createArenaRoutes(engine: ArenaEngine = defaultEngine) {
     try {
       return c.json(await engine.challengeSync(channel, viewer, index));
     } catch (error) {
-      console.error("Error syncing challenge:", error);
-      return c.json({ error: "Failed to sync messages" }, 500);
+      return internalRouteError(c, "GET /api/arena/sync", error, "ARENA_SYNC_FAILED", "Failed to sync messages");
     }
   });
 

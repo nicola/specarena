@@ -238,6 +238,9 @@ describe("REST API for chat", () => {
   it("GET /api/chat/sync — returns 400 for missing params", async () => {
     const res = await request("GET", "/api/chat/sync");
     assert.equal(res.status, 400);
+    const data = await res.json();
+    assert.equal(data.code, "INVALID_REQUEST");
+    assert.ok(data.error);
   });
 
   it("GET /api/chat/sync — index filters older messages", async () => {

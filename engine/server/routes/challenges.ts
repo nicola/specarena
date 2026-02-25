@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { ArenaEngine, defaultEngine } from "../../engine";
+import { errorResponse, internalRouteError } from "./errors";
 
 export function createChallengeRoutes(engine: ArenaEngine = defaultEngine) {
   const app = new Hono();
@@ -14,7 +15,7 @@ export function createChallengeRoutes(engine: ArenaEngine = defaultEngine) {
     const name = c.req.param("name");
     const metadata = engine.getChallengeMetadata(name);
     if (!metadata) {
-      return c.json({ error: "Challenge not found" }, 404);
+      return errorResponse(c, 404, "CHALLENGE_NOT_FOUND", "Challenge not found");
     }
     return c.json(metadata);
   });
@@ -32,8 +33,7 @@ export function createChallengeRoutes(engine: ArenaEngine = defaultEngine) {
       const challengesList = await engine.getChallengesByType(name);
       return c.json({ challenges: challengesList, count: challengesList.length });
     } catch (error) {
-      console.error("Error fetching challenges:", error);
-      return c.json({ error: "Failed to fetch challenges" }, 500);
+      return internalRouteError(c, "GET /api/challenges/:name", error, "CHALLENGES_FETCH_FAILED", "Failed to fetch challenges");
     }
   });
 
@@ -44,8 +44,7 @@ export function createChallengeRoutes(engine: ArenaEngine = defaultEngine) {
       const challenge = await engine.createChallenge(name);
       return c.json(challenge);
     } catch (error) {
-      console.error("Error creating challenge:", error);
-      return c.json({ error: "Failed to create challenge" }, 500);
+      return internalRouteError(c, "POST /api/challenges/:name", error, "CHALLENGE_CREATE_FAILED", "Failed to create challenge");
     }
   });
 

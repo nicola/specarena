@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { ArenaEngine, defaultEngine } from "../../engine";
 import { fromChallengeChannel } from "../../types";
 import { ChatSendSchema, SyncSchema } from "../schemas";
+import { errorResponse, internalRouteError, validationError } from "./errors";
 import { getIdentity, IdentityEnv } from "./identity";
 
 const SSE_KEEPALIVE_INTERVAL_MS = 30_000;
@@ -15,21 +16,20 @@ export function createChatRoutes(engine: ArenaEngine = defaultEngine) {
     const body = await c.req.json();
     const parsed = ChatSendSchema.safeParse(body);
     if (!parsed.success) {
-      return c.json({ error: parsed.error.issues[0].message }, 400);
+      return validationError(c, parsed.error.issues[0].message);
     }
 
     const { channel, content, to } = parsed.data;
 
     const from = getIdentity(c);
     if (!from) {
-      return c.json({ error: "from is required" }, 400);
+      return errorResponse(c, 400, "MISSING_FROM", "from is required");
     }
 
     try {
       return c.json(await chat.chatSend(channel, from, content, to));
     } catch (error) {
-      console.error("Error sending chat message:", error);
-      return c.json({ error: "Failed to send message" }, 500);
+      return internalRouteError(c, "POST /api/chat/send", error, "CHAT_SEND_FAILED", "Failed to send message");
     }
   });
 
@@ -40,7 +40,7 @@ export function createChatRoutes(engine: ArenaEngine = defaultEngine) {
       index: c.req.query("index") ?? 0,
     });
     if (!parsed.success) {
-      return c.json({ error: parsed.error.issues[0].message }, 400);
+      return validationError(c, parsed.error.issues[0].message);
     }
 
     const { channel, index } = parsed.data;
@@ -48,8 +48,7 @@ export function createChatRoutes(engine: ArenaEngine = defaultEngine) {
     try {
       return c.json(await chat.chatSync(channel, viewer, index));
     } catch (error) {
-      console.error("Error syncing chat:", error);
-      return c.json({ error: "Failed to sync messages" }, 500);
+      return internalRouteError(c, "GET /api/chat/sync", error, "CHAT_SYNC_FAILED", "Failed to sync messages");
     }
   });
 
@@ -60,8 +59,7 @@ export function createChatRoutes(engine: ArenaEngine = defaultEngine) {
       const messages = await chat.getMessagesForChannel(uuid);
       return c.json({ channel: uuid, messages, count: messages.length });
     } catch (error) {
-      console.error("Error fetching messages:", error);
-      return c.json({ error: "Failed to fetch messages" }, 500);
+      return internalRouteError(c, "GET /api/chat/messages/:uuid", error, "CHAT_MESSAGES_FETCH_FAILED", "Failed to fetch messages");
     }
   });
 

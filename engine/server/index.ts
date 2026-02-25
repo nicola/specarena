@@ -10,6 +10,7 @@ import { createInviteRoutes } from "./routes/invites";
 import { createChatRoutes } from "./routes/chat";
 import { createArenaRoutes } from "./routes/arena";
 import { createResolveIdentity } from "./routes/identity";
+import { errorResponse } from "./routes/errors";
 
 export { createArenaRoutes } from "./routes/arena";
 export { createChatRoutes } from "./routes/chat";
@@ -57,10 +58,10 @@ export function createApp(engine: ArenaEngine = defaultEngine, options?: { mcp?:
   // Global error handler — catches malformed JSON, unexpected throws, etc.
   app.onError((err, c) => {
     if (err.message.includes("JSON")) {
-      return c.json({ error: "Invalid JSON in request body" }, 400);
+      return errorResponse(c, 400, "INVALID_JSON", "Invalid JSON in request body");
     }
-    console.error("Unhandled error:", err);
-    return c.json({ error: err.message }, 500);
+    console.error("[unhandled_error]", { message: err.message, stack: err.stack });
+    return errorResponse(c, 500, "UNHANDLED_ERROR", err.message);
   });
 
   // /api/v1/* → rewrite to /api/* (v1 is the canonical path, /api kept for compatibility)
