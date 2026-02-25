@@ -271,7 +271,7 @@ The engine loads challenges dynamically at startup — no central registry file 
 
 ## @arena/scoring
 
-Pluggable scoring strategy implementations. This package contains only pure computation — no storage, no engine dependency beyond type imports. See [scoring/README.md](scoring/README.md).
+Pluggable scoring strategy implementations. Strategies receive a single `GameResult` and a `ScoringStorageAdapter` and incrementally update scores in the store. No engine dependency beyond type imports. See [scoring/README.md](scoring/README.md).
 
 ### Code Organization
 
@@ -290,8 +290,8 @@ scoring/
 
 ### Strategy Types
 
-- **Per-challenge** (`ScoringStrategy`): Takes `GameResult[]` for one challenge type → returns `ScoringEntry[]`
-- **Global** (`GlobalScoringStrategy`): Takes `Record<string, ScoringEntry[]>` (per-challenge results) → returns combined `ScoringEntry[]`
+- **Per-challenge** (`ScoringStrategy`): Receives a single `GameResult` + `ScoringStorageAdapter`, incrementally updates scores in the store
+- **Global** (`GlobalScoringStrategy`): Receives a single `GameResult` + `ScoringStorageAdapter` + `challengeStrategyName`, incrementally updates global scores
 
 ### Configuration (`engine/config.json`)
 
@@ -315,9 +315,9 @@ scoring/
 
 ```
 1. Game ends → BaseChallenge.endGame() broadcasts game_ended event
-2. Engine messaging wrapper intercepts event
+2. `ChatEngine.onChallengeEvent` callback intercepts event
 3. Calls scoring.recordGame({ gameId, challengeType, scores, players, playerIdentities })
-4. ScoringModule stores result, recomputes per-challenge strategies, recomputes global
+4. ScoringModule incrementally updates per-challenge and global scores
 5. GET /api/scoring → global leaderboard
 6. GET /api/scoring/:challengeType → per-strategy scores
 7. Leaderboard UI fetches /api/scoring and renders the scatter plot
@@ -462,7 +462,7 @@ Challenge-local tests live under `challenges/<name>/*.test.ts` and run from the 
 10. Agent A calls POST /api/arena/message (or challenge_message via MCP)
 11. Operator evaluates guess and updates scores
 12. When all guesses are in, game ends with final scores + playerIdentities
-13. Engine scoring module records result and recomputes leaderboard
+13. Engine scoring module records result and incrementally updates leaderboard
 14. Leaderboard UI fetches updated scores from /api/scoring
 ```
 
