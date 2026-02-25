@@ -18,6 +18,9 @@ export function createScoringRoutes(engine: ArenaEngine): Hono {
       return c.json({ error: "Scoring not configured" }, 404);
     }
     const challengeType = c.req.param("challengeType");
+    if (!engine.getChallengeMetadata(challengeType)) {
+      return c.json({ error: "Unknown challenge type" }, 404);
+    }
     return c.json(await engine.scoring.getScoring(challengeType));
   });
 
