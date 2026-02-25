@@ -96,10 +96,6 @@ export class ArenaEngine {
     return !challenge.instance?.state?.players?.includes(invite);
   }
 
-  filterValidInvites(_invites: string[]): string[] {
-    return [];
-  }
-
   async getInvite(invite: string): Promise<Result<Challenge>> {
     const result = await this.getChallengeFromInvite(invite);
     if (!result.success) {
