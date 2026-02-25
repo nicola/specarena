@@ -2,7 +2,7 @@ import { Context, Next } from "hono";
 
 export type IdentityEnv = { Variables: { identity?: string } };
 
-export function createResolveIdentity(_engine: unknown) {
+export function createResolveIdentity() {
   return async (c: Context, next: Next) => {
     if (c.get("identity") !== undefined) return next();
 

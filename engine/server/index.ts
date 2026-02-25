@@ -71,7 +71,7 @@ export function createApp(engine: ArenaEngine = defaultEngine, options?: { mcp?:
   });
 
   // Resolve identity from query/body params (standalone mode)
-  app.use("*", createResolveIdentity(engine));
+  app.use("*", createResolveIdentity());
 
   // Mount REST routes
   app.route("/", createChallengeRoutes(engine));
