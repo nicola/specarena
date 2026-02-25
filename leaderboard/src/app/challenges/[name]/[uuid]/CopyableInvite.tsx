@@ -17,6 +17,7 @@ export default function CopyableInvite({ invite, copyText = invite, className, s
     try {
       await navigator.clipboard.writeText(copyText.trim());
       setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error("Failed to copy:", err);
     }
