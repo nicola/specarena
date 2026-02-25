@@ -1,5 +1,10 @@
 import type { ScoringEntry } from "./types";
 
+/**
+ * Strategies perform read-modify-write on state (getStrategyState → compute → setStrategyState).
+ * A DB-backed adapter must serialize concurrent updates per (challengeType, strategyName, playerId)
+ * to avoid lost updates — e.g. row-level locking or compare-and-swap.
+ */
 export interface ScoringStorageAdapter {
   getScores(challengeType: string): Promise<Record<string, ScoringEntry[]>>;
   getGlobalScores(): Promise<ScoringEntry[]>;

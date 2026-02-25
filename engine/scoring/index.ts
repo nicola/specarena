@@ -54,7 +54,8 @@ export class ScoringModule {
     const globalStrategy = this.globalStrategies[globalName];
     if (!globalStrategy) return;
 
-    // Use the first per-challenge strategy as the representative for global aggregation
+    // The first per-challenge strategy feeds into global aggregation.
+    // Reordering scoring.default changes which strategy's scores are used globally.
     const strategyNames = this.getStrategiesForChallenge(result.challengeType);
     const firstStrategy = strategyNames[0];
     if (!firstStrategy) return;
