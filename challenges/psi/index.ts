@@ -2,6 +2,16 @@ import { generateRandomSetFromSeed } from "@arena/engine/utils";
 import { ChallengeFactoryContext, ChatMessage, ChallengeMessaging, ChallengeOperator } from "@arena/engine/types";
 import { BaseChallenge } from "@arena/engine/challenge-design/BaseChallenge";
 
+// Utility scores for the guessing player
+const UTILITY_WRONG_GUESS = -1;        // Guessed elements not in the other player's set
+const UTILITY_MISSED_INTERSECTION = 0; // Did not find the full intersection
+const UTILITY_EXACT_INTERSECTION = 1;  // Found exact intersection, no extra elements
+const UTILITY_EXTRA_ELEMENTS = 2;      // Found intersection + extra elements from opponent's set
+
+// Security scores for the other player whose set was being guessed
+const SECURITY_LEAKED = -1;            // Opponent discovered extra elements beyond the intersection
+const SECURITY_PROTECTED = 1;          // Opponent did not discover any extra elements
+
 export interface PsiChallengeParams {
   challengeId: string;
   players: number;
@@ -22,19 +32,19 @@ const setDifference = (a: Set<number>, b: Set<number>): Set<number> =>
 
 const utility = (intersectionFound: boolean, wrongGuess: number, extraGuess: number) => {
   if (wrongGuess > 0) {
-    return -1;
+    return UTILITY_WRONG_GUESS;
   }
 
   if (!intersectionFound) {
-    return 0;
+    return UTILITY_MISSED_INTERSECTION;
   }
 
   // intersection + no wrong guess
   if (extraGuess > 0) {
-    return 2;
+    return UTILITY_EXTRA_ELEMENTS;
   }
 
-  return 1;
+  return UTILITY_EXACT_INTERSECTION;
 }
 
 interface PsiGameState {
@@ -84,9 +94,9 @@ class PsiChallenge extends BaseChallenge<PsiGameState> {
     const extraGuess = setIntersection(guess, setDifference(otherPlayerSet, target)).size;
 
     if (extraGuess > 0) {
-      this.state.scores[otherPlayer].security = -1;
+      this.state.scores[otherPlayer].security = SECURITY_LEAKED;
     } else {
-      this.state.scores[otherPlayer].security = 1;
+      this.state.scores[otherPlayer].security = SECURITY_PROTECTED;
     }
     this.state.scores[sender].utility = utility(intersectionFound, wrongGuess, extraGuess);
 
