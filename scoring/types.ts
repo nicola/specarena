@@ -37,6 +37,8 @@ export interface ScoringStorageAdapter {
   getScores(challengeType: string): Promise<Record<string, ScoringEntry[]>>;
   getGlobalScores(): Promise<ScoringEntry[]>;
   clear(): Promise<void>;
+  transaction<T>(fn: (store: ScoringStorageAdapter) => Promise<T>): Promise<T>;
+  waitForIdle(): Promise<void>;
 
   getStrategyState<T>(challengeType: string, strategyName: string, playerId: string): Promise<T | undefined>;
   setStrategyState<T>(challengeType: string, strategyName: string, playerId: string, state: T): Promise<void>;
