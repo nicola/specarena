@@ -1,13 +1,7 @@
-import type { GameResult, ScoringEntry } from "./types";
+import type { ScoringEntry } from "./types";
 
 export interface ScoringStorageAdapter {
-  addResult(result: GameResult): Promise<void>;
-  getResults(challengeType: string): Promise<GameResult[]>;
-  getAllResults(): Promise<GameResult[]>;
-  getChallengeTypes(): Promise<string[]>;
-  setScores(challengeType: string, strategyName: string, entries: ScoringEntry[]): Promise<void>;
   getScores(challengeType: string): Promise<Record<string, ScoringEntry[]>>;
-  setGlobalScores(entries: ScoringEntry[]): Promise<void>;
   getGlobalScores(): Promise<ScoringEntry[]>;
   clear(): Promise<void>;
 
@@ -21,8 +15,6 @@ export interface ScoringStorageAdapter {
 }
 
 export class InMemoryScoringStore implements ScoringStorageAdapter {
-  /** challengeType → GameResult[] */
-  private results = new Map<string, GameResult[]>();
   /** challengeType → strategyName → playerId → ScoringEntry */
   private scores = new Map<string, Map<string, Map<string, ScoringEntry>>>();
   /** playerId → ScoringEntry */
@@ -31,41 +23,6 @@ export class InMemoryScoringStore implements ScoringStorageAdapter {
   private strategyState = new Map<string, Map<string, unknown>>();
   /** playerId → state */
   private globalStrategyState = new Map<string, unknown>();
-
-  async addResult(result: GameResult): Promise<void> {
-    const list = this.results.get(result.challengeType) ?? [];
-    list.push(result);
-    this.results.set(result.challengeType, list);
-  }
-
-  async getResults(challengeType: string): Promise<GameResult[]> {
-    return this.results.get(challengeType) ?? [];
-  }
-
-  async getAllResults(): Promise<GameResult[]> {
-    const all: GameResult[] = [];
-    for (const list of this.results.values()) {
-      all.push(...list);
-    }
-    return all;
-  }
-
-  async getChallengeTypes(): Promise<string[]> {
-    return [...this.results.keys()];
-  }
-
-  async setScores(challengeType: string, strategyName: string, entries: ScoringEntry[]): Promise<void> {
-    let strategies = this.scores.get(challengeType);
-    if (!strategies) {
-      strategies = new Map();
-      this.scores.set(challengeType, strategies);
-    }
-    const playerMap = new Map<string, ScoringEntry>();
-    for (const entry of entries) {
-      playerMap.set(entry.playerId, entry);
-    }
-    strategies.set(strategyName, playerMap);
-  }
 
   async getScores(challengeType: string): Promise<Record<string, ScoringEntry[]>> {
     const strategies = this.scores.get(challengeType);
@@ -77,19 +34,11 @@ export class InMemoryScoringStore implements ScoringStorageAdapter {
     return result;
   }
 
-  async setGlobalScores(entries: ScoringEntry[]): Promise<void> {
-    this.globalScores.clear();
-    for (const entry of entries) {
-      this.globalScores.set(entry.playerId, entry);
-    }
-  }
-
   async getGlobalScores(): Promise<ScoringEntry[]> {
     return [...this.globalScores.values()];
   }
 
   async clear(): Promise<void> {
-    this.results.clear();
     this.scores.clear();
     this.globalScores.clear();
     this.strategyState.clear();

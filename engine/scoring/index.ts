@@ -71,7 +71,6 @@ export class ScoringModule {
   /** Record a game result and incrementally update scores. Called at game end. */
   async recordGame(result: GameResult): Promise<void> {
     if (ScoringModule.isSelfPlay(result)) return;
-    await this.store.addResult(result);
     await this.updateChallenge(result);
     await this.updateGlobal(result);
   }
@@ -81,7 +80,6 @@ export class ScoringModule {
     await this.store.clear();
     for (const result of results) {
       if (ScoringModule.isSelfPlay(result)) continue;
-      await this.store.addResult(result);
       await this.updateChallenge(result);
       await this.updateGlobal(result);
     }

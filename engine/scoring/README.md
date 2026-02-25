@@ -117,9 +117,11 @@ class ScoringModule {
 
 `InMemoryScoringStore` implements an async interface so it can be swapped for a DB-backed store without changing any other code. Methods:
 
-- `addResult(result)` / `getResults(challengeType)` / `getAllResults()`
-- `setScores(challengeType, strategyName, entries)` / `getScores(challengeType)`
-- `setGlobalScores(entries)` / `getGlobalScores()`
+- `getScores(challengeType)` / `getGlobalScores()`
+- `setScoreEntry(challengeType, strategyName, entry)` / `getScoreEntry(challengeType, strategyName, playerId)`
+- `setGlobalScoreEntry(entry)`
+- `getStrategyState(challengeType, strategyName, playerId)` / `setStrategyState(...)`
+- `getGlobalStrategyState(playerId)` / `setGlobalStrategyState(...)`
 - `clear()`
 
 ## API Routes
