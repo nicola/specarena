@@ -38,8 +38,6 @@ export function createInviteRoutes(engine: ArenaEngine = defaultEngine) {
       return c.json({ error: result.message }, status);
     }
 
-    await engine.chat.sendMessage("invites", "operator", `${inviteId}`);
-
     return c.json({ success: true });
   });
 
