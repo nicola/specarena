@@ -3,6 +3,8 @@ import { ArenaEngine, defaultEngine } from "../../engine";
 import { fromChallengeChannel } from "../../types";
 import { getIdentity, IdentityEnv } from "./identity";
 
+const SSE_KEEPALIVE_INTERVAL_MS = 30_000;
+
 export function createChatRoutes(engine: ArenaEngine = defaultEngine) {
   const app = new Hono<IdentityEnv>();
   const chat = engine.chat;
@@ -89,7 +91,7 @@ export function createChatRoutes(engine: ArenaEngine = defaultEngine) {
             clearInterval(keepAliveInterval);
             unsubscribe();
           }
-        }, 30000);
+        }, SSE_KEEPALIVE_INTERVAL_MS);
       },
     });
 

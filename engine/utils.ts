@@ -1,5 +1,7 @@
 import Prando from "prando";
 
+const UNIQUE_SET_MAX_ATTEMPTS_MULTIPLIER = 100;
+
 /**
  * Generates a deterministic random set of size `size` from a channel seed
  * using the Prando library for seeded random number generation.
@@ -25,7 +27,7 @@ export function generateRandomSetFromSeed(
   }
 
   let attempts = 0;
-  const maxAttempts = size * 100;
+  const maxAttempts = size * UNIQUE_SET_MAX_ATTEMPTS_MULTIPLIER;
 
   while (result.size < size) {
     const randomValue = rng.nextInt(from, to);

@@ -1,4 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
+
+const STALE_CHALLENGE_TIMEOUT_MS = 10 * 60 * 1000;
+
 import {
   Challenge,
   ChallengeError,
@@ -133,13 +136,13 @@ export class ArenaEngine {
   }
 
   async getChallengesByType(challengeType: string): Promise<Challenge[]> {
-    const tenMinutesAgo = Date.now() - 10 * 60 * 1000;
+    const cutoff = Date.now() - STALE_CHALLENGE_TIMEOUT_MS;
     return (await this.storageAdapter.listChallenges())
       .filter((c) => c.challengeType === challengeType)
       .filter((c) => {
         const gameStarted = c.instance?.state?.gameStarted ?? false;
-        const createdMoreThan10MinsAgo = c.createdAt < tenMinutesAgo;
-        return gameStarted || !createdMoreThan10MinsAgo;
+        const isStale = c.createdAt < cutoff;
+        return gameStarted || !isStale;
       })
       .sort((a, b) => b.createdAt - a.createdAt);
   }
