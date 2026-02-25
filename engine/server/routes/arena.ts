@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { ArenaEngine, defaultEngine } from "../../engine";
+import { JoinSchema, MessageSchema, SyncSchema } from "../schemas";
 import { getIdentity, IdentityEnv } from "./identity";
 
 export function createArenaRoutes(engine: ArenaEngine = defaultEngine) {
@@ -8,11 +9,12 @@ export function createArenaRoutes(engine: ArenaEngine = defaultEngine) {
   // POST /api/arena/join - Join a challenge with an invite code
   app.post("/api/arena/join", async (c) => {
     const body = await c.req.json();
-    const { invite, userId } = body;
-    if (!invite) {
-      return c.json({ error: "invite is required" }, 400);
+    const parsed = JoinSchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json({ error: parsed.error.issues[0].message }, 400);
     }
 
+    const { invite, userId } = parsed.data;
     const result = await engine.challengeJoin(invite, userId);
     if ("error" in result) {
       return c.json(result, 400);
@@ -22,10 +24,13 @@ export function createArenaRoutes(engine: ArenaEngine = defaultEngine) {
 
   // POST /api/arena/message - Send a message to the challenge operator
   app.post("/api/arena/message", async (c) => {
-    const { challengeId, messageType, content, from: bodyFrom } = await c.req.json();
-    if (!challengeId || !content) {
-      return c.json({ error: "challengeId and content are required" }, 400);
+    const body = await c.req.json();
+    const parsed = MessageSchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json({ error: parsed.error.issues[0].message }, 400);
     }
+
+    const { challengeId, content, messageType } = parsed.data;
 
     const from = getIdentity(c);
     if (!from) {
@@ -41,13 +46,15 @@ export function createArenaRoutes(engine: ArenaEngine = defaultEngine) {
 
   // GET /api/arena/sync - Get messages from the challenge operator
   app.get("/api/arena/sync", async (c) => {
-    const channel = c.req.query("channel");
-    const index = parseInt(c.req.query("index") || "0", 10);
-
-    if (!channel) {
-      return c.json({ error: "channel is required" }, 400);
+    const parsed = SyncSchema.safeParse({
+      channel: c.req.query("channel"),
+      index: c.req.query("index") ?? 0,
+    });
+    if (!parsed.success) {
+      return c.json({ error: parsed.error.issues[0].message }, 400);
     }
 
+    const { channel, index } = parsed.data;
     const viewer = getIdentity(c);
     try {
       return c.json(await engine.challengeSync(channel, viewer, index));
