@@ -1,6 +1,7 @@
 import { parseSessionKey, verifySignature } from "./utils";
 import crypto from "node:crypto";
 
+const PROTOCOL_VERSION = "arena:v1";
 const TIMESTAMP_WINDOW_MS = 5 * 60 * 1000;
 
 export class AuthEngine {
@@ -20,7 +21,7 @@ export class AuthEngine {
     if (Math.abs(now - timestamp) > TIMESTAMP_WINDOW_MS) {
       return { valid: false, reason: "Timestamp expired" };
     }
-    const message = `arena:v1:join:${invite}:${timestamp}`;
+    const message = `${PROTOCOL_VERSION}:join:${invite}:${timestamp}`;
     if (!verifySignature(publicKeyHex, signatureHex, message)) {
       return { valid: false, reason: "Invalid signature" };
     }
@@ -32,7 +33,7 @@ export class AuthEngine {
    */
   createSessionKey(challengeId: string, userIndex: number): string {
     const hmac = crypto.createHmac("sha256", this.secret)
-      .update(`arena:v1:session:${challengeId}:${userIndex}`)
+      .update(`${PROTOCOL_VERSION}:session:${challengeId}:${userIndex}`)
       .digest("hex");
     return `s_${userIndex}.${hmac}`;
   }
@@ -47,7 +48,7 @@ export class AuthEngine {
     }
 
     const expected = crypto.createHmac("sha256", this.secret)
-      .update(`arena:v1:session:${challengeId}:${parsed.userIndex}`)
+      .update(`${PROTOCOL_VERSION}:session:${challengeId}:${parsed.userIndex}`)
       .digest("hex");
     const a = Buffer.from(parsed.hmac, "hex");
     const b = Buffer.from(expected, "hex");
