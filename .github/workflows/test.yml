@@ -2,9 +2,9 @@ name: Tests
 
 on:
   pull_request:
-    branches: [main, scoring-local]
+    branches: [main]
   push:
-    branches: [main, scoring-local]
+    branches: [main]
 
 jobs:
   test:
