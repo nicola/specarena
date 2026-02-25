@@ -49,7 +49,12 @@ export function createArenaRoutes(engine: ArenaEngine = defaultEngine) {
     }
 
     const viewer = getIdentity(c);
-    return c.json(await engine.challengeSync(channel, viewer, index));
+    try {
+      return c.json(await engine.challengeSync(channel, viewer, index));
+    } catch (error) {
+      console.error("Error syncing challenge:", error);
+      return c.json({ error: "Failed to sync messages" }, 500);
+    }
   });
 
   return app;

@@ -19,7 +19,12 @@ export function createChatRoutes(engine: ArenaEngine = defaultEngine) {
       return c.json({ error: "from is required" }, 400);
     }
 
-    return c.json(await chat.chatSend(channel, from, content, to));
+    try {
+      return c.json(await chat.chatSend(channel, from, content, to));
+    } catch (error) {
+      console.error("Error sending chat message:", error);
+      return c.json({ error: "Failed to send message" }, 500);
+    }
   });
 
   // GET /api/chat/sync - Get messages from a channel
@@ -32,14 +37,24 @@ export function createChatRoutes(engine: ArenaEngine = defaultEngine) {
     }
 
     const viewer = getIdentity(c);
-    return c.json(await chat.chatSync(channel, viewer, index));
+    try {
+      return c.json(await chat.chatSync(channel, viewer, index));
+    } catch (error) {
+      console.error("Error syncing chat:", error);
+      return c.json({ error: "Failed to sync messages" }, 500);
+    }
   });
 
   // GET /api/chat/messages/:uuid - get messages
   app.get("/api/chat/messages/:uuid", async (c) => {
     const uuid = c.req.param("uuid");
-    const messages = await chat.getMessagesForChannel(uuid);
-    return c.json({ channel: uuid, messages, count: messages.length });
+    try {
+      const messages = await chat.getMessagesForChannel(uuid);
+      return c.json({ channel: uuid, messages, count: messages.length });
+    } catch (error) {
+      console.error("Error fetching messages:", error);
+      return c.json({ error: "Failed to fetch messages" }, 500);
+    }
   });
 
   // GET /api/chat/ws/:uuid - SSE stream
