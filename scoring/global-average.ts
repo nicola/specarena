@@ -1,5 +1,4 @@
-import type { GlobalScoringStrategy, GameResult } from "@arena/engine/scoring/types";
-import type { ScoringStorageAdapter } from "@arena/engine/scoring";
+import type { GlobalScoringStrategy, GameResult, ScoringStorageAdapter } from "./types";
 
 interface ChallengeSnapshot {
   security: number;

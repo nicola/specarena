@@ -1,8 +1,8 @@
 import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { average } from "../average";
-import { InMemoryScoringStore } from "@arena/engine/scoring";
-import type { GameResult } from "@arena/engine/scoring/types";
+import { InMemoryScoringStore } from "../store";
+import type { GameResult } from "../types";
 
 function makeGame(
   p0: { security: number; utility: number },
