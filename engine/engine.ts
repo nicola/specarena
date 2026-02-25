@@ -168,7 +168,7 @@ export class ArenaEngine {
 
   async getChallengesByType(challengeType: string): Promise<Challenge[]> {
     return (await this.storageAdapter.listChallenges())
-      .filter((c) => c.challengeType === challengeType)
+      .filter((c) => c.challengeType === challengeType && !this.isChallengeStale(c))
       .sort((a, b) => b.createdAt - a.createdAt);
   }
 
