@@ -8,6 +8,7 @@ import {
   ChallengeOperatorError,
   Result,
   fromChallengeChannel,
+  toChallengeChannel,
 } from "./types";
 import { ChatEngine, createChatEngine } from "./chat/ChatEngine";
 import { ArenaStorageAdapter, InMemoryArenaStorageAdapter } from "./storage/InMemoryArenaStorageAdapter";
@@ -64,11 +65,35 @@ export class ArenaEngine {
     return Object.fromEntries(this.challengeMetadataMap);
   }
 
+  private isChallengeStale(challenge: Challenge, now: number = Date.now()): boolean {
+    const gameStarted = challenge.instance?.state?.gameStarted ?? false;
+    const cutoff = now - STALE_CHALLENGE_TIMEOUT_MS;
+    return !gameStarted && challenge.createdAt < cutoff;
+  }
+
+  private async pruneStaleChallenges(now: number = Date.now()): Promise<void> {
+    const challenges = await this.storageAdapter.listChallenges();
+    const stale = challenges.filter((challenge) => this.isChallengeStale(challenge, now));
+    if (stale.length === 0) {
+      return;
+    }
+
+    await Promise.all(
+      stale.map(async (challenge) => {
+        await this.storageAdapter.deleteChallenge(challenge.id);
+        await this.chat.deleteChannel(challenge.id);
+        await this.chat.deleteChannel(toChallengeChannel(challenge.id));
+      }),
+    );
+  }
+
   async listChallenges(): Promise<Challenge[]> {
+    await this.pruneStaleChallenges();
     return this.storageAdapter.listChallenges();
   }
 
   async createChallenge(challengeType: string): Promise<Challenge> {
+    await this.pruneStaleChallenges();
     const id = crypto.randomUUID();
     const factory = this.challengeFactories.get(challengeType);
 
@@ -114,6 +139,7 @@ export class ArenaEngine {
   }
 
   async getChallengeFromInvite(invite: string): Promise<Result<Challenge>> {
+    await this.pruneStaleChallenges();
     const challenge = (await this.storageAdapter.listChallenges())
       .find((c) => c.invites.includes(invite));
     if (challenge) {
@@ -127,18 +153,24 @@ export class ArenaEngine {
   }
 
   async getChallenge(challengeId: string): Promise<Challenge | undefined> {
-    return this.storageAdapter.getChallenge(challengeId);
+    const challenge = await this.storageAdapter.getChallenge(challengeId);
+    if (!challenge) {
+      return undefined;
+    }
+    if (!this.isChallengeStale(challenge)) {
+      return challenge;
+    }
+
+    await this.storageAdapter.deleteChallenge(challenge.id);
+    await this.chat.deleteChannel(challenge.id);
+    await this.chat.deleteChannel(toChallengeChannel(challenge.id));
+    return undefined;
   }
 
   async getChallengesByType(challengeType: string): Promise<Challenge[]> {
-    const cutoff = Date.now() - STALE_CHALLENGE_TIMEOUT_MS;
+    await this.pruneStaleChallenges();
     return (await this.storageAdapter.listChallenges())
       .filter((c) => c.challengeType === challengeType)
-      .filter((c) => {
-        const gameStarted = c.instance?.state?.gameStarted ?? false;
-        const isStale = c.createdAt < cutoff;
-        return gameStarted || !isStale;
-      })
       .sort((a, b) => b.createdAt - a.createdAt);
   }
 

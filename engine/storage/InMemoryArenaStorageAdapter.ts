@@ -5,6 +5,7 @@ export interface ArenaStorageAdapter {
   listChallenges(): Promise<Challenge[]>;
   getChallenge(challengeId: string): Promise<Challenge | undefined>;
   setChallenge(challenge: Challenge): Promise<void>;
+  deleteChallenge(challengeId: string): Promise<void>;
 }
 
 export class InMemoryArenaStorageAdapter implements ArenaStorageAdapter {
@@ -24,5 +25,9 @@ export class InMemoryArenaStorageAdapter implements ArenaStorageAdapter {
 
   async setChallenge(challenge: Challenge): Promise<void> {
     this.challengesById[challenge.id] = challenge;
+  }
+
+  async deleteChallenge(challengeId: string): Promise<void> {
+    delete this.challengesById[challengeId];
   }
 }
