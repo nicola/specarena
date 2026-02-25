@@ -22,6 +22,7 @@ export type { Score };
 export interface ChallengeOperatorState {
   gameStarted: boolean;
   gameEnded: boolean;
+  completedAt?: number;
   scores: Score[];
   players: string[];
   playerIdentities: Record<string, string>; // invite → userId

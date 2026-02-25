@@ -106,6 +106,7 @@ export abstract class BaseChallenge<TGameState = {}> implements ChallengeOperato
   // It marks the game ended and emits a canonical score summary.
   protected async endGame(): Promise<void> {
     this.state.gameEnded = true;
+    this.state.completedAt = Date.now();
     const lines = this.state.scores.map(
       (s, i) => `- Player ${i + 1}: ${JSON.stringify(s)}`
     );
