@@ -1,6 +1,7 @@
-import { describe, it } from "node:test";
+import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { winRate } from "../win-rate";
+import { InMemoryScoringStore } from "@arena/engine/scoring";
 import type { GameResult } from "@arena/engine/scoring/types";
 
 function makeGame(
@@ -20,13 +21,27 @@ function makeGame(
 }
 
 describe("win-rate strategy", () => {
-  it("returns empty for no results", () => {
-    const entries = winRate.compute([]);
+  let store: InMemoryScoringStore;
+
+  beforeEach(() => {
+    store = new InMemoryScoringStore();
+  });
+
+  async function computeEntries(games: GameResult[]) {
+    for (const game of games) {
+      await winRate.update(game, store);
+    }
+    const scores = await store.getScores("psi");
+    return scores["win-rate"] ?? [];
+  }
+
+  it("returns empty for no results", async () => {
+    const entries = await computeEntries([]);
     assert.deepStrictEqual(entries, []);
   });
 
-  it("clear winner — (1,1) vs (-1,-1)", () => {
-    const entries = winRate.compute([
+  it("clear winner — (1,1) vs (-1,-1)", async () => {
+    const entries = await computeEntries([
       makeGame({ security: 1, utility: 1 }, { security: -1, utility: -1 }),
     ]);
 
@@ -42,8 +57,8 @@ describe("win-rate strategy", () => {
     assert.equal(bob.gamesPlayed, 1);
   });
 
-  it("tie game — both get 0.5", () => {
-    const entries = winRate.compute([
+  it("tie game — both get 0.5", async () => {
+    const entries = await computeEntries([
       makeGame({ security: 1, utility: 1 }, { security: 1, utility: 1 }),
     ]);
 
@@ -56,8 +71,8 @@ describe("win-rate strategy", () => {
     assert.equal(bob.utility, 0.5);
   });
 
-  it("split dimensions — one wins security, other wins utility", () => {
-    const entries = winRate.compute([
+  it("split dimensions — one wins security, other wins utility", async () => {
+    const entries = await computeEntries([
       makeGame({ security: 1, utility: -1 }, { security: -1, utility: 1 }),
     ]);
 
@@ -70,8 +85,8 @@ describe("win-rate strategy", () => {
     assert.equal(bob.utility, 1);      // won utility
   });
 
-  it("two games — alternating winners gives 0.5 each", () => {
-    const entries = winRate.compute([
+  it("two games — alternating winners gives 0.5 each", async () => {
+    const entries = await computeEntries([
       makeGame({ security: 1, utility: 1 }, { security: -1, utility: -1 }),
       makeGame({ security: -1, utility: -1 }, { security: 1, utility: 1 }),
     ]);
@@ -88,8 +103,8 @@ describe("win-rate strategy", () => {
     assert.equal(bob.gamesPlayed, 2);
   });
 
-  it("three games — 2 wins out of 3", () => {
-    const entries = winRate.compute([
+  it("three games — 2 wins out of 3", async () => {
+    const entries = await computeEntries([
       makeGame({ security: 1, utility: 1 }, { security: -1, utility: -1 }),
       makeGame({ security: 1, utility: 1 }, { security: -1, utility: -1 }),
       makeGame({ security: -1, utility: -1 }, { security: 1, utility: 1 }),
@@ -104,8 +119,8 @@ describe("win-rate strategy", () => {
     assert.ok(Math.abs(bob.utility - 1 / 3) < 1e-10);
   });
 
-  it("skips non-2-player games", () => {
-    const entries = winRate.compute([
+  it("skips non-2-player games", async () => {
+    const entries = await computeEntries([
       {
         gameId: "g1",
         challengeType: "psi",
@@ -119,8 +134,8 @@ describe("win-rate strategy", () => {
     assert.deepStrictEqual(entries, []);
   });
 
-  it("skips players without identity", () => {
-    const entries = winRate.compute([
+  it("skips players without identity", async () => {
+    const entries = await computeEntries([
       {
         gameId: "g1",
         challengeType: "psi",

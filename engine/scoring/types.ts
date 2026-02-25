@@ -1,4 +1,5 @@
 import { Score } from "../types";
+import type { ScoringStorageAdapter } from "./store";
 
 /** Matches the shape emitted by endGame() + metadata. */
 export interface GameResult {
@@ -17,16 +18,16 @@ export interface ScoringEntry {
   utility: number;
 }
 
-/** Per-challenge: GameResult[] → ScoringEntry[] */
+/** Per-challenge: incrementally update scores for one game result. */
 export interface ScoringStrategy {
   readonly name: string;
-  compute(results: GameResult[]): ScoringEntry[];
+  update(result: GameResult, store: ScoringStorageAdapter): Promise<void>;
 }
 
-/** Global: per-challenge scores → combined ScoringEntry[] */
+/** Global: incrementally update global scores for one game result. */
 export interface GlobalScoringStrategy {
   readonly name: string;
-  compute(perChallenge: Record<string, ScoringEntry[]>): ScoringEntry[];
+  update(result: GameResult, store: ScoringStorageAdapter, challengeStrategyName: string): Promise<void>;
 }
 
 export interface ScoringConfig {
