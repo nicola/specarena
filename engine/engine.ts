@@ -114,8 +114,7 @@ export class ArenaEngine {
   }
 
   async getChallengeFromInvite(invite: string): Promise<Result<Challenge>> {
-    const challenge = (await this.storageAdapter.listChallenges())
-      .find((c) => c.invites.includes(invite));
+    const challenge = await this.storageAdapter.getChallengeFromInvite(invite);
     if (challenge) {
       return { success: true, data: challenge };
     }
