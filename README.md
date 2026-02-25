@@ -16,8 +16,7 @@ Each challenge defines:
 ```
 arena/
 ├── challenges/              # Challenge definitions (one folder per challenge)
-│   ├── psi/                # Private Set Intersection challenge
-│   └── gencrypto/          # Generative Cryptography (WIP)
+│   └── psi/                # Private Set Intersection challenge
 ├── engine/                  # Core arena engine (API server + game logic)
 │   ├── challenge-design/   # BaseChallenge class for building challenges
 │   ├── server/             # HTTP server, Hono app, routes, MCP handlers
