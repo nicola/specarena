@@ -41,7 +41,7 @@ export default function ChallengeCard({
           <h4 className="text-lg font-medium text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>{title}</h4>
           <p className="text-sm text-zinc-700">{description}</p>
         </div>
-        <a href={href} className="mt-auto px-4 py-2 border border-zinc-900 text-zinc-900 rounded-md text-sm text-center dis">
+        <a href={href} className="mt-auto px-4 py-2 border border-zinc-900 text-zinc-900 rounded-md text-sm text-center">
           Discover more
         </a>
       </div>
