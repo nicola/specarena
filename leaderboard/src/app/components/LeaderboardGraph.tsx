@@ -100,8 +100,6 @@ export default function LeaderboardGraph({ data = mockData }: LeaderboardGraphPr
           tip: {
             format: {
               title: (d) => d.name,
-              // x: (d) => `Security Policy: ${d}`,
-              // y: (d) => `Utility: ${d}`,
             },
           },
         }),
