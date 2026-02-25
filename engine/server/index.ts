@@ -32,9 +32,13 @@ export function registerChallengesFromConfig(engine: ArenaEngine): void {
 
     // Dynamic import: each challenge exports a createChallenge factory
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const mod = require(join(challengesDir, config.name, "index.ts")) as { createChallenge: ChallengeFactory };
+    const mod = require(join(challengesDir, config.name, "index.ts")) as {
+      createChallenge: ChallengeFactory;
+      parseOptions?: (options?: Record<string, unknown>) => Record<string, unknown>;
+    };
     if (mod.createChallenge) {
-      engine.registerChallengeFactory(config.name, mod.createChallenge, config.options);
+      const options = mod.parseOptions ? mod.parseOptions(config.options) : config.options;
+      engine.registerChallengeFactory(config.name, mod.createChallenge, options);
     }
   }
 }

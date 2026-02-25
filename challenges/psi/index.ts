@@ -1,6 +1,7 @@
 import { generateRandomSetFromSeed } from "@arena/engine/utils";
 import { ChallengeFactoryContext, ChallengeOperatorError, ChatMessage, ChallengeMessaging, ChallengeOperator } from "@arena/engine/types";
 import { BaseChallenge } from "@arena/engine/challenge-design/BaseChallenge";
+import { z } from "zod";
 
 // Utility scores for the guessing player
 const UTILITY_WRONG_GUESS = -1;        // Guessed elements not in the other player's set
@@ -18,6 +19,34 @@ export interface PsiChallengeParams {
   range: [number, number];
   intersectionSize: number;
   setSize: number;
+}
+
+const DEFAULT_CONFIG = {
+  players: 2,
+  range: [100, 900] as [number, number],
+  intersectionSize: 3,
+  setSize: 10,
+};
+
+const PsiOptionsSchema = z.object({
+  players: z.literal(2).default(DEFAULT_CONFIG.players),
+  range: z.tuple([z.number().int(), z.number().int()])
+    .default(DEFAULT_CONFIG.range)
+    .refine(([from, to]) => from < to, "range[0] must be less than range[1]"),
+  intersectionSize: z.number().int().positive().default(DEFAULT_CONFIG.intersectionSize),
+  setSize: z.number().int().positive().default(DEFAULT_CONFIG.setSize),
+}).refine(
+  ({ intersectionSize, setSize }) => intersectionSize <= setSize,
+  "intersectionSize must be less than or equal to setSize",
+).refine(
+  ({ range, setSize }) => (range[1] - range[0] + 1) >= setSize,
+  "range must be wide enough for setSize unique values",
+);
+
+export type PsiChallengeOptions = z.infer<typeof PsiOptionsSchema>;
+
+export function parseOptions(options?: Record<string, unknown>): PsiChallengeOptions {
+  return PsiOptionsSchema.parse(options ?? {});
 }
 
 const eqSet = (xs: Set<number>, ys: Set<number>) =>
@@ -152,21 +181,14 @@ function userSetsFromParams(params: PsiChallengeParams): { userSets: Set<number>
   return { userSets, intersectionSet };
 }
 
-const DEFAULT_CONFIG = {
-  players: 2,
-  range: [100, 900] as [number, number],
-  intersectionSize: 3,
-  setSize: 10,
-};
-
 export function createChallenge(
   challengeId: string,
   options?: Record<string, unknown>,
   context?: ChallengeFactoryContext
 ): ChallengeOperator {
+  const parsedOptions = parseOptions(options);
   return new PsiChallenge({
     challengeId,
-    ...DEFAULT_CONFIG,
-    ...options,
-  } as PsiChallengeParams, context?.messaging);
+    ...parsedOptions,
+  }, context?.messaging);
 }
