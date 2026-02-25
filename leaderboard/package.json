@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "node --import tsx --test src/**/*.test.ts"
   },
   "dependencies": {
     "@arena/engine": "*",
@@ -27,6 +28,7 @@
     "eslint": "^10",
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
+    "tsx": "^4.19.4",
     "typescript": "5.9.3"
   }
 }

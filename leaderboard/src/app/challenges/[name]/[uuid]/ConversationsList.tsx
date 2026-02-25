@@ -1,16 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
-
-interface ChatMessage {
-  channel: string;
-  from: string;
-  to: string | null;
-  content: string;
-  index: number;
-  timestamp: number;
-  redacted?: boolean;
-}
+import { type ChatMessage, deduplicateMessages, getConversationKey } from "@/lib/chat-utils";
 
 interface Score {
   security: number;
@@ -64,12 +55,6 @@ const getInitials = (name: string): string => {
     .join("")
     .toUpperCase()
     .slice(0, 2);
-};
-
-// Deduplicate incoming messages against an existing list using channel+index as key
-const deduplicateMessages = (existing: ChatMessage[], incoming: ChatMessage[]): ChatMessage[] => {
-  const existingKeys = new Set(existing.map(m => `${m.channel}-${m.index}`));
-  return incoming.filter(msg => !existingKeys.has(`${msg.channel}-${msg.index}`));
 };
 
 const CHALLENGE_CHANNEL_PREFIX = "challenge_";
@@ -220,10 +205,6 @@ export default function ConversationsList({ uuid, engineUrl = "" }: Conversation
     if (name === "operator") return "Operator";
     return playerMap.get(name) ?? name;
   };
-
-  // Helper to get conversation key for a message
-  const getConversationKey = (message: ChatMessage): string =>
-    message.to ? `${message.from} -> ${message.to}` : message.channel;
 
   if (loading && messages.length === 0) {
     return (
