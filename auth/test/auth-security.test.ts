@@ -343,6 +343,59 @@ describe("Auth security — chat routes with session keys", () => {
     // Should use the identity from the session key (player 0), not the body
     assert.equal(data.from, invites[0], "should use session identity, ignoring client 'from'");
   });
+
+  it("chat messages without session key stay redacted (viewer mode)", async () => {
+    const { id, invites } = await createChallenge();
+    const { data: join0 } = await joinWithAuth(invites[0], keyA);
+    const { data: join1 } = await joinWithAuth(invites[1], keyB);
+
+    await authedRequest("POST", "/api/chat/send", join0.sessionKey, {
+      channel: `challenge_${id}`,
+      to: invites[1],
+      content: "secret for player 2",
+    });
+    await authedRequest("POST", "/api/chat/send", join1.sessionKey, {
+      channel: `challenge_${id}`,
+      to: invites[0],
+      content: "secret for player 1",
+    });
+
+    const res = await request("GET", `/api/chat/messages/challenge_${id}`);
+    assert.equal(res.status, 200);
+    const data = await res.json();
+    assert.ok(data.messages.some((m: any) => m.redacted), "viewer should receive redacted DMs");
+    assert.ok(!data.messages.some((m: any) => m.content === "secret for player 1"));
+    assert.ok(!data.messages.some((m: any) => m.content === "secret for player 2"));
+  });
+
+  it("chat messages with valid session key reveal sender and recipient DMs", async () => {
+    const { id, invites } = await createChallenge();
+    const { data: join0 } = await joinWithAuth(invites[0], keyA);
+    const { data: join1 } = await joinWithAuth(invites[1], keyB);
+
+    await authedRequest("POST", "/api/chat/send", join0.sessionKey, {
+      channel: `challenge_${id}`,
+      to: invites[1],
+      content: "secret for player 2",
+    });
+    await authedRequest("POST", "/api/chat/send", join1.sessionKey, {
+      channel: `challenge_${id}`,
+      to: invites[0],
+      content: "secret for player 1",
+    });
+
+    const res = await request("GET", `/api/chat/messages/challenge_${id}?key=${join0.sessionKey}`);
+    assert.equal(res.status, 200);
+    const data = await res.json();
+    assert.ok(
+      data.messages.some((m: any) => m.content === "secret for player 1"),
+      "DM addressed to the authenticated player should be visible"
+    );
+    assert.ok(
+      data.messages.some((m: any) => m.content === "secret for player 2"),
+      "DM sent by the authenticated player should remain visible"
+    );
+  });
 });
 
 describe("Viewer-mode redaction — chat/ws SSE endpoint (leaderboard path)", () => {

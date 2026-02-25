@@ -32,6 +32,15 @@ async function getChallengeIdFromRequest(c: Context): Promise<string | null> {
     }
   }
 
+  // Fallback for wildcard middleware where route params may not be resolved yet
+  if (!challengeId) {
+    const path = new URL(c.req.url).pathname;
+    const match = path.match(/^\/api(?:\/v1)?\/chat\/(?:ws|messages)\/([^/?#]+)/);
+    if (match) {
+      challengeId = decodeURIComponent(match[1]);
+    }
+  }
+
   if (!challengeId) {
     return null;
   }
