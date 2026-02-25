@@ -24,6 +24,7 @@ export class ArenaEngine {
   private readonly challengeMetadataMap: Map<string, ChallengeMetadata>;
   readonly chat: ChatEngine;
   scoring: ScoringModule | null;
+  private _pendingScoring: Promise<void> = Promise.resolve();
 
   constructor(options: EngineOptions = {}) {
     this.storageAdapter = options.storageAdapter ?? new InMemoryArenaStorageAdapter();
@@ -38,27 +39,31 @@ export class ArenaEngine {
         const challenge = await this.getChallenge(challengeId);
         return challenge?.instance?.state?.gameEnded ?? false;
       },
-      onChallengeEvent: async (challengeId, event) => {
-        if (event.type !== "game_ended" || !this.scoring) return;
+    });
+
+    this.chat.on('game_ended', (challengeId, event) => {
+      if (!this.scoring) return;
+      this._pendingScoring = this._pendingScoring.then(async () => {
         const challenge = await this.getChallenge(challengeId);
         if (!challenge) return;
-        try {
-          await this.scoring.recordGame({
-            gameId: challengeId,
-            challengeType: challenge.challengeType,
-            completedAt: Date.now(),
-            scores: event.state.scores,
-            players: event.state.players,
-            playerIdentities: event.state.playerIdentities,
-          });
-        } catch (err) {
-          console.error("Scoring recordGame failed:", err);
-        }
-      },
+        await this.scoring!.recordGame({
+          gameId: challengeId,
+          challengeType: challenge.challengeType,
+          completedAt: Date.now(),
+          scores: event.state.scores,
+          players: event.state.players,
+          playerIdentities: event.state.playerIdentities,
+        });
+      }).catch((err) => console.error("Scoring recordGame failed:", err));
     });
   }
 
+  async flushScoring(): Promise<void> {
+    await this._pendingScoring;
+  }
+
   async clearRuntimeState(): Promise<void> {
+    await this.flushScoring();
     await Promise.all([
       this.storageAdapter.clearRuntimeState(),
       this.chat.clearRuntimeState(),
