@@ -1,5 +1,6 @@
 import { readFileSync } from "fs";
 import { join } from "path";
+import { z } from "zod";
 import { Hono } from "hono";
 import { ArenaEngine, defaultEngine } from "../engine";
 import { ChallengeFactory, ChallengeMetadata } from "../types";
@@ -22,10 +23,23 @@ export { createInviteRoutes } from "./routes/invites";
 export { createResolveIdentity } from "./routes/identity";
 export { createScoringRoutes } from "./routes/scoring";
 
+const EngineConfigSchema = z.object({
+  challenges: z.array(z.object({
+    name: z.string(),
+    options: z.record(z.unknown()).optional(),
+    scoring: z.array(z.string()).optional(),
+  })),
+  scoring: z.object({
+    default: z.array(z.string()),
+    global: z.string().optional(),
+  }),
+});
+
 export function loadConfig(): EngineConfig {
-  return JSON.parse(
+  const raw = JSON.parse(
     readFileSync(join(__dirname, "..", "config.json"), "utf-8")
   );
+  return EngineConfigSchema.parse(raw);
 }
 
 export function registerChallengesFromConfig(engine: ArenaEngine, config?: EngineConfig): void {
