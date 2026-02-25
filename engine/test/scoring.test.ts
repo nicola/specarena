@@ -379,6 +379,13 @@ describe("Scoring integration via engine", () => {
     assert.ok(typeof data === "object");
   });
 
+  it("GET /api/scoring/:challengeType returns 404 for unknown type", async () => {
+    const res = await request("GET", "/api/scoring/nonexistent");
+    assert.equal(res.status, 404);
+    const data = await res.json();
+    assert.equal(data.error, "Unknown challenge type");
+  });
+
   it("multiple games accumulate and API returns correct values", async () => {
     // Play two full games
     for (let i = 0; i < 2; i++) {
