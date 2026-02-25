@@ -5,6 +5,7 @@ export interface ChatStorageAdapter {
   getNextIndex(channel: string): Promise<number>;
   getMessagesForChannel(channel: string): Promise<ChatMessage[]>;
   appendMessage(channel: string, message: ChatMessage): Promise<void>;
+  deleteChannel(channel: string): Promise<void>;
 }
 
 export class InMemoryChatStorageAdapter implements ChatStorageAdapter {
@@ -32,5 +33,10 @@ export class InMemoryChatStorageAdapter implements ChatStorageAdapter {
       this.messagesByChannel[channel] = [];
     }
     this.messagesByChannel[channel].push(message);
+  }
+
+  async deleteChannel(channel: string): Promise<void> {
+    delete this.messagesByChannel[channel];
+    delete this.indexCounters[channel];
   }
 }
