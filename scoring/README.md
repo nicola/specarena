@@ -28,8 +28,7 @@ Global strategies receive a single `GameResult`, a `ScoringStorageAdapter`, and 
 Create a new file in `scoring/`, e.g. `scoring/elo.ts`:
 
 ```typescript
-import type { ScoringStrategy, GameResult } from "@arena/engine/scoring/types";
-import type { ScoringStorageAdapter } from "@arena/engine/scoring";
+import type { ScoringStrategy, GameResult, ScoringStorageAdapter } from "./types";
 
 interface EloState {
   rating: number;
@@ -44,6 +43,8 @@ export const elo: ScoringStrategy = {
     //   - result.players[]          — invite codes in join order
     //   - result.playerIdentities{} — invite → userId mapping
     //   - result.scores[]           — { security, utility } parallel with players[]
+    //   - result.createdAt          — epoch ms, when the challenge was created
+    //   - result.completedAt        — epoch ms, when the game ended
     //
     // To resolve a player's userId:
     //   const playerId = result.playerIdentities[result.players[i]];
@@ -73,7 +74,7 @@ export const elo: ScoringStrategy = {
 ```
 
 Key points:
-- Import types from `@arena/engine/scoring/types`
+- Import types from `./types`
 - Always resolve invite codes to userIds via `result.playerIdentities[result.players[i]]`
 - Skip players without an identity mapping (`if (!playerId) continue`)
 - Use `store.getStrategyState()` / `store.setStrategyState()` to persist arbitrary state between games
@@ -123,8 +124,8 @@ Create `scoring/test/elo.test.ts`:
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { elo } from "../elo";
-import type { GameResult } from "@arena/engine/scoring/types";
-import { InMemoryScoringStore } from "@arena/engine/scoring";
+import type { GameResult } from "../types";
+import { InMemoryScoringStore } from "../store";
 
 function makeGame(
   p0: { security: number; utility: number },
@@ -133,6 +134,7 @@ function makeGame(
   return {
     gameId: crypto.randomUUID(),
     challengeType: "psi",
+    createdAt: Date.now(),
     completedAt: Date.now(),
     scores: [p0, p1],
     players: ["inv_a", "inv_b"],
@@ -162,8 +164,7 @@ npm run test:scoring
 Global strategies incrementally update a single cross-challenge leaderboard. They receive a single `GameResult`, a `ScoringStorageAdapter`, and the name of the first per-challenge strategy (so they can read that strategy's latest score entry from the store).
 
 ```typescript
-import type { GlobalScoringStrategy, GameResult } from "@arena/engine/scoring/types";
-import type { ScoringStorageAdapter } from "@arena/engine/scoring";
+import type { GlobalScoringStrategy, GameResult, ScoringStorageAdapter } from "./types";
 
 export const myGlobal: GlobalScoringStrategy = {
   name: "my-global",
