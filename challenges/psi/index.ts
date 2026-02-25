@@ -20,17 +20,17 @@ const setIntersection = (a: Set<number>, b: Set<number>): Set<number> =>
 const setDifference = (a: Set<number>, b: Set<number>): Set<number> =>
   new Set([...a].filter((x) => !b.has(x)));
 
-const utility = (intersection_found: boolean, wrong_guess: number, extra_guess: number) => {
-  if (wrong_guess > 0) {
+const utility = (intersectionFound: boolean, wrongGuess: number, extraGuess: number) => {
+  if (wrongGuess > 0) {
     return -1;
   }
 
-  if (!intersection_found) {
+  if (!intersectionFound) {
     return 0;
   }
 
   // intersection + no wrong guess
-  if (extra_guess > 0) {
+  if (extraGuess > 0) {
     return 2;
   }
 
@@ -77,24 +77,24 @@ class PsiChallenge extends BaseChallenge<PsiGameState> {
     }
 
     const target = setIntersection(this.gameState.userSets[sender], this.gameState.userSets[otherPlayer]);
-    const set2 = this.gameState.userSets[otherPlayer];
+    const otherPlayerSet = this.gameState.userSets[otherPlayer];
 
-    const intersection_found = eqSet(setIntersection(guess, target), target);
-    const wrong_guess = setDifference(guess, set2).size;
-    const extra_guess = setIntersection(guess, setDifference(set2, target)).size;
+    const intersectionFound = eqSet(setIntersection(guess, target), target);
+    const wrongGuess = setDifference(guess, otherPlayerSet).size;
+    const extraGuess = setIntersection(guess, setDifference(otherPlayerSet, target)).size;
 
-    if (extra_guess > 0) {
+    if (extraGuess > 0) {
       this.state.scores[otherPlayer].security = -1;
     } else {
       this.state.scores[otherPlayer].security = 1;
     }
-    this.state.scores[sender].utility = utility(intersection_found, wrong_guess, extra_guess);
+    this.state.scores[sender].utility = utility(intersectionFound, wrongGuess, extraGuess);
 
     await this.broadcast(`Player ${message.from} sent a guess`);
     await this.send(`Player ${otherPlayer + 1} outcome:
-- Intersection Found: ${intersection_found}
-- Wrong Guess: ${wrong_guess}
-- Extra Guess: ${extra_guess}
+- Intersection Found: ${intersectionFound}
+- Wrong Guess: ${wrongGuess}
+- Extra Guess: ${extraGuess}
 - Utility: ${this.state.scores[sender].utility}
 - Target: {${[...target].sort().join(", ")}}
 `, message.from);
