@@ -1,6 +1,6 @@
 # Engine Scoring Module
 
-The scoring module lives inside the engine and orchestrates leaderboard computation. It hooks into `game_ended` events, stores results, runs pluggable strategies from `@arena/scoring`, and exposes the computed leaderboard via API routes.
+The scoring module lives inside the engine and orchestrates leaderboard computation. It hooks into `game_ended` events, passes each result to pluggable strategies from `@arena/scoring` for incremental score updates, and exposes the computed leaderboard via API routes.
 
 ## Architecture
 
@@ -16,8 +16,8 @@ The module does **not** contain strategy implementations. Strategies live in the
 ## How It Works
 
 1. **Game ends** — `BaseChallenge.endGame()` broadcasts a `game_ended` event
-2. **Engine intercepts** — the messaging wrapper in `engine.ts` catches the event and calls `scoring.recordGame(result)`
-3. **Module stores + recomputes** — the result is saved to the store, then all applicable strategies are re-run for that challenge type, then the global strategy is re-run
+2. **Engine callback** — the `onChallengeEvent` callback in `ChatEngine` fires and calls `scoring.recordGame(result)`
+3. **Module updates incrementally** — each applicable strategy's `update()` is called with the single game result and the store, updating scores in O(1) per game
 4. **API serves results** — `GET /api/scoring` and `GET /api/scoring/:challengeType` read from the store
 
 ## Types
@@ -55,7 +55,7 @@ interface ScoringEntry {
 ```typescript
 interface ScoringStrategy {
   readonly name: string;
-  compute(results: GameResult[]): ScoringEntry[];
+  update(result: GameResult, store: ScoringStorageAdapter): Promise<void>;
 }
 ```
 
@@ -64,7 +64,7 @@ interface ScoringStrategy {
 ```typescript
 interface GlobalScoringStrategy {
   readonly name: string;
-  compute(perChallenge: Record<string, ScoringEntry[]>): ScoringEntry[];
+  update(result: GameResult, store: ScoringStorageAdapter, challengeStrategyName: string): Promise<void>;
 }
 ```
 

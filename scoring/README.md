@@ -6,7 +6,7 @@ This package (`@arena/scoring`) contains the pluggable scoring strategy implemen
 
 ### Per-Challenge Strategies
 
-These take `GameResult[]` for a single challenge type and produce `ScoringEntry[]`.
+Each strategy receives a single `GameResult` and a `ScoringStorageAdapter`, and incrementally updates scores in the store.
 
 | Strategy | Name | Description |
 |----------|------|-------------|
@@ -15,7 +15,7 @@ These take `GameResult[]` for a single challenge type and produce `ScoringEntry[
 
 ### Global Strategies
 
-These take per-challenge `ScoringEntry[]` results and combine them into a single leaderboard.
+Global strategies receive a single `GameResult`, a `ScoringStorageAdapter`, and the name of the first per-challenge strategy. They incrementally update global scores by reading the latest per-challenge score entry from the store.
 
 | Strategy | Name | Description |
 |----------|------|-------------|
@@ -28,12 +28,18 @@ These take per-challenge `ScoringEntry[]` results and combine them into a single
 Create a new file in `scoring/`, e.g. `scoring/elo.ts`:
 
 ```typescript
-import type { ScoringStrategy, GameResult, ScoringEntry } from "@arena/engine/scoring/types";
+import type { ScoringStrategy, GameResult } from "@arena/engine/scoring/types";
+import type { ScoringStorageAdapter } from "@arena/engine/scoring";
+
+interface EloState {
+  rating: number;
+  count: number;
+}
 
 export const elo: ScoringStrategy = {
   name: "elo",
 
-  compute(results: GameResult[]): ScoringEntry[] {
+  async update(result: GameResult, store: ScoringStorageAdapter): Promise<void> {
     // Each GameResult contains:
     //   - result.players[]          — invite codes in join order
     //   - result.playerIdentities{} — invite → userId mapping
@@ -41,16 +47,27 @@ export const elo: ScoringStrategy = {
     //
     // To resolve a player's userId:
     //   const playerId = result.playerIdentities[result.players[i]];
-    //
-    // Return one ScoringEntry per player with:
-    //   - playerId:    the resolved userId (skip players without identity)
-    //   - gamesPlayed: number of games this player participated in
-    //   - security:    the computed metric for the security dimension
-    //   - utility:     the computed metric for the utility dimension
 
-    // ... your implementation here ...
+    for (let i = 0; i < result.players.length; i++) {
+      const playerId = result.playerIdentities[result.players[i]];
+      if (!playerId) continue;
 
-    return [];
+      // Read previous state from the store
+      const prev = await store.getStrategyState<EloState>(result.challengeType, this.name, playerId);
+      const state: EloState = {
+        rating: (prev?.rating ?? 1500) + /* your delta */ 0,
+        count: (prev?.count ?? 0) + 1,
+      };
+
+      // Persist updated state and score entry
+      await store.setStrategyState(result.challengeType, this.name, playerId, state);
+      await store.setScoreEntry(result.challengeType, this.name, {
+        playerId,
+        gamesPlayed: state.count,
+        security: state.rating,
+        utility: state.rating,
+      });
+    }
   },
 };
 ```
@@ -59,6 +76,8 @@ Key points:
 - Import types from `@arena/engine/scoring/types`
 - Always resolve invite codes to userIds via `result.playerIdentities[result.players[i]]`
 - Skip players without an identity mapping (`if (!playerId) continue`)
+- Use `store.getStrategyState()` / `store.setStrategyState()` to persist arbitrary state between games
+- Use `store.setScoreEntry()` to write the player's current score
 - The `security` and `utility` fields in `ScoringEntry` can mean anything your strategy defines (averages, ratings, win rates, etc.)
 
 ### 2. Register it in `scoring/index.ts`
@@ -105,6 +124,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { elo } from "../elo";
 import type { GameResult } from "@arena/engine/scoring/types";
+import { InMemoryScoringStore } from "@arena/engine/scoring";
 
 function makeGame(
   p0: { security: number; utility: number },
@@ -121,8 +141,10 @@ function makeGame(
 }
 
 describe("elo strategy", () => {
-  it("returns empty for no results", () => {
-    assert.deepStrictEqual(elo.compute([]), []);
+  it("no-ops for empty result set", async () => {
+    const store = new InMemoryScoringStore();
+    const scores = await store.getScores("psi");
+    assert.deepStrictEqual(scores, {});
   });
 
   // ... test your strategy logic
@@ -137,18 +159,20 @@ npm run test:scoring
 
 ## Writing a Global Strategy
 
-Global strategies combine per-challenge scores into a single leaderboard. They receive a `Record<string, ScoringEntry[]>` where keys are challenge types and values are the output of the first per-challenge strategy.
+Global strategies incrementally update a single cross-challenge leaderboard. They receive a single `GameResult`, a `ScoringStorageAdapter`, and the name of the first per-challenge strategy (so they can read that strategy's latest score entry from the store).
 
 ```typescript
-import type { GlobalScoringStrategy, ScoringEntry } from "@arena/engine/scoring/types";
+import type { GlobalScoringStrategy, GameResult } from "@arena/engine/scoring/types";
+import type { ScoringStorageAdapter } from "@arena/engine/scoring";
 
 export const myGlobal: GlobalScoringStrategy = {
   name: "my-global",
 
-  compute(perChallenge: Record<string, ScoringEntry[]>): ScoringEntry[] {
-    // perChallenge is { "psi": [...], "gencrypto": [...] }
-    // Combine them however you want and return ScoringEntry[]
-    return [];
+  async update(result: GameResult, store: ScoringStorageAdapter, challengeStrategyName: string): Promise<void> {
+    // Read per-challenge score for each player via:
+    //   store.getScoreEntry(result.challengeType, challengeStrategyName, playerId)
+    // Update global state via store.getGlobalStrategyState / setGlobalStrategyState
+    // Write global score via store.setGlobalScoreEntry(entry)
   },
 };
 ```
