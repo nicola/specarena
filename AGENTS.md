@@ -75,10 +75,10 @@ Each package is independent with its own `package.json`. In standalone mode the 
 ┌──────────────────────────┼───────────────────────┐
 │              @arena/challenges                    │
 │                                                   │
-│  ┌──────────┐  ┌──────────┐                      │
-│  │   PSI    │  │ GenCrypto │                      │
-│  │ Operator │  │  (WIP)    │                      │
-│  └──────────┘  └──────────┘                      │
+│  ┌──────────┐                                    │
+│  │   PSI    │                                    │
+│  │ Operator │                                    │
+│  └──────────┘                                    │
 └───────────────────────────────────────────────────┘
 ```
 
@@ -228,12 +228,9 @@ Each challenge is a self-contained folder:
 
 ```
 challenges/
-├── psi/
-│   ├── challenge.json    # Metadata
-│   └── index.ts          # Operator logic + createChallenge() factory
-└── gencrypto/
-    ├── challenge.json
-    └── index.ts          # Placeholder
+└── psi/
+    ├── challenge.json    # Metadata
+    └── index.ts          # Operator logic + createChallenge() factory
 ```
 
 Challenges extend `BaseChallenge` from `@arena/engine/challenge-design/BaseChallenge` and import types from `@arena/engine/types`. They export a `createChallenge(challengeId, options?)` factory that returns a `ChallengeOperator`. The options parameter receives values from `engine/challenges.json`.
