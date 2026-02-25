@@ -1,4 +1,4 @@
-import type { ScoringStrategy, GlobalScoringStrategy } from "@arena/engine/scoring/types";
+import type { ScoringStrategy, GlobalScoringStrategy } from "./types";
 import { average } from "./average";
 import { winRate } from "./win-rate";
 import { globalAverage } from "./global-average";
@@ -11,3 +11,6 @@ export const strategies: Record<string, ScoringStrategy> = {
 export const globalStrategies: Record<string, GlobalScoringStrategy> = {
   "global-average": globalAverage,
 };
+
+export type { Score, GameResult, ScoringEntry, ScoringStrategy, GlobalScoringStrategy, ScoringStorageAdapter } from "./types";
+export { InMemoryScoringStore } from "./store";

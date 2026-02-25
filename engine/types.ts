@@ -16,10 +16,8 @@ export interface ChatMessage {
   redacted?: boolean;
 }
 
-export interface Score {
-  security: number;
-  utility: number;
-}
+import type { Score } from "@arena/scoring";
+export type { Score };
 
 export interface ChallengeOperatorState {
   gameStarted: boolean;

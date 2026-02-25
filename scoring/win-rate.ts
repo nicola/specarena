@@ -1,5 +1,4 @@
-import type { ScoringStrategy, GameResult } from "@arena/engine/scoring/types";
-import type { ScoringStorageAdapter } from "@arena/engine/scoring";
+import type { ScoringStrategy, GameResult, ScoringStorageAdapter } from "./types";
 
 interface WinRateState {
   securityWins: number;

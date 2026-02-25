@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "exports": {
-    ".": "./index.ts"
+    ".": "./index.ts",
+    "./types": "./types.ts",
+    "./store": "./store.ts"
   },
   "scripts": {
     "test": "node --import tsx --test --test-force-exit test/*.test.ts"
