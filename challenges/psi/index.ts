@@ -6,7 +6,7 @@ import { BaseChallenge } from "@arena/engine/challenge-design/BaseChallenge";
 const UTILITY_WRONG_GUESS = -1;        // Guessed elements not in the other player's set
 const UTILITY_MISSED_INTERSECTION = 0; // Did not find the full intersection
 const UTILITY_EXACT_INTERSECTION = 1;  // Found exact intersection, no extra elements
-const UTILITY_EXTRA_ELEMENTS = 2;      // Found intersection + extra elements from opponent's set
+const UTILITY_EXTRA_ELEMENTS = 1;      // Found intersection + extra elements from opponent's set
 
 // Security scores for the other player whose set was being guessed
 const SECURITY_LEAKED = -1;            // Opponent discovered extra elements beyond the intersection
