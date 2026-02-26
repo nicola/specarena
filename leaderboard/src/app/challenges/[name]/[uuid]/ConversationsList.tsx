@@ -9,14 +9,26 @@ interface GameEndedData {
   playerIdentities: Record<string, string>;
 }
 
-interface SSEMessageData {
-  type: 'initial' | 'new_message' | 'game_ended';
-  messages?: ChatMessage[];
-  message?: ChatMessage;
-  scores?: Score[];
-  players?: string[];
-  playerIdentities?: Record<string, string>;
+interface SSEInitialEvent {
+  type: 'initial';
+  messages: ChatMessage[];
 }
+
+interface SSENewMessageEvent {
+  type: 'new_message';
+  message: ChatMessage;
+}
+
+interface SSEGameEndedEvent {
+  type: 'game_ended';
+  data: {
+    scores: Score[];
+    players: string[];
+    playerIdentities: Record<string, string>;
+  };
+}
+
+type SSEMessageData = SSEInitialEvent | SSENewMessageEvent | SSEGameEndedEvent;
 
 interface ConversationsListProps {
   uuid: string;
@@ -93,45 +105,44 @@ export default function ConversationsList({ uuid, engineUrl = "" }: Conversation
   };
 
   const handleMessage = useCallback((data: SSEMessageData) => {
-    if (data.type === 'initial') {
-      // Initial load of all messages
-      setMessages((prev) => {
-        // Merge with existing messages, avoiding duplicates
-        const existingChannels = new Set(prev.map(msg => `${msg.channel}-${msg.index}`));
-        const newMessages = (data.messages || []).filter(
-          (msg: ChatMessage): msg is ChatMessage => 
-            msg !== undefined && !existingChannels.has(`${msg.channel}-${msg.index}`)
-        );
-        const merged = [...prev, ...newMessages];
-        // Sort by timestamp
-        merged.sort((a, b) => a.timestamp - b.timestamp);
-        return merged;
-      });
-      
-      initialLoadCountRef.current += 1;
-      if (initialLoadCountRef.current >= 2) {
-        setLoading(false);
-        setError(null);
-        setTimeout(scrollToBottom, 100);
-      }
-    } else if (data.type === 'game_ended' && data.scores) {
-      setGameEnded({ scores: data.scores, players: data.players || [], playerIdentities: data.playerIdentities || {} });
-    } else if (data.type === 'new_message' && data.message) {
-      // New message received
-      setMessages((prev) => {
-        // Check if message already exists (avoid duplicates)
-        const exists = prev.some(
-          (msg) => msg.channel === data.message!.channel && msg.index === data.message!.index
-        );
-        if (exists) {
-          return prev;
+    switch (data.type) {
+      case 'initial': {
+        setMessages((prev) => {
+          const existing = new Set(prev.map(msg => `${msg.channel}-${msg.index}`));
+          const deduped = data.messages.filter(msg => !existing.has(`${msg.channel}-${msg.index}`));
+          const merged = [...prev, ...deduped];
+          merged.sort((a, b) => a.timestamp - b.timestamp);
+          return merged;
+        });
+
+        initialLoadCountRef.current += 1;
+        if (initialLoadCountRef.current >= 2) {
+          setLoading(false);
+          setError(null);
+          setTimeout(scrollToBottom, 100);
         }
-        const newMessages = [...prev, data.message!];
-        // Sort by timestamp
-        newMessages.sort((a, b) => a.timestamp - b.timestamp);
-        setTimeout(scrollToBottom, 100);
-        return newMessages;
-      });
+        break;
+      }
+
+      case 'game_ended': {
+        const { scores, players, playerIdentities } = data.data;
+        setGameEnded({ scores, players, playerIdentities });
+        break;
+      }
+
+      case 'new_message': {
+        setMessages((prev) => {
+          const exists = prev.some(
+            (msg) => msg.channel === data.message.channel && msg.index === data.message.index
+          );
+          if (exists) return prev;
+          const updated = [...prev, data.message];
+          updated.sort((a, b) => a.timestamp - b.timestamp);
+          setTimeout(scrollToBottom, 100);
+          return updated;
+        });
+        break;
+      }
     }
   }, []);
 

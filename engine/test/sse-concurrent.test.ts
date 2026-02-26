@@ -364,6 +364,69 @@ describe("Concurrent SSE streams — engine level (no auth)", () => {
     }
   });
 
+  it("game_ended SSE payload matches the shape the UI summary box expects", async () => {
+    const { id, invites } = await createPsiChallenge();
+    await request("POST", "/api/arena/join", { invite: invites[0] });
+    await request("POST", "/api/arena/join", { invite: invites[1] });
+
+    const viewer = await openSSE(`challenge_${id}`);
+
+    try {
+      await readNextSSEData(viewer.reader, viewer.buf);
+
+      // End the game
+      await sendGuess(id, invites[0], "100");
+      await sendGuess(id, invites[1], "100");
+
+      // Drain until game_ended
+      let ev: any;
+      for (let i = 0; i < 15; i++) {
+        ev = await readNextSSEData(viewer.reader, viewer.buf);
+        if (ev.type === "game_ended") break;
+      }
+      assert.equal(ev.type, "game_ended");
+
+      // The UI destructures: const { scores, players, playerIdentities } = data.data;
+      const { data } = ev;
+      assert.ok(data, "game_ended must have a data field");
+      assert.ok(Array.isArray(data.scores), "data.scores must be an array");
+      assert.ok(Array.isArray(data.players), "data.players must be an array");
+      assert.equal(typeof data.playerIdentities, "object", "data.playerIdentities must be an object");
+
+      // Scores must have security + utility (rendered in the summary box)
+      for (const score of data.scores) {
+        assert.equal(typeof score.security, "number", "score.security must be a number");
+        assert.equal(typeof score.utility, "number", "score.utility must be a number");
+      }
+
+      // Players array must match scores length
+      assert.equal(data.scores.length, data.players.length, "scores and players must have same length");
+
+      // playerIdentities keys should be invite codes
+      for (const key of Object.keys(data.playerIdentities)) {
+        assert.ok(invites.includes(key), `playerIdentities key ${key} should be an invite code`);
+      }
+
+      // Verify late viewer gets the same shape (reconnect scenario)
+      const late = await openSSE(`challenge_${id}`);
+      try {
+        const init = await readNextSSEData(late.reader, late.buf);
+        assert.equal(init.type, "initial");
+
+        const lateEnded = await readNextSSEData(late.reader, late.buf);
+        assert.equal(lateEnded.type, "game_ended");
+        assert.ok(lateEnded.data, "late viewer game_ended must have data");
+        assert.ok(Array.isArray(lateEnded.data.scores));
+        assert.ok(Array.isArray(lateEnded.data.players));
+        assert.equal(typeof lateEnded.data.playerIdentities, "object");
+      } finally {
+        late.reader.cancel().catch(() => {});
+      }
+    } finally {
+      viewer.reader.cancel().catch(() => {});
+    }
+  });
+
   it("stream stays open after game_ended — no stream closure", async () => {
     const { id, invites } = await createPsiChallenge();
     await request("POST", "/api/arena/join", { invite: invites[0] });
