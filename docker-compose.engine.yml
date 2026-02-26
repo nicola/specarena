@@ -5,7 +5,7 @@ services:
   engine:
     build:
       context: .
-      dockerfile: engine/Dockerfile
+      dockerfile: api/Dockerfile
     environment:
       - PORT=3001
     expose:

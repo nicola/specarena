@@ -1,9 +1,9 @@
 import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 
-import { generateKeyPair, generateSecret, hashPublicKey, sign } from "../utils";
-import { createAuthApp } from "../server/index";
-import { readNextSSEData } from "../../engine/test/helpers/sse";
+import { generateKeyPair, generateSecret, hashPublicKey, sign } from "../auth/utils";
+import { createAuthApp } from "../auth/index";
+import { readNextSSEData } from "./helpers/sse";
 
 // --- Auth-enabled engine + app ---
 

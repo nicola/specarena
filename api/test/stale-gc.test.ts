@@ -1,9 +1,9 @@
 import { beforeEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-import app from "../server/index";
-import { defaultEngine } from "../engine";
-import { toChallengeChannel } from "../types";
+import app from "../index";
+import { defaultEngine } from "@arena/engine/engine";
+import { toChallengeChannel } from "@arena/engine/types";
 
 const STALE_MS = 11 * 60 * 1000;
 

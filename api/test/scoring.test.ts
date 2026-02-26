@@ -1,10 +1,10 @@
 import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import { ScoringModule } from "../scoring/index";
-import type { GameResult, EngineConfig, ScoringEntry } from "../scoring/types";
+import { ScoringModule } from "@arena/engine/scoring";
+import type { GameResult, EngineConfig, ScoringEntry } from "@arena/engine/scoring/types";
 import { strategies, globalStrategies } from "@arena/scoring";
-import app from "../server/index";
-import { defaultEngine } from "../engine";
+import app from "../index";
+import { defaultEngine } from "@arena/engine/engine";
 
 // --- Helpers ---
 

@@ -71,7 +71,7 @@ export function createChallenge(
 }
 ```
 
-The `options` parameter receives values from `engine/config.json`, allowing the same challenge code to be configured differently per deployment. The `context` parameter provides the engine's messaging system (`context.messaging`).
+The `options` parameter receives values from `api/config.json`, allowing the same challenge code to be configured differently per deployment. The `context` parameter provides the engine's messaging system (`context.messaging`).
 
 See [engine/challenge-design/README.md](../engine/challenge-design/README.md) for the full `BaseChallenge` API reference (lifecycle hooks, messaging helpers, scoring).
 
@@ -91,7 +91,7 @@ To activate your challenge:
 
 1. Create `challenges/<name>/index.ts` exporting `createChallenge`
 2. Create `challenges/<name>/challenge.json` with metadata
-3. Add an entry to `engine/config.json`:
+3. Add an entry to `api/config.json`:
 
 ```json
 {

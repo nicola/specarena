@@ -1,6 +1,6 @@
 import { Hono } from "hono";
-import { ArenaEngine, defaultEngine } from "../../engine";
-import { ChallengeError } from "../../types";
+import { ArenaEngine, defaultEngine } from "@arena/engine/engine";
+import { ChallengeError } from "@arena/engine/types";
 
 export function createInviteRoutes(engine: ArenaEngine = defaultEngine) {
   const app = new Hono();

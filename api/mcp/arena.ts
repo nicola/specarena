@@ -1,6 +1,6 @@
 import { createMcpHandler } from "mcp-handler";
 import { z } from "zod";
-import { ArenaEngine, defaultEngine } from "../../engine";
+import { ArenaEngine, defaultEngine } from "@arena/engine/engine";
 
 export function createArenaHandler(options: { redisUrl?: string; basePath?: string; engine?: ArenaEngine } = {}) {
   const engine = options.engine ?? defaultEngine;

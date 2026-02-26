@@ -1,10 +1,10 @@
 import { readFileSync } from "fs";
 import { join } from "path";
 import { Hono } from "hono";
-import { ArenaEngine, defaultEngine } from "../engine";
-import { ChallengeFactory, ChallengeMetadata } from "../types";
-import { ScoringModule } from "../scoring/index";
-import type { EngineConfig } from "../scoring/types";
+import { ArenaEngine, defaultEngine } from "@arena/engine/engine";
+import { ChallengeFactory, ChallengeMetadata } from "@arena/engine/types";
+import { ScoringModule } from "@arena/engine/scoring";
+import type { EngineConfig } from "@arena/engine/scoring/types";
 import { strategies, globalStrategies } from "@arena/scoring";
 import { createArenaHandler } from "./mcp/arena";
 import { createChatHandler } from "./mcp/chat";
@@ -24,13 +24,13 @@ export { createScoringRoutes } from "./routes/scoring";
 
 export function loadConfig(): EngineConfig {
   return JSON.parse(
-    readFileSync(join(__dirname, "..", "config.json"), "utf-8")
+    readFileSync(join(__dirname, "config.json"), "utf-8")
   );
 }
 
 export function registerChallengesFromConfig(engine: ArenaEngine, config?: EngineConfig): void {
   const configs = config ?? loadConfig();
-  const challengesDir = join(__dirname, "..", "..", "challenges");
+  const challengesDir = join(__dirname, "..", "challenges");
 
   for (const entry of configs.challenges) {
     const metadata: ChallengeMetadata = JSON.parse(
@@ -63,7 +63,7 @@ export function createApp(engine: ArenaEngine = defaultEngine, options?: { mcp?:
 
   // Serve SKILL.md
   app.get("/skill.md", (c) => {
-    const skillPath = join(__dirname, "..", "..", "SKILL.md");
+    const skillPath = join(__dirname, "..", "SKILL.md");
     const content = readFileSync(skillPath, "utf-8");
     return c.text(content);
   });

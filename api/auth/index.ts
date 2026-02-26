@@ -3,10 +3,10 @@ import { ArenaEngine, createEngine } from "@arena/engine/engine";
 import {
   registerChallengesFromConfig,
   createApp,
-} from "@arena/engine/server";
-import { AuthEngine } from "../AuthEngine";
-import { generateSecret, hashPublicKey } from "../utils";
-import { createAuthUser } from "../middleware";
+} from "../index";
+import { AuthEngine } from "./AuthEngine";
+import { generateSecret, hashPublicKey } from "./utils";
+import { createAuthUser } from "./middleware";
 
 export interface AuthAppOptions {
   secret?: string;

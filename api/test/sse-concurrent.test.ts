@@ -1,8 +1,8 @@
 import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 
-import app from "../server/index";
-import { defaultEngine } from "../engine";
+import app from "../index";
+import { defaultEngine } from "@arena/engine/engine";
 import { readNextSSEData } from "./helpers/sse";
 
 // --- Helpers ---

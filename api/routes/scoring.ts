@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import type { ArenaEngine } from "../../engine";
+import type { ArenaEngine } from "@arena/engine/engine";
 
 export function createScoringRoutes(engine: ArenaEngine): Hono {
   const app = new Hono();

@@ -9,21 +9,16 @@
     "./storage/InMemoryChatStorageAdapter": "./storage/InMemoryChatStorageAdapter.ts",
     "./types": "./types.ts",
     "./utils": "./utils.ts",
-    "./server": "./server/index.ts",
     "./challenge-design/BaseChallenge": "./challenge-design/BaseChallenge.ts",
     "./scoring": "./scoring/index.ts",
     "./scoring/types": "./scoring/types.ts"
   },
   "scripts": {
-    "start": "tsx server/start.ts",
     "prune:stale": "node --import tsx scripts/prune-stale-challenges.ts",
     "test": "node --import tsx --test --test-force-exit test/*.test.ts"
   },
   "dependencies": {
     "@arena/scoring": "*",
-    "@hono/node-server": "^1.14.1",
-    "hono": "^4.7.6",
-    "mcp-handler": "^1.0.4",
     "prando": "^6.0.1",
     "zod": "^3.25.76"
   },

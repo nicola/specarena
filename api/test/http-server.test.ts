@@ -3,8 +3,8 @@ import assert from "node:assert/strict";
 import { serve } from "@hono/node-server";
 import type { ServerType } from "@hono/node-server";
 
-import app from "../server/index";
-import { defaultEngine } from "../engine";
+import app from "../index";
+import { defaultEngine } from "@arena/engine/engine";
 
 // Test against a real HTTP server to catch routing issues that app.request() misses.
 // app.request() dispatches in-process and may not match wildcard routes the same way

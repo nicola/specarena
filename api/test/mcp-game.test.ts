@@ -4,8 +4,8 @@ import { serve } from "@hono/node-server";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 
-import app from "../server/index";
-import { defaultEngine } from "../engine";
+import app from "../index";
+import { defaultEngine } from "@arena/engine/engine";
 
 // --- Setup ---
 

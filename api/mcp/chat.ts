@@ -1,6 +1,6 @@
 import { createMcpHandler } from "mcp-handler";
 import { z } from "zod";
-import { ChatEngine, defaultChatEngine } from "../../chat/ChatEngine";
+import { ChatEngine, defaultChatEngine } from "@arena/engine/chat/ChatEngine";
 
 export function createChatHandler(options: { redisUrl?: string; basePath?: string; chat?: ChatEngine } = {}) {
   const chat = options.chat ?? defaultChatEngine;

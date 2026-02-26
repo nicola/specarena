@@ -1,0 +1,14 @@
+{
+  "challenges": [
+    {
+      "name": "psi",
+      "options": { "players": 2, "range": [100, 900], "intersectionSize": 3, "setSize": 10 },
+      "scoring": ["win-rate"]
+    }
+  ],
+  "scoring": {
+    "default": ["average"],
+    "global": "global-average",
+    "globalSource": "average"
+  }
+}

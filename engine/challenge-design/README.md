@@ -106,4 +106,4 @@ export function createChallenge(
 
 ### Registration
 
-Export a `createChallenge(challengeId, options?, context?)` factory function from your challenge's `index.ts`. Add your challenge to `engine/config.json` to register it with the server.
+Export a `createChallenge(challengeId, options?, context?)` factory function from your challenge's `index.ts`. Add your challenge to `api/config.json` to register it with the server.

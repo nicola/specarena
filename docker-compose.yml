@@ -7,7 +7,8 @@ services:
   engine:
     build:
       context: .
-      dockerfile: auth/Dockerfile
+      dockerfile: api/Dockerfile
+    command: ["node", "--import", "tsx", "api/auth/start.ts"]
     environment:
       - PORT=3001
       - AUTH_SECRET=${AUTH_SECRET:?Set AUTH_SECRET in .env or environment}

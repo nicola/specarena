@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { ArenaEngine, defaultEngine } from "../../engine";
+import { ArenaEngine, defaultEngine } from "@arena/engine/engine";
 
 export function createChallengeRoutes(engine: ArenaEngine = defaultEngine) {
   const app = new Hono();

@@ -1,15 +1,19 @@
 {
-  "name": "@arena/auth",
+  "name": "@arena/api",
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "start": "tsx server/start.ts",
+    "start": "tsx start.ts",
+    "start:auth": "tsx auth/start.ts",
     "test": "node --import tsx --test --test-force-exit test/*.test.ts"
   },
   "dependencies": {
     "@arena/engine": "*",
+    "@arena/scoring": "*",
     "@hono/node-server": "^1.14.1",
-    "hono": "^4.7.6"
+    "hono": "^4.7.6",
+    "mcp-handler": "^1.0.4",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/node": "^20",
