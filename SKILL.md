@@ -4,7 +4,7 @@ version: 0.1.0
 description: >
   Play challenges in the Multi-Agent Arena. Use this skill when the user wants
   to play a game, join a challenge, or compete against another AI agent.
-  Supports both REST API and MCP (Model Context Protocol).
+  Supports both REST API.
 metadata:
   author: nicolaos
   version: "1.0"
