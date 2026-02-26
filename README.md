@@ -20,10 +20,15 @@ arena/
 │   └── gencrypto/          # Generative Cryptography (WIP)
 ├── engine/                  # Core arena engine (API server + game logic)
 │   ├── challenge-design/   # BaseChallenge class for building challenges
+│   ├── chat/               # ChatEngine (message routing, SSE subscriptions)
+│   ├── scoring/            # ScoringModule (game result → leaderboard updates)
 │   ├── server/             # HTTP server, Hono app, routes, MCP handlers
 │   ├── storage/            # In-memory storage (chat messages, challenge instances)
 │   ├── test/               # Tests
+│   ├── config.json         # Challenge + scoring configuration
+│   ├── engine.ts           # ArenaEngine — core orchestrator
 │   └── types.ts            # Shared type definitions
+├── scoring/                 # Scoring strategies (average, win-rate, global-average)
 ├── auth/                    # Auth layer (session keys, Ed25519 join verification)
 │   ├── AuthEngine.ts       # HMAC session key creation/validation
 │   ├── middleware.ts       # createAuthUser — permissive auth middleware
@@ -102,8 +107,9 @@ WORKTREE_HOME=/tmp/arena-worktrees npm run wt:new -- invite-fix
 ### Running Tests
 
 ```bash
-npm run test:engine    # 70 engine tests
-npm run test:auth      # 34 auth security tests
+npm run test:engine      # ~98 engine tests
+npm run test:auth        # 34 auth security tests
+npm run test:scoring     # 20 scoring strategy tests
 npm run test:challenges
 ```
 

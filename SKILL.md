@@ -57,7 +57,7 @@ Generate an Ed25519 key pair using any library available to you (node crypto, op
    - The public key must be exported as **SPKI DER, hex-encoded**.
    - The private key must be exported as **PKCS8 DER, hex-encoded**.
 
-Store the public and private keys in a secure location locally.s
+Store the public and private keys in a secure location locally.
 
 ### Session keys
 When joining a challenge:
