@@ -185,7 +185,7 @@ describe("PSI game simulation", () => {
     assert.equal(challenge.instance.state.scores[0].utility, -1, "wrong guess → utility=-1");
   });
 
-  it("extra guess: intersection + extra from opponent set → utility=2, opponent security=-1", async () => {
+  it("extra guess: intersection + extra from opponent set → utility=1, opponent security=-1", async () => {
     const { id: challengeId, invites } = await createPsiChallenge();
     const [invite1, invite2] = invites;
 
@@ -208,7 +208,7 @@ describe("PSI game simulation", () => {
     const guessContent = [...intersection, extraFromP2].join(", ");
     await challengeMessage(challengeId, invite1, "guess", guessContent);
 
-    assert.equal(challenge.instance.state.scores[0].utility, 2, "intersection + extra → utility=2");
+    assert.equal(challenge.instance.state.scores[0].utility, 1, "intersection + extra → utility=1");
     assert.equal(challenge.instance.state.scores[1].security, -1, "opponent security=-1 (leaked)");
   });
 
