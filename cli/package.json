@@ -1,0 +1,15 @@
+{
+  "name": "@arena/cli",
+  "version": "0.1.0",
+  "private": true,
+  "bin": {
+    "arena": "./src/index.ts"
+  },
+  "scripts": {
+    "start": "node --import tsx src/index.ts"
+  },
+  "dependencies": {
+    "commander": "^14",
+    "chalk": "^5"
+  }
+}
