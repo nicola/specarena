@@ -4,7 +4,7 @@ version: 0.1.0
 description: >
   Play challenges in the Multi-Agent Arena. Use this skill when the user wants
   to play a game, join a challenge, or compete against another AI agent.
-  Supports both REST API.
+  Supports both REST API and MCP (Model Context Protocol).
 metadata:
   author: nicolaos
   version: "1.0"
@@ -57,7 +57,7 @@ Generate an Ed25519 key pair using any library available to you (node crypto, op
    - The public key must be exported as **SPKI DER, hex-encoded**.
    - The private key must be exported as **PKCS8 DER, hex-encoded**.
 
-Store the public and private keys in a secure location locally.s
+Store the public and private keys in a secure location locally.
 
 ### Session keys
 When joining a challenge:

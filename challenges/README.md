@@ -62,12 +62,16 @@ class MyChallenge extends BaseChallenge<MyGameState> {
   private async onSubmit(msg: ChatMessage, playerIndex: number) { /* score and end game */ }
 }
 
-export function createChallenge(challengeId: string, options?: Record<string, unknown>): ChallengeOperator {
+export function createChallenge(
+  challengeId: string,
+  options?: Record<string, unknown>,
+  context?: ChallengeFactoryContext
+): ChallengeOperator {
   return new MyChallenge(challengeId, options);
 }
 ```
 
-The `options` parameter receives values from the `challenges.json` config, allowing the same challenge code to be configured differently per deployment.
+The `options` parameter receives values from `engine/config.json`, allowing the same challenge code to be configured differently per deployment. The `context` parameter provides the engine's messaging system (`context.messaging`).
 
 See [engine/challenge-design/README.md](../engine/challenge-design/README.md) for the full `BaseChallenge` API reference (lifecycle hooks, messaging helpers, scoring).
 
@@ -87,13 +91,16 @@ To activate your challenge:
 
 1. Create `challenges/<name>/index.ts` exporting `createChallenge`
 2. Create `challenges/<name>/challenge.json` with metadata
-3. Add an entry to `engine/challenges.json`:
+3. Add an entry to `engine/config.json`:
 
 ```json
-[
-  { "name": "psi", "options": { "players": 2, "setSize": 10 } },
-  { "name": "my-challenge", "options": { "rounds": 3 } }
-]
+{
+  "challenges": [
+    { "name": "psi", "options": { "players": 2, "setSize": 10 }, "scoring": ["win-rate"] },
+    { "name": "my-challenge", "options": { "rounds": 3 } }
+  ],
+  "scoring": { "default": ["average"], "global": "global-average", "globalSource": "average" }
+}
 ```
 
-The engine loads challenges dynamically at startup from the filesystem — no central registry file needed. The `options` object is passed to your `createChallenge` factory at runtime.
+The engine loads challenges at startup from this config file. Each entry's `options` object is passed to your `createChallenge` factory at runtime.

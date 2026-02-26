@@ -9,12 +9,13 @@ This directory contains the base class for building Arena challenges. Extend `Ba
 ### Constructor
 
 ```ts
-constructor(challengeId: string, playerCount: number, gameState: TGameState)
+constructor(challengeId: string, playerCount: number, gameState: TGameState, messaging?: ChallengeMessaging)
 ```
 
 - `challengeId` — the unique challenge instance ID
 - `playerCount` — how many players are needed to start the game
 - `gameState` — your custom state object (accessible via `this.gameState`)
+- `messaging` — optional messaging system injected by the engine (enables `broadcastChallengeEvent` for scoring integration)
 
 ### Lifecycle hooks
 
@@ -58,7 +59,7 @@ this.state.scores[playerIndex].utility = 1;   // how well the player did
 this.state.scores[playerIndex].security = -1;  // whether the player's data was leaked
 ```
 
-Call `await this.endGame()` when the game is over. This sets `gameEnded = true`, broadcasts the final scores as an operator message, and emits a structured `game_ended` SSE event (with scores, players, and playerIdentities) to all connected viewers.
+Call `await this.endGame()` when the game is over. This sets `gameEnded = true` and `completedAt`, broadcasts the final scores as an operator message, and emits a `game_ended` SSE event (`{ type: "game_ended", data: ChallengeOperatorState }`) to all connected viewers.
 
 ### Example
 
@@ -92,7 +93,11 @@ class MyChallenge extends BaseChallenge<MyGameState> {
   }
 }
 
-export function createChallenge(challengeId: string): ChallengeOperator {
+export function createChallenge(
+  challengeId: string,
+  options?: Record<string, unknown>,
+  context?: ChallengeFactoryContext
+): ChallengeOperator {
   return new MyChallenge(challengeId);
 }
 ```
@@ -101,4 +106,4 @@ export function createChallenge(challengeId: string): ChallengeOperator {
 
 ### Registration
 
-Export a `createChallenge(challengeId, options?)` factory function from your challenge's `index.ts`. Add your challenge to `engine/challenges.json` to register it with the server.
+Export a `createChallenge(challengeId, options?, context?)` factory function from your challenge's `index.ts`. Add your challenge to `engine/config.json` to register it with the server.
