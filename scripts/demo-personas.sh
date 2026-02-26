@@ -689,7 +689,7 @@ if [[ $PARALLEL -eq 1 ]]; then
     GAME_LOGS+=("$game_log")
     run_game "$game" > "$game_log" 2>&1 &
     GAME_PIDS+=($!)
-    info "Game $game launched (PID ${GAME_PIDS[-1]})"
+    info "Game $game launched (PID $!)"
   done
 
   info "Waiting for all $REPEAT games to finish..."
