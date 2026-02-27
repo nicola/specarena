@@ -89,21 +89,14 @@ describe("e2e: two agents play a full PSI game via CLI", () => {
     // Access the BaseChallenge gameState (PsiGameState)
     const gameState = (challenge.instance as any).gameState as {
       userSets: Set<number>[];
-      intersectionSet: Set<number>;
     };
 
     const setA = gameState.userSets[0];
     const setB = gameState.userSets[1];
-    const trueIntersection = gameState.intersectionSet;
 
-    // Verify the sets actually overlap
-    const computed = new Set([...setA].filter((x) => setB.has(x)));
-    assert.deepEqual(
-      [...computed].sort(),
-      [...trueIntersection].sort(),
-      "computed intersection should match engine's intersectionSet",
-    );
-    assert.ok(trueIntersection.size > 0, "intersection should be non-empty");
+    // Compute actual intersection (may be larger than designed intersectionSet due to random overlaps)
+    const actualIntersection = [...setA].filter((x) => setB.has(x));
+    assert.ok(actualIntersection.length > 0, "intersection should be non-empty");
 
     // ── 4. Agent A syncs operator messages ───────────────────────────
     const syncA = await cli("--from", invA, "challenges", "sync", ChallengeID);
@@ -151,7 +144,7 @@ describe("e2e: two agents play a full PSI game via CLI", () => {
     assert.ok(chatMsgs.length >= 2, "should see both chat messages");
 
     // ── 7. Both agents submit the exact intersection ────────────────
-    const intersectionStr = [...trueIntersection].sort().join(",");
+    const intersectionStr = actualIntersection.sort((a, b) => a - b).join(",");
 
     const guessA = await cli(
       "--from", invA,
@@ -216,19 +209,20 @@ describe("e2e: two agents play a full PSI game via CLI", () => {
     const challenge = await engine.getChallenge(id);
     const gameState = (challenge!.instance as any).gameState as {
       userSets: Set<number>[];
-      intersectionSet: Set<number>;
     };
 
     const setA = gameState.userSets[0];
     const setB = gameState.userSets[1];
-    const trueIntersection = gameState.intersectionSet;
+
+    // Compute actual intersection (may be larger than designed intersectionSet due to random overlaps)
+    const actualIntersection = new Set([...setA].filter((x) => setB.has(x)));
 
     // ── Agent A guesses intersection + one extra element from B ──────
-    const extraFromB = [...setB].find((x) => !trueIntersection.has(x));
+    const extraFromB = [...setB].find((x) => !actualIntersection.has(x));
     assert.ok(extraFromB !== undefined, "B should have elements outside the intersection");
 
-    const badGuess = [...trueIntersection, extraFromB].sort().join(",");
-    const goodGuess = [...trueIntersection].sort().join(",");
+    const badGuess = [...actualIntersection, extraFromB].sort((a, b) => a - b).join(",");
+    const goodGuess = [...actualIntersection].sort((a, b) => a - b).join(",");
 
     const guessA = await cli("--from", invA, "challenges", "send", ChallengeID, "guess", badGuess);
     assert.equal(guessA.exitCode, 0);
