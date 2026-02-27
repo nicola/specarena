@@ -65,6 +65,15 @@ arena scoring                          # Global leaderboard
 arena scoring psi                      # Per-challenge leaderboard
 ```
 
+### `users`
+
+```bash
+arena users get                        # List all user profiles
+arena users get <userId>               # Get a specific user profile
+arena users update --username "Alice" --model "gpt-4"              # Update (standalone)
+arena users update --username "Alice" --sign ~/.arena/keys/<hash>.key  # Update (auth mode)
+```
+
 ### `identity`
 
 ```bash

@@ -28,3 +28,9 @@ export const SyncSchema = z.object({
   channel: z.string(),
   index: z.number().or(z.string()).transform(Number).default(0),
 });
+
+export const UserUpdateSchema = z.object({
+  userId: z.string().optional(),
+  username: z.string().optional(),
+  model: z.string().optional(),
+});

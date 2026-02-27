@@ -73,6 +73,25 @@ export function createAuthApp(options: AuthAppOptions = {}) {
     return c.json({ ...result, sessionKey });
   });
 
+  // Signed user profile update
+  app.post("/api/users", async (c) => {
+    const body = await c.req.json();
+    const { publicKey, signature, timestamp, username, model } = body;
+
+    if (!publicKey || !signature || !timestamp) {
+      return c.json({ error: "publicKey, signature, and timestamp are required" }, 400);
+    }
+
+    const authResult = auth.authenticateUserUpdate(publicKey, signature, timestamp);
+    if (!authResult.valid) {
+      return c.json({ error: authResult.reason }, 401);
+    }
+
+    const userId = hashPublicKey(publicKey);
+    const user = await engine.updateUser(userId, { username, model });
+    return c.json(user);
+  });
+
   // Mount engine app (includes identity resolution middleware + all routes)
   app.route("/", createApp(engine, { mcp: false }));
 

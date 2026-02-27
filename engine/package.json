@@ -11,7 +11,8 @@
     "./utils": "./utils.ts",
     "./challenge-design/BaseChallenge": "./challenge-design/BaseChallenge.ts",
     "./scoring": "./scoring/index.ts",
-    "./scoring/types": "./scoring/types.ts"
+    "./scoring/types": "./scoring/types.ts",
+    "./users": "./users/index.ts"
   },
   "scripts": {
     "prune:stale": "node --import tsx scripts/prune-stale-challenges.ts",

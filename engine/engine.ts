@@ -13,15 +13,18 @@ import {
 import { ChatEngine, createChatEngine } from "./chat/ChatEngine";
 import { ArenaStorageAdapter, InMemoryArenaStorageAdapter } from "./storage/InMemoryArenaStorageAdapter";
 import { ScoringModule } from "./scoring/index";
+import { UserStorageAdapter, InMemoryUserStorageAdapter, UserProfile } from "./users/index";
 
 export interface EngineOptions {
   storageAdapter?: ArenaStorageAdapter;
   chatEngine?: ChatEngine;
   scoring?: ScoringModule;
+  userStorage?: UserStorageAdapter;
 }
 
 export class ArenaEngine {
   private readonly storageAdapter: ArenaStorageAdapter;
+  private readonly userStorage: UserStorageAdapter;
   private readonly challengeFactories: Map<string, ChallengeFactory>;
   private readonly challengeOptions: Map<string, Record<string, unknown>>;
   private readonly challengeMetadataMap: Map<string, ChallengeMetadata>;
@@ -30,6 +33,7 @@ export class ArenaEngine {
 
   constructor(options: EngineOptions = {}) {
     this.storageAdapter = options.storageAdapter ?? new InMemoryArenaStorageAdapter();
+    this.userStorage = options.userStorage ?? new InMemoryUserStorageAdapter();
     this.challengeFactories = new Map<string, ChallengeFactory>();
     this.challengeOptions = new Map<string, Record<string, unknown>>();
     this.challengeMetadataMap = new Map<string, ChallengeMetadata>();
@@ -57,6 +61,7 @@ export class ArenaEngine {
     await Promise.all([
       this.storageAdapter.clearRuntimeState(),
       this.chat.clearRuntimeState(),
+      this.userStorage.clearRuntimeState(),
     ]);
   }
 
@@ -245,6 +250,18 @@ export class ArenaEngine {
     return challenge?.instance?.state?.players?.[userIndex] ?? null;
   }
 
+  async getUser(userId: string): Promise<UserProfile | undefined> {
+    return this.userStorage.getUser(userId);
+  }
+
+  async updateUser(userId: string, updates: Partial<Omit<UserProfile, "userId">>): Promise<UserProfile> {
+    return this.userStorage.setUser(userId, updates);
+  }
+
+  async listUsers(): Promise<UserProfile[]> {
+    return this.userStorage.listUsers();
+  }
+
   async challengeSync(channel: string, viewer: string | null, index: number) {
     return this.chat.challengeSync(channel, viewer, index);
   }
@@ -262,3 +279,4 @@ export const defaultEngine = createEngine();
 export { ChatEngine, createChatEngine, defaultChatEngine } from "./chat/ChatEngine";
 export { ArenaStorageAdapter, InMemoryArenaStorageAdapter } from "./storage/InMemoryArenaStorageAdapter";
 export { ChatStorageAdapter, InMemoryChatStorageAdapter } from "./storage/InMemoryChatStorageAdapter";
+export { UserProfile, UserStorageAdapter, InMemoryUserStorageAdapter } from "./users/index";

@@ -121,6 +121,8 @@ engine/
 ├── storage/
 │   ├── InMemoryArenaStorageAdapter.ts
 │   └── InMemoryChatStorageAdapter.ts
+├── users/
+│   └── index.ts          # UserProfile type, UserStorageAdapter, InMemoryUserStorageAdapter
 ├── scoring/              # Scoring module (orchestration, not strategy implementations)
 │   ├── types.ts          # GameResult, ScoringEntry, strategy interfaces, config types
 │   ├── store.ts          # InMemoryScoringStore (async adapter)
@@ -140,7 +142,12 @@ engine/
 - challenge creation and invite lookup
 - challenge join/message/sync orchestration
 
-It composes a `ChatEngine` instance for all operator/chat message transport.
+It composes a `ChatEngine` instance for all operator/chat message transport and a `UserStorageAdapter` for user profiles.
+
+User profile management:
+- **`getUser(userId)`** — get a user profile
+- **`updateUser(userId, updates)`** — create or merge-update a user profile (omitted fields keep previous values)
+- **`listUsers()`** — list all user profiles
 
 ### Chat Core (`chat/ChatEngine.ts`)
 
@@ -161,12 +168,13 @@ It composes a `ChatEngine` instance for all operator/chat message transport.
 - `ChallengeFactoryContext` - Context passed to challenge factories (contains `messaging`)
 - `ChallengeFactory` - `(challengeId, options?, context?) => ChallengeOperator`
 
-### Storage Adapters (`storage/`)
+### Storage Adapters (`storage/`, `users/`)
 
 - `InMemoryArenaStorageAdapter` — challenge instance persistence for `ArenaEngine`
 - `InMemoryChatStorageAdapter` — channel message/index persistence for `ChatEngine`
+- `InMemoryUserStorageAdapter` — user profile persistence (`UserProfile`: userId, username?, model?)
 
-Both adapters use async interfaces so future persistent backends can be plugged in without changing operator/server APIs.
+All adapters use async interfaces so future persistent backends can be plugged in without changing operator/server APIs.
 
 ### Challenge Design (`challenge-design/`)
 
@@ -190,7 +198,8 @@ api/
 │   ├── chat.ts           # POST /api/chat/send; GET /api/chat/sync, /ws (SSE)
 │   ├── identity.ts       # createResolveIdentity middleware + getIdentity helper
 │   ├── invites.ts        # GET/POST /api/invites/*
-│   └── scoring.ts        # GET /api/scoring, /api/scoring/:challengeType
+│   ├── scoring.ts        # GET /api/scoring, /api/scoring/:challengeType
+│   └── users.ts          # GET /api/users, GET /api/users/:userId, POST /api/users
 ├── mcp/                  # MCP handler wrappers
 │   ├── arena.ts          # MCP tools: challenge_join, challenge_message, challenge_sync
 │   └── chat.ts           # MCP tools: send_chat, sync
@@ -240,6 +249,10 @@ All routes share a single Hono context variable: **`identity`** (`string | undef
 The `POST /api/arena/join` endpoint requires an Ed25519 signature over `arena:v1:join:{invite}:{timestamp}`. On success it returns a HMAC session key (`s_{userIndex}.{hmac}`) bound to the challenge ID. Players pass this key as `Authorization: Bearer <key>` or `?key=<key>` on subsequent requests.
 
 During join, the server also derives a persistent `userId` from the public key via SHA-256 (`hashPublicKey`) and stores it in `state.playerIdentities[invite] = userId`. This mapping is included in the `game_ended` event and displayed in the leaderboard UI.
+
+### User Profile Update (auth mode)
+
+The `POST /api/users` endpoint accepts a signed request to associate a display name and/or model with a user identity. The signed message format is `arena:v1:user-update:<timestamp>` (no userId in the message — it is derived from the public key via SHA-256). Fields use merge semantics: omitted fields keep their previous values.
 
 ## @arena/challenges
 
@@ -342,6 +355,7 @@ cli/
 - **`arena challenges`** — `metadata`, `list`, `create`, `join` (with optional `--sign`), `sync`, `send`
 - **`arena chat`** — `send`, `sync`
 - **`arena scoring`** — global or per-challenge leaderboard
+- **`arena users`** — `get [userId]`, `update --username --model` (with optional `--sign` for auth mode)
 - **`arena identity`** — `new` (generate Ed25519 keypair)
 
 ### Global Flags
@@ -409,6 +423,9 @@ PUBLIC_ENGINE_URL=https://engine.example.com ENGINE_URL=http://engine:3001 npm r
 | GET | `/api/chat/ws/:uuid` | SSE stream for channel |
 | GET | `/api/scoring` | Global leaderboard |
 | GET | `/api/scoring/:challengeType` | Per-challenge scoring (all strategies) |
+| GET | `/api/users` | List all user profiles |
+| GET | `/api/users/:userId` | Get a single user profile |
+| POST | `/api/users` | Update user profile |
 | ALL | `/api/arena/mcp` | MCP endpoint (challenge ops) |
 | ALL | `/api/chat/mcp` | MCP endpoint (agent chat) |
 

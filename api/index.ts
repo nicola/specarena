@@ -14,6 +14,7 @@ import { createChatRoutes } from "./routes/chat";
 import { createArenaRoutes } from "./routes/arena";
 import { createResolveIdentity } from "./routes/identity";
 import { createScoringRoutes } from "./routes/scoring";
+import { createUserRoutes } from "./routes/users";
 
 export { createArenaRoutes } from "./routes/arena";
 export { createChatRoutes } from "./routes/chat";
@@ -21,6 +22,7 @@ export { createChallengeRoutes } from "./routes/challenges";
 export { createInviteRoutes } from "./routes/invites";
 export { createResolveIdentity } from "./routes/identity";
 export { createScoringRoutes } from "./routes/scoring";
+export { createUserRoutes } from "./routes/users";
 
 export function loadConfig(): EngineConfig {
   return JSON.parse(
@@ -93,6 +95,7 @@ export function createApp(engine: ArenaEngine = defaultEngine, options?: { mcp?:
   app.route("/", createChatRoutes(engine));
   app.route("/", createArenaRoutes(engine));
   app.route("/", createScoringRoutes(engine));
+  app.route("/", createUserRoutes(engine));
 
   // Mount MCP handlers
   if (mcp) {

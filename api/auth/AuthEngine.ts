@@ -28,6 +28,22 @@ export class AuthEngine {
     return { valid: true };
   }
 
+  authenticateUserUpdate(
+    publicKeyHex: string,
+    signatureHex: string,
+    timestamp: number,
+  ): { valid: true } | { valid: false; reason: string } {
+    const now = Date.now();
+    if (Math.abs(now - timestamp) > TIMESTAMP_WINDOW_MS) {
+      return { valid: false, reason: "Timestamp expired" };
+    }
+    const message = `${PROTOCOL_VERSION}:user-update:${timestamp}`;
+    if (!verifySignature(publicKeyHex, signatureHex, message)) {
+      return { valid: false, reason: "Invalid signature" };
+    }
+    return { valid: true };
+  }
+
   /**
    * Create a session key: `s_<userIndex>.<HMAC-SHA256(secret, challengeId:userIndex)>`
    */

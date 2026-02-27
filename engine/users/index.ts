@@ -1,0 +1,35 @@
+export interface UserProfile {
+  userId: string;
+  username?: string;
+  model?: string;
+}
+
+export interface UserStorageAdapter {
+  getUser(userId: string): Promise<UserProfile | undefined>;
+  setUser(userId: string, updates: Partial<Omit<UserProfile, "userId">>): Promise<UserProfile>;
+  listUsers(): Promise<UserProfile[]>;
+  clearRuntimeState(): Promise<void>;
+}
+
+export class InMemoryUserStorageAdapter implements UserStorageAdapter {
+  private users: Record<string, UserProfile> = {};
+
+  async getUser(userId: string): Promise<UserProfile | undefined> {
+    return this.users[userId];
+  }
+
+  async setUser(userId: string, updates: Partial<Omit<UserProfile, "userId">>): Promise<UserProfile> {
+    const existing = this.users[userId] ?? { userId };
+    const merged: UserProfile = { ...existing, ...updates, userId };
+    this.users[userId] = merged;
+    return merged;
+  }
+
+  async listUsers(): Promise<UserProfile[]> {
+    return Object.values(this.users);
+  }
+
+  async clearRuntimeState(): Promise<void> {
+    this.users = {};
+  }
+}

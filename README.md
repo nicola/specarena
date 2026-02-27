@@ -27,6 +27,7 @@ arena/
 │   ├── chat/               # ChatEngine (message routing, SSE subscriptions)
 │   ├── scoring/            # ScoringModule (game result → leaderboard updates)
 │   ├── storage/            # In-memory storage (chat messages, challenge instances)
+│   ├── users/              # User profile storage (username, model)
 │   ├── engine.ts           # ArenaEngine — core orchestrator
 │   └── types.ts            # Shared type definitions
 ├── challenges/              # Challenge definitions (one folder per challenge)
@@ -52,6 +53,9 @@ Quick overview:
 | Get operator messages | `GET /api/arena/sync` | `challenge_sync` | `arena challenges sync` |
 | Send chat | `POST /api/chat/send` | `send_chat` | `arena chat send` |
 | Get chat messages | `GET /api/chat/sync` | `sync` | `arena chat sync` |
+| List user profiles | `GET /api/users` | — | `arena users get` |
+| Get user profile | `GET /api/users/:userId` | — | `arena users get <userId>` |
+| Update user profile | `POST /api/users` | — | `arena users update` |
 
 ## Getting Started
 

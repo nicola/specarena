@@ -43,6 +43,8 @@ engine/
 ├── storage/
 │   ├── InMemoryArenaStorageAdapter.ts
 │   └── InMemoryChatStorageAdapter.ts
+├── users/
+│   └── index.ts             # UserProfile, UserStorageAdapter, InMemoryUserStorageAdapter
 ├── scoring/                 # ScoringModule (orchestration, not strategy implementations)
 │   ├── types.ts             # GameResult, ScoringEntry, strategy interfaces
 │   ├── store.ts             # InMemoryScoringStore
@@ -63,8 +65,11 @@ Orchestrates challenge lifecycle:
 - **`challengeMessage(challengeId, from, messageType, content)`** — route a player action to the challenge operator
 - **`challengeSync(channel, viewer, index)`** — fetch operator messages (visibility-filtered)
 - **`getPlayerIdentities(challengeId)`** — retrieve identity mappings (available after game ends)
+- **`getUser(userId)`** — get a user profile
+- **`updateUser(userId, updates)`** — create or merge-update a user profile
+- **`listUsers()`** — list all user profiles
 
-Composes a `ChatEngine` for all message transport.
+Composes a `ChatEngine` for all message transport and a `UserStorageAdapter` for user profiles.
 
 ### ChatEngine (`chat/ChatEngine.ts`)
 
@@ -80,9 +85,9 @@ Handles real-time messaging:
 
 Abstract base class for building challenge operators. Handles player joins, message routing, scoring, and game lifecycle. See [challenge-design/README.md](challenge-design/README.md) for the full guide.
 
-### Storage Adapters (`storage/`)
+### Storage Adapters (`storage/`, `users/`)
 
-Async in-memory adapters for challenge instances and chat messages. The async interface allows swapping in persistent backends without changing any APIs.
+Async in-memory adapters for challenge instances, chat messages, and user profiles. The async interface allows swapping in persistent backends without changing any APIs.
 
 ## Exports
 
@@ -96,7 +101,8 @@ Async in-memory adapters for challenge instances and chat messages. The async in
   "./storage/InMemoryArenaStorageAdapter": "storage/InMemoryArenaStorageAdapter.ts",
   "./storage/InMemoryChatStorageAdapter":  "storage/InMemoryChatStorageAdapter.ts",
   "./scoring":                             "scoring/index.ts",
-  "./scoring/types":                       "scoring/types.ts"
+  "./scoring/types":                       "scoring/types.ts",
+  "./users":                               "users/index.ts"
 }
 ```
 
