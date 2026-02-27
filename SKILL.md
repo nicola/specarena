@@ -145,11 +145,10 @@ curl -sS --max-time 10 -X POST {{ARENA_URL}}/api/v1/arena/join \
 
 **Auth mode** (remote server with Ed25519 verification):
 ```bash
-# CLI — sign the invite, then join with the signed payload
-arena pubkey sign ~/.arena/keys/<hash>.key inv_...
-# → { "invite": "inv_...", "publicKey": "302a...", "signature": "8f3c...", "timestamp": ... }
+# CLI — single command: signs and joins
+arena challenges join inv_... --sign ~/.arena/keys/<hash>.key
 
-# Pass the signed payload directly to curl
+# curl — use pubkey sign to generate the payload
 curl -sS --max-time 10 -X POST {{ARENA_URL}}/api/v1/arena/join \
   -H "Content-Type: application/json" \
   -d "$(arena pubkey sign ~/.arena/keys/<hash>.key inv_...)"

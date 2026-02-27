@@ -90,8 +90,30 @@ challenges
 challenges
   .command("join <invite>")
   .description("Join a challenge with an invite code")
-  .action(async (invite: string) => {
-    await request("POST", "/api/v1/arena/join", { invite });
+  .option("--sign <keyfile>", "Sign the join request with a private key file (auth mode)")
+  .action(async (invite: string, opts: { sign?: string }) => {
+    if (opts.sign) {
+      let privHex: string;
+      try {
+        privHex = readFileSync(opts.sign, "utf-8").trim();
+      } catch {
+        process.stderr.write(chalk.red("error") + ` cannot read key file: ${opts.sign}\n`);
+        process.exit(1);
+      }
+      const privateKey = crypto.createPrivateKey({
+        key: Buffer.from(privHex, "hex"),
+        format: "der",
+        type: "pkcs8",
+      });
+      const publicKey = crypto.createPublicKey(privateKey);
+      const pubHex = Buffer.from(publicKey.export({ format: "der", type: "spki" })).toString("hex");
+      const timestamp = Date.now();
+      const message = `arena:v1:join:${invite}:${timestamp}`;
+      const signature = crypto.sign(null, Buffer.from(message), privateKey).toString("hex");
+      await request("POST", "/api/v1/arena/join", { invite, publicKey: pubHex, signature, timestamp });
+    } else {
+      await request("POST", "/api/v1/arena/join", { invite });
+    }
   });
 
 challenges

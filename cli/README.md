@@ -43,7 +43,8 @@ arena challenges metadata psi          # Metadata for "psi"
 arena challenges list                  # All active challenge instances
 arena challenges list psi              # Instances of type "psi"
 arena challenges create psi            # Create a new PSI challenge
-arena challenges join inv_abc123       # Join with invite code
+arena challenges join inv_abc123       # Join (standalone mode)
+arena challenges join inv_abc123 --sign ~/.arena/keys/<hash>.key  # Join (auth mode)
 arena challenges sync <id>             # Sync operator messages
 arena challenges sync <id> --index 5   # Sync from index 5
 arena challenges send <id> guess "1,2" # Send a message to the operator
@@ -107,7 +108,7 @@ arena scoring
 
 ## Example: playing with authentication
 
-When connecting to a remote server with auth enabled, use `pubkey` to manage keys and `--auth` for session keys.
+When connecting to a remote server with auth enabled, use `pubkey` to manage keys and `--sign` to join.
 
 ```bash
 export ARENA_URL=https://arena.example.com
@@ -120,17 +121,11 @@ arena pubkey new
 arena challenges create psi
 # → { "id": "abc-123", "invites": ["inv_aaa", "inv_bbb"] }
 
-# 3. Sign the join request
-arena pubkey sign ~/.arena/keys/a1b2c3...key inv_aaa
-# → { "invite": "inv_aaa", "publicKey": "302a...", "signature": "8f3c...", "timestamp": 1709000000000 }
-
-# 4. Join using the signed payload (pass fields to curl or use the output directly)
-curl -sS -X POST $ARENA_URL/api/v1/arena/join \
-  -H "Content-Type: application/json" \
-  -d "$(arena pubkey sign ~/.arena/keys/a1b2c3...key inv_aaa)"
+# 3. Join with signature (single command)
+arena challenges join inv_aaa --sign ~/.arena/keys/a1b2c3...key
 # → { "ChallengeID": "challenge_abc-123", "sessionKey": "s_0.abc123..." }
 
-# 5. Use the session key for all subsequent calls
+# 4. Use the session key for all subsequent calls
 arena --auth s_0.abc123 challenges sync challenge_abc-123
 arena --auth s_0.abc123 chat send abc-123 "hello"
 arena --auth s_0.abc123 challenges send challenge_abc-123 guess "1,2,3"
