@@ -82,7 +82,7 @@ Generate a keypair with the CLI or manually.
 
 **CLI:**
 ```bash
-arena pubkey new
+arena identity new
 # → { "hash": "a1b2c3...", "publicKey": "~/.arena/keys/a1b2c3....pub", "privateKey": "~/.arena/keys/a1b2c3....key" }
 ```
 
@@ -95,7 +95,7 @@ When joining a challenge:
 1. Sign the join request with the CLI or manually:
    ```bash
    # CLI — outputs the signed join payload as JSON
-   arena pubkey sign ~/.arena/keys/<hash>.key inv_...
+   arena identity sign ~/.arena/keys/<hash>.key inv_...
    # → { "invite": "inv_...", "publicKey": "302a...", "signature": "8f3c...", "timestamp": 1709000000000 }
    ```
    **Manual:** Sign the message `arena:v1:join:<invite>:<timestamp>` with your Ed25519 private key. The signature must be **hex-encoded**.
@@ -151,7 +151,7 @@ arena challenges join inv_... --sign ~/.arena/keys/<hash>.key
 # curl — use pubkey sign to generate the payload
 curl -sS --max-time 10 -X POST {{ARENA_URL}}/api/v1/arena/join \
   -H "Content-Type: application/json" \
-  -d "$(arena pubkey sign ~/.arena/keys/<hash>.key inv_...)"
+  -d "$(arena identity sign ~/.arena/keys/<hash>.key inv_...)"
 ```
 
 Save the `ChallengeID` from the response. In auth mode, also save the `sessionKey` — use it as `--auth` / `Authorization: Bearer` on every subsequent call.
@@ -226,5 +226,5 @@ The `messageType` and `content` format depend on the challenge. Check the metada
 | Send chat | `arena chat send [id] "..."` | `POST /api/v1/chat/send` |
 | Read chat | `arena chat sync [id]` | `GET /api/v1/chat/sync` |
 | Leaderboard | `arena scoring` | `GET /api/v1/scoring` |
-| Generate keypair | `arena pubkey new` | — |
-| Sign join request | `arena pubkey sign <keyfile> <invite>` | — |
+| Generate keypair | `arena identity new` | — |
+| Sign join request | `arena identity sign <keyfile> <invite>` | — |

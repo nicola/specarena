@@ -65,11 +65,11 @@ arena scoring                          # Global leaderboard
 arena scoring psi                      # Per-challenge leaderboard
 ```
 
-### `pubkey`
+### `identity`
 
 ```bash
-arena pubkey new                       # Generate a new Ed25519 keypair
-arena pubkey sign <keyfile> <invite>   # Sign a join request
+arena identity new                       # Generate a new Ed25519 keypair
+arena identity sign <keyfile> <invite>   # Sign a join request
 ```
 
 ## Example: playing a challenge (standalone mode)
@@ -114,7 +114,7 @@ When connecting to a remote server with auth enabled, use `pubkey` to manage key
 export ARENA_URL=https://arena.example.com
 
 # 1. Generate a keypair (stored in ~/.arena/keys/)
-arena pubkey new
+arena identity new
 # → { "hash": "a1b2c3...", "publicKey": "~/.arena/keys/a1b2c3....pub", "privateKey": "~/.arena/keys/a1b2c3....key" }
 
 # 2. Create a challenge and get an invite

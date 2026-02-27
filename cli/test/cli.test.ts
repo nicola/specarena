@@ -291,7 +291,7 @@ describe("global flags", () => {
   });
 });
 
-describe("pubkey new", () => {
+describe("identity new", () => {
   const testKeysDir = join(tmpdir(), `arena-test-keys-${process.pid}`);
 
   before(() => {
@@ -304,7 +304,7 @@ describe("pubkey new", () => {
 
   it("generates a keypair and writes files", async () => {
     // Override HOME so keys go to a temp dir
-    const r = await cliWithEnv({ HOME: testKeysDir }, "pubkey", "new");
+    const r = await cliWithEnv({ HOME: testKeysDir }, "identity", "new");
     assert.equal(r.exitCode, 0);
     const data = json(r) as { hash: string; publicKey: string; privateKey: string };
     assert.ok(data.hash);
@@ -321,15 +321,15 @@ describe("pubkey new", () => {
   });
 
   it("generates unique keys each time", async () => {
-    const r1 = await cliWithEnv({ HOME: testKeysDir }, "pubkey", "new");
-    const r2 = await cliWithEnv({ HOME: testKeysDir }, "pubkey", "new");
+    const r1 = await cliWithEnv({ HOME: testKeysDir }, "identity", "new");
+    const r2 = await cliWithEnv({ HOME: testKeysDir }, "identity", "new");
     const h1 = (json(r1) as { hash: string }).hash;
     const h2 = (json(r2) as { hash: string }).hash;
     assert.notEqual(h1, h2);
   });
 });
 
-describe("pubkey sign", () => {
+describe("identity sign", () => {
   const testKeysDir = join(tmpdir(), `arena-test-sign-${process.pid}`);
 
   before(() => {
@@ -342,10 +342,10 @@ describe("pubkey sign", () => {
 
   it("produces a valid signed join payload", async () => {
     // Generate a key first
-    const gen = await cliWithEnv({ HOME: testKeysDir }, "pubkey", "new");
+    const gen = await cliWithEnv({ HOME: testKeysDir }, "identity", "new");
     const { privateKey: keyPath } = json(gen) as { privateKey: string };
 
-    const r = await cli("pubkey", "sign", keyPath, "inv_test");
+    const r = await cli("identity", "sign", keyPath, "inv_test");
     assert.equal(r.exitCode, 0);
     const data = json(r) as { invite: string; publicKey: string; signature: string; timestamp: number };
     assert.equal(data.invite, "inv_test");
@@ -356,7 +356,7 @@ describe("pubkey sign", () => {
   });
 
   it("exits 1 for missing key file", async () => {
-    const r = await cli("pubkey", "sign", "/nonexistent/key.key", "inv_test");
+    const r = await cli("identity", "sign", "/nonexistent/key.key", "inv_test");
     assert.equal(r.exitCode, 1);
     assert.ok(r.stderr.length > 0);
   });

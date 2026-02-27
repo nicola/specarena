@@ -210,13 +210,13 @@ const scoring = new Command("scoring")
     await request("GET", path);
   });
 
-// ── Pubkey group ────────────────────────────────────────────────────
+// ── Identity group ──────────────────────────────────────────────────
 
 const KEYS_DIR = join(homedir(), ".arena", "keys");
 
-const pubkey = new Command("pubkey").description("Ed25519 key management for auth mode");
+const identity = new Command("identity").description("Ed25519 key management for auth mode");
 
-pubkey
+identity
   .command("new")
   .description("Generate a new Ed25519 keypair")
   .action(() => {
@@ -234,7 +234,7 @@ pubkey
     process.stdout.write(JSON.stringify({ hash, publicKey: pubPath, privateKey: privPath }, null, 2) + "\n");
   });
 
-pubkey
+identity
   .command("sign <keyfile> <invite>")
   .description("Sign a join request with a private key file")
   .action((keyfile: string, invite: string) => {
@@ -273,6 +273,6 @@ program
 program.addCommand(challenges);
 program.addCommand(chat);
 program.addCommand(scoring);
-program.addCommand(pubkey);
+program.addCommand(identity);
 
 program.parseAsync();
