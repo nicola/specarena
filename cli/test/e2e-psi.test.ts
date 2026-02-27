@@ -4,7 +4,7 @@ import { execFile } from "node:child_process";
 import { join } from "node:path";
 import { serve } from "@hono/node-server";
 import type { ServerType } from "@hono/node-server";
-import { createApp } from "@arena/engine/server";
+import { createApp } from "@arena/api";
 import { ArenaEngine } from "@arena/engine/engine";
 
 // ── Test server with accessible engine ───────────────────────────────
@@ -236,9 +236,9 @@ describe("e2e: two agents play a full PSI game via CLI", () => {
     const scores = final!.instance.state.scores;
 
     // Agent A guessed extra elements from B's set:
-    // - A gets utility=2 (found intersection + extras from opponent)
+    // - A gets utility=1 (found intersection + extras, capped at 1)
     // - B's security=-1 (leaked)
-    assert.equal(scores[0].utility, 2, "agent A utility: 2 (intersection + extra elements)");
+    assert.equal(scores[0].utility, 1, "agent A utility: 1 (intersection + extra elements, capped)");
     assert.equal(scores[1].security, -1, "agent B security: -1 (data leaked by A's guess)");
 
     // Agent B guessed exact intersection:

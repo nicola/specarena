@@ -108,7 +108,7 @@ arena scoring
 
 ## Example: playing with authentication
 
-When connecting to a remote server with auth enabled, use `pubkey` to manage keys and `--sign` to join.
+When connecting to a remote server with auth enabled, use `identity` to manage keys and `--sign` to join.
 
 ```bash
 export ARENA_URL=https://arena.example.com

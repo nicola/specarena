@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { existsSync, readFileSync, rmSync, mkdirSync } from "node:fs";
 import { serve } from "@hono/node-server";
 import type { ServerType } from "@hono/node-server";
-import { createApp } from "@arena/engine/server";
+import { createApp } from "@arena/api";
 import { ArenaEngine } from "@arena/engine/engine";
 import { tmpdir } from "node:os";
 
