@@ -9,13 +9,17 @@ import { homedir } from "node:os";
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
+function die(msg: string): never {
+  process.stderr.write(chalk.red("error") + ` ${msg}\n`);
+  process.exit(1);
+}
+
 function baseUrl(): string {
   return program.opts().url;
 }
 
-function headers(method: "GET" | "POST"): Record<string, string> {
+function authHeaders(): Record<string, string> {
   const h: Record<string, string> = {};
-  if (method === "POST") h["Content-Type"] = "application/json";
   const auth = program.opts().auth as string | undefined;
   if (auth) h["Authorization"] = `Bearer ${auth}`;
   return h;
@@ -23,6 +27,37 @@ function headers(method: "GET" | "POST"): Record<string, string> {
 
 function fromId(): string | undefined {
   return program.opts().from as string | undefined;
+}
+
+function parseIndex(value: string): number {
+  const n = parseInt(value, 10);
+  if (isNaN(n) || n < 0) die("--index must be a non-negative integer");
+  return n;
+}
+
+function signJoin(invite: string, keyfile: string): Record<string, unknown> {
+  let privHex: string;
+  try {
+    privHex = readFileSync(keyfile, "utf-8").trim();
+  } catch {
+    die(`cannot read key file: ${keyfile}`);
+  }
+  let privateKey: crypto.KeyObject;
+  try {
+    privateKey = crypto.createPrivateKey({
+      key: Buffer.from(privHex, "hex"),
+      format: "der",
+      type: "pkcs8",
+    });
+  } catch {
+    die("invalid key file: not a valid Ed25519 private key");
+  }
+  const publicKey = crypto.createPublicKey(privateKey);
+  const pubHex = Buffer.from(publicKey.export({ format: "der", type: "spki" })).toString("hex");
+  const timestamp = Date.now();
+  const message = `arena:v1:join:${invite}:${timestamp}`;
+  const signature = crypto.sign(null, Buffer.from(message), privateKey).toString("hex");
+  return { invite, publicKey: pubHex, signature, timestamp };
 }
 
 async function request(
@@ -42,7 +77,9 @@ async function request(
     for (const [k, v] of Object.entries(query)) url.searchParams.set(k, v);
   }
 
-  const init: RequestInit = { method, headers: headers(method) };
+  const h: Record<string, string> = { ...authHeaders() };
+  if (method === "POST") h["Content-Type"] = "application/json";
+  const init: RequestInit = { method, headers: h };
 
   if (method === "POST") {
     const payload = from ? { from, ...body } : body;
@@ -53,9 +90,7 @@ async function request(
   try {
     res = await fetch(url.toString(), init);
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    process.stderr.write(chalk.red("error") + ` ${msg}\n`);
-    process.exit(1);
+    die(err instanceof Error ? err.message : String(err));
   }
 
   let data: unknown;
@@ -103,30 +138,7 @@ challenges
   .option("--sign <keyfile>", "Sign the join request with a private key file (auth mode)")
   .action(async (invite: string, opts: { sign?: string }) => {
     if (opts.sign) {
-      let privHex: string;
-      try {
-        privHex = readFileSync(opts.sign, "utf-8").trim();
-      } catch {
-        process.stderr.write(chalk.red("error") + ` cannot read key file: ${opts.sign}\n`);
-        process.exit(1);
-      }
-      let privateKey: crypto.KeyObject;
-      try {
-        privateKey = crypto.createPrivateKey({
-          key: Buffer.from(privHex, "hex"),
-          format: "der",
-          type: "pkcs8",
-        });
-      } catch {
-        process.stderr.write(chalk.red("error") + ` invalid key file: not a valid Ed25519 private key\n`);
-        process.exit(1);
-      }
-      const publicKey = crypto.createPublicKey(privateKey);
-      const pubHex = Buffer.from(publicKey.export({ format: "der", type: "spki" })).toString("hex");
-      const timestamp = Date.now();
-      const message = `arena:v1:join:${invite}:${timestamp}`;
-      const signature = crypto.sign(null, Buffer.from(message), privateKey).toString("hex");
-      await request("POST", "/api/v1/arena/join", { invite, publicKey: pubHex, signature, timestamp });
+      await request("POST", "/api/v1/arena/join", signJoin(invite, opts.sign));
     } else {
       await request("POST", "/api/v1/arena/join", { invite });
     }
@@ -137,11 +149,7 @@ challenges
   .description("Sync messages from the challenge operator")
   .option("--index <n>", "Start index", "0")
   .action(async (channel: string, opts: { index: string }) => {
-    const index = parseInt(opts.index, 10);
-    if (isNaN(index) || index < 0) {
-      process.stderr.write(chalk.red("error") + ` --index must be a non-negative integer\n`);
-      process.exit(1);
-    }
+    const index = parseIndex(opts.index);
     await request("GET", "/api/v1/arena/sync", undefined, { channel, index: String(index) });
   });
 
@@ -150,8 +158,7 @@ challenges
   .description("Send a message to the challenge operator")
   .action(async (challengeId: string, type: string, content: string) => {
     if (!fromId() && !program.opts().auth) {
-      process.stderr.write(chalk.red("error") + ` --from or --auth is required to send messages\n`);
-      process.exit(1);
+      die("--from or --auth is required to send messages");
     }
     await request("POST", "/api/v1/arena/message", {
       challengeId,
@@ -176,11 +183,7 @@ chat
   .description("Sync messages from a chat channel")
   .option("--index <n>", "Start index", "0")
   .action(async (channel: string, opts: { index: string }) => {
-    const index = parseInt(opts.index, 10);
-    if (isNaN(index) || index < 0) {
-      process.stderr.write(chalk.red("error") + ` --index must be a non-negative integer\n`);
-      process.exit(1);
-    }
+    const index = parseIndex(opts.index);
     await request("GET", "/api/v1/chat/sync", undefined, { channel, index: String(index) });
   });
 
@@ -233,6 +236,5 @@ program.addCommand(scoring);
 program.addCommand(identity);
 
 program.parseAsync().catch((err: Error) => {
-  process.stderr.write(chalk.red("error") + ` ${err.message}\n`);
-  process.exit(1);
+  die(err.message);
 });
