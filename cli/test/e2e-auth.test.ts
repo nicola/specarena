@@ -217,16 +217,17 @@ describe("e2e: full PSI game via CLI with auth", () => {
     await cli("challenges", "join", invites[0], "--sign", keyfile);
 
     // Sync as viewer (no --auth, no --from) — should succeed but with redacted DMs
-    const syncR = await cli("challenges", "sync", `challenge_${id}`);
+    const syncR = await cli("challenges", "sync", id);
     assert.equal(syncR.exitCode, 0, "viewer sync should succeed");
     const { messages } = json(syncR) as {
       messages: Array<{ from: string; to?: string; content: string; redacted?: boolean }>;
     };
 
+    assert.ok(messages.length > 0, "viewer should see messages");
+
     // DMs to the player should be redacted for the viewer
     const dmToPlayer = messages.find((m) => m.to && m.to !== "viewer");
-    if (dmToPlayer) {
-      assert.ok(dmToPlayer.redacted, "DMs should be redacted for viewer");
-    }
+    assert.ok(dmToPlayer, "should have a DM to the player");
+    assert.ok(dmToPlayer!.redacted, "DMs should be redacted for viewer");
   });
 });

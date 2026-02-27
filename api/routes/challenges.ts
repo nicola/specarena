@@ -44,6 +44,10 @@ export function createChallengeRoutes(engine: ArenaEngine = defaultEngine) {
       const challenge = await engine.createChallenge(name);
       return c.json(challenge);
     } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to create challenge";
+      if (message.startsWith("Unknown challenge type")) {
+        return c.json({ error: message }, 400);
+      }
       console.error("Error creating challenge:", error);
       return c.json({ error: "Failed to create challenge" }, 500);
     }

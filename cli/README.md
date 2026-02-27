@@ -30,7 +30,7 @@ Or directly (shebang):
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--url <url>` | `$ARENA_URL` or `http://localhost:3001` | Server base URL |
-| `--auth <key>` | — | `Authorization: Bearer` token |
+| `--auth <key>` | `$ARENA_AUTH` | `Authorization: Bearer` token (prefer env var to avoid leaking in `ps`) |
 | `--from <id>` | — | Identity for standalone mode |
 
 ## Commands
@@ -124,8 +124,9 @@ arena challenges create psi
 arena challenges join inv_aaa --sign ~/.arena/keys/a1b2c3...key
 # → { "ChallengeID": "challenge_abc-123", "sessionKey": "s_0.abc123..." }
 
-# 4. Use the session key for all subsequent calls
-arena --auth s_0.abc123 challenges sync challenge_abc-123
-arena --auth s_0.abc123 chat send abc-123 "hello"
-arena --auth s_0.abc123 challenges send challenge_abc-123 guess "1,2,3"
+# 4. Use the session key for all subsequent calls (prefer env var to keep it out of `ps`)
+export ARENA_AUTH=s_0.abc123
+arena challenges sync challenge_abc-123
+arena chat send abc-123 "hello"
+arena challenges send challenge_abc-123 guess "1,2,3"
 ```

@@ -2,7 +2,7 @@ import { describe, it, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { join } from "node:path";
-import { existsSync, readFileSync, rmSync, mkdirSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync, rmSync, mkdirSync } from "node:fs";
 import { serve } from "@hono/node-server";
 import type { ServerType } from "@hono/node-server";
 import { createApp } from "@arena/api";
@@ -152,6 +152,18 @@ describe("challenges join", () => {
     const r = await cli("challenges", "join", "inv_bogus");
     assert.equal(r.exitCode, 1);
   });
+
+  it("exits 1 for --sign with corrupted key file", async () => {
+    const badKeyPath = join(tmpdir(), `arena-bad-key-${process.pid}.key`);
+    writeFileSync(badKeyPath, "not-valid-hex-garbage\n");
+    try {
+      const r = await cli("challenges", "join", "inv_bogus", "--sign", badKeyPath);
+      assert.equal(r.exitCode, 1);
+      assert.ok(r.stderr.includes("invalid key file"), "should print friendly error");
+    } finally {
+      rmSync(badKeyPath, { force: true });
+    }
+  });
 });
 
 describe("challenges sync", () => {
@@ -183,6 +195,12 @@ describe("challenges sync", () => {
     const data = json(r) as { messages: unknown[] };
     assert.deepEqual(data.messages, []);
   });
+
+  it("exits 1 for non-numeric --index", async () => {
+    const r = await cli("challenges", "sync", "any-channel", "--index", "abc");
+    assert.equal(r.exitCode, 1);
+    assert.ok(r.stderr.includes("--index must be a non-negative integer"));
+  });
 });
 
 describe("challenges send", () => {
@@ -196,6 +214,12 @@ describe("challenges send", () => {
 
     const r = await cli("--from", invites[0], "challenges", "send", ChallengeID, "guess", "1,2,3");
     assert.equal(r.exitCode, 0);
+  });
+
+  it("exits 1 without --from", async () => {
+    const r = await cli("challenges", "send", "some-id", "guess", "1,2,3");
+    assert.equal(r.exitCode, 1);
+    assert.ok(r.stderr.includes("--from or --auth is required"));
   });
 });
 

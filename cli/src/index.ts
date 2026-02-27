@@ -13,8 +13,9 @@ function baseUrl(): string {
   return program.opts().url;
 }
 
-function headers(): Record<string, string> {
-  const h: Record<string, string> = { "Content-Type": "application/json" };
+function headers(method: "GET" | "POST"): Record<string, string> {
+  const h: Record<string, string> = {};
+  if (method === "POST") h["Content-Type"] = "application/json";
   const auth = program.opts().auth as string | undefined;
   if (auth) h["Authorization"] = `Bearer ${auth}`;
   return h;
@@ -41,7 +42,7 @@ async function request(
     for (const [k, v] of Object.entries(query)) url.searchParams.set(k, v);
   }
 
-  const init: RequestInit = { method, headers: headers() };
+  const init: RequestInit = { method, headers: headers(method) };
 
   if (method === "POST") {
     const payload = from ? { from, ...body } : body;
@@ -77,7 +78,7 @@ challenges
   .command("metadata [name]")
   .description("Get challenge metadata (all or by name)")
   .action(async (name?: string) => {
-    const path = name ? `/api/v1/metadata/${name}` : "/api/v1/metadata";
+    const path = name ? `/api/v1/metadata/${encodeURIComponent(name)}` : "/api/v1/metadata";
     await request("GET", path);
   });
 
@@ -85,7 +86,7 @@ challenges
   .command("list [name]")
   .description("List challenges (all or by type)")
   .action(async (name?: string) => {
-    const path = name ? `/api/v1/challenges/${name}` : "/api/v1/challenges";
+    const path = name ? `/api/v1/challenges/${encodeURIComponent(name)}` : "/api/v1/challenges";
     await request("GET", path);
   });
 
@@ -93,7 +94,7 @@ challenges
   .command("create <name>")
   .description("Create a new challenge instance")
   .action(async (name: string) => {
-    await request("POST", `/api/v1/challenges/${name}`);
+    await request("POST", `/api/v1/challenges/${encodeURIComponent(name)}`);
   });
 
 challenges
@@ -109,11 +110,17 @@ challenges
         process.stderr.write(chalk.red("error") + ` cannot read key file: ${opts.sign}\n`);
         process.exit(1);
       }
-      const privateKey = crypto.createPrivateKey({
-        key: Buffer.from(privHex, "hex"),
-        format: "der",
-        type: "pkcs8",
-      });
+      let privateKey: crypto.KeyObject;
+      try {
+        privateKey = crypto.createPrivateKey({
+          key: Buffer.from(privHex, "hex"),
+          format: "der",
+          type: "pkcs8",
+        });
+      } catch {
+        process.stderr.write(chalk.red("error") + ` invalid key file: not a valid Ed25519 private key\n`);
+        process.exit(1);
+      }
       const publicKey = crypto.createPublicKey(privateKey);
       const pubHex = Buffer.from(publicKey.export({ format: "der", type: "spki" })).toString("hex");
       const timestamp = Date.now();
@@ -130,13 +137,22 @@ challenges
   .description("Sync messages from the challenge operator")
   .option("--index <n>", "Start index", "0")
   .action(async (channel: string, opts: { index: string }) => {
-    await request("GET", "/api/v1/arena/sync", undefined, { channel, index: opts.index });
+    const index = parseInt(opts.index, 10);
+    if (isNaN(index) || index < 0) {
+      process.stderr.write(chalk.red("error") + ` --index must be a non-negative integer\n`);
+      process.exit(1);
+    }
+    await request("GET", "/api/v1/arena/sync", undefined, { channel, index: String(index) });
   });
 
 challenges
   .command("send <challengeId> <type> <content>")
   .description("Send a message to the challenge operator")
   .action(async (challengeId: string, type: string, content: string) => {
+    if (!fromId() && !program.opts().auth) {
+      process.stderr.write(chalk.red("error") + ` --from or --auth is required to send messages\n`);
+      process.exit(1);
+    }
     await request("POST", "/api/v1/arena/message", {
       challengeId,
       messageType: type,
@@ -160,7 +176,12 @@ chat
   .description("Sync messages from a chat channel")
   .option("--index <n>", "Start index", "0")
   .action(async (channel: string, opts: { index: string }) => {
-    await request("GET", "/api/v1/chat/sync", undefined, { channel, index: opts.index });
+    const index = parseInt(opts.index, 10);
+    if (isNaN(index) || index < 0) {
+      process.stderr.write(chalk.red("error") + ` --index must be a non-negative integer\n`);
+      process.exit(1);
+    }
+    await request("GET", "/api/v1/chat/sync", undefined, { channel, index: String(index) });
   });
 
 // ── Scoring (root-level) ────────────────────────────────────────────
@@ -169,7 +190,7 @@ const scoring = new Command("scoring")
   .description("Leaderboard & scoring")
   .argument("[type]", "Challenge type (omit for global)")
   .action(async (type?: string) => {
-    const path = type ? `/api/v1/scoring/${type}` : "/api/v1/scoring";
+    const path = type ? `/api/v1/scoring/${encodeURIComponent(type)}` : "/api/v1/scoring";
     await request("GET", path);
   });
 
@@ -203,7 +224,7 @@ program
   .name("arena")
   .description("CLI for the Arena REST API")
   .option("--url <url>", "Base URL", process.env.ARENA_URL || "http://localhost:3001")
-  .option("--auth <key>", "Authorization bearer token")
+  .option("--auth <key>", "Authorization bearer token", process.env.ARENA_AUTH)
   .option("--from <id>", "Identity for standalone mode");
 
 program.addCommand(challenges);
@@ -211,4 +232,7 @@ program.addCommand(chat);
 program.addCommand(scoring);
 program.addCommand(identity);
 
-program.parseAsync();
+program.parseAsync().catch((err: Error) => {
+  process.stderr.write(chalk.red("error") + ` ${err.message}\n`);
+  process.exit(1);
+});

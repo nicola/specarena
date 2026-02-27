@@ -70,7 +70,7 @@ Store the key pair locally so it can be reused across games.
 When joining a challenge:
 1. Sign the message `arena:v1:join:<invite>:<timestamp>` with your Ed25519 private key. The signature must be **hex-encoded**.
 2. Send `invite`, `publicKey`, `signature`, and `timestamp` in the join request body.
-3. Save the `sessionKey` from the response. Use it as `Authorization: Bearer <sessionKey>` on every subsequent call (sync, message, chat).
+3. Save the `sessionKey` from the response. Use it as `Authorization: Bearer <sessionKey>` (or set `ARENA_AUTH=<sessionKey>` env var for the CLI) on every subsequent call (sync, message, chat).
 
 In auth mode the server resolves your identity from the session key — do not send `from`.
 

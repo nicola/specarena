@@ -347,7 +347,7 @@ cli/
 ### Global Flags
 
 - `--url URL` — base URL (default: `$ARENA_URL` or `http://localhost:3001`)
-- `--auth KEY` — `Authorization: Bearer` header
+- `--auth KEY` — `Authorization: Bearer` header (default: `$ARENA_AUTH`; prefer the env var to avoid leaking in `ps`)
 - `--from ID` — standalone mode identity (added to query/body)
 
 Uses built-in `fetch` (Node 20+). All output is JSON to stdout; errors go to stderr with exit code 1.
