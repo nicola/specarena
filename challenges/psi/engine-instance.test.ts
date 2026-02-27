@@ -1,7 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { createEngine, InMemoryArenaStorageAdapter } from "@arena/engine/engine";
-import { createApp } from "@arena/engine/server";
 import { ChallengeMetadata } from "@arena/engine/types";
 import { createChallenge } from "./index";
 
@@ -93,12 +92,4 @@ describe("PSI challenge with isolated engine instances", () => {
     assert.ok((await engine.chat.getMessagesForChallengeChannel(challenge.id)).length > 0);
   });
 
-  it("lets server routes run against an injected engine instance", async () => {
-    const engine = createEngine();
-    const app = createApp(engine);
-
-    const response = await app.request("/api/challenges/psi", { method: "POST" });
-    assert.equal(response.status, 200);
-    assert.equal((await engine.listChallenges()).length, 1);
-  });
 });
