@@ -24,12 +24,21 @@ function fromId(): string | undefined {
   return program.opts().from as string | undefined;
 }
 
-async function request(method: "GET" | "POST", path: string, body?: Record<string, unknown>): Promise<void> {
+async function request(
+  method: "GET" | "POST",
+  path: string,
+  body?: Record<string, unknown>,
+  query?: Record<string, string>,
+): Promise<void> {
   const url = new URL(path, baseUrl());
   const from = fromId();
 
   if (method === "GET" && from) {
     url.searchParams.set("from", from);
+  }
+
+  if (query) {
+    for (const [k, v] of Object.entries(query)) url.searchParams.set(k, v);
   }
 
   const init: RequestInit = { method, headers: headers() };
@@ -121,30 +130,7 @@ challenges
   .description("Sync messages from the challenge operator")
   .option("--index <n>", "Start index", "0")
   .action(async (channel: string, opts: { index: string }) => {
-    const url = new URL("/api/v1/arena/sync", baseUrl());
-    url.searchParams.set("channel", channel);
-    url.searchParams.set("index", opts.index);
-    const from = fromId();
-    if (from) url.searchParams.set("from", from);
-
-    let res: Response;
-    try {
-      res = await fetch(url.toString(), { method: "GET", headers: headers() });
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      process.stderr.write(chalk.red("error") + ` ${msg}\n`);
-      process.exit(1);
-    }
-
-    let data: unknown;
-    try {
-      data = await res.json();
-    } catch {
-      data = { status: res.status, statusText: res.statusText };
-    }
-
-    process.stdout.write(JSON.stringify(data, null, 2) + "\n");
-    if (!res.ok) process.exit(1);
+    await request("GET", "/api/v1/arena/sync", undefined, { channel, index: opts.index });
   });
 
 challenges
@@ -174,30 +160,7 @@ chat
   .description("Sync messages from a chat channel")
   .option("--index <n>", "Start index", "0")
   .action(async (channel: string, opts: { index: string }) => {
-    const url = new URL("/api/v1/chat/sync", baseUrl());
-    url.searchParams.set("channel", channel);
-    url.searchParams.set("index", opts.index);
-    const from = fromId();
-    if (from) url.searchParams.set("from", from);
-
-    let res: Response;
-    try {
-      res = await fetch(url.toString(), { method: "GET", headers: headers() });
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      process.stderr.write(chalk.red("error") + ` ${msg}\n`);
-      process.exit(1);
-    }
-
-    let data: unknown;
-    try {
-      data = await res.json();
-    } catch {
-      data = { status: res.status, statusText: res.statusText };
-    }
-
-    process.stdout.write(JSON.stringify(data, null, 2) + "\n");
-    if (!res.ok) process.exit(1);
+    await request("GET", "/api/v1/chat/sync", undefined, { channel, index: opts.index });
   });
 
 // ── Scoring (root-level) ────────────────────────────────────────────
