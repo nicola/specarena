@@ -229,36 +229,9 @@ identity
     const pubPath = join(KEYS_DIR, `${hash}.pub`);
     const privPath = join(KEYS_DIR, `${hash}.key`);
     writeFileSync(pubPath, pubHex + "\n");
-    writeFileSync(privPath, privHex + "\n");
+    writeFileSync(privPath, privHex + "\n", { mode: 0o600 });
 
     process.stdout.write(JSON.stringify({ hash, publicKey: pubPath, privateKey: privPath }, null, 2) + "\n");
-  });
-
-identity
-  .command("sign <keyfile> <invite>")
-  .description("Sign a join request with a private key file")
-  .action((keyfile: string, invite: string) => {
-    let privHex: string;
-    try {
-      privHex = readFileSync(keyfile, "utf-8").trim();
-    } catch {
-      process.stderr.write(chalk.red("error") + ` cannot read key file: ${keyfile}\n`);
-      process.exit(1);
-    }
-
-    const privateKey = crypto.createPrivateKey({
-      key: Buffer.from(privHex, "hex"),
-      format: "der",
-      type: "pkcs8",
-    });
-    const publicKey = crypto.createPublicKey(privateKey);
-    const pubHex = Buffer.from(publicKey.export({ format: "der", type: "spki" })).toString("hex");
-
-    const timestamp = Date.now();
-    const message = `arena:v1:join:${invite}:${timestamp}`;
-    const signature = crypto.sign(null, Buffer.from(message), privateKey).toString("hex");
-
-    process.stdout.write(JSON.stringify({ invite, publicKey: pubHex, signature, timestamp }, null, 2) + "\n");
   });
 
 // ── Program ──────────────────────────────────────────────────────────

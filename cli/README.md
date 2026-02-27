@@ -69,7 +69,6 @@ arena scoring psi                      # Per-challenge leaderboard
 
 ```bash
 arena identity new                       # Generate a new Ed25519 keypair
-arena identity sign <keyfile> <invite>   # Sign a join request
 ```
 
 ## Example: playing a challenge (standalone mode)

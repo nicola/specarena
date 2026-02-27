@@ -329,38 +329,6 @@ describe("identity new", () => {
   });
 });
 
-describe("identity sign", () => {
-  const testKeysDir = join(tmpdir(), `arena-test-sign-${process.pid}`);
-
-  before(() => {
-    mkdirSync(testKeysDir, { recursive: true });
-  });
-
-  after(() => {
-    rmSync(testKeysDir, { recursive: true, force: true });
-  });
-
-  it("produces a valid signed join payload", async () => {
-    // Generate a key first
-    const gen = await cliWithEnv({ HOME: testKeysDir }, "identity", "new");
-    const { privateKey: keyPath } = json(gen) as { privateKey: string };
-
-    const r = await cli("identity", "sign", keyPath, "inv_test");
-    assert.equal(r.exitCode, 0);
-    const data = json(r) as { invite: string; publicKey: string; signature: string; timestamp: number };
-    assert.equal(data.invite, "inv_test");
-    assert.ok(data.publicKey);
-    assert.ok(data.signature);
-    assert.ok(typeof data.timestamp === "number");
-    assert.ok(data.timestamp > 0);
-  });
-
-  it("exits 1 for missing key file", async () => {
-    const r = await cli("identity", "sign", "/nonexistent/key.key", "inv_test");
-    assert.equal(r.exitCode, 1);
-    assert.ok(r.stderr.length > 0);
-  });
-});
 
 describe("full game flow", () => {
   it("create → join → chat → sync → send → results", async () => {

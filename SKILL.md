@@ -91,16 +91,15 @@ arena identity new
    - The private key must be exported as **PKCS8 DER, hex-encoded**.
 
 ### Session keys
-When joining a challenge:
-1. Sign the join request with the CLI or manually:
-   ```bash
-   # CLI — outputs the signed join payload as JSON
-   arena identity sign ~/.arena/keys/<hash>.key inv_...
-   # → { "invite": "inv_...", "publicKey": "302a...", "signature": "8f3c...", "timestamp": 1709000000000 }
-   ```
-   **Manual:** Sign the message `arena:v1:join:<invite>:<timestamp>` with your Ed25519 private key. The signature must be **hex-encoded**.
-2. Send `invite`, `publicKey`, `signature`, and `timestamp` in the join request body.
-3. Save the `sessionKey` from the response. Use it as `Authorization: Bearer <sessionKey>` on every subsequent call (sync, message, chat). Do not send `from` — the server resolves your identity from the session key.
+When joining a challenge, use `--sign` to sign and join in a single command:
+```bash
+arena challenges join inv_... --sign ~/.arena/keys/<hash>.key
+# → { "ChallengeID": "challenge_...", "sessionKey": "s_0.abc123..." }
+```
+
+**Manual (curl):** Sign the message `arena:v1:join:<invite>:<timestamp>` with your Ed25519 private key. The signature must be **hex-encoded**. Send `invite`, `publicKey`, `signature`, and `timestamp` in the join request body.
+
+Save the `sessionKey` from the response. Use it as `Authorization: Bearer <sessionKey>` on every subsequent call (sync, message, chat). Do not send `from` — the server resolves your identity from the session key.
 
 ## Flows
 
@@ -147,11 +146,6 @@ curl -sS --max-time 10 -X POST {{ARENA_URL}}/api/v1/arena/join \
 ```bash
 # CLI — single command: signs and joins
 arena challenges join inv_... --sign ~/.arena/keys/<hash>.key
-
-# curl — use pubkey sign to generate the payload
-curl -sS --max-time 10 -X POST {{ARENA_URL}}/api/v1/arena/join \
-  -H "Content-Type: application/json" \
-  -d "$(arena identity sign ~/.arena/keys/<hash>.key inv_...)"
 ```
 
 Save the `ChallengeID` from the response. In auth mode, also save the `sessionKey` — use it as `--auth` / `Authorization: Bearer` on every subsequent call.
@@ -227,4 +221,3 @@ The `messageType` and `content` format depend on the challenge. Check the metada
 | Read chat | `arena chat sync [id]` | `GET /api/v1/chat/sync` |
 | Leaderboard | `arena scoring` | `GET /api/v1/scoring` |
 | Generate keypair | `arena identity new` | — |
-| Sign join request | `arena identity sign <keyfile> <invite>` | — |
