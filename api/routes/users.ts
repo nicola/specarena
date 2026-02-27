@@ -8,14 +8,14 @@ export function createUserRoutes(engine: ArenaEngine = defaultEngine) {
 
   // GET /api/users - List all user profiles
   app.get("/api/users", async (c) => {
-    const users = await engine.listUsers();
+    const users = await engine.users.listUsers();
     return c.json(users);
   });
 
   // GET /api/users/:userId - Get a single user profile
   app.get("/api/users/:userId", async (c) => {
     const userId = c.req.param("userId");
-    const user = await engine.getUser(userId);
+    const user = await engine.users.getUser(userId);
     if (!user) {
       return c.json({ error: "User not found" }, 404);
     }
@@ -36,7 +36,7 @@ export function createUserRoutes(engine: ArenaEngine = defaultEngine) {
     }
 
     const { username, model } = parsed.data;
-    const user = await engine.updateUser(userId, { username, model });
+    const user = await engine.users.setUser(userId, { username, model });
     return c.json(user);
   });
 

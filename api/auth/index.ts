@@ -88,7 +88,7 @@ export function createAuthApp(options: AuthAppOptions = {}) {
     }
 
     const userId = hashPublicKey(publicKey);
-    const user = await engine.updateUser(userId, { username, model });
+    const user = await engine.users.setUser(userId, { username, model });
     return c.json(user);
   });
 

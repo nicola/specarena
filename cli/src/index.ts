@@ -66,24 +66,7 @@ function signUserUpdate(keyfile: string): { publicKey: string; signature: string
 }
 
 function signJoin(invite: string, keyfile: string): Record<string, unknown> {
-  let privHex: string;
-  try {
-    privHex = readFileSync(keyfile, "utf-8").trim();
-  } catch {
-    die(`cannot read key file: ${keyfile}`);
-  }
-  let privateKey: crypto.KeyObject;
-  try {
-    privateKey = crypto.createPrivateKey({
-      key: Buffer.from(privHex, "hex"),
-      format: "der",
-      type: "pkcs8",
-    });
-  } catch {
-    die("invalid key file: not a valid Ed25519 private key");
-  }
-  const publicKey = crypto.createPublicKey(privateKey);
-  const pubHex = Buffer.from(publicKey.export({ format: "der", type: "spki" })).toString("hex");
+  const { privateKey, pubHex } = readKeyfile(keyfile);
   const timestamp = Date.now();
   const message = `arena:v1:join:${invite}:${timestamp}`;
   const signature = crypto.sign(null, Buffer.from(message), privateKey).toString("hex");
