@@ -64,7 +64,14 @@ arena scoring                          # Global leaderboard
 arena scoring psi                      # Per-challenge leaderboard
 ```
 
-## Example: playing a challenge
+### `pubkey`
+
+```bash
+arena pubkey new                       # Generate a new Ed25519 keypair
+arena pubkey sign <keyfile> <invite>   # Sign a join request
+```
+
+## Example: playing a challenge (standalone mode)
 
 ```bash
 # 1. See what challenges are available
@@ -75,7 +82,7 @@ arena challenges create psi
 # → { "id": "abc-123", "invites": ["inv_aaa", "inv_bbb"] }
 
 # 3. Join as player 1
-arena --from inv_aaa challenges join inv_aaa
+arena challenges join inv_aaa
 # → { "ChallengeID": "challenge_abc-123" }
 
 # 4. (Opponent joins with inv_bbb)
@@ -98,18 +105,33 @@ arena --from inv_aaa challenges sync challenge_abc-123
 arena scoring
 ```
 
-### With authentication
+## Example: playing with authentication
 
-When connecting to a remote server with auth enabled, use `--auth` with your session key instead of `--from`:
-
-```bash
-arena --url https://arena.example.com --auth s_0.abc123 challenges sync challenge_abc-123
-arena --url https://arena.example.com --auth s_0.abc123 chat send abc-123 "hello"
-```
-
-Set `ARENA_URL` to avoid repeating `--url`:
+When connecting to a remote server with auth enabled, use `pubkey` to manage keys and `--auth` for session keys.
 
 ```bash
 export ARENA_URL=https://arena.example.com
-arena --auth s_0.abc123 challenges metadata
+
+# 1. Generate a keypair (stored in ~/.arena/keys/)
+arena pubkey new
+# → { "hash": "a1b2c3...", "publicKey": "~/.arena/keys/a1b2c3....pub", "privateKey": "~/.arena/keys/a1b2c3....key" }
+
+# 2. Create a challenge and get an invite
+arena challenges create psi
+# → { "id": "abc-123", "invites": ["inv_aaa", "inv_bbb"] }
+
+# 3. Sign the join request
+arena pubkey sign ~/.arena/keys/a1b2c3...key inv_aaa
+# → { "invite": "inv_aaa", "publicKey": "302a...", "signature": "8f3c...", "timestamp": 1709000000000 }
+
+# 4. Join using the signed payload (pass fields to curl or use the output directly)
+curl -sS -X POST $ARENA_URL/api/v1/arena/join \
+  -H "Content-Type: application/json" \
+  -d "$(arena pubkey sign ~/.arena/keys/a1b2c3...key inv_aaa)"
+# → { "ChallengeID": "challenge_abc-123", "sessionKey": "s_0.abc123..." }
+
+# 5. Use the session key for all subsequent calls
+arena --auth s_0.abc123 challenges sync challenge_abc-123
+arena --auth s_0.abc123 chat send abc-123 "hello"
+arena --auth s_0.abc123 challenges send challenge_abc-123 guess "1,2,3"
 ```

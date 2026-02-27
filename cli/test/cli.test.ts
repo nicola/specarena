@@ -2,10 +2,12 @@ import { describe, it, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { join } from "node:path";
+import { existsSync, readFileSync, rmSync, mkdirSync } from "node:fs";
 import { serve } from "@hono/node-server";
 import type { ServerType } from "@hono/node-server";
 import { createApp } from "@arena/engine/server";
 import { ArenaEngine } from "@arena/engine/engine";
+import { tmpdir } from "node:os";
 
 // ── Test server ──────────────────────────────────────────────────────
 
@@ -48,6 +50,23 @@ function cli(...args: string[]): Promise<CliResult> {
       "node",
       ["--import", "tsx", cliPath, "--url", baseUrl, ...args],
       { timeout: 10_000 },
+      (error, stdout, stderr) => {
+        resolve({
+          stdout,
+          stderr,
+          exitCode: error ? (error as NodeJS.ErrnoException).code ? Number((error as NodeJS.ErrnoException).code) || 1 : 1 : 0,
+        });
+      },
+    );
+  });
+}
+
+function cliWithEnv(env: Record<string, string>, ...args: string[]): Promise<CliResult> {
+  return new Promise((resolve) => {
+    execFile(
+      "node",
+      ["--import", "tsx", cliPath, "--url", baseUrl, ...args],
+      { timeout: 10_000, env: { ...process.env, ...env } },
       (error, stdout, stderr) => {
         resolve({
           stdout,
@@ -267,6 +286,77 @@ describe("global flags", () => {
   it("--url overrides base URL", async () => {
     // Point to a bogus URL — should fail with network error
     const r = await cli("--url", "http://localhost:1", "challenges", "metadata");
+    assert.equal(r.exitCode, 1);
+    assert.ok(r.stderr.length > 0);
+  });
+});
+
+describe("pubkey new", () => {
+  const testKeysDir = join(tmpdir(), `arena-test-keys-${process.pid}`);
+
+  before(() => {
+    mkdirSync(testKeysDir, { recursive: true });
+  });
+
+  after(() => {
+    rmSync(testKeysDir, { recursive: true, force: true });
+  });
+
+  it("generates a keypair and writes files", async () => {
+    // Override HOME so keys go to a temp dir
+    const r = await cliWithEnv({ HOME: testKeysDir }, "pubkey", "new");
+    assert.equal(r.exitCode, 0);
+    const data = json(r) as { hash: string; publicKey: string; privateKey: string };
+    assert.ok(data.hash);
+    assert.ok(data.publicKey.endsWith(".pub"));
+    assert.ok(data.privateKey.endsWith(".key"));
+    assert.ok(existsSync(data.publicKey), "pub file should exist");
+    assert.ok(existsSync(data.privateKey), "key file should exist");
+
+    // Key files should contain hex
+    const pub = readFileSync(data.publicKey, "utf-8").trim();
+    const priv = readFileSync(data.privateKey, "utf-8").trim();
+    assert.match(pub, /^[0-9a-f]+$/);
+    assert.match(priv, /^[0-9a-f]+$/);
+  });
+
+  it("generates unique keys each time", async () => {
+    const r1 = await cliWithEnv({ HOME: testKeysDir }, "pubkey", "new");
+    const r2 = await cliWithEnv({ HOME: testKeysDir }, "pubkey", "new");
+    const h1 = (json(r1) as { hash: string }).hash;
+    const h2 = (json(r2) as { hash: string }).hash;
+    assert.notEqual(h1, h2);
+  });
+});
+
+describe("pubkey sign", () => {
+  const testKeysDir = join(tmpdir(), `arena-test-sign-${process.pid}`);
+
+  before(() => {
+    mkdirSync(testKeysDir, { recursive: true });
+  });
+
+  after(() => {
+    rmSync(testKeysDir, { recursive: true, force: true });
+  });
+
+  it("produces a valid signed join payload", async () => {
+    // Generate a key first
+    const gen = await cliWithEnv({ HOME: testKeysDir }, "pubkey", "new");
+    const { privateKey: keyPath } = json(gen) as { privateKey: string };
+
+    const r = await cli("pubkey", "sign", keyPath, "inv_test");
+    assert.equal(r.exitCode, 0);
+    const data = json(r) as { invite: string; publicKey: string; signature: string; timestamp: number };
+    assert.equal(data.invite, "inv_test");
+    assert.ok(data.publicKey);
+    assert.ok(data.signature);
+    assert.ok(typeof data.timestamp === "number");
+    assert.ok(data.timestamp > 0);
+  });
+
+  it("exits 1 for missing key file", async () => {
+    const r = await cli("pubkey", "sign", "/nonexistent/key.key", "inv_test");
     assert.equal(r.exitCode, 1);
     assert.ok(r.stderr.length > 0);
   });

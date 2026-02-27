@@ -348,6 +348,7 @@ cli/
 - **`arena challenges`** — `metadata`, `list`, `create`, `join`, `sync`, `send`
 - **`arena chat`** — `send`, `sync`
 - **`arena scoring`** — global or per-challenge leaderboard
+- **`arena pubkey`** — `new` (generate Ed25519 keypair), `sign` (sign a join request)
 
 ### Global Flags
 

@@ -2,6 +2,10 @@
 
 import { program, Command } from "commander";
 import chalk from "chalk";
+import crypto from "node:crypto";
+import { mkdirSync, writeFileSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { homedir } from "node:os";
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
@@ -184,6 +188,57 @@ const scoring = new Command("scoring")
     await request("GET", path);
   });
 
+// ── Pubkey group ────────────────────────────────────────────────────
+
+const KEYS_DIR = join(homedir(), ".arena", "keys");
+
+const pubkey = new Command("pubkey").description("Ed25519 key management for auth mode");
+
+pubkey
+  .command("new")
+  .description("Generate a new Ed25519 keypair")
+  .action(() => {
+    const { publicKey, privateKey } = crypto.generateKeyPairSync("ed25519");
+    const pubHex = Buffer.from(publicKey.export({ format: "der", type: "spki" })).toString("hex");
+    const privHex = Buffer.from(privateKey.export({ format: "der", type: "pkcs8" })).toString("hex");
+    const hash = crypto.createHash("sha256").update(pubHex).digest("hex");
+
+    mkdirSync(KEYS_DIR, { recursive: true });
+    const pubPath = join(KEYS_DIR, `${hash}.pub`);
+    const privPath = join(KEYS_DIR, `${hash}.key`);
+    writeFileSync(pubPath, pubHex + "\n");
+    writeFileSync(privPath, privHex + "\n");
+
+    process.stdout.write(JSON.stringify({ hash, publicKey: pubPath, privateKey: privPath }, null, 2) + "\n");
+  });
+
+pubkey
+  .command("sign <keyfile> <invite>")
+  .description("Sign a join request with a private key file")
+  .action((keyfile: string, invite: string) => {
+    let privHex: string;
+    try {
+      privHex = readFileSync(keyfile, "utf-8").trim();
+    } catch {
+      process.stderr.write(chalk.red("error") + ` cannot read key file: ${keyfile}\n`);
+      process.exit(1);
+    }
+
+    const privateKey = crypto.createPrivateKey({
+      key: Buffer.from(privHex, "hex"),
+      format: "der",
+      type: "pkcs8",
+    });
+    const publicKey = crypto.createPublicKey(privateKey);
+    const pubHex = Buffer.from(publicKey.export({ format: "der", type: "spki" })).toString("hex");
+
+    const timestamp = Date.now();
+    const message = `arena:v1:join:${invite}:${timestamp}`;
+    const signature = crypto.sign(null, Buffer.from(message), privateKey).toString("hex");
+
+    process.stdout.write(JSON.stringify({ invite, publicKey: pubHex, signature, timestamp }, null, 2) + "\n");
+  });
+
 // ── Program ──────────────────────────────────────────────────────────
 
 program
@@ -196,5 +251,6 @@ program
 program.addCommand(challenges);
 program.addCommand(chat);
 program.addCommand(scoring);
+program.addCommand(pubkey);
 
 program.parseAsync();
