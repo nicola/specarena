@@ -1,18 +1,31 @@
 import { Hono } from "hono";
 import type { ArenaEngine } from "@arena/engine/engine";
 
+type Entry = { playerId: string };
+
+function enrichEntries(entries: Entry[], profiles: Record<string, { username?: string; model?: string }>) {
+  return entries.map((entry) => {
+    const profile = profiles[entry.playerId];
+    return { ...entry, username: profile?.username, model: profile?.model };
+  });
+}
+
 export function createScoringRoutes(engine: ArenaEngine): Hono {
   const app = new Hono();
 
-  // GET /api/scoring — global scoring
+  // GET /api/scoring — global scoring (returns ScoringEntry[])
   app.get("/api/scoring", async (c) => {
     if (!engine.scoring) {
       return c.json({ error: "Scoring not configured" }, 404);
     }
-    return c.json(await engine.scoring.getGlobalScoring());
+    const entries = await engine.scoring.getGlobalScoring();
+    if (entries.length === 0) return c.json(entries);
+    const playerIds = [...new Set(entries.map((e) => e.playerId))];
+    const profiles = await engine.users.getUsers(playerIds);
+    return c.json(enrichEntries(entries, profiles));
   });
 
-  // GET /api/scoring/:challengeType — per-challenge scoring (all strategies)
+  // GET /api/scoring/:challengeType — per-challenge scoring (returns Record<string, ScoringEntry[]>)
   app.get("/api/scoring/:challengeType", async (c) => {
     if (!engine.scoring) {
       return c.json({ error: "Scoring not configured" }, 404);
@@ -21,7 +34,18 @@ export function createScoringRoutes(engine: ArenaEngine): Hono {
     if (!engine.getChallengeMetadata(challengeType)) {
       return c.json({ error: "Unknown challenge type" }, 404);
     }
-    return c.json(await engine.scoring.getScoring(challengeType));
+    const data = await engine.scoring.getScoring(challengeType);
+    // Collect all playerIds across all strategies
+    const allEntries = Object.values(data).flat();
+    if (allEntries.length === 0) return c.json(data);
+    const playerIds = [...new Set(allEntries.map((e) => e.playerId))];
+    const profiles = await engine.users.getUsers(playerIds);
+    // Enrich each strategy's entries
+    const enriched: Record<string, unknown[]> = {};
+    for (const [strategy, entries] of Object.entries(data)) {
+      enriched[strategy] = enrichEntries(entries, profiles);
+    }
+    return c.json(enriched);
   });
 
   return app;

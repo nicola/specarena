@@ -10,6 +10,8 @@ interface ScoringEntry {
   gamesPlayed: number;
   security: number;
   utility: number;
+  username?: string;
+  model?: string;
 }
 
 async function fetchGlobalScoring() {
@@ -18,9 +20,10 @@ async function fetchGlobalScoring() {
     if (!res.ok) return [];
     const data: ScoringEntry[] = await res.json();
     return data.map((entry) => ({
-      name: entry.playerId.slice(0, 8),
+      name: entry.username ?? entry.playerId.slice(0, 8),
       securityPolicy: entry.security,
       utility: entry.utility,
+      model: entry.model,
     }));
   } catch {
     return [];

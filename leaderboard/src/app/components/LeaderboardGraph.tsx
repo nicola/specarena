@@ -7,6 +7,7 @@ interface LeaderboardData {
   name: string;
   securityPolicy: number;
   utility: number;
+  model?: string;
 }
 
 interface LeaderboardGraphProps {
@@ -15,21 +16,21 @@ interface LeaderboardGraphProps {
 
 // Mock leaderboard data (scores in [-2, 2] range)
 const mockData: LeaderboardData[] = [
-  { name: "Alpha", securityPolicy: 0.7, utility: 1.6 },
-  { name: "Beta", securityPolicy: 0.2, utility: 1.0 },
-  { name: "Gamma", securityPolicy: 1.2, utility: -0.4 },
-  { name: "Delta", securityPolicy: -0.6, utility: 1.8 },
-  { name: "Epsilon", securityPolicy: 1.0, utility: 0.4 },
-  { name: "Zeta", securityPolicy: -0.2, utility: 1.3 },
-  { name: "Eta", securityPolicy: 1.4, utility: -0.8 },
-  { name: "Theta", securityPolicy: -0.8, utility: 0.6 },
-  { name: "Iota", securityPolicy: 0.5, utility: 1.1 },
-  { name: "Kappa", securityPolicy: 0.0, utility: 0.5 },
-  { name: "Lambda", securityPolicy: 1.1, utility: 0.7 },
-  { name: "Mu", securityPolicy: -0.4, utility: 1.5 },
-  { name: "Nu", securityPolicy: 0.3, utility: 0.2 },
-  { name: "Xi", securityPolicy: -1.0, utility: 1.0 },
-  { name: "Omicron", securityPolicy: 0.9, utility: 1.4 },
+  { name: "Alpha", securityPolicy: 0.35, utility: 0.8 },
+  { name: "Beta", securityPolicy: 0.1, utility: 0.5 },
+  { name: "Gamma", securityPolicy: 0.6, utility: -0.2 },
+  { name: "Delta", securityPolicy: -0.3, utility: 0.9 },
+  { name: "Epsilon", securityPolicy: 0.5, utility: 0.2 },
+  { name: "Zeta", securityPolicy: -0.1, utility: 0.65 },
+  { name: "Eta", securityPolicy: 0.7, utility: -0.4 },
+  { name: "Theta", securityPolicy: -0.4, utility: 0.3 },
+  { name: "Iota", securityPolicy: 0.25, utility: 0.55 },
+  { name: "Kappa", securityPolicy: 0.0, utility: 0.25 },
+  { name: "Lambda", securityPolicy: 0.55, utility: 0.35 },
+  { name: "Mu", securityPolicy: -0.2, utility: 0.75 },
+  { name: "Nu", securityPolicy: 0.15, utility: 0.1 },
+  { name: "Xi", securityPolicy: -0.5, utility: 0.5 },
+  { name: "Omicron", securityPolicy: 0.45, utility: 0.7 },
 ];
 
 export default function LeaderboardGraph({ data = mockData }: LeaderboardGraphProps) {
@@ -116,8 +117,8 @@ export default function LeaderboardGraph({ data = mockData }: LeaderboardGraphPr
     }));
 
     // Simple overlap avoidance: sort by position and nudge colliding labels
-    const pixelsPerUnitX = width / 4; // domain is [-2,2] = 4 units
-    const pixelsPerUnitY = 400 / 4;
+    const pixelsPerUnitX = width / 3; // domain is [-1.5,1.5] = 3 units
+    const pixelsPerUnitY = 400 / 3;
     const minDistPx = 14; // min vertical pixel distance between labels
 
     labelPositions.sort((a, b) => {
@@ -154,13 +155,13 @@ export default function LeaderboardGraph({ data = mockData }: LeaderboardGraphPr
       },
       x: {
         label: "Security",
-        domain: [-2, 2],
-        ticks: 5,
+        domain: [-1.5, 1.5],
+        ticks: [-1, 0, 1],
       },
       y: {
         label: "Utility",
-        domain: [-2, 2],
-        ticks: 5,
+        domain: [-1.5, 1.5],
+        ticks: [-1, 0, 1],
       },
       marks: [
         // All points as dots
@@ -169,10 +170,18 @@ export default function LeaderboardGraph({ data = mockData }: LeaderboardGraphPr
           y: "utility",
           fill: (d) => paretoSet.has(d.name) ? "#000" : "#a1a1aa",
           r: (d) => paretoSet.has(d.name) ? 5 : 3,
+          channels: {
+            name: { value: "name", label: "Name" },
+            model: { value: (d) => d.model ?? "—", label: "Model" },
+          },
           tip: {
             format: {
-              title: (d) => d.name,
-              r: false
+              name: true,
+              model: true,
+              x: true,
+              y: true,
+              fill: false,
+              r: false,
             },
           },
         }),
