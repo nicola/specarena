@@ -45,7 +45,7 @@ describe("Stale challenge garbage collection", () => {
     assert.equal(invite.success, false);
   });
 
-  it("does not prune old challenges that have started", async () => {
+  it("prunes old challenges that have started but not ended", async () => {
     const challenge = await createPsiChallenge();
     await request("POST", "/api/arena/join", { invite: challenge.invites[0] });
     await request("POST", "/api/arena/join", { invite: challenge.invites[1] });
@@ -53,7 +53,22 @@ describe("Stale challenge garbage collection", () => {
     const instance = await defaultEngine.getChallenge(challenge.id);
     assert.ok(instance);
     assert.equal(instance.instance.state.gameStarted, true);
+    assert.equal(instance.instance.state.gameEnded, false);
 
+    instance.createdAt = Date.now() - STALE_MS;
+    const removed = await defaultEngine.pruneStaleChallenges();
+    assert.equal(removed, 1);
+
+    const typed = await defaultEngine.getChallengesByType("psi");
+    assert.ok(!typed.some((c) => c.id === challenge.id));
+  });
+
+  it("does not prune old challenges that have ended", async () => {
+    const challenge = await createPsiChallenge();
+    const instance = await defaultEngine.getChallenge(challenge.id);
+    assert.ok(instance);
+
+    instance.instance.state.gameEnded = true;
     instance.createdAt = Date.now() - STALE_MS;
     await defaultEngine.pruneStaleChallenges();
 

@@ -85,9 +85,9 @@ export class ArenaEngine {
   }
 
   private isChallengeStale(challenge: Challenge, now: number = Date.now()): boolean {
-    const gameStarted = challenge.instance?.state?.gameStarted ?? false;
+    const gameEnded = challenge.instance?.state?.gameEnded ?? false;
     const cutoff = now - STALE_CHALLENGE_TIMEOUT_MS;
-    return !gameStarted && challenge.createdAt < cutoff;
+    return !gameEnded && challenge.createdAt < cutoff;
   }
 
   async pruneStaleChallenges(now: number = Date.now()): Promise<number> {
