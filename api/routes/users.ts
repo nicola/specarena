@@ -12,6 +12,20 @@ export function createUserRoutes(engine: ArenaEngine = defaultEngine) {
     return c.json(users);
   });
 
+  // GET /api/users/batch?ids=id1,id2,id3 - Get multiple user profiles
+  app.get("/api/users/batch", async (c) => {
+    const idsParam = c.req.query("ids");
+    if (!idsParam) {
+      return c.json({ error: "ids query parameter is required" }, 400);
+    }
+    const ids = idsParam.split(",").filter(Boolean);
+    if (ids.length === 0) {
+      return c.json({});
+    }
+    const profiles = await engine.users.getUsers(ids);
+    return c.json(profiles);
+  });
+
   // GET /api/users/:userId - Get a single user profile
   app.get("/api/users/:userId", async (c) => {
     const userId = c.req.param("userId");

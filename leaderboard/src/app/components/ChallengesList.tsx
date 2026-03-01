@@ -23,13 +23,12 @@ interface ChallengesListProps {
 }
 
 const formatDate = (timestamp: number) => {
-  return new Date(timestamp).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
+  const d = new Date(timestamp);
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const hh = String(d.getHours()).padStart(2, '0');
+  const min = String(d.getMinutes()).padStart(2, '0');
+  return `${mm}/${dd} ${hh}:${min}`;
 };
 
 const getGameStatus = (challengeInstance: ChallengeInstance) => {
@@ -83,50 +82,38 @@ export default function ChallengesList({ challenges, challengeType }: Challenges
           <p className="text-zinc-600">No challenges created yet. Be the first to participate!</p>
         </div>
       ) : (
-        <div className="space-y-4">
-          {challenges.map((challengeInstance) => (
-            <Link
-              key={challengeInstance.id}
-              href={`/challenges/${challengeType}/${challengeInstance.id}`}
-              className="block border border-zinc-900 p-6 hover:bg-zinc-50 transition-colors"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs text-zinc-500 font-mono">
-                      {challengeInstance.id}
-                    </span>
-                    {(() => {
-                      const status = getGameStatus(challengeInstance);
-                      return (
-                        <span className={`text-xs ${status.textColor} flex items-center gap-1.5 font-medium`}>
-                          <span className={`w-2 h-2 ${status.dotColor} rounded-full ${status.animate ? 'animate-pulse' : ''}`}></span>
-                          {status.label}
-                        </span>
-                      );
-                    })()}
-                  </div>
-                  <p className="text-sm text-zinc-600 text-xs">
-                    Created {formatDate(challengeInstance.createdAt)}
-                  </p>
-                  {challengeInstance.instance?.state?.gameEnded && challengeInstance.instance.state.playerIdentities && Object.keys(challengeInstance.instance.state.playerIdentities).length > 0 && (
-                    <div className="flex gap-2 mt-1">
-                      {Object.values(challengeInstance.instance.state.playerIdentities).map((id, idx) => (
-                        <span key={idx} className="text-xs font-mono text-zinc-400" title={id}>
-                          {id.slice(0, 8)}...
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div className="text-zinc-400">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </div>
-              </div>
-            </Link>
-          ))}
+        <div className="border border-zinc-900 divide-y divide-zinc-200">
+          {challenges.map((challengeInstance) => {
+            const status = getGameStatus(challengeInstance);
+            const players = challengeInstance.instance?.state?.gameEnded
+              && challengeInstance.instance.state.playerIdentities
+              ? Object.values(challengeInstance.instance.state.playerIdentities)
+              : [];
+            return (
+              <Link
+                key={challengeInstance.id}
+                href={`/challenges/${challengeType}/${challengeInstance.id}`}
+                className="flex items-center px-3 py-2 hover:bg-zinc-50 transition-colors"
+              >
+                <span className="w-[72px] text-xs text-zinc-500 font-mono shrink-0">
+                  {challengeInstance.id.slice(0, 8)}
+                </span>
+                <span className={`w-[120px] text-xs ${status.textColor} flex items-center gap-1.5 font-medium shrink-0`}>
+                  <span className={`w-1.5 h-1.5 ${status.dotColor} rounded-full ${status.animate ? 'animate-pulse' : ''}`}></span>
+                  {status.label}
+                </span>
+                <span className="w-[90px] text-xs text-zinc-400 shrink-0">
+                  {formatDate(challengeInstance.createdAt)}
+                </span>
+                <span className="text-xs font-mono text-zinc-400 truncate min-w-0 flex-1">
+                  {players.map(p => p.slice(0, 8)).join(', ')}
+                </span>
+                <svg className="w-4 h-4 text-zinc-400 shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>

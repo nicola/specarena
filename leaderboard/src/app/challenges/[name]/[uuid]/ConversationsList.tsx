@@ -3,10 +3,17 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { CHALLENGE_CHANNEL_PREFIX, toChallengeChannel, type ChatMessage, type Score } from "@arena/engine/types";
 
+interface UserProfile {
+  userId: string;
+  username?: string;
+  model?: string;
+}
+
 interface GameEndedData {
   scores: Score[];
   players: string[];
   playerIdentities: Record<string, string>;
+  profiles?: Record<string, UserProfile>;
 }
 
 interface SSEInitialEvent {
@@ -25,6 +32,7 @@ interface SSEGameEndedEvent {
     scores: Score[];
     players: string[];
     playerIdentities: Record<string, string>;
+    profiles?: Record<string, UserProfile>;
   };
 }
 
@@ -99,6 +107,7 @@ export default function ConversationsList({ uuid, engineUrl = "" }: Conversation
   const challengeEventSourceRef = useRef<EventSource | null>(null);
   const initialLoadCountRef = useRef(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const engineUrlRef = useRef(engineUrl);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -125,8 +134,25 @@ export default function ConversationsList({ uuid, engineUrl = "" }: Conversation
       }
 
       case 'game_ended': {
-        const { scores, players, playerIdentities } = data.data;
-        setGameEnded({ scores, players, playerIdentities });
+        const { scores, players, playerIdentities, profiles } = data.data;
+        if (profiles) {
+          setGameEnded({ scores, players, playerIdentities, profiles });
+        } else {
+          // Live event — fetch profiles via batch endpoint
+          const userIds = Object.values(playerIdentities).filter(Boolean);
+          if (userIds.length > 0) {
+            fetch(`${engineUrlRef.current}/api/users/batch?ids=${userIds.join(",")}`)
+              .then(r => r.json())
+              .then((fetched: Record<string, UserProfile>) => {
+                setGameEnded({ scores, players, playerIdentities, profiles: fetched });
+              })
+              .catch(() => {
+                setGameEnded({ scores, players, playerIdentities });
+              });
+          } else {
+            setGameEnded({ scores, players, playerIdentities });
+          }
+        }
         break;
       }
 
@@ -399,20 +425,20 @@ export default function ConversationsList({ uuid, engineUrl = "" }: Conversation
               const rawName = gameEnded.players[i] || `Player ${i + 1}`;
               const label = displayName(rawName);
               const identity = gameEnded.playerIdentities[rawName];
+              const profile = identity ? gameEnded.profiles?.[identity] : undefined;
               return (
                 <div key={i} className="flex items-center gap-3 bg-zinc-50 rounded-lg px-4 py-2.5">
                   <div className={`flex-shrink-0 w-7 h-7 rounded-full ${getAvatarColor(rawName)} flex items-center justify-center text-white text-xs font-semibold`} title={rawName}>
-                    {getInitials(label)}
+                    {getInitials(profile?.username ?? label)}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <span className="text-sm font-medium text-zinc-800 block truncate cursor-default" title={rawName}>
-                      {label}
+                    <span className="text-sm font-medium text-zinc-800 block truncate cursor-default" title={identity ?? rawName}>
+                      {profile?.username ?? label}
                     </span>
-                    {identity && (
-                      <span className="text-xs font-mono text-zinc-400 block truncate cursor-default" title={identity}>
-                        {identity.slice(0, 8)}...{identity.slice(-8)}
-                      </span>
-                    )}
+                    <span className="text-xs text-zinc-400 block truncate cursor-default">
+                      {profile?.model && <span className="mr-2">{profile.model}</span>}
+                      {identity && <span className="font-mono" title={identity}>{identity.slice(0, 8)}...{identity.slice(-8)}</span>}
+                    </span>
                   </div>
                   <div className="flex gap-4 text-sm">
                     <span className="text-zinc-600">

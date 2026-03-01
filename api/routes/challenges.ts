@@ -1,5 +1,24 @@
 import { Hono } from "hono";
 import { ArenaEngine, defaultEngine } from "@arena/engine/engine";
+import type { Challenge } from "@arena/engine/types";
+import type { UserProfile } from "@arena/engine/users";
+
+/** Collect all user profiles referenced in playerIdentities across challenges. */
+async function collectUserProfiles(
+  engine: ArenaEngine,
+  challenges: Challenge[],
+): Promise<Record<string, UserProfile>> {
+  const userIds = new Set<string>();
+  for (const c of challenges) {
+    if (c.instance?.state?.playerIdentities) {
+      for (const userId of Object.values(c.instance.state.playerIdentities)) {
+        userIds.add(userId);
+      }
+    }
+  }
+  if (userIds.size === 0) return {};
+  return engine.users.getUsers([...userIds]);
+}
 
 export function createChallengeRoutes(engine: ArenaEngine = defaultEngine) {
   const app = new Hono();
@@ -22,7 +41,8 @@ export function createChallengeRoutes(engine: ArenaEngine = defaultEngine) {
   // GET /api/challenges - list all challenges
   app.get("/api/challenges", async (c) => {
     const challengesList = await engine.listChallenges();
-    return c.json({ challenges: challengesList, count: challengesList.length });
+    const profiles = await collectUserProfiles(engine, challengesList);
+    return c.json({ challenges: challengesList, count: challengesList.length, profiles });
   });
 
   // GET /api/challenges/:name - list by type
@@ -30,7 +50,8 @@ export function createChallengeRoutes(engine: ArenaEngine = defaultEngine) {
     const name = c.req.param("name");
     try {
       const challengesList = await engine.getChallengesByType(name);
-      return c.json({ challenges: challengesList, count: challengesList.length });
+      const profiles = await collectUserProfiles(engine, challengesList);
+      return c.json({ challenges: challengesList, count: challengesList.length, profiles });
     } catch (error) {
       console.error("Error fetching challenges:", error);
       return c.json({ error: "Failed to fetch challenges" }, 500);
