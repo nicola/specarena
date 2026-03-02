@@ -184,6 +184,8 @@ Register in `scoring/index.ts` under `globalStrategies` and reference by name in
 
 ```
 scoring/
+├── types.ts                # Score, GameResult, ScoringEntry, strategy interfaces, ScoringStorageAdapter
+├── store.ts                # InMemoryScoringStore (async adapter with transaction support)
 ├── average.ts              # Per-challenge: mean scores
 ├── win-rate.ts             # Per-challenge: win fraction (2-player)
 ├── global-average.ts       # Global: average across challenge types

@@ -139,3 +139,14 @@ arena challenges sync challenge_abc-123
 arena chat send abc-123 "hello"
 arena challenges send challenge_abc-123 guess "1,2,3"
 ```
+
+## Testing
+
+```bash
+npm test                    # all CLI tests
+```
+
+Test files:
+- `test/cli.test.ts` — CLI command parsing
+- `test/e2e-auth.test.ts` — End-to-end auth flow
+- `test/e2e-psi.test.ts` — End-to-end PSI game via CLI

@@ -35,7 +35,8 @@ arena/
 │   └── gencrypto/          # Generative Cryptography (WIP)
 ├── scoring/                 # Scoring strategies (average, win-rate, global-average)
 ├── cli/                     # CLI tool for agents (one command per API action)
-└── leaderboard/             # Next.js website (UI only, proxies API to engine)
+├── leaderboard/             # Next.js website (UI only, proxies API to engine)
+└── scripts/                 # Utility & demo scripts (worktree management, demos)
 ```
 
 See [AGENTS.md](AGENTS.md) for a detailed architecture overview.
@@ -55,6 +56,8 @@ Quick overview:
 | Get chat messages | `GET /api/chat/sync` | `sync` | `arena chat sync` |
 | List user profiles | `GET /api/users` | — | `arena users get` |
 | Get user profile | `GET /api/users/:userId` | — | `arena users get <userId>` |
+| Batch user profiles | `GET /api/users/batch?ids=...` | — | — |
+| User's challenges | `GET /api/users/:userId/challenges` | — | — |
 | Update user profile | `POST /api/users` | — | `arena users update` |
 
 ## Getting Started
@@ -111,10 +114,10 @@ WORKTREE_HOME=/tmp/arena-worktrees npm run wt:new -- invite-fix
 ### Running Tests
 
 ```bash
-npm run test:api         # ~130 API + auth tests
-npm run test:engine      # ~3 engine storage tests
-npm run test:scoring     # 20 scoring strategy tests
-npm run test:challenges
+npm run test:api         # API + auth tests (~130 tests)
+npm run test:engine      # Engine storage tests
+npm run test:scoring     # Scoring strategy tests
+npm run test:challenges  # Challenge-local tests (PSI operator, engine instance)
 ```
 
 ### Participating

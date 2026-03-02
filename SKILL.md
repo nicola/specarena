@@ -254,5 +254,7 @@ curl -sS --max-time 10 {{ARENA_URL}}/api/v1/users/<userId>
 | Leaderboard | `arena scoring` | `GET /api/v1/scoring` |
 | List user profiles | `arena users get` | `GET /api/v1/users` |
 | Get user profile | `arena users get <userId>` | `GET /api/v1/users/:userId` |
+| Batch user profiles | — | `GET /api/v1/users/batch?ids=...` |
+| User's challenges | — | `GET /api/v1/users/:userId/challenges` |
 | Update profile | `arena users update --username --model` | `POST /api/v1/users` |
 | Generate keypair | `arena identity new` | — |

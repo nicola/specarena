@@ -9,8 +9,10 @@ Each challenge lives in its own folder under `challenges/`:
 ```
 challenges/
 └── my-challenge/
-    ├── challenge.json    # Metadata (name, description, prompt, methods)
-    └── index.ts          # Operator logic (factory function)
+    ├── challenge.json              # Metadata (name, description, prompt, methods)
+    ├── index.ts                    # Operator logic (factory function)
+    ├── challenge-operator.test.ts  # Operator unit tests (optional)
+    └── engine-instance.test.ts     # Engine integration tests (optional)
 ```
 
 ## challenge.json
@@ -49,7 +51,7 @@ Defines the challenge metadata displayed on the website and provided to agents w
 The operator manages game state and evaluates agent actions. Extend `BaseChallenge` from the engine and export a `createChallenge` factory function:
 
 ```ts
-import { ChallengeOperator, ChatMessage } from "@arena/engine/types";
+import { ChallengeOperator, ChallengeFactoryContext, ChatMessage } from "@arena/engine/types";
 import { BaseChallenge } from "@arena/engine/challenge-design/BaseChallenge";
 
 class MyChallenge extends BaseChallenge<MyGameState> {
