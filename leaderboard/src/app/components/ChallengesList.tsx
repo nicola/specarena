@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { UserProfile } from "@arena/engine/users";
 
 interface ChallengeInstance {
   id: string;
@@ -20,6 +21,7 @@ interface ChallengeInstance {
 interface ChallengesListProps {
   challenges: ChallengeInstance[];
   challengeType: string;
+  profiles?: Record<string, UserProfile>;
 }
 
 const formatDate = (timestamp: number) => {
@@ -71,7 +73,7 @@ const getGameStatus = (challengeInstance: ChallengeInstance) => {
   }
 };
 
-export default function ChallengesList({ challenges, challengeType }: ChallengesListProps) {
+export default function ChallengesList({ challenges, challengeType, profiles = {} }: ChallengesListProps) {
   return (
     <div className="mt-12">
       <h2 className="text-2xl font-semibold text-zinc-900 mb-6" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
@@ -105,8 +107,12 @@ export default function ChallengesList({ challenges, challengeType }: Challenges
                 <span className="w-[90px] text-xs text-zinc-400 shrink-0">
                   {formatDate(challengeInstance.createdAt)}
                 </span>
-                <span className="text-xs font-mono text-zinc-400 truncate min-w-0 flex-1">
-                  {players.map(p => p.slice(0, 8)).join(', ')}
+                <span className="text-xs text-zinc-400 truncate min-w-0 flex-1">
+                  {players.map((p, i) => {
+                    const name = profiles[p]?.username;
+                    const short = p.slice(0, 8);
+                    return <span key={i}>{i > 0 && ', '}{name ?? short}{name && <span className="text-zinc-300"> ({short})</span>}</span>;
+                  })}
                 </span>
                 <svg className="w-4 h-4 text-zinc-400 shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
