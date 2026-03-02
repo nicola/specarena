@@ -5,8 +5,8 @@ import { InMemoryScoringStore } from "../store";
 import type { GameResult, Attribution } from "../types";
 
 function makeGame(
-  p0: { security: number; utility: number },
-  p1: { security: number; utility: number },
+  attacker: { security: number; utility: number },
+  victim: { security: number; utility: number },
   overrides?: Partial<GameResult>
 ): GameResult {
   return {
@@ -14,9 +14,9 @@ function makeGame(
     challengeType: "psi",
     createdAt: Date.now(),
     completedAt: Date.now(),
-    scores: [p0, p1],
-    players: ["inv_a", "inv_b"],
-    playerIdentities: { inv_a: "alice", inv_b: "bob" },
+    scores: [attacker, victim],
+    players: ["inv_attacker", "inv_victim"],
+    playerIdentities: { inv_attacker: "attacker", inv_victim: "victim" },
     ...overrides,
   };
 }
@@ -36,7 +36,7 @@ describe("red-team strategy", () => {
     return scores["red-team"] ?? [];
   }
 
-  it("one breach — attacker gets utility=1, victim gets security=0", async () => {
+  it("attacker breaches victim — attacker utility=1", async () => {
     const entries = await computeEntries([
       makeGame(
         { security: 1, utility: 1 },
@@ -45,35 +45,35 @@ describe("red-team strategy", () => {
       ),
     ]);
 
-    const alice = entries.find((e) => e.playerId === "alice")!;
-    const bob = entries.find((e) => e.playerId === "bob")!;
+    const attacker = entries.find((e) => e.playerId === "attacker")!;
+    const victim = entries.find((e) => e.playerId === "victim")!;
 
-    assert.equal(alice.utility, 1);    // caused 1 breach in 1 game
-    assert.equal(alice.security, 0);   // security always 0
-    assert.equal(alice.gamesPlayed, 1);
+    assert.equal(attacker.utility, 1);     // caused 1 breach in 1 game
+    assert.equal(attacker.security, 0);
+    assert.equal(attacker.gamesPlayed, 1);
 
-    assert.equal(bob.utility, 0);      // caused 0 breaches
-    assert.equal(bob.security, 0);     // security always 0
-    assert.equal(bob.gamesPlayed, 1);
+    assert.equal(victim.utility, 0);       // caused 0 breaches
+    assert.equal(victim.security, 0);
+    assert.equal(victim.gamesPlayed, 1);
   });
 
-  it("no attributions — all players get utility=0, security=0", async () => {
+  it("no attributions — both players get utility=0", async () => {
     const entries = await computeEntries([
       makeGame({ security: 1, utility: 1 }, { security: 1, utility: 1 }),
     ]);
 
-    const alice = entries.find((e) => e.playerId === "alice")!;
-    const bob = entries.find((e) => e.playerId === "bob")!;
+    const attacker = entries.find((e) => e.playerId === "attacker")!;
+    const victim = entries.find((e) => e.playerId === "victim")!;
 
-    assert.equal(alice.utility, 0);
-    assert.equal(alice.security, 0);
-    assert.equal(bob.utility, 0);
-    assert.equal(bob.security, 0);
+    assert.equal(attacker.utility, 0);
+    assert.equal(attacker.security, 0);
+    assert.equal(victim.utility, 0);
+    assert.equal(victim.security, 0);
   });
 
-  it("multi-game accumulation — rates computed correctly", async () => {
+  it("multi-game — attack rate accumulates correctly", async () => {
     const entries = await computeEntries([
-      // Game 1: alice breaches bob
+      // Game 1: attacker breaches victim
       makeGame(
         { security: 1, utility: 1 },
         { security: -1, utility: -1 },
@@ -81,7 +81,7 @@ describe("red-team strategy", () => {
       ),
       // Game 2: no breach
       makeGame({ security: 1, utility: 1 }, { security: 1, utility: 1 }),
-      // Game 3: bob breaches alice
+      // Game 3: victim breaches attacker
       makeGame(
         { security: -1, utility: -1 },
         { security: 1, utility: 1 },
@@ -89,16 +89,16 @@ describe("red-team strategy", () => {
       ),
     ]);
 
-    const alice = entries.find((e) => e.playerId === "alice")!;
-    const bob = entries.find((e) => e.playerId === "bob")!;
+    const attacker = entries.find((e) => e.playerId === "attacker")!;
+    const victim = entries.find((e) => e.playerId === "victim")!;
 
-    assert.equal(alice.gamesPlayed, 3);
-    assert.ok(Math.abs(alice.utility - 1 / 3) < 1e-10);   // 1 breach in 3 games
-    assert.equal(alice.security, 0);
+    assert.equal(attacker.gamesPlayed, 3);
+    assert.ok(Math.abs(attacker.utility - 1 / 3) < 1e-10);  // 1 breach in 3 games
+    assert.equal(attacker.security, 0);
 
-    assert.equal(bob.gamesPlayed, 3);
-    assert.ok(Math.abs(bob.utility - 1 / 3) < 1e-10);     // 1 breach in 3 games
-    assert.equal(bob.security, 0);
+    assert.equal(victim.gamesPlayed, 3);
+    assert.ok(Math.abs(victim.utility - 1 / 3) < 1e-10);    // 1 breach in 3 games
+    assert.equal(victim.security, 0);
   });
 
   it("missing playerIdentities — skipped gracefully", async () => {
@@ -108,7 +108,7 @@ describe("red-team strategy", () => {
         { security: -1, utility: -1 },
         {
           attributions: [{ from: 0, to: 1, type: "security_breach" }],
-          playerIdentities: { inv_a: "alice" }, // inv_b missing
+          playerIdentities: { inv_attacker: "attacker" }, // victim missing
         }
       ),
     ]);
@@ -116,7 +116,7 @@ describe("red-team strategy", () => {
     assert.deepStrictEqual(entries, []);
   });
 
-  it("skips non-security_breach attributions", async () => {
+  it("non-security_breach attributions are ignored", async () => {
     const entries = await computeEntries([
       makeGame(
         { security: 1, utility: 1 },
@@ -125,17 +125,16 @@ describe("red-team strategy", () => {
       ),
     ]);
 
-    const alice = entries.find((e) => e.playerId === "alice")!;
-    const bob = entries.find((e) => e.playerId === "bob")!;
+    const attacker = entries.find((e) => e.playerId === "attacker")!;
+    const victim = entries.find((e) => e.playerId === "victim")!;
 
-    // No security_breach attributions, so both should have utility=0
-    assert.equal(alice.utility, 0);
-    assert.equal(alice.security, 0);
-    assert.equal(bob.utility, 0);
-    assert.equal(bob.security, 0);
+    assert.equal(attacker.utility, 0);
+    assert.equal(attacker.security, 0);
+    assert.equal(victim.utility, 0);
+    assert.equal(victim.security, 0);
   });
 
-  it("skips single-player games", async () => {
+  it("single-player game — skipped", async () => {
     const entries = await computeEntries([
       {
         gameId: "g1",
@@ -143,15 +142,15 @@ describe("red-team strategy", () => {
         createdAt: Date.now(),
         completedAt: Date.now(),
         scores: [{ security: 1, utility: 1 }],
-        players: ["inv_a"],
-        playerIdentities: { inv_a: "alice" },
+        players: ["inv_attacker"],
+        playerIdentities: { inv_attacker: "attacker" },
       },
     ]);
 
     assert.deepStrictEqual(entries, []);
   });
 
-  it("mutual breach — both players breach each other", async () => {
+  it("mutual breach — both players get utility=1", async () => {
     const entries = await computeEntries([
       makeGame(
         { security: -1, utility: 1 },
@@ -165,12 +164,12 @@ describe("red-team strategy", () => {
       ),
     ]);
 
-    const alice = entries.find((e) => e.playerId === "alice")!;
-    const bob = entries.find((e) => e.playerId === "bob")!;
+    const attacker = entries.find((e) => e.playerId === "attacker")!;
+    const victim = entries.find((e) => e.playerId === "victim")!;
 
-    assert.equal(alice.utility, 1);    // breached bob
-    assert.equal(alice.security, 0);
-    assert.equal(bob.utility, 1);      // breached alice
-    assert.equal(bob.security, 0);
+    assert.equal(attacker.utility, 1);   // breached victim
+    assert.equal(attacker.security, 0);
+    assert.equal(victim.utility, 1);     // breached attacker
+    assert.equal(victim.security, 0);
   });
 });
