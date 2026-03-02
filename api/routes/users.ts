@@ -42,7 +42,8 @@ export function createUserRoutes(engine: ArenaEngine = defaultEngine) {
   // (must be registered before the :userId catch-all below)
   app.get("/api/users/:userId/challenges", async (c) => {
     const userId = c.req.param("userId");
-    const challenges = await engine.getChallengesByUserId(userId);
+    const all = await engine.getChallengesByUserId(userId);
+    const challenges = all.filter((c) => c.instance?.state?.gameEnded);
     const profiles = await collectUserProfiles(engine, challenges);
     return c.json({ challenges, count: challenges.length, profiles });
   });

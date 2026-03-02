@@ -182,6 +182,48 @@ describe("REST API for arena", () => {
   });
 });
 
+describe("REST API for user challenges", () => {
+  beforeEach(async () => clearState());
+
+  it("GET /api/users/:userId/challenges — excludes non-ended games", async () => {
+    const { id, invites } = await createPsiChallenge();
+    const [inv1, inv2] = invites;
+
+    // Join both players with known userIds
+    await request("POST", "/api/arena/join", { invite: inv1, userId: "user_x" });
+    await request("POST", "/api/arena/join", { invite: inv2, userId: "user_y" });
+
+    // Game is in progress (not ended) — should NOT appear
+    const res1 = await request("GET", "/api/users/user_x/challenges");
+    assert.equal(res1.status, 200);
+    const data1 = await res1.json();
+    assert.equal(data1.count, 0);
+    assert.equal(data1.challenges.length, 0);
+
+    // Now end the game by having both players guess
+    const sync1 = await (await request("GET", `/api/arena/sync?channel=${id}&from=${inv1}&index=0`)).json();
+    const sync2 = await (await request("GET", `/api/arena/sync?channel=${id}&from=${inv2}&index=0`)).json();
+    const parseSet = (content: string): Set<number> => {
+      const match = content.match(/\{(.+)\}/);
+      if (!match) return new Set();
+      return new Set(match[1].split(",").map((s) => parseInt(s.trim(), 10)));
+    };
+    const p1Set = parseSet(sync1.messages.find((m: any) => m.to === inv1 && m.content.includes("Your private set")).content);
+    const p2Set = parseSet(sync2.messages.find((m: any) => m.to === inv2 && m.content.includes("Your private set")).content);
+    const intersection = [...p1Set].filter((n) => p2Set.has(n)).join(", ");
+
+    await request("POST", "/api/arena/message", { challengeId: id, from: inv1, messageType: "guess", content: intersection });
+    await request("POST", "/api/arena/message", { challengeId: id, from: inv2, messageType: "guess", content: intersection });
+
+    // Game ended — should now appear
+    const res2 = await request("GET", "/api/users/user_x/challenges");
+    assert.equal(res2.status, 200);
+    const data2 = await res2.json();
+    assert.equal(data2.count, 1);
+    assert.equal(data2.challenges[0].id, id);
+  });
+});
+
 describe("REST API for chat", () => {
   beforeEach(async () => clearState());
 
