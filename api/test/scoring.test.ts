@@ -67,7 +67,7 @@ describe("ScoringModule", () => {
     assert.equal(bob.metrics["average:utility"], 1);
   });
 
-  it("computes win-rate correctly for 2-player games", async () => {
+  it("computes win-rate correctly (threshold-based: score >= 1 is a win)", async () => {
     await scoring.recordGame(makeGameResult());
     const scores = await scoring.getScoring("psi");
     const wr = scores["win-rate"];
@@ -77,15 +77,15 @@ describe("ScoringModule", () => {
 
     assert.ok(alice);
     assert.ok(bob);
-    // Alice: security=1 > 0.5 (win), utility=0.8 < 1 (loss)
+    // Alice: security=1 (win), utility=0.8 (loss)
     assert.equal(alice.metrics["win-rate:security"], 1);
     assert.equal(alice.metrics["win-rate:utility"], 0);
-    // Bob: security loss, utility win
+    // Bob: security=0.5 (loss), utility=1 (win)
     assert.equal(bob.metrics["win-rate:security"], 0);
     assert.equal(bob.metrics["win-rate:utility"], 1);
   });
 
-  it("handles ties in win-rate as 0.5", async () => {
+  it("both players below threshold — both get 0", async () => {
     const game = makeGameResult({
       scores: [
         { security: 0.5, utility: 0.5 },
@@ -97,8 +97,8 @@ describe("ScoringModule", () => {
 
     const alice = wr.find((e: ScoringEntry) => e.playerId === "user-alice");
     assert.ok(alice);
-    assert.equal(alice.metrics["win-rate:security"], 0.5);
-    assert.equal(alice.metrics["win-rate:utility"], 0.5);
+    assert.equal(alice.metrics["win-rate:security"], 0);
+    assert.equal(alice.metrics["win-rate:utility"], 0);
   });
 
   it("averages across multiple games", async () => {
