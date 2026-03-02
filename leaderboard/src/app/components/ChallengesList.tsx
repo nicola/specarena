@@ -91,6 +91,15 @@ export default function ChallengesList({ challenges, challengeType, profiles = {
         </div>
       ) : (
         <div className="border border-zinc-900 divide-y divide-zinc-100">
+          <div className="flex items-center px-5 py-3 text-xs text-zinc-400 uppercase tracking-wider border-b border-zinc-200">
+            <span className="w-[80px] shrink-0">ID</span>
+            <span className="w-[140px] max-sm:hidden shrink-0">Status</span>
+            <span className="w-[100px] shrink-0">Date</span>
+            <span className="min-w-0 flex-1">Player</span>
+            <span className="w-[70px] text-right shrink-0 pl-3">Utility</span>
+            <span className="w-[70px] text-right shrink-0 pl-3">Security</span>
+            <span className="w-4 ml-2 shrink-0"></span>
+          </div>
           {challenges.map((challengeInstance) => {
             const status = getGameStatus(challengeInstance);
             const players = challengeInstance.instance?.state?.gameEnded
@@ -115,65 +124,55 @@ export default function ChallengesList({ challenges, challengeType, profiles = {
                 <span className="w-[100px] text-sm text-zinc-400 shrink-0">
                   {formatDate(challengeInstance.createdAt)}
                 </span>
-                <span className="text-sm text-zinc-600 min-w-0 flex-1">
-                  {players.length > 0 && challengeInstance.instance?.state?.scores ? (
-                    <table className="w-full text-sm border-collapse table-fixed" onClick={(e) => e.stopPropagation()}>
-                      <colgroup>
-                        <col />
-                        <col className="w-[60px]" />
-                        <col className="w-[70px]" />
-                      </colgroup>
-                      <thead>
-                        <tr className="text-xs text-zinc-400">
-                          <th className="text-left font-normal">Player</th>
-                          <th className="text-right font-normal">Utility</th>
-                          <th className="text-right font-normal">Security</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {players.map((p, i) => {
-                          const name = profiles[p]?.username;
-                          const short = p.slice(0, 8);
-                          const score = challengeInstance.instance?.state?.scores?.[i];
-                          return (
-                            <tr key={i}>
-                              <td className="truncate">
-                                <Link
-                                  href={`/users/${p}`}
-                                  className="hover:text-zinc-900"
-                                >
-                                  {name ?? short}{name && <span className="text-zinc-400"> ({short})</span>}
-                                </Link>
-                              </td>
-                              <td className="text-right font-mono text-zinc-500">{score?.utility ?? '–'}</td>
-                              <td className="text-right font-mono text-zinc-500">{score?.security ?? '–'}</td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  ) : (
-                    players.map((p, i) => {
+                {players.length > 0 && challengeInstance.instance?.state?.scores ? (
+                  <div className="min-w-0 flex-1">
+                    {players.map((p, i) => {
                       const name = profiles[p]?.username;
                       const short = p.slice(0, 8);
+                      const score = challengeInstance.instance?.state?.scores?.[i];
                       return (
-                        <span key={i}>
-                          {i > 0 && ', '}
-                          <Link
-                            href={`/users/${p}`}
-                            onClick={(e) => e.stopPropagation()}
-                            className="hover:text-zinc-900"
-                          >
-                            {name ?? short}{name && <span className="text-zinc-400"> ({short})</span>}
-                          </Link>
-                        </span>
+                        <div key={i} className="flex items-center leading-tight">
+                          <span className="text-sm text-zinc-600 min-w-0 flex-1 truncate">
+                            <Link
+                              href={`/users/${p}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="hover:text-zinc-900"
+                            >
+                              {name ?? short}{name && <span className="text-zinc-400"> ({short})</span>}
+                            </Link>
+                          </span>
+                          <span className="w-[70px] text-right text-xs font-mono text-zinc-400 shrink-0 pl-3">{score?.utility ?? '–'}</span>
+                          <span className="w-[70px] text-right text-xs font-mono text-zinc-400 shrink-0 pl-3">{score?.security ?? '–'}</span>
+                          <span className="w-4 ml-2 shrink-0"></span>
+                        </div>
                       );
-                    })
-                  )}
-                </span>
-                <svg className="w-4 h-4 text-zinc-300 shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
+                    })}
+                  </div>
+                ) : (
+                  <>
+                    <span className="text-sm text-zinc-600 min-w-0 flex-1 truncate">
+                      {players.map((p, i) => {
+                        const name = profiles[p]?.username;
+                        const short = p.slice(0, 8);
+                        return (
+                          <span key={i}>
+                            {i > 0 && ', '}
+                            <Link
+                              href={`/users/${p}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="hover:text-zinc-900"
+                            >
+                              {name ?? short}{name && <span className="text-zinc-400"> ({short})</span>}
+                            </Link>
+                          </span>
+                        );
+                      })}
+                    </span>
+                    <svg className="w-4 h-4 text-zinc-300 shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </>
+                )}
               </div>
             );
           })}
