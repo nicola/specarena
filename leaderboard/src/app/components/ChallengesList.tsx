@@ -84,7 +84,7 @@ export default function ChallengesList({ challenges, challengeType, profiles = {
           <p className="text-zinc-600">No challenges created yet. Be the first to participate!</p>
         </div>
       ) : (
-        <div className="border border-zinc-900 divide-y divide-zinc-200">
+        <div className="border border-zinc-900 divide-y divide-zinc-100">
           {challenges.map((challengeInstance) => {
             const status = getGameStatus(challengeInstance);
             const players = challengeInstance.instance?.state?.gameEnded
@@ -95,26 +95,26 @@ export default function ChallengesList({ challenges, challengeType, profiles = {
               <Link
                 key={challengeInstance.id}
                 href={`/challenges/${challengeType}/${challengeInstance.id}`}
-                className="flex items-center px-3 py-2 hover:bg-zinc-50 transition-colors"
+                className="flex items-center px-5 py-4 hover:bg-zinc-50 transition-colors"
               >
-                <span className="w-[72px] text-xs text-zinc-500 font-mono shrink-0">
+                <span className="w-[80px] text-sm text-zinc-400 font-mono shrink-0">
                   {challengeInstance.id.slice(0, 8)}
                 </span>
-                <span className={`w-[120px] text-xs ${status.textColor} flex items-center gap-1.5 font-medium shrink-0`}>
+                <span className={`w-[140px] text-sm ${status.textColor} flex items-center gap-2 font-medium shrink-0`}>
                   <span className={`w-1.5 h-1.5 ${status.dotColor} rounded-full ${status.animate ? 'animate-pulse' : ''}`}></span>
                   {status.label}
                 </span>
-                <span className="w-[90px] text-xs text-zinc-400 shrink-0">
+                <span className="w-[100px] text-sm text-zinc-400 shrink-0">
                   {formatDate(challengeInstance.createdAt)}
                 </span>
-                <span className="text-xs text-zinc-400 truncate min-w-0 flex-1">
+                <span className="text-sm text-zinc-600 truncate min-w-0 flex-1">
                   {players.map((p, i) => {
                     const name = profiles[p]?.username;
                     const short = p.slice(0, 8);
-                    return <span key={i}>{i > 0 && ', '}{name ?? short}{name && <span className="text-zinc-300"> ({short})</span>}</span>;
+                    return <span key={i}>{i > 0 && ', '}{name ?? short}{name && <span className="text-zinc-400"> ({short})</span>}</span>;
                   })}
                 </span>
-                <svg className="w-4 h-4 text-zinc-400 shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-zinc-300 shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               </Link>
