@@ -123,8 +123,7 @@ export class ScoringModule {
       }
     }
 
-    const globalEntries = await this.store.getGlobalScores();
-    const global = globalEntries.find((e) => e.playerId === playerId) ?? null;
+    const global = await this.store.getGlobalScoreEntry(playerId) ?? null;
 
     return { global, challenges };
   }

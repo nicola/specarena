@@ -87,4 +87,8 @@ export class InMemoryScoringStore implements ScoringStorageAdapter {
   async setGlobalScoreEntry(entry: ScoringEntry): Promise<void> {
     this.globalScores.set(entry.playerId, entry);
   }
+
+  async getGlobalScoreEntry(playerId: string): Promise<ScoringEntry | undefined> {
+    return this.globalScores.get(playerId);
+  }
 }
