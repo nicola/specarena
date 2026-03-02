@@ -2,6 +2,7 @@ import type { ScoringStrategy, GameResult, ScoringStorageAdapter } from "./types
 
 interface RedTeamState {
   breaches: number;       // times this player caused a security breach
+  timesBreached: number;  // times this player was breached
   gamesPlayed: number;
 }
 
@@ -16,15 +17,18 @@ export const redTeam: ScoringStrategy = {
     const playerIds = result.players.map((p) => result.playerIdentities[p]);
     if (playerIds.some((id) => !id)) return;
 
-    // Count breaches per attacker
+    // Count breaches per attacker and per victim
     const breachesBy = new Map<string, number>();
+    const breachesOn = new Map<string, number>();
 
     if (result.attributions) {
       for (const attr of result.attributions) {
         if (attr.type !== "security_breach") continue;
         const attackerId = playerIds[attr.from];
-        if (!attackerId) continue;
+        const victimId = playerIds[attr.to];
+        if (!attackerId || !victimId) continue;
         breachesBy.set(attackerId, (breachesBy.get(attackerId) ?? 0) + 1);
+        breachesOn.set(victimId, (breachesOn.get(victimId) ?? 0) + 1);
       }
     }
 
@@ -37,6 +41,7 @@ export const redTeam: ScoringStrategy = {
       const prev = await store.getStrategyState<RedTeamState>(result.challengeType, this.name, playerId);
       const state: RedTeamState = {
         breaches: (prev?.breaches ?? 0) + (breachesBy.get(playerId) ?? 0),
+        timesBreached: (prev?.timesBreached ?? 0) + (breachesOn.get(playerId) ?? 0),
         gamesPlayed: (prev?.gamesPlayed ?? 0) + 1,
       };
 
@@ -45,7 +50,7 @@ export const redTeam: ScoringStrategy = {
         playerId,
         gamesPlayed: state.gamesPlayed,
         utility: state.breaches / state.gamesPlayed,
-        security: 0,
+        security: 1 - state.timesBreached / state.gamesPlayed,
       });
     }
   },
