@@ -1,10 +1,40 @@
 import ChallengePrompt from "@/app/components/ChallengePrompt";
 import ChallengesList from "@/app/components/ChallengesList";
+import LeaderboardGraph from "@/app/components/LeaderboardGraph";
 import Link from "next/link";
 import { Metadata } from "next";
 import { ChallengeMetadata } from "@arena/engine/types";
 import type { UserProfile } from "@arena/engine/users";
 import { ENGINE_URL } from "@/lib/config";
+
+interface ScoringEntry {
+  playerId: string;
+  gamesPlayed: number;
+  metrics: Record<string, number>;
+  username?: string;
+  model?: string;
+}
+
+async function fetchChallengeScoring(challengeType: string): Promise<Record<string, ScoringEntry[]>> {
+  try {
+    const res = await fetch(`${ENGINE_URL}/api/scoring/${challengeType}`, { cache: "no-store" });
+    if (!res.ok) return {};
+    return await res.json();
+  } catch {
+    return {};
+  }
+}
+
+function graphDataFromScoring(data: Record<string, ScoringEntry[]>) {
+  const entries = data["average"] || Object.values(data)[0] || [];
+  const strategyPrefix = data["average"] ? "average" : Object.keys(data)[0] || "average";
+  return entries.map((entry) => ({
+    name: entry.username ?? entry.playerId.slice(0, 8),
+    securityPolicy: entry.metrics[`${strategyPrefix}:security`] ?? 0,
+    utility: entry.metrics[`${strategyPrefix}:utility`] ?? 0,
+    model: entry.model,
+  }));
+}
 
 async function fetchMetadata(name: string): Promise<ChallengeMetadata | null> {
   try {
@@ -35,21 +65,29 @@ export default async function ChallengePage({ params }: { params: Promise<{ name
     return <div>Challenge {name} not found</div>;
   }
 
-  // Fetch all challenges for this challenge type from the API
+  // Fetch challenges and scoring in parallel
   let challengesList: Array<{ id: string; name: string; createdAt: number; challengeType: string; invites: string[] }> = [];
   let profiles: Record<string, UserProfile> = {};
-  try {
-    const response = await fetch(`${ENGINE_URL}/api/challenges/${name}`, {
-      cache: 'no-store',
-    });
-    if (response.ok) {
-      const data = await response.json();
-      challengesList = data.challenges || [];
-      profiles = data.profiles || {};
-    }
-  } catch (error) {
-    console.error("Error fetching challenges:", error);
+  const [challengesResult, allScoring] = await Promise.all([
+    fetch(`${ENGINE_URL}/api/challenges/${name}`, { cache: 'no-store' })
+      .then(res => res.ok ? res.json() : null)
+      .catch(() => null),
+    fetchChallengeScoring(name),
+  ]);
+  if (challengesResult) {
+    challengesList = challengesResult.challenges || [];
+    profiles = challengesResult.profiles || {};
   }
+  const scoringData = graphDataFromScoring(allScoring);
+  const redTeamData = (allScoring["red-team"] || [])
+    .map((entry) => ({
+      name: entry.username ?? entry.playerId.slice(0, 8),
+      attack: entry.metrics["red-team:attack"] ?? 0,
+      model: entry.model,
+      gamesPlayed: entry.gamesPlayed,
+    }))
+    .filter((d) => d.attack > 0)
+    .sort((a, b) => b.attack - a.attack);
 
   return (
     <>
@@ -71,8 +109,55 @@ export default async function ChallengePage({ params }: { params: Promise<{ name
             </Link>
           </div>
         </div>
-        {/* Leaderboard Graph */}
         <ChallengePrompt prompt={challenge.prompt} />
+
+        {/* Leaderboard Graph */}
+        {scoringData.length > 0 && (
+          <div className="max-w-4xl mx-auto border border-zinc-900 p-8 mt-10 mb-10">
+            <LeaderboardGraph data={scoringData} />
+          </div>
+        )}
+
+        {/* Unbeaten + Red Team side by side */}
+        {(() => {
+          const unbeaten = scoringData.filter((d) => d.securityPolicy === 1);
+          if (unbeaten.length === 0 && redTeamData.length === 0) return null;
+          return (
+            <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-6">
+              {unbeaten.length > 0 && (
+                <div>
+                  <h2 className="text-lg font-semibold text-zinc-900 mb-4" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
+                    Unbeaten ({unbeaten.length})
+                  </h2>
+                  <div className="border border-zinc-900 divide-y divide-zinc-100">
+                    {unbeaten.map((player) => (
+                      <div key={player.name} className="flex items-center px-4 py-3">
+                        <span className="text-sm text-zinc-900 min-w-0 flex-1 truncate">{player.name}</span>
+                        <span className="text-xs font-mono text-zinc-400 shrink-0 pl-3">{player.utility.toFixed(2)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {redTeamData.length > 0 && (
+                <div>
+                  <h2 className="text-lg font-semibold text-zinc-900 mb-4" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
+                    Red Team ({redTeamData.length})
+                  </h2>
+                  <div className="border border-zinc-900 divide-y divide-zinc-100">
+                    {redTeamData.map((player, i) => (
+                      <div key={player.name} className="flex items-center px-4 py-3">
+                        <span className="w-[24px] text-xs text-zinc-400 shrink-0">{i + 1}</span>
+                        <span className="text-sm text-zinc-900 min-w-0 flex-1 truncate">{player.name}</span>
+                        <span className="text-xs font-mono text-zinc-400 shrink-0 pl-3">{player.attack.toFixed(2)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Challenges List */}
         <ChallengesList challenges={challengesList} challengeType={name} profiles={profiles} />
