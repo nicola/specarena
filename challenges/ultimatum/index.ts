@@ -53,14 +53,6 @@ export interface UltimatumParams {
   reservationValues?: number[];
 }
 
-/** A single entry in the action history log */
-interface ActionEntry {
-  round: number;
-  player: number;        // Player index (0-based)
-  action: string;        // "submit_offer" | "accept" | "reject" | "pass"
-  details?: unknown;     // Action-specific payload (e.g. the offer object)
-}
-
 /**
  * The game state tracked by the challenge operator.
  *
@@ -91,9 +83,6 @@ interface UltimatumGameState {
   turnOrder: number[];    // Ordered list of player indices for this round
   turnIndex: number;      // Position within turnOrder for the current turn
   turnOrderPolicy: "round_robin" | "random";
-
-  // --- History ---
-  actionHistory: ActionEntry[];
 }
 
 // ---------------------------------------------------------------------------
@@ -213,7 +202,6 @@ class UltimatumChallenge extends BaseChallenge<UltimatumGameState> {
         turnOrder: [],   // Populated in onGameStart
         turnIndex: 0,
         turnOrderPolicy: params.turnOrder,
-        actionHistory: [],
       },
       messaging,
     );
@@ -337,14 +325,6 @@ class UltimatumChallenge extends BaseChallenge<UltimatumGameState> {
     this.gameState.lastOfferBy = senderIndex;
     this.gameState.acceptances = new Set();
 
-    // Log the action
-    this.gameState.actionHistory.push({
-      round: this.gameState.round,
-      player: senderIndex,
-      action: "submit_offer",
-      details: offer,
-    });
-
     await this.broadcast(
       `Player ${senderIndex + 1} proposed a split: ${JSON.stringify(offer)}`,
     );
@@ -380,12 +360,6 @@ class UltimatumChallenge extends BaseChallenge<UltimatumGameState> {
 
     // Record the acceptance
     this.gameState.acceptances.add(senderIndex);
-
-    this.gameState.actionHistory.push({
-      round: this.gameState.round,
-      player: senderIndex,
-      action: "accept",
-    });
 
     await this.broadcast(
       `Player ${senderIndex + 1} accepted the offer.`,
@@ -429,12 +403,6 @@ class UltimatumChallenge extends BaseChallenge<UltimatumGameState> {
     this.gameState.lastOfferBy = null;
     this.gameState.acceptances = new Set();
 
-    this.gameState.actionHistory.push({
-      round: this.gameState.round,
-      player: senderIndex,
-      action: "reject",
-    });
-
     await this.broadcast(
       `Player ${senderIndex + 1} rejected the offer. The table is cleared.`,
     );
@@ -451,12 +419,6 @@ class UltimatumChallenge extends BaseChallenge<UltimatumGameState> {
    */
   private async onPass(message: ChatMessage, senderIndex: number): Promise<void> {
     this.assertTurn(senderIndex);
-
-    this.gameState.actionHistory.push({
-      round: this.gameState.round,
-      player: senderIndex,
-      action: "pass",
-    });
 
     await this.broadcast(`Player ${senderIndex + 1} passed.`);
 
