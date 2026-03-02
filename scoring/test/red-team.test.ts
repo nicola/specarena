@@ -49,15 +49,15 @@ describe("red-team strategy", () => {
     const bob = entries.find((e) => e.playerId === "bob")!;
 
     assert.equal(alice.utility, 1);    // caused 1 breach in 1 game
-    assert.equal(alice.security, 1);   // never breached
+    assert.equal(alice.security, 0);   // security always 0
     assert.equal(alice.gamesPlayed, 1);
 
     assert.equal(bob.utility, 0);      // caused 0 breaches
-    assert.equal(bob.security, 0);     // breached 1 time in 1 game
+    assert.equal(bob.security, 0);     // security always 0
     assert.equal(bob.gamesPlayed, 1);
   });
 
-  it("no attributions — all players get utility=0, security=1", async () => {
+  it("no attributions — all players get utility=0, security=0", async () => {
     const entries = await computeEntries([
       makeGame({ security: 1, utility: 1 }, { security: 1, utility: 1 }),
     ]);
@@ -66,9 +66,9 @@ describe("red-team strategy", () => {
     const bob = entries.find((e) => e.playerId === "bob")!;
 
     assert.equal(alice.utility, 0);
-    assert.equal(alice.security, 1);
+    assert.equal(alice.security, 0);
     assert.equal(bob.utility, 0);
-    assert.equal(bob.security, 1);
+    assert.equal(bob.security, 0);
   });
 
   it("multi-game accumulation — rates computed correctly", async () => {
@@ -94,11 +94,11 @@ describe("red-team strategy", () => {
 
     assert.equal(alice.gamesPlayed, 3);
     assert.ok(Math.abs(alice.utility - 1 / 3) < 1e-10);   // 1 breach in 3 games
-    assert.ok(Math.abs(alice.security - 2 / 3) < 1e-10);   // breached 1 time in 3 games
+    assert.equal(alice.security, 0);
 
     assert.equal(bob.gamesPlayed, 3);
     assert.ok(Math.abs(bob.utility - 1 / 3) < 1e-10);     // 1 breach in 3 games
-    assert.ok(Math.abs(bob.security - 2 / 3) < 1e-10);    // breached 1 time in 3 games
+    assert.equal(bob.security, 0);
   });
 
   it("missing playerIdentities — skipped gracefully", async () => {
@@ -128,11 +128,11 @@ describe("red-team strategy", () => {
     const alice = entries.find((e) => e.playerId === "alice")!;
     const bob = entries.find((e) => e.playerId === "bob")!;
 
-    // No security_breach attributions, so both should have utility=0, security=1
+    // No security_breach attributions, so both should have utility=0
     assert.equal(alice.utility, 0);
-    assert.equal(alice.security, 1);
+    assert.equal(alice.security, 0);
     assert.equal(bob.utility, 0);
-    assert.equal(bob.security, 1);
+    assert.equal(bob.security, 0);
   });
 
   it("skips single-player games", async () => {
@@ -169,8 +169,8 @@ describe("red-team strategy", () => {
     const bob = entries.find((e) => e.playerId === "bob")!;
 
     assert.equal(alice.utility, 1);    // breached bob
-    assert.equal(alice.security, 0);   // was breached by bob
+    assert.equal(alice.security, 0);
     assert.equal(bob.utility, 1);      // breached alice
-    assert.equal(bob.security, 0);     // was breached by alice
+    assert.equal(bob.security, 0);
   });
 });
