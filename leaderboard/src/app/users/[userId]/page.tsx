@@ -35,7 +35,7 @@ async function fetchUserScores(userId: string): Promise<PlayerScores | null> {
 }
 
 function formatScore(value: number): string {
-  return value >= 0 ? `+${value.toFixed(2)}` : value.toFixed(2);
+  return value.toFixed(2);
 }
 
 export default async function UserProfilePage({ params }: { params: Promise<{ userId: string }> }) {
