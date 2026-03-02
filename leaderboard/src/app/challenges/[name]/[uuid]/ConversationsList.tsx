@@ -2,12 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { CHALLENGE_CHANNEL_PREFIX, toChallengeChannel, type ChatMessage, type Score } from "@arena/engine/types";
-
-interface UserProfile {
-  userId: string;
-  username?: string;
-  model?: string;
-}
+import type { UserProfile } from "@arena/engine/users";
 
 interface GameEndedData {
   scores: Score[];
@@ -255,6 +250,16 @@ export default function ConversationsList({ uuid, engineUrl = "" }: Conversation
     return playerMap.get(name) ?? name;
   };
 
+  const renderName = (name: string) => {
+    const base = displayName(name);
+    if (gameEnded) {
+      const userId = gameEnded.playerIdentities[name];
+      const username = userId ? gameEnded.profiles?.[userId]?.username : undefined;
+      if (username) return <>{base} <span className="text-zinc-400 font-normal">({username})</span></>;
+    }
+    return base;
+  };
+
   if (loading && messages.length === 0) {
     return (
       <div className="p-8 text-center text-zinc-500">
@@ -375,7 +380,7 @@ export default function ConversationsList({ uuid, engineUrl = "" }: Conversation
                   {showSender && (
                     <div className="flex items-baseline gap-2 mb-1">
                       <span className="font-semibold text-sm text-zinc-900 cursor-default" title={message.from}>
-                        {displayName(message.from)}
+                        {renderName(message.from)}
                       </span>
                       {!isDirectMessage && (
                         <span className="text-xs text-zinc-500 bg-zinc-100 px-1.5 py-0.5 rounded">
