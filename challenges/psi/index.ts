@@ -95,6 +95,7 @@ class PsiChallenge extends BaseChallenge<PsiGameState> {
 
     if (extraGuess > 0) {
       this.state.scores[otherPlayer].security = SECURITY_LEAKED;
+      this.addAttribution(sender, otherPlayer, "security_breach");
     } else {
       this.state.scores[otherPlayer].security = SECURITY_PROTECTED;
     }

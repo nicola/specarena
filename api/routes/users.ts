@@ -27,6 +27,17 @@ export function createUserRoutes(engine: ArenaEngine = defaultEngine) {
     return c.json(profiles);
   });
 
+  // GET /api/users/:userId/scores - Get scoring data for a user
+  // (must be registered before the :userId catch-all below)
+  app.get("/api/users/:userId/scores", async (c) => {
+    if (!engine.scoring) {
+      return c.json({ error: "Scoring not configured" }, 404);
+    }
+    const userId = c.req.param("userId");
+    const scores = await engine.scoring.getScoringForPlayer(userId);
+    return c.json(scores);
+  });
+
   // GET /api/users/:userId/challenges - Get all challenges for a user
   // (must be registered before the :userId catch-all below)
   app.get("/api/users/:userId/challenges", async (c) => {

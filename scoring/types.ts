@@ -3,6 +3,12 @@ export interface Score {
   utility: number;
 }
 
+export interface Attribution {
+  from: number;   // attacker player index
+  to: number;     // victim player index
+  type: string;   // e.g. "security_breach"
+}
+
 /** Matches the shape emitted by endGame() + metadata. */
 export interface GameResult {
   gameId: string;
@@ -12,6 +18,7 @@ export interface GameResult {
   scores: Score[];
   players: string[];
   playerIdentities: Record<string, string>;
+  attributions?: Attribution[];
 }
 
 export interface ScoringEntry {
@@ -47,4 +54,10 @@ export interface ScoringStorageAdapter {
   setScoreEntry(challengeType: string, strategyName: string, entry: ScoringEntry): Promise<void>;
   getScoreEntry(challengeType: string, strategyName: string, playerId: string): Promise<ScoringEntry | undefined>;
   setGlobalScoreEntry(entry: ScoringEntry): Promise<void>;
+  getGlobalScoreEntry(playerId: string): Promise<ScoringEntry | undefined>;
+}
+
+export interface PlayerScores {
+  global: ScoringEntry | null;
+  challenges: Record<string, Record<string, ScoringEntry>>;
 }

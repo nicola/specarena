@@ -100,6 +100,16 @@ export abstract class BaseChallenge<TGameState = {}> implements ChallengeOperato
     await this.messaging.sendChallengeMessage(this.challengeId, "operator", content);
   }
 
+  // --- Attribution ---
+
+  // Record an attribution (e.g. which player caused a security breach).
+  protected addAttribution(from: number, to: number, type: string): void {
+    if (!this.state.attributions) {
+      this.state.attributions = [];
+    }
+    this.state.attributions.push({ from, to, type });
+  }
+
   // --- Game lifecycle ---
 
   // Standard game-finalization helper used by challenges after scoring.

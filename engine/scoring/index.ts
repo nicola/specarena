@@ -1,6 +1,7 @@
 import type {
   EngineConfig,
   GameResult,
+  PlayerScores,
   ScoringEntry,
   ScoringStrategy,
   GlobalScoringStrategy,
@@ -105,6 +106,28 @@ export class ScoringModule {
     return this.store.getGlobalScores();
   }
 
+  /** Get all scores (global + per-challenge) for a single player. */
+  async getScoringForPlayer(playerId: string): Promise<PlayerScores> {
+    const challengeTypes = this.config.challenges.map((c) => c.name);
+
+    const challenges: PlayerScores["challenges"] = {};
+    for (const ct of challengeTypes) {
+      const data = await this.store.getScores(ct);
+      const filtered: Record<string, ScoringEntry> = {};
+      for (const [strategy, entries] of Object.entries(data)) {
+        const entry = entries.find((e) => e.playerId === playerId);
+        if (entry) filtered[strategy] = entry;
+      }
+      if (Object.keys(filtered).length > 0) {
+        challenges[ct] = filtered;
+      }
+    }
+
+    const global = await this.store.getGlobalScoreEntry(playerId) ?? null;
+
+    return { global, challenges };
+  }
+
   /** Convert a completed Challenge to a GameResult. Returns null if game hasn't ended. */
   static challengeToGameResult(challenge: Challenge): GameResult | null {
     const state = challenge.instance?.state;
@@ -118,10 +141,11 @@ export class ScoringModule {
       scores: state.scores,
       players: state.players,
       playerIdentities: state.playerIdentities,
+      attributions: state.attributions,
     };
   }
 }
 
-export type { GameResult, ScoringEntry, ScoringStrategy, GlobalScoringStrategy, EngineConfig, ScoringConfig, ChallengeConfigEntry } from "./types";
+export type { GameResult, PlayerScores, ScoringEntry, ScoringStrategy, GlobalScoringStrategy, EngineConfig, ScoringConfig, ChallengeConfigEntry } from "./types";
 export type { ScoringStorageAdapter } from "./store";
 export { InMemoryScoringStore } from "./store";
