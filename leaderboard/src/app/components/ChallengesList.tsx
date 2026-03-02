@@ -94,11 +94,11 @@ export default function ChallengesList({ challenges, challengeType, profiles = {
           <div className="flex items-center px-5 py-3 text-xs text-zinc-400 uppercase tracking-wider border-b border-zinc-200">
             <span className="w-[80px] shrink-0">ID</span>
             <span className="w-[140px] max-sm:hidden shrink-0">Status</span>
-            <span className="w-[100px] shrink-0">Date</span>
+            <span className="w-[100px] shrink-0 max-sm:hidden">Date</span>
             <span className="min-w-0 flex-1">Player</span>
-            <span className="w-[70px] text-right shrink-0 pl-3">Utility</span>
-            <span className="w-[70px] text-right shrink-0 pl-3">Security</span>
-            <span className="w-4 ml-2 shrink-0"></span>
+            <span className="w-[70px] text-right shrink-0 pl-3"><span className="max-sm:hidden">Utility</span><span className="sm:hidden">U</span></span>
+            <span className="w-[70px] max-sm:mr-1 text-right shrink-0 pl-3"><span className="max-sm:hidden">Security</span><span className="sm:hidden">S</span></span>
+            <span className="w-4 ml-2 shrink-0 max-sm:hidden"></span>
           </div>
           {challenges.map((challengeInstance) => {
             const status = getGameStatus(challengeInstance);
@@ -113,15 +113,15 @@ export default function ChallengesList({ challenges, challengeType, profiles = {
                 onClick={() => router.push(challengeHref)}
                 className="flex items-start px-5 py-4 hover:bg-zinc-50 transition-colors cursor-pointer"
               >
-                <span className={`w-1.5 h-1.5 ${status.dotColor} rounded-full ${status.animate ? 'animate-pulse' : ''} shrink-0 mr-3 sm:hidden`}></span>
-                <span className="w-[80px] text-sm text-zinc-400 font-mono shrink-0">
+                <span className={`w-1.5 h-1.5 mt-[7px] ${status.dotColor} rounded-full ${status.animate ? 'animate-pulse' : ''} shrink-0 mr-3 sm:hidden`}></span>
+                <span className="w-[80px] text-sm max-sm:text-xs max-sm:mt-0.5 text-zinc-400 font-mono shrink-0">
                   {challengeInstance.id.slice(0, 8)}
                 </span>
                 <span className={`w-[140px] max-sm:hidden text-sm ${status.textColor} flex items-center gap-2 font-medium shrink-0`}>
                   <span className={`w-1.5 h-1.5 ${status.dotColor} rounded-full ${status.animate ? 'animate-pulse' : ''}`}></span>
                   {status.label}
                 </span>
-                <span className="w-[100px] text-sm text-zinc-400 shrink-0">
+                <span className="w-[100px] text-sm text-zinc-400 shrink-0 max-sm:hidden">
                   {formatDate(challengeInstance.createdAt)}
                 </span>
                 {players.length > 0 && challengeInstance.instance?.state?.scores ? (
@@ -142,8 +142,8 @@ export default function ChallengesList({ challenges, challengeType, profiles = {
                             </Link>
                           </span>
                           <span className="w-[70px] text-right text-xs font-mono text-zinc-400 shrink-0 pl-3">{score?.utility ?? '–'}</span>
-                          <span className="w-[70px] text-right text-xs font-mono text-zinc-400 shrink-0 pl-3">{score?.security ?? '–'}</span>
-                          <span className="w-4 ml-2 shrink-0"></span>
+                          <span className="w-[70px] max-sm:mr-1 text-right text-xs font-mono text-zinc-400 shrink-0 pl-3">{score?.security ?? '–'}</span>
+                          <span className="w-4 ml-2 shrink-0 max-sm:hidden"></span>
                         </div>
                       );
                     })}
