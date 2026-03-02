@@ -17,6 +17,7 @@ interface ChallengeInstance {
       gameEnded?: boolean;
       players: string[];
       playerIdentities?: Record<string, string>;
+      scores?: { security: number; utility: number }[];
     };
   };
 }
@@ -101,7 +102,7 @@ export default function ChallengesList({ challenges, challengeType, profiles = {
               <div
                 key={challengeInstance.id}
                 onClick={() => router.push(challengeHref)}
-                className="flex items-center px-5 py-4 hover:bg-zinc-50 transition-colors cursor-pointer"
+                className="flex items-start px-5 py-4 hover:bg-zinc-50 transition-colors cursor-pointer"
               >
                 <span className={`w-1.5 h-1.5 ${status.dotColor} rounded-full ${status.animate ? 'animate-pulse' : ''} shrink-0 mr-3 sm:hidden`}></span>
                 <span className="w-[80px] text-sm text-zinc-400 font-mono shrink-0">
@@ -114,23 +115,61 @@ export default function ChallengesList({ challenges, challengeType, profiles = {
                 <span className="w-[100px] text-sm text-zinc-400 shrink-0">
                   {formatDate(challengeInstance.createdAt)}
                 </span>
-                <span className="text-sm text-zinc-600 truncate min-w-0 flex-1">
-                  {players.map((p, i) => {
-                    const name = profiles[p]?.username;
-                    const short = p.slice(0, 8);
-                    return (
-                      <span key={i}>
-                        {i > 0 && ', '}
-                        <Link
-                          href={`/users/${p}`}
-                          onClick={(e) => e.stopPropagation()}
-                          className="hover:text-zinc-900"
-                        >
-                          {name ?? short}{name && <span className="text-zinc-400"> ({short})</span>}
-                        </Link>
-                      </span>
-                    );
-                  })}
+                <span className="text-sm text-zinc-600 min-w-0 flex-1">
+                  {players.length > 0 && challengeInstance.instance?.state?.scores ? (
+                    <table className="w-full text-sm border-collapse table-fixed" onClick={(e) => e.stopPropagation()}>
+                      <colgroup>
+                        <col />
+                        <col className="w-[60px]" />
+                        <col className="w-[70px]" />
+                      </colgroup>
+                      <thead>
+                        <tr className="text-xs text-zinc-400">
+                          <th className="text-left font-normal">Player</th>
+                          <th className="text-right font-normal">Utility</th>
+                          <th className="text-right font-normal">Security</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {players.map((p, i) => {
+                          const name = profiles[p]?.username;
+                          const short = p.slice(0, 8);
+                          const score = challengeInstance.instance?.state?.scores?.[i];
+                          return (
+                            <tr key={i}>
+                              <td className="truncate">
+                                <Link
+                                  href={`/users/${p}`}
+                                  className="hover:text-zinc-900"
+                                >
+                                  {name ?? short}{name && <span className="text-zinc-400"> ({short})</span>}
+                                </Link>
+                              </td>
+                              <td className="text-right font-mono text-zinc-500">{score?.utility ?? '–'}</td>
+                              <td className="text-right font-mono text-zinc-500">{score?.security ?? '–'}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  ) : (
+                    players.map((p, i) => {
+                      const name = profiles[p]?.username;
+                      const short = p.slice(0, 8);
+                      return (
+                        <span key={i}>
+                          {i > 0 && ', '}
+                          <Link
+                            href={`/users/${p}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="hover:text-zinc-900"
+                          >
+                            {name ?? short}{name && <span className="text-zinc-400"> ({short})</span>}
+                          </Link>
+                        </span>
+                      );
+                    })
+                  )}
                 </span>
                 <svg className="w-4 h-4 text-zinc-300 shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
