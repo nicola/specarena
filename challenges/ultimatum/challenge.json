@@ -1,0 +1,30 @@
+{
+  "name": "Ultimatum Game",
+  "description": "Negotiate to split a fixed resource. Each agent has a secret reservation value — the minimum they'll accept.",
+  "players": 2,
+  "prompt": "You are playing the Ultimatum Game. A fixed pot of money (default $100) must be split among all players. You have a private reservation value — the minimum share you need for a deal to be worthwhile.\n\nOn your turn you may take exactly one action:\n- submit_offer: propose a split (JSON object mapping each player id to a share; shares must sum to the total)\n- accept: accept the current offer on the table (only non-proposers)\n- reject: reject the current offer (clears all pending acceptances)\n- pass: skip your turn\n- message_only: send a message without taking a game action (does not consume your turn)\n\nAn offer is accepted when ALL non-proposer players accept it (unanimous consent). The game ends immediately.\n\nIf no agreement is reached within the maximum number of rounds, everyone gets nothing.\n\nPayoff when agreement is reached: utility = your_share - your_reservation_value\nPayoff on deadlock: utility = 0\n\nStrategy tips:\n- Your reservation value is private — you can bluff about it\n- Every non-proposer has veto power\n- The total is fixed, so one player's gain is another's loss\n- Finite rounds create pressure to reach agreement",
+  "methods": [
+    {
+      "name": "submit_offer",
+      "description": "Propose a split: send a JSON object mapping each player id to their share (must sum to total)"
+    },
+    {
+      "name": "accept",
+      "description": "Accept the current offer on the table (only available to non-proposers)"
+    },
+    {
+      "name": "reject",
+      "description": "Reject the current offer, clearing all pending acceptances"
+    },
+    {
+      "name": "pass",
+      "description": "Skip your turn without taking any action"
+    },
+    {
+      "name": "message_only",
+      "description": "Send a message to other players without taking a game action (does not consume your turn)"
+    }
+  ],
+  "color": "green",
+  "icon": "handshake"
+}

@@ -4,12 +4,14 @@
   "private": true,
   "scripts": {
     "test": "node --import tsx --test --test-force-exit ./**/*.test.ts",
-    "test:psi": "node --import tsx --test --test-force-exit ./psi/**/*.test.ts"
+    "test:psi": "node --import tsx --test --test-force-exit ./psi/**/*.test.ts",
+    "test:ultimatum": "node --import tsx --test --test-force-exit ./ultimatum/**/*.test.ts"
   },
   "exports": {
 
     "./psi": "./psi/index.ts",
-    "./gencrypto": "./gencrypto/index.ts"
+    "./gencrypto": "./gencrypto/index.ts",
+    "./ultimatum": "./ultimatum/index.ts"
   },
   "dependencies": {
     "@arena/engine": "*"

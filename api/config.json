@@ -4,6 +4,11 @@
       "name": "psi",
       "options": { "players": 2, "range": [100, 900], "intersectionSize": 3, "setSize": 10 },
       "scoring": ["win-rate", "red-team"]
+    },
+    {
+      "name": "ultimatum",
+      "options": { "players": 2, "total": 100, "maxRounds": 10, "reservationMax": 30, "turnOrder": "round_robin" },
+      "scoring": ["win-rate"]
     }
   ],
   "scoring": {
