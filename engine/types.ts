@@ -16,8 +16,8 @@ export interface ChatMessage {
   redacted?: boolean;
 }
 
-import type { Score } from "@arena/scoring";
-export type { Score };
+import type { Score, Attribution } from "@arena/scoring";
+export type { Score, Attribution };
 
 export interface ChallengeOperatorState {
   gameStarted: boolean;
@@ -26,6 +26,7 @@ export interface ChallengeOperatorState {
   scores: Score[];
   players: string[];
   playerIdentities: Record<string, string>; // invite → userId
+  attributions?: Attribution[];
 }
 
 export interface ChallengeOperator {

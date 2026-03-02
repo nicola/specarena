@@ -1,4 +1,4 @@
-import type { ScoringEntry, ScoringStorageAdapter, PlayerScores } from "./types";
+import type { ScoringEntry, ScoringStorageAdapter } from "./types";
 
 export class InMemoryScoringStore implements ScoringStorageAdapter {
   /** challengeType → strategyName → playerId → ScoringEntry */
@@ -86,21 +86,5 @@ export class InMemoryScoringStore implements ScoringStorageAdapter {
 
   async setGlobalScoreEntry(entry: ScoringEntry): Promise<void> {
     this.globalScores.set(entry.playerId, entry);
-  }
-
-  async getScoresForPlayer(playerId: string): Promise<PlayerScores> {
-    const challenges: Record<string, Record<string, ScoringEntry>> = {};
-    for (const [challengeType, strategies] of this.scores) {
-      const strategyEntries: Record<string, ScoringEntry> = {};
-      for (const [strategyName, playerMap] of strategies) {
-        const entry = playerMap.get(playerId);
-        if (entry) strategyEntries[strategyName] = entry;
-      }
-      if (Object.keys(strategyEntries).length > 0) {
-        challenges[challengeType] = strategyEntries;
-      }
-    }
-    const globalEntry = this.globalScores.get(playerId) ?? null;
-    return { global: globalEntry, challenges };
   }
 }

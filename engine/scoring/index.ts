@@ -108,7 +108,25 @@ export class ScoringModule {
 
   /** Get all scores (global + per-challenge) for a single player. */
   async getScoringForPlayer(playerId: string): Promise<PlayerScores> {
-    return this.store.getScoresForPlayer(playerId);
+    const challengeTypes = this.config.challenges.map((c) => c.name);
+
+    const challenges: PlayerScores["challenges"] = {};
+    for (const ct of challengeTypes) {
+      const data = await this.store.getScores(ct);
+      const filtered: Record<string, ScoringEntry> = {};
+      for (const [strategy, entries] of Object.entries(data)) {
+        const entry = entries.find((e) => e.playerId === playerId);
+        if (entry) filtered[strategy] = entry;
+      }
+      if (Object.keys(filtered).length > 0) {
+        challenges[ct] = filtered;
+      }
+    }
+
+    const globalEntries = await this.store.getGlobalScores();
+    const global = globalEntries.find((e) => e.playerId === playerId) ?? null;
+
+    return { global, challenges };
   }
 
   /** Convert a completed Challenge to a GameResult. Returns null if game hasn't ended. */
