@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { ArenaEngine, defaultEngine } from "@arena/engine/engine";
 import { UserUpdateSchema } from "../schemas";
 import { getIdentity, IdentityEnv } from "./identity";
+import { collectUserProfiles } from "./challenges";
 
 export function createUserRoutes(engine: ArenaEngine = defaultEngine) {
   const app = new Hono<IdentityEnv>();
@@ -24,6 +25,15 @@ export function createUserRoutes(engine: ArenaEngine = defaultEngine) {
     }
     const profiles = await engine.users.getUsers(ids);
     return c.json(profiles);
+  });
+
+  // GET /api/users/:userId/challenges - Get all challenges for a user
+  // (must be registered before the :userId catch-all below)
+  app.get("/api/users/:userId/challenges", async (c) => {
+    const userId = c.req.param("userId");
+    const challenges = await engine.getChallengesByUserId(userId);
+    const profiles = await collectUserProfiles(engine, challenges);
+    return c.json({ challenges, count: challenges.length, profiles });
   });
 
   // GET /api/users/:userId - Get a single user profile

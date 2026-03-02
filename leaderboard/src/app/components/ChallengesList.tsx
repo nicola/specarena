@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { UserProfile } from "@arena/engine/users";
 
 interface ChallengeInstance {
@@ -74,10 +77,12 @@ const getGameStatus = (challengeInstance: ChallengeInstance) => {
 };
 
 export default function ChallengesList({ challenges, challengeType, profiles = {} }: ChallengesListProps) {
+  const router = useRouter();
+
   return (
     <div className="mt-12">
       <h2 className="text-2xl font-semibold text-zinc-900 mb-6" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
-        All Challenges ({challenges.length})
+        Challenges ({challenges.length})
       </h2>
       {challenges.length === 0 ? (
         <div className="border border-zinc-900 p-8 text-center">
@@ -91,16 +96,18 @@ export default function ChallengesList({ challenges, challengeType, profiles = {
               && challengeInstance.instance.state.playerIdentities
               ? Object.values(challengeInstance.instance.state.playerIdentities)
               : [];
+            const challengeHref = `/challenges/${challengeType || challengeInstance.challengeType}/${challengeInstance.id}`;
             return (
-              <Link
+              <div
                 key={challengeInstance.id}
-                href={`/challenges/${challengeType}/${challengeInstance.id}`}
-                className="flex items-center px-5 py-4 hover:bg-zinc-50 transition-colors"
+                onClick={() => router.push(challengeHref)}
+                className="flex items-center px-5 py-4 hover:bg-zinc-50 transition-colors cursor-pointer"
               >
+                <span className={`w-1.5 h-1.5 ${status.dotColor} rounded-full ${status.animate ? 'animate-pulse' : ''} shrink-0 mr-3 sm:hidden`}></span>
                 <span className="w-[80px] text-sm text-zinc-400 font-mono shrink-0">
                   {challengeInstance.id.slice(0, 8)}
                 </span>
-                <span className={`w-[140px] text-sm ${status.textColor} flex items-center gap-2 font-medium shrink-0`}>
+                <span className={`w-[140px] max-sm:hidden text-sm ${status.textColor} flex items-center gap-2 font-medium shrink-0`}>
                   <span className={`w-1.5 h-1.5 ${status.dotColor} rounded-full ${status.animate ? 'animate-pulse' : ''}`}></span>
                   {status.label}
                 </span>
@@ -111,13 +118,24 @@ export default function ChallengesList({ challenges, challengeType, profiles = {
                   {players.map((p, i) => {
                     const name = profiles[p]?.username;
                     const short = p.slice(0, 8);
-                    return <span key={i}>{i > 0 && ', '}{name ?? short}{name && <span className="text-zinc-400"> ({short})</span>}</span>;
+                    return (
+                      <span key={i}>
+                        {i > 0 && ', '}
+                        <Link
+                          href={`/users/${p}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="hover:text-zinc-900"
+                        >
+                          {name ?? short}{name && <span className="text-zinc-400"> ({short})</span>}
+                        </Link>
+                      </span>
+                    );
                   })}
                 </span>
                 <svg className="w-4 h-4 text-zinc-300 shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
-              </Link>
+              </div>
             );
           })}
         </div>

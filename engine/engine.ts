@@ -182,6 +182,10 @@ export class ArenaEngine {
     return undefined;
   }
 
+  async getChallengesByUserId(userId: string): Promise<Challenge[]> {
+    return this.storageAdapter.getChallengesByUserId(userId);
+  }
+
   async getChallengesByType(challengeType: string): Promise<Challenge[]> {
     return (await this.storageAdapter.listChallenges())
       .filter((c) => c.challengeType === challengeType && !this.isChallengeStale(c))

@@ -4,7 +4,7 @@ import type { Challenge } from "@arena/engine/types";
 import type { UserProfile } from "@arena/engine/users";
 
 /** Collect all user profiles referenced in playerIdentities across challenges. */
-async function collectUserProfiles(
+export async function collectUserProfiles(
   engine: ArenaEngine,
   challenges: Challenge[],
 ): Promise<Record<string, UserProfile>> {

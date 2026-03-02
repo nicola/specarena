@@ -5,6 +5,7 @@ export interface ArenaStorageAdapter {
   listChallenges(): Promise<Challenge[]>;
   getChallenge(challengeId: string): Promise<Challenge | undefined>;
   getChallengeFromInvite(invite: string): Promise<Challenge | undefined>;
+  getChallengesByUserId(userId: string): Promise<Challenge[]>;
   setChallenge(challenge: Challenge): Promise<void>;
   deleteChallenge(challengeId: string): Promise<void>;
 }
@@ -29,6 +30,15 @@ export class InMemoryArenaStorageAdapter implements ArenaStorageAdapter {
   async getChallengeFromInvite(invite: string): Promise<Challenge | undefined> {
     const challengeId = this.inviteToChallengeId[invite];
     return challengeId ? this.challengesById[challengeId] : undefined;
+  }
+
+  async getChallengesByUserId(userId: string): Promise<Challenge[]> {
+    return Object.values(this.challengesById)
+      .filter((c) => {
+        const identities = c.instance?.state?.playerIdentities;
+        return identities && Object.values(identities).includes(userId);
+      })
+      .sort((a, b) => b.createdAt - a.createdAt);
   }
 
   async setChallenge(challenge: Challenge): Promise<void> {

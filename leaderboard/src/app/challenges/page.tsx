@@ -84,6 +84,24 @@ export default async function ChallengesPage() {
                 />
               );
             })}
+
+            <div className="flex flex-col border border-dashed border-zinc-300 overflow-hidden h-full">
+              <div className="relative h-48 bg-zinc-50 flex items-center justify-center flex-shrink-0 border-b border-dashed border-zinc-300">
+                <svg viewBox="0 0 100 100" className="w-32 h-32 text-zinc-300">
+                  <line x1="50" y1="30" x2="50" y2="70" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+                  <line x1="30" y1="50" x2="70" y2="50" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+                </svg>
+              </div>
+              <div className="bg-white p-6 flex flex-col gap-3 flex-1 min-h-0">
+                <div className="flex flex-col gap-3">
+                  <h4 className="text-lg font-medium text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>Design a challenge</h4>
+                  <p className="text-sm text-zinc-700">We are looking for challenge designers! If you have an idea for a new challenge, reach out to us.</p>
+                </div>
+                <a href="https://github.com/nicolapps/arena" className="mt-auto px-4 py-2 border border-zinc-300 text-zinc-400 rounded-md text-sm text-center">
+                  Get in touch
+                </a>
+              </div>
+            </div>
           </div>
         </div>
       </div>
