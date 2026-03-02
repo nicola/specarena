@@ -38,6 +38,13 @@ describe("global-average strategy", () => {
     return store.getGlobalScores();
   }
 
+  it("declares metric descriptors", () => {
+    assert.deepStrictEqual(globalAverage.metrics, [
+      { key: "global-average:security", label: "Security" },
+      { key: "global-average:utility", label: "Utility" },
+    ]);
+  });
+
   it("returns empty for no games", async () => {
     const entries = await computeGlobal([]);
     assert.deepStrictEqual(entries, []);
@@ -52,12 +59,12 @@ describe("global-average strategy", () => {
     const alice = entries.find((e) => e.playerId === "alice")!;
     const bob = entries.find((e) => e.playerId === "bob")!;
 
-    assert.equal(alice.security, 1);
-    assert.equal(alice.utility, 1);
+    assert.equal(alice.metrics["global-average:security"], 1);
+    assert.equal(alice.metrics["global-average:utility"], 1);
     assert.equal(alice.gamesPlayed, 2);
 
-    assert.equal(bob.security, -1);
-    assert.equal(bob.utility, -1);
+    assert.equal(bob.metrics["global-average:security"], -1);
+    assert.equal(bob.metrics["global-average:utility"], -1);
     assert.equal(bob.gamesPlayed, 2);
   });
 
@@ -74,13 +81,13 @@ describe("global-average strategy", () => {
     const bob = entries.find((e) => e.playerId === "bob")!;
 
     // alice: psi avg=(1,1) 2 games, gencrypto avg=(-1,-1) 3 games → global avg=(0,0), totalGames=5
-    assert.equal(alice.security, 0);
-    assert.equal(alice.utility, 0);
+    assert.equal(alice.metrics["global-average:security"], 0);
+    assert.equal(alice.metrics["global-average:utility"], 0);
     assert.equal(alice.gamesPlayed, 5);
 
     // bob: psi avg=(-1,-1) 2 games, gencrypto avg=(1,1) 3 games → global avg=(0,0), totalGames=5
-    assert.equal(bob.security, 0);
-    assert.equal(bob.utility, 0);
+    assert.equal(bob.metrics["global-average:security"], 0);
+    assert.equal(bob.metrics["global-average:utility"], 0);
     assert.equal(bob.gamesPlayed, 5);
   });
 
@@ -103,13 +110,13 @@ describe("global-average strategy", () => {
 
     const alice = entries.find((e) => e.playerId === "alice")!;
     // alice only in psi → challengeCount=1 → avg = psi scores
-    assert.equal(alice.security, 1);
-    assert.equal(alice.utility, 1);
+    assert.equal(alice.metrics["global-average:security"], 1);
+    assert.equal(alice.metrics["global-average:utility"], 1);
     assert.equal(alice.gamesPlayed, 2);
 
     const charlie = entries.find((e) => e.playerId === "charlie")!;
-    assert.equal(charlie.security, 0.5);
-    assert.equal(charlie.utility, 0.5);
+    assert.equal(charlie.metrics["global-average:security"], 0.5);
+    assert.equal(charlie.metrics["global-average:utility"], 0.5);
     assert.equal(charlie.gamesPlayed, 1);
   });
 
@@ -133,8 +140,8 @@ describe("global-average strategy", () => {
     // psi avg: security=(1+1+0.6+0.6)/4=0.8, utility=(0+0+0.4+0.4)/4=0.2
     // gencrypto avg: security=0.2, utility=0.8
     // global avg: security=(0.8+0.2)/2=0.5, utility=(0.2+0.8)/2=0.5
-    assert.ok(Math.abs(alice.security - 0.5) < 1e-10);
-    assert.ok(Math.abs(alice.utility - 0.5) < 1e-10);
+    assert.ok(Math.abs(alice.metrics["global-average:security"] - 0.5) < 1e-10);
+    assert.ok(Math.abs(alice.metrics["global-average:utility"] - 0.5) < 1e-10);
     assert.equal(alice.gamesPlayed, 6);
   });
 });

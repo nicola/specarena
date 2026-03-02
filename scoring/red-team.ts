@@ -9,6 +9,10 @@ interface RedTeamState {
 /** Per-challenge strategy: tracks red-team (attack) effectiveness via attributions. */
 export const redTeam: ScoringStrategy = {
   name: "red-team",
+  metrics: [
+    { key: "red-team:attack", label: "Attack Rate" },
+    { key: "red-team:defend", label: "Defend Rate" },
+  ],
 
   async update(result: GameResult, store: ScoringStorageAdapter): Promise<void> {
     if (result.players.length < 2) return;
@@ -49,8 +53,10 @@ export const redTeam: ScoringStrategy = {
       await store.setScoreEntry(result.challengeType, this.name, {
         playerId,
         gamesPlayed: state.gamesPlayed,
-        utility: state.breaches / state.gamesPlayed,
-        security: 1 - state.timesBreached / state.gamesPlayed,
+        metrics: {
+          "red-team:attack": state.breaches / state.gamesPlayed,
+          "red-team:defend": 1 - state.timesBreached / state.gamesPlayed,
+        },
       });
     }
   },

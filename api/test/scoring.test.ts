@@ -58,13 +58,13 @@ describe("ScoringModule", () => {
 
     assert.ok(alice);
     assert.equal(alice.gamesPlayed, 1);
-    assert.equal(alice.security, 1);
-    assert.equal(alice.utility, 0.8);
+    assert.equal(alice.metrics["average:security"], 1);
+    assert.equal(alice.metrics["average:utility"], 0.8);
 
     assert.ok(bob);
     assert.equal(bob.gamesPlayed, 1);
-    assert.equal(bob.security, 0.5);
-    assert.equal(bob.utility, 1);
+    assert.equal(bob.metrics["average:security"], 0.5);
+    assert.equal(bob.metrics["average:utility"], 1);
   });
 
   it("computes win-rate correctly for 2-player games", async () => {
@@ -78,11 +78,11 @@ describe("ScoringModule", () => {
     assert.ok(alice);
     assert.ok(bob);
     // Alice: security=1 > 0.5 (win), utility=0.8 < 1 (loss)
-    assert.equal(alice.security, 1);
-    assert.equal(alice.utility, 0);
+    assert.equal(alice.metrics["win-rate:security"], 1);
+    assert.equal(alice.metrics["win-rate:utility"], 0);
     // Bob: security loss, utility win
-    assert.equal(bob.security, 0);
-    assert.equal(bob.utility, 1);
+    assert.equal(bob.metrics["win-rate:security"], 0);
+    assert.equal(bob.metrics["win-rate:utility"], 1);
   });
 
   it("handles ties in win-rate as 0.5", async () => {
@@ -97,8 +97,8 @@ describe("ScoringModule", () => {
 
     const alice = wr.find((e: ScoringEntry) => e.playerId === "user-alice");
     assert.ok(alice);
-    assert.equal(alice.security, 0.5);
-    assert.equal(alice.utility, 0.5);
+    assert.equal(alice.metrics["win-rate:security"], 0.5);
+    assert.equal(alice.metrics["win-rate:utility"], 0.5);
   });
 
   it("averages across multiple games", async () => {
@@ -123,13 +123,13 @@ describe("ScoringModule", () => {
 
     assert.ok(alice);
     assert.equal(alice.gamesPlayed, 2);
-    assert.equal(alice.security, 0.5);
-    assert.equal(alice.utility, 0.5);
+    assert.equal(alice.metrics["average:security"], 0.5);
+    assert.equal(alice.metrics["average:utility"], 0.5);
 
     assert.ok(bob);
     assert.equal(bob.gamesPlayed, 2);
-    assert.equal(bob.security, 0.5);
-    assert.equal(bob.utility, 0.5);
+    assert.equal(bob.metrics["average:security"], 0.5);
+    assert.equal(bob.metrics["average:utility"], 0.5);
   });
 
   it("produces global scores", async () => {
@@ -158,8 +158,8 @@ describe("ScoringModule", () => {
     assert.ok(alice);
     // psi: security=1, utility=0.8; other-challenge: security=0, utility=0
     // global average: security=0.5, utility=0.4
-    assert.equal(alice.security, 0.5);
-    assert.equal(alice.utility, 0.4);
+    assert.equal(alice.metrics["global-average:security"], 0.5);
+    assert.equal(alice.metrics["global-average:utility"], 0.4);
     assert.equal(alice.gamesPlayed, 2);
   });
 
@@ -253,8 +253,8 @@ describe("ScoringModule", () => {
 
     assert.ok(alice);
     assert.equal(alice.gamesPlayed, 2);
-    assert.equal(alice.security, 0.5);
-    assert.equal(alice.utility, 0.5);
+    assert.equal(alice.metrics["average:security"], 0.5);
+    assert.equal(alice.metrics["average:utility"], 0.5);
 
     assert.ok(bob);
     assert.equal(bob.gamesPlayed, 1);
@@ -325,6 +325,18 @@ describe("ScoringModule", () => {
     assert.ok(bob);
     assert.equal(alice.gamesPlayed, games);
     assert.equal(bob.gamesPlayed, games);
+  });
+
+  it("getMetricDescriptors returns all strategy metrics", () => {
+    const descriptors = scoring.getMetricDescriptors();
+    assert.ok(descriptors.strategies["average"]);
+    assert.ok(descriptors.strategies["win-rate"]);
+    assert.ok(descriptors.strategies["red-team"]);
+    assert.ok(descriptors.global["global-average"]);
+    assert.deepStrictEqual(descriptors.strategies["average"], [
+      { key: "average:security", label: "Security" },
+      { key: "average:utility", label: "Utility" },
+    ]);
   });
 });
 

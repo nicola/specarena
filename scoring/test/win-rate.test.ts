@@ -36,6 +36,13 @@ describe("win-rate strategy", () => {
     return scores["win-rate"] ?? [];
   }
 
+  it("declares metric descriptors", () => {
+    assert.deepStrictEqual(winRate.metrics, [
+      { key: "win-rate:security", label: "Security" },
+      { key: "win-rate:utility", label: "Utility" },
+    ]);
+  });
+
   it("returns empty for no results", async () => {
     const entries = await computeEntries([]);
     assert.deepStrictEqual(entries, []);
@@ -49,12 +56,12 @@ describe("win-rate strategy", () => {
     const alice = entries.find((e) => e.playerId === "alice")!;
     const bob = entries.find((e) => e.playerId === "bob")!;
 
-    assert.equal(alice.security, 1);   // won security
-    assert.equal(alice.utility, 1);    // won utility
+    assert.equal(alice.metrics["win-rate:security"], 1);   // won security
+    assert.equal(alice.metrics["win-rate:utility"], 1);    // won utility
     assert.equal(alice.gamesPlayed, 1);
 
-    assert.equal(bob.security, 0);     // lost security
-    assert.equal(bob.utility, 0);      // lost utility
+    assert.equal(bob.metrics["win-rate:security"], 0);     // lost security
+    assert.equal(bob.metrics["win-rate:utility"], 0);      // lost utility
     assert.equal(bob.gamesPlayed, 1);
   });
 
@@ -66,10 +73,10 @@ describe("win-rate strategy", () => {
     const alice = entries.find((e) => e.playerId === "alice")!;
     const bob = entries.find((e) => e.playerId === "bob")!;
 
-    assert.equal(alice.security, 0.5);
-    assert.equal(alice.utility, 0.5);
-    assert.equal(bob.security, 0.5);
-    assert.equal(bob.utility, 0.5);
+    assert.equal(alice.metrics["win-rate:security"], 0.5);
+    assert.equal(alice.metrics["win-rate:utility"], 0.5);
+    assert.equal(bob.metrics["win-rate:security"], 0.5);
+    assert.equal(bob.metrics["win-rate:utility"], 0.5);
   });
 
   it("split dimensions — one wins security, other wins utility", async () => {
@@ -80,10 +87,10 @@ describe("win-rate strategy", () => {
     const alice = entries.find((e) => e.playerId === "alice")!;
     const bob = entries.find((e) => e.playerId === "bob")!;
 
-    assert.equal(alice.security, 1);   // won security
-    assert.equal(alice.utility, 0);    // lost utility
-    assert.equal(bob.security, 0);     // lost security
-    assert.equal(bob.utility, 1);      // won utility
+    assert.equal(alice.metrics["win-rate:security"], 1);   // won security
+    assert.equal(alice.metrics["win-rate:utility"], 0);    // lost utility
+    assert.equal(bob.metrics["win-rate:security"], 0);     // lost security
+    assert.equal(bob.metrics["win-rate:utility"], 1);      // won utility
   });
 
   it("two games — alternating winners gives 0.5 each", async () => {
@@ -95,12 +102,12 @@ describe("win-rate strategy", () => {
     const alice = entries.find((e) => e.playerId === "alice")!;
     const bob = entries.find((e) => e.playerId === "bob")!;
 
-    assert.equal(alice.security, 0.5);
-    assert.equal(alice.utility, 0.5);
+    assert.equal(alice.metrics["win-rate:security"], 0.5);
+    assert.equal(alice.metrics["win-rate:utility"], 0.5);
     assert.equal(alice.gamesPlayed, 2);
 
-    assert.equal(bob.security, 0.5);
-    assert.equal(bob.utility, 0.5);
+    assert.equal(bob.metrics["win-rate:security"], 0.5);
+    assert.equal(bob.metrics["win-rate:utility"], 0.5);
     assert.equal(bob.gamesPlayed, 2);
   });
 
@@ -114,10 +121,10 @@ describe("win-rate strategy", () => {
     const alice = entries.find((e) => e.playerId === "alice")!;
     const bob = entries.find((e) => e.playerId === "bob")!;
 
-    assert.ok(Math.abs(alice.security - 2 / 3) < 1e-10);
-    assert.ok(Math.abs(alice.utility - 2 / 3) < 1e-10);
-    assert.ok(Math.abs(bob.security - 1 / 3) < 1e-10);
-    assert.ok(Math.abs(bob.utility - 1 / 3) < 1e-10);
+    assert.ok(Math.abs(alice.metrics["win-rate:security"] - 2 / 3) < 1e-10);
+    assert.ok(Math.abs(alice.metrics["win-rate:utility"] - 2 / 3) < 1e-10);
+    assert.ok(Math.abs(bob.metrics["win-rate:security"] - 1 / 3) < 1e-10);
+    assert.ok(Math.abs(bob.metrics["win-rate:utility"] - 1 / 3) < 1e-10);
   });
 
   it("skips non-2-player games", async () => {

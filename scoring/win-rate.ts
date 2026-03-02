@@ -16,6 +16,10 @@ function dimensionWin(a: number, b: number): [number, number] {
 /** Per-challenge strategy: win fraction for 2-player games per dimension. Ties = 0.5. */
 export const winRate: ScoringStrategy = {
   name: "win-rate",
+  metrics: [
+    { key: "win-rate:security", label: "Security" },
+    { key: "win-rate:utility", label: "Utility" },
+  ],
 
   async update(result: GameResult, store: ScoringStorageAdapter): Promise<void> {
     if (result.players.length !== 2) return;
@@ -48,8 +52,10 @@ export const winRate: ScoringStrategy = {
       await store.setScoreEntry(result.challengeType, this.name, {
         playerId,
         gamesPlayed: state.count,
-        security: state.securityWins / state.count,
-        utility: state.utilityWins / state.count,
+        metrics: {
+          "win-rate:security": state.securityWins / state.count,
+          "win-rate:utility": state.utilityWins / state.count,
+        },
       });
     }
   },

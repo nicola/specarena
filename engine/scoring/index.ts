@@ -1,6 +1,7 @@
 import type {
   EngineConfig,
   GameResult,
+  MetricDescriptor,
   PlayerScores,
   ScoringEntry,
   ScoringStrategy,
@@ -128,6 +129,19 @@ export class ScoringModule {
     return { global, challenges };
   }
 
+  /** Get metric descriptors for all registered strategies. */
+  getMetricDescriptors(): { strategies: Record<string, MetricDescriptor[]>; global: Record<string, MetricDescriptor[]> } {
+    const strategies: Record<string, MetricDescriptor[]> = {};
+    for (const [name, strategy] of Object.entries(this.strategies)) {
+      strategies[name] = strategy.metrics;
+    }
+    const global: Record<string, MetricDescriptor[]> = {};
+    for (const [name, strategy] of Object.entries(this.globalStrategies)) {
+      global[name] = strategy.metrics;
+    }
+    return { strategies, global };
+  }
+
   /** Convert a completed Challenge to a GameResult. Returns null if game hasn't ended. */
   static challengeToGameResult(challenge: Challenge): GameResult | null {
     const state = challenge.instance?.state;
@@ -146,6 +160,6 @@ export class ScoringModule {
   }
 }
 
-export type { GameResult, PlayerScores, ScoringEntry, ScoringStrategy, GlobalScoringStrategy, EngineConfig, ScoringConfig, ChallengeConfigEntry } from "./types";
+export type { GameResult, PlayerScores, ScoringEntry, MetricDescriptor, ScoringStrategy, GlobalScoringStrategy, EngineConfig, ScoringConfig, ChallengeConfigEntry } from "./types";
 export type { ScoringStorageAdapter } from "./store";
 export { InMemoryScoringStore } from "./store";
