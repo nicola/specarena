@@ -64,10 +64,12 @@ Orchestrates challenge lifecycle:
 - **`challengeJoin(invite, userId?)`** — player joins via invite code
 - **`challengeMessage(challengeId, from, messageType, content)`** — route a player action to the challenge operator
 - **`challengeSync(channel, viewer, index)`** — fetch operator messages (visibility-filtered)
+- **`getChallengesByType(type)`** — list challenges of a given type (sorted by createdAt, excludes stale)
+- **`getChallengesByUserId(userId)`** — list challenges where a user participated
 - **`getPlayerIdentities(challengeId)`** — retrieve identity mappings (available after game ends)
-- **`getUser(userId)`** — get a user profile
-- **`updateUser(userId, updates)`** — create or merge-update a user profile
-- **`listUsers()`** — list all user profiles
+- **`resolvePlayerIdentity(challengeId, userIndex)`** — resolve a player's invite by position index
+- **`pruneStaleChallenges()`** — remove challenges older than 10 minutes that haven't ended
+- **`clearRuntimeState()`** — wipe all in-memory state (storage, chat, users)
 
 Composes a `ChatEngine` for all message transport and a `UserStorageAdapter` for user profiles.
 

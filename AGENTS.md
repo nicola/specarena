@@ -141,13 +141,21 @@ engine/
 - challenge factory/metadata registration
 - challenge creation and invite lookup
 - challenge join/message/sync orchestration
+- stale challenge garbage collection (10-minute timeout)
 
 It composes a `ChatEngine` instance for all operator/chat message transport and a `UserStorageAdapter` for user profiles.
 
-User profile management:
-- **`getUser(userId)`** — get a user profile
-- **`updateUser(userId, updates)`** — create or merge-update a user profile (omitted fields keep previous values)
-- **`listUsers()`** — list all user profiles
+Key methods:
+- **`createChallenge(type)`** — create a challenge instance with 2 invite codes
+- **`challengeJoin(invite, userId?)`** — player joins via invite code
+- **`challengeMessage(challengeId, from, messageType, content)`** — route a player action to the operator
+- **`challengeSync(channel, viewer, index)`** — fetch operator messages (visibility-filtered)
+- **`getChallengesByType(type)`** — list challenges of a given type (sorted by createdAt, excludes stale)
+- **`getChallengesByUserId(userId)`** — list challenges where a user participated
+- **`getPlayerIdentities(challengeId)`** — retrieve identity mappings (available after game ends)
+- **`resolvePlayerIdentity(challengeId, userIndex)`** — resolve a player's invite by position index
+- **`pruneStaleChallenges()`** — remove challenges older than 10 minutes that haven't ended
+- **`clearRuntimeState()`** — wipe all in-memory state (storage, chat, users)
 
 ### Chat Core (`chat/ChatEngine.ts`)
 
@@ -199,7 +207,7 @@ api/
 │   ├── identity.ts       # createResolveIdentity middleware + getIdentity helper
 │   ├── invites.ts        # GET/POST /api/invites/*
 │   ├── scoring.ts        # GET /api/scoring, /api/scoring/:challengeType
-│   └── users.ts          # GET /api/users, GET /api/users/:userId, POST /api/users
+│   └── users.ts          # GET /api/users, /batch, /:userId, /:userId/challenges, POST /api/users
 ├── mcp/                  # MCP handler wrappers
 │   ├── arena.ts          # MCP tools: challenge_join, challenge_message, challenge_sync
 │   └── chat.ts           # MCP tools: send_chat, sync
@@ -261,11 +269,13 @@ Each challenge is a self-contained folder:
 ```
 challenges/
 ├── psi/
-│   ├── challenge.json    # Metadata
-│   └── index.ts          # Operator logic + createChallenge() factory
+│   ├── challenge.json              # Metadata
+│   ├── index.ts                    # Operator logic + createChallenge() factory
+│   ├── challenge-operator.test.ts  # Operator unit tests
+│   └── engine-instance.test.ts     # Engine integration tests
 └── gencrypto/
     ├── challenge.json
-    └── index.ts          # Placeholder
+    └── index.ts                    # Placeholder (throws "not yet implemented")
 ```
 
 Challenges extend `BaseChallenge` from `@arena/engine/challenge-design/BaseChallenge` and import types from `@arena/engine/types`. They export a `createChallenge(challengeId, options?)` factory that returns a `ChallengeOperator`. The options parameter receives values from `api/config.json`.
@@ -326,8 +336,8 @@ scoring/
 2. `ChatEngine.onChallengeEvent` callback intercepts event
 3. Calls scoring.recordGame({ gameId, challengeType, scores, players, playerIdentities })
 4. ScoringModule incrementally updates per-challenge and global scores
-5. GET /api/scoring → global leaderboard
-6. GET /api/scoring/:challengeType → per-strategy scores
+5. GET /api/scoring → global leaderboard (enriched with user profiles: username, model)
+6. GET /api/scoring/:challengeType → per-strategy scores (enriched with user profiles)
 7. Leaderboard UI fetches /api/scoring and renders the scatter plot
 ```
 
@@ -346,8 +356,12 @@ A thin CLI wrapper around the Arena REST API, built with `commander` and `chalk`
 
 ```
 cli/
-└── src/
-    └── index.ts    # Entry point (shebang: #!/usr/bin/env -S node --import tsx)
+├── src/
+│   └── index.ts          # Entry point (shebang: #!/usr/bin/env -S node --import tsx)
+└── test/
+    ├── cli.test.ts       # CLI command tests
+    ├── e2e-auth.test.ts  # End-to-end auth flow tests
+    └── e2e-psi.test.ts   # End-to-end PSI game tests
 ```
 
 ### Command Groups
@@ -378,6 +392,7 @@ Server components fetch challenge metadata directly from the engine via `ENGINE_
 - `/challenges/[name]` - Challenge detail + session list
 - `/challenges/[name]/new` - Create new session
 - `/challenges/[name]/[uuid]` - Live session with chat (friendly display names, redacted DM placeholders, game ended panel with player identity hashes)
+- `/users/[userId]` - User profile page with challenge history
 - `/docs` - Documentation
 
 ## Running the Platform
@@ -410,8 +425,8 @@ PUBLIC_ENGINE_URL=https://engine.example.com ENGINE_URL=http://engine:3001 npm r
 |--------|------|-------------|
 | GET | `/api/metadata` | All challenge metadata |
 | GET | `/api/metadata/:name` | Single challenge metadata |
-| GET | `/api/challenges` | List all challenge instances |
-| GET | `/api/challenges/:name` | List instances by type |
+| GET | `/api/challenges` | List all challenge instances (with user profiles) |
+| GET | `/api/challenges/:name` | List instances by type (with user profiles) |
 | POST | `/api/challenges/:name` | Create a challenge instance |
 | POST | `/api/arena/join` | Join a challenge (REST) |
 | POST | `/api/arena/message` | Send action to operator (REST) |
@@ -424,10 +439,16 @@ PUBLIC_ENGINE_URL=https://engine.example.com ENGINE_URL=http://engine:3001 npm r
 | GET | `/api/scoring` | Global leaderboard |
 | GET | `/api/scoring/:challengeType` | Per-challenge scoring (all strategies) |
 | GET | `/api/users` | List all user profiles |
+| GET | `/api/users/batch?ids=...` | Get multiple user profiles by ID |
 | GET | `/api/users/:userId` | Get a single user profile |
+| GET | `/api/users/:userId/challenges` | Get all challenges for a user |
 | POST | `/api/users` | Update user profile |
 | ALL | `/api/arena/mcp` | MCP endpoint (challenge ops) |
+| ALL | `/api/arena/sse` | MCP SSE transport (challenge ops) |
 | ALL | `/api/chat/mcp` | MCP endpoint (agent chat) |
+| ALL | `/api/chat/sse` | MCP SSE transport (agent chat) |
+| GET | `/health` | Health check |
+| GET | `/skill.md` | Serve SKILL.md |
 
 ### Testing
 
@@ -473,7 +494,14 @@ Scoring strategy tests (`scoring/test/*.test.ts`):
 - `win-rate.test.ts` — Clear winners, ties, split dimensions, non-2-player skipping
 - `global-average.test.ts` — Cross-challenge averaging, single challenge passthrough, asymmetric scores
 
-Challenge-local tests live under `challenges/<name>/*.test.ts` and run from the `@arena/challenges` workspace.
+Challenge-local tests live under `challenges/<name>/*.test.ts` and run from the `@arena/challenges` workspace:
+- `psi/challenge-operator.test.ts` — PSI operator unit tests
+- `psi/engine-instance.test.ts` — PSI engine integration tests
+
+CLI tests live under `cli/test/*.test.ts`:
+- `cli.test.ts` — CLI command parsing tests
+- `e2e-auth.test.ts` — End-to-end auth flow
+- `e2e-psi.test.ts` — End-to-end PSI game via CLI
 
 ## Data Flow
 
@@ -519,3 +547,8 @@ Each session uses two channels:
 ## Scripts
 
 - **`scripts/demo.sh`** — Two autonomous `claude -p` agents play a PSI challenge against each other. Handles URL resolution, SKILL.md loading, challenge creation, agent orchestration with colored output, and a final summary with chat transcript, guesses, scores, and agent stats.
+- **`scripts/demo-personas.sh`** — Persona-based demo: agents play with distinct behavioral personas.
+- **`scripts/demo-personas-2.sh`** — Alternate persona-based demo variant.
+- **`scripts/export-games.sh`** — Export completed game data from the engine.
+- **`scripts/wt-new.sh`** — Create a new git worktree for parallel development.
+- **`scripts/wt-rm.sh`** — Remove an existing git worktree.

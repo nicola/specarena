@@ -123,6 +123,8 @@ class ScoringModule {
 - `setGlobalScoreEntry(entry)`
 - `getStrategyState(challengeType, strategyName, playerId)` / `setStrategyState(...)`
 - `getGlobalStrategyState(playerId)` / `setGlobalStrategyState(...)`
+- `transaction(fn)` — serializes scoring write transactions to prevent race conditions
+- `waitForIdle()` — wait for all pending transactions to complete
 - `clear()`
 
 ## API Routes
