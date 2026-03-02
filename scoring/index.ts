@@ -14,5 +14,5 @@ export const globalStrategies: Record<string, GlobalScoringStrategy> = {
   "global-average": globalAverage,
 };
 
-export type { Score, GameResult, PlayerScores, ScoringEntry, ScoringStrategy, GlobalScoringStrategy, ScoringStorageAdapter } from "./types";
+export type { Score, Attribution, GameResult, PlayerScores, ScoringEntry, MetricDescriptor, ScoringStrategy, GlobalScoringStrategy, ScoringStorageAdapter } from "./types";
 export { InMemoryScoringStore } from "./store";

@@ -8,8 +8,7 @@ const engineUrl = process.env.ENGINE_URL || "http://localhost:3001";
 interface ScoringEntry {
   playerId: string;
   gamesPlayed: number;
-  security: number;
-  utility: number;
+  metrics: Record<string, number>;
   username?: string;
   model?: string;
 }
@@ -21,8 +20,8 @@ async function fetchGlobalScoring() {
     const data: ScoringEntry[] = await res.json();
     return data.map((entry) => ({
       name: entry.username ?? entry.playerId.slice(0, 8),
-      securityPolicy: entry.security,
-      utility: entry.utility,
+      securityPolicy: entry.metrics["global-average:security"] ?? 0,
+      utility: entry.metrics["global-average:utility"] ?? 0,
       model: entry.model,
     }));
   } catch {

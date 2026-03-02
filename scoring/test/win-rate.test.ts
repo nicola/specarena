@@ -21,7 +21,7 @@ function makeGame(
   };
 }
 
-describe("win-rate strategy", () => {
+describe("win-rate strategy (threshold-based)", () => {
   let store: InMemoryScoringStore;
 
   beforeEach(() => {
@@ -36,29 +36,19 @@ describe("win-rate strategy", () => {
     return scores["win-rate"] ?? [];
   }
 
+  it("declares metric descriptors", () => {
+    assert.deepStrictEqual(winRate.metrics, [
+      { key: "win-rate:security", label: "Security Win Rate" },
+      { key: "win-rate:utility", label: "Utility Win Rate" },
+    ]);
+  });
+
   it("returns empty for no results", async () => {
     const entries = await computeEntries([]);
     assert.deepStrictEqual(entries, []);
   });
 
-  it("clear winner — (1,1) vs (-1,-1)", async () => {
-    const entries = await computeEntries([
-      makeGame({ security: 1, utility: 1 }, { security: -1, utility: -1 }),
-    ]);
-
-    const alice = entries.find((e) => e.playerId === "alice")!;
-    const bob = entries.find((e) => e.playerId === "bob")!;
-
-    assert.equal(alice.security, 1);   // won security
-    assert.equal(alice.utility, 1);    // won utility
-    assert.equal(alice.gamesPlayed, 1);
-
-    assert.equal(bob.security, 0);     // lost security
-    assert.equal(bob.utility, 0);      // lost utility
-    assert.equal(bob.gamesPlayed, 1);
-  });
-
-  it("tie game — both get 0.5", async () => {
+  it("both players score >= 1 — both get win-rate 1", async () => {
     const entries = await computeEntries([
       makeGame({ security: 1, utility: 1 }, { security: 1, utility: 1 }),
     ]);
@@ -66,13 +56,13 @@ describe("win-rate strategy", () => {
     const alice = entries.find((e) => e.playerId === "alice")!;
     const bob = entries.find((e) => e.playerId === "bob")!;
 
-    assert.equal(alice.security, 0.5);
-    assert.equal(alice.utility, 0.5);
-    assert.equal(bob.security, 0.5);
-    assert.equal(bob.utility, 0.5);
+    assert.equal(alice.metrics["win-rate:security"], 1);
+    assert.equal(alice.metrics["win-rate:utility"], 1);
+    assert.equal(bob.metrics["win-rate:security"], 1);
+    assert.equal(bob.metrics["win-rate:utility"], 1);
   });
 
-  it("split dimensions — one wins security, other wins utility", async () => {
+  it("score < 1 counts as loss", async () => {
     const entries = await computeEntries([
       makeGame({ security: 1, utility: -1 }, { security: -1, utility: 1 }),
     ]);
@@ -80,47 +70,48 @@ describe("win-rate strategy", () => {
     const alice = entries.find((e) => e.playerId === "alice")!;
     const bob = entries.find((e) => e.playerId === "bob")!;
 
-    assert.equal(alice.security, 1);   // won security
-    assert.equal(alice.utility, 0);    // lost utility
-    assert.equal(bob.security, 0);     // lost security
-    assert.equal(bob.utility, 1);      // won utility
+    assert.equal(alice.metrics["win-rate:security"], 1);
+    assert.equal(alice.metrics["win-rate:utility"], 0);
+    assert.equal(bob.metrics["win-rate:security"], 0);
+    assert.equal(bob.metrics["win-rate:utility"], 1);
   });
 
-  it("two games — alternating winners gives 0.5 each", async () => {
+  it("both players lose — both get 0", async () => {
     const entries = await computeEntries([
-      makeGame({ security: 1, utility: 1 }, { security: -1, utility: -1 }),
-      makeGame({ security: -1, utility: -1 }, { security: 1, utility: 1 }),
+      makeGame({ security: -1, utility: -1 }, { security: -1, utility: -1 }),
     ]);
 
     const alice = entries.find((e) => e.playerId === "alice")!;
     const bob = entries.find((e) => e.playerId === "bob")!;
 
-    assert.equal(alice.security, 0.5);
-    assert.equal(alice.utility, 0.5);
-    assert.equal(alice.gamesPlayed, 2);
-
-    assert.equal(bob.security, 0.5);
-    assert.equal(bob.utility, 0.5);
-    assert.equal(bob.gamesPlayed, 2);
+    assert.equal(alice.metrics["win-rate:security"], 0);
+    assert.equal(alice.metrics["win-rate:utility"], 0);
+    assert.equal(bob.metrics["win-rate:security"], 0);
+    assert.equal(bob.metrics["win-rate:utility"], 0);
   });
 
-  it("three games — 2 wins out of 3", async () => {
+  it("multiple games — accumulates correctly", async () => {
     const entries = await computeEntries([
       makeGame({ security: 1, utility: 1 }, { security: -1, utility: -1 }),
-      makeGame({ security: 1, utility: 1 }, { security: -1, utility: -1 }),
-      makeGame({ security: -1, utility: -1 }, { security: 1, utility: 1 }),
+      makeGame({ security: 1, utility: -1 }, { security: 1, utility: 1 }),
+      makeGame({ security: -1, utility: 1 }, { security: 1, utility: -1 }),
     ]);
 
     const alice = entries.find((e) => e.playerId === "alice")!;
     const bob = entries.find((e) => e.playerId === "bob")!;
 
-    assert.ok(Math.abs(alice.security - 2 / 3) < 1e-10);
-    assert.ok(Math.abs(alice.utility - 2 / 3) < 1e-10);
-    assert.ok(Math.abs(bob.security - 1 / 3) < 1e-10);
-    assert.ok(Math.abs(bob.utility - 1 / 3) < 1e-10);
+    // alice: security wins 2/3, utility wins 2/3
+    assert.ok(Math.abs(alice.metrics["win-rate:security"] - 2 / 3) < 1e-10);
+    assert.ok(Math.abs(alice.metrics["win-rate:utility"] - 2 / 3) < 1e-10);
+    assert.equal(alice.gamesPlayed, 3);
+
+    // bob: security wins 2/3, utility wins 1/3
+    assert.ok(Math.abs(bob.metrics["win-rate:security"] - 2 / 3) < 1e-10);
+    assert.ok(Math.abs(bob.metrics["win-rate:utility"] - 1 / 3) < 1e-10);
+    assert.equal(bob.gamesPlayed, 3);
   });
 
-  it("skips non-2-player games", async () => {
+  it("works with any number of players (not just 2)", async () => {
     const entries = await computeEntries([
       {
         gameId: "g1",
@@ -133,7 +124,9 @@ describe("win-rate strategy", () => {
       },
     ]);
 
-    assert.deepStrictEqual(entries, []);
+    assert.equal(entries.length, 1);
+    assert.equal(entries[0].metrics["win-rate:security"], 1);
+    assert.equal(entries[0].metrics["win-rate:utility"], 1);
   });
 
   it("skips players without identity", async () => {
@@ -149,6 +142,7 @@ describe("win-rate strategy", () => {
       },
     ]);
 
-    assert.deepStrictEqual(entries, []);
+    assert.equal(entries.length, 1);
+    assert.equal(entries[0].playerId, "alice");
   });
 });

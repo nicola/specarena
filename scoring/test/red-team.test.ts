@@ -36,7 +36,14 @@ describe("red-team strategy", () => {
     return scores["red-team"] ?? [];
   }
 
-  it("attacker breaches victim — attacker utility=1", async () => {
+  it("declares metric descriptors", () => {
+    assert.deepStrictEqual(redTeam.metrics, [
+      { key: "red-team:attack", label: "Attack Rate" },
+      { key: "red-team:defend", label: "Defend Rate" },
+    ]);
+  });
+
+  it("attacker breaches victim — attack=1", async () => {
     const entries = await computeEntries([
       makeGame(
         { security: 1, utility: 1 },
@@ -48,16 +55,16 @@ describe("red-team strategy", () => {
     const attacker = entries.find((e) => e.playerId === "attacker")!;
     const victim = entries.find((e) => e.playerId === "victim")!;
 
-    assert.equal(attacker.utility, 1);     // caused 1 breach in 1 game
-    assert.equal(attacker.security, 1);   // never breached
+    assert.equal(attacker.metrics["red-team:attack"], 1);     // caused 1 breach in 1 game
+    assert.equal(attacker.metrics["red-team:defend"], 1);     // never breached
     assert.equal(attacker.gamesPlayed, 1);
 
-    assert.equal(victim.utility, 0);       // caused 0 breaches
-    assert.equal(victim.security, 0);      // breached 1 time in 1 game
+    assert.equal(victim.metrics["red-team:attack"], 0);       // caused 0 breaches
+    assert.equal(victim.metrics["red-team:defend"], 0);       // breached 1 time in 1 game
     assert.equal(victim.gamesPlayed, 1);
   });
 
-  it("no attributions — utility=0, security=1", async () => {
+  it("no attributions — attack=0, defend=1", async () => {
     const entries = await computeEntries([
       makeGame({ security: 1, utility: 1 }, { security: 1, utility: 1 }),
     ]);
@@ -65,10 +72,10 @@ describe("red-team strategy", () => {
     const attacker = entries.find((e) => e.playerId === "attacker")!;
     const victim = entries.find((e) => e.playerId === "victim")!;
 
-    assert.equal(attacker.utility, 0);
-    assert.equal(attacker.security, 1);  // never breached
-    assert.equal(victim.utility, 0);
-    assert.equal(victim.security, 1);    // never breached
+    assert.equal(attacker.metrics["red-team:attack"], 0);
+    assert.equal(attacker.metrics["red-team:defend"], 1);  // never breached
+    assert.equal(victim.metrics["red-team:attack"], 0);
+    assert.equal(victim.metrics["red-team:defend"], 1);    // never breached
   });
 
   it("multi-game — attack rate accumulates correctly", async () => {
@@ -93,12 +100,12 @@ describe("red-team strategy", () => {
     const victim = entries.find((e) => e.playerId === "victim")!;
 
     assert.equal(attacker.gamesPlayed, 3);
-    assert.ok(Math.abs(attacker.utility - 1 / 3) < 1e-10);  // 1 breach in 3 games
-    assert.ok(Math.abs(attacker.security - 2 / 3) < 1e-10); // breached 1 time in 3 games
+    assert.ok(Math.abs(attacker.metrics["red-team:attack"] - 1 / 3) < 1e-10);  // 1 breach in 3 games
+    assert.ok(Math.abs(attacker.metrics["red-team:defend"] - 2 / 3) < 1e-10);  // breached 1 time in 3 games
 
     assert.equal(victim.gamesPlayed, 3);
-    assert.ok(Math.abs(victim.utility - 1 / 3) < 1e-10);    // 1 breach in 3 games
-    assert.ok(Math.abs(victim.security - 2 / 3) < 1e-10);   // breached 1 time in 3 games
+    assert.ok(Math.abs(victim.metrics["red-team:attack"] - 1 / 3) < 1e-10);    // 1 breach in 3 games
+    assert.ok(Math.abs(victim.metrics["red-team:defend"] - 2 / 3) < 1e-10);    // breached 1 time in 3 games
   });
 
   it("missing playerIdentities — skipped gracefully", async () => {
@@ -128,10 +135,10 @@ describe("red-team strategy", () => {
     const attacker = entries.find((e) => e.playerId === "attacker")!;
     const victim = entries.find((e) => e.playerId === "victim")!;
 
-    assert.equal(attacker.utility, 0);
-    assert.equal(attacker.security, 1);  // never breached
-    assert.equal(victim.utility, 0);
-    assert.equal(victim.security, 1);    // never breached
+    assert.equal(attacker.metrics["red-team:attack"], 0);
+    assert.equal(attacker.metrics["red-team:defend"], 1);  // never breached
+    assert.equal(victim.metrics["red-team:attack"], 0);
+    assert.equal(victim.metrics["red-team:defend"], 1);    // never breached
   });
 
   it("single-player game — skipped", async () => {
@@ -150,7 +157,7 @@ describe("red-team strategy", () => {
     assert.deepStrictEqual(entries, []);
   });
 
-  it("mutual breach — both players get utility=1", async () => {
+  it("mutual breach — both players get attack=1", async () => {
     const entries = await computeEntries([
       makeGame(
         { security: -1, utility: 1 },
@@ -167,9 +174,9 @@ describe("red-team strategy", () => {
     const attacker = entries.find((e) => e.playerId === "attacker")!;
     const victim = entries.find((e) => e.playerId === "victim")!;
 
-    assert.equal(attacker.utility, 1);   // breached victim
-    assert.equal(attacker.security, 0); // was breached by victim
-    assert.equal(victim.utility, 1);    // breached attacker
-    assert.equal(victim.security, 0);   // was breached by attacker
+    assert.equal(attacker.metrics["red-team:attack"], 1);   // breached victim
+    assert.equal(attacker.metrics["red-team:defend"], 0);   // was breached by victim
+    assert.equal(victim.metrics["red-team:attack"], 1);     // breached attacker
+    assert.equal(victim.metrics["red-team:defend"], 0);     // was breached by attacker
   });
 });

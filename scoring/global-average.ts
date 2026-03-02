@@ -1,22 +1,25 @@
 import type { GlobalScoringStrategy, GameResult, ScoringStorageAdapter } from "./types";
 
 interface ChallengeSnapshot {
-  security: number;
-  utility: number;
+  metrics: Record<string, number>;
   gamesPlayed: number;
 }
 
 interface GlobalAvgState {
-  sumSecurity: number;
-  sumUtility: number;
+  /** Sum of per-challenge metric values, keyed by metric key (remapped to global-average:*) */
+  metricSums: Record<string, number>;
   challengeCount: number;
   totalGames: number;
   prevScores: Record<string, ChallengeSnapshot>;
 }
 
-/** Global strategy: averages per-challenge security and utility per player. Sums gamesPlayed. */
+/** Global strategy: averages per-challenge metrics per player. Sums gamesPlayed. */
 export const globalAverage: GlobalScoringStrategy = {
   name: "global-average",
+  metrics: [
+    { key: "global-average:security", label: "Security" },
+    { key: "global-average:utility", label: "Utility" },
+  ],
 
   async update(result: GameResult, store: ScoringStorageAdapter, challengeStrategyName: string): Promise<void> {
     const playerIds = new Set<string>();
@@ -30,33 +33,52 @@ export const globalAverage: GlobalScoringStrategy = {
       if (!current) continue;
 
       const state = await store.getGlobalStrategyState<GlobalAvgState>(playerId)
-        ?? { sumSecurity: 0, sumUtility: 0, challengeCount: 0, totalGames: 0, prevScores: {} };
+        ?? { metricSums: {}, challengeCount: 0, totalGames: 0, prevScores: {} };
 
       const prev = state.prevScores[result.challengeType];
       if (prev) {
-        state.sumSecurity += current.security - prev.security;
-        state.sumUtility += current.utility - prev.utility;
+        // Subtract old values, add new values
+        for (const [key, value] of Object.entries(current.metrics)) {
+          const globalKey = remapKey(challengeStrategyName, key);
+          state.metricSums[globalKey] = (state.metricSums[globalKey] ?? 0) + value - (prev.metrics[key] ?? 0);
+        }
         state.totalGames += current.gamesPlayed - prev.gamesPlayed;
       } else {
-        state.sumSecurity += current.security;
-        state.sumUtility += current.utility;
+        // First time seeing this challenge for this player
+        for (const [key, value] of Object.entries(current.metrics)) {
+          const globalKey = remapKey(challengeStrategyName, key);
+          state.metricSums[globalKey] = (state.metricSums[globalKey] ?? 0) + value;
+        }
         state.totalGames += current.gamesPlayed;
         state.challengeCount += 1;
       }
 
       state.prevScores[result.challengeType] = {
-        security: current.security,
-        utility: current.utility,
+        metrics: { ...current.metrics },
         gamesPlayed: current.gamesPlayed,
       };
 
       await store.setGlobalStrategyState(playerId, state);
+
+      const metrics: Record<string, number> = {};
+      for (const [key, sum] of Object.entries(state.metricSums)) {
+        metrics[key] = state.challengeCount > 0 ? sum / state.challengeCount : 0;
+      }
+
       await store.setGlobalScoreEntry({
         playerId,
         gamesPlayed: state.totalGames,
-        security: state.challengeCount > 0 ? state.sumSecurity / state.challengeCount : 0,
-        utility: state.challengeCount > 0 ? state.sumUtility / state.challengeCount : 0,
+        metrics,
       });
     }
   },
 };
+
+/** Remap a per-challenge metric key to a global one: "average:security" → "global-average:security" */
+function remapKey(strategyName: string, metricKey: string): string {
+  // Strip the strategy prefix and replace with global-average
+  const colonIdx = metricKey.indexOf(":");
+  if (colonIdx === -1) return `global-average:${metricKey}`;
+  const dimension = metricKey.slice(colonIdx + 1);
+  return `global-average:${dimension}`;
+}

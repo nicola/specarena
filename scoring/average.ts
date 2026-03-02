@@ -9,6 +9,10 @@ interface AverageState {
 /** Per-challenge strategy: mean security + utility per player across all their games. */
 export const average: ScoringStrategy = {
   name: "average",
+  metrics: [
+    { key: "average:security", label: "Security" },
+    { key: "average:utility", label: "Utility" },
+  ],
 
   async update(result: GameResult, store: ScoringStorageAdapter): Promise<void> {
     for (let i = 0; i < result.players.length; i++) {
@@ -29,8 +33,10 @@ export const average: ScoringStrategy = {
       await store.setScoreEntry(result.challengeType, this.name, {
         playerId,
         gamesPlayed: state.count,
-        security: state.sumSecurity / state.count,
-        utility: state.sumUtility / state.count,
+        metrics: {
+          "average:security": state.sumSecurity / state.count,
+          "average:utility": state.sumUtility / state.count,
+        },
       });
     }
   },

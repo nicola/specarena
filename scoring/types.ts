@@ -21,22 +21,28 @@ export interface GameResult {
   attributions?: Attribution[];
 }
 
+export interface MetricDescriptor {
+  key: string;
+  label: string;
+}
+
 export interface ScoringEntry {
   playerId: string;
   gamesPlayed: number;
-  security: number;
-  utility: number;
+  metrics: Record<string, number>;
 }
 
 /** Per-challenge: incrementally update scores for one game result. */
 export interface ScoringStrategy {
   readonly name: string;
+  readonly metrics: MetricDescriptor[];
   update(result: GameResult, store: ScoringStorageAdapter): Promise<void>;
 }
 
 /** Global: incrementally update global scores for one game result. */
 export interface GlobalScoringStrategy {
   readonly name: string;
+  readonly metrics: MetricDescriptor[];
   update(result: GameResult, store: ScoringStorageAdapter, challengeStrategyName: string): Promise<void>;
 }
 

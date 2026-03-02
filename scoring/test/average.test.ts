@@ -36,6 +36,13 @@ describe("average strategy", () => {
     return scores["average"] ?? [];
   }
 
+  it("declares metric descriptors", () => {
+    assert.deepStrictEqual(average.metrics, [
+      { key: "average:security", label: "Security" },
+      { key: "average:utility", label: "Utility" },
+    ]);
+  });
+
   it("returns empty for no results", async () => {
     const entries = await computeEntries([]);
     assert.deepStrictEqual(entries, []);
@@ -49,12 +56,12 @@ describe("average strategy", () => {
     const alice = entries.find((e) => e.playerId === "alice")!;
     const bob = entries.find((e) => e.playerId === "bob")!;
 
-    assert.equal(alice.security, 1);
-    assert.equal(alice.utility, 1);
+    assert.equal(alice.metrics["average:security"], 1);
+    assert.equal(alice.metrics["average:utility"], 1);
     assert.equal(alice.gamesPlayed, 1);
 
-    assert.equal(bob.security, -1);
-    assert.equal(bob.utility, -1);
+    assert.equal(bob.metrics["average:security"], -1);
+    assert.equal(bob.metrics["average:utility"], -1);
     assert.equal(bob.gamesPlayed, 1);
   });
 
@@ -67,12 +74,12 @@ describe("average strategy", () => {
     const alice = entries.find((e) => e.playerId === "alice")!;
     const bob = entries.find((e) => e.playerId === "bob")!;
 
-    assert.equal(alice.security, 0);
-    assert.equal(alice.utility, 0);
+    assert.equal(alice.metrics["average:security"], 0);
+    assert.equal(alice.metrics["average:utility"], 0);
     assert.equal(alice.gamesPlayed, 2);
 
-    assert.equal(bob.security, 0);
-    assert.equal(bob.utility, 0);
+    assert.equal(bob.metrics["average:security"], 0);
+    assert.equal(bob.metrics["average:utility"], 0);
     assert.equal(bob.gamesPlayed, 2);
   });
 
@@ -85,10 +92,10 @@ describe("average strategy", () => {
     const alice = entries.find((e) => e.playerId === "alice")!;
     const bob = entries.find((e) => e.playerId === "bob")!;
 
-    assert.equal(alice.security, 1);
-    assert.equal(alice.utility, 1);
-    assert.equal(bob.security, -1);
-    assert.equal(bob.utility, 1);
+    assert.equal(alice.metrics["average:security"], 1);
+    assert.equal(alice.metrics["average:utility"], 1);
+    assert.equal(bob.metrics["average:security"], -1);
+    assert.equal(bob.metrics["average:utility"], 1);
   });
 
   it("skips players without identity", async () => {
@@ -124,12 +131,12 @@ describe("average strategy", () => {
 
     const alice = entries.find((e) => e.playerId === "alice")!;
     assert.equal(alice.gamesPlayed, 2);
-    assert.equal(alice.security, 1); // (1+1)/2
-    assert.equal(alice.utility, 1); // (1+1)/2
+    assert.equal(alice.metrics["average:security"], 1); // (1+1)/2
+    assert.equal(alice.metrics["average:utility"], 1); // (1+1)/2
 
     const charlie = entries.find((e) => e.playerId === "charlie")!;
     assert.equal(charlie.gamesPlayed, 1);
-    assert.equal(charlie.security, 0);
-    assert.equal(charlie.utility, 0);
+    assert.equal(charlie.metrics["average:security"], 0);
+    assert.equal(charlie.metrics["average:utility"], 0);
   });
 });

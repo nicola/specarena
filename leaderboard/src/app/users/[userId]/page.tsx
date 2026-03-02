@@ -35,7 +35,7 @@ async function fetchUserScores(userId: string): Promise<PlayerScores | null> {
 }
 
 function formatScore(value: number): string {
-  return value >= 0 ? `+${value.toFixed(2)}` : value.toFixed(2);
+  return value.toFixed(2);
 }
 
 export default async function UserProfilePage({ params }: { params: Promise<{ userId: string }> }) {
@@ -85,32 +85,38 @@ export default async function UserProfilePage({ params }: { params: Promise<{ us
             <thead>
               <tr className="border-b border-zinc-200">
                 <th className="text-left py-2 pr-4 font-medium text-zinc-500">Challenge</th>
-                <th className="text-left py-2 pr-4 font-medium text-zinc-500">Strategy</th>
+                <th className="text-left py-2 pr-4 font-medium text-zinc-500">Metric</th>
                 <th className="text-right py-2 pr-4 font-medium text-zinc-500">Games</th>
-                <th className="text-right py-2 pr-4 font-medium text-zinc-500">Security</th>
-                <th className="text-right py-2 font-medium text-zinc-500">Utility</th>
+                <th className="text-right py-2 font-medium text-zinc-500">Score</th>
               </tr>
             </thead>
             <tbody>
-              {Object.entries(scores!.challenges).map(([challengeType, strategies]) =>
-                Object.entries(strategies).map(([strategy, entry], i) => (
-                  <tr key={`${challengeType}-${strategy}`} className="border-b border-zinc-100">
-                    <td className="py-2 pr-4 text-zinc-900">{i === 0 ? challengeType : ""}</td>
-                    <td className="py-2 pr-4 text-zinc-600">{strategy}</td>
-                    <td className="py-2 pr-4 text-right text-zinc-600 tabular-nums">{entry.gamesPlayed}</td>
-                    <td className="py-2 pr-4 text-right font-mono tabular-nums">{formatScore(entry.security)}</td>
-                    <td className="py-2 text-right font-mono tabular-nums">{formatScore(entry.utility)}</td>
+              {Object.entries(scores!.challenges).map(([challengeType, strategies]) => {
+                let isFirst = true;
+                return Object.entries(strategies).flatMap(([strategy, entry]) =>
+                  Object.entries(entry.metrics).map(([metricKey, value]) => {
+                    const showChallenge = isFirst;
+                    isFirst = false;
+                    return (
+                      <tr key={`${challengeType}-${metricKey}`} className="border-b border-zinc-100">
+                        <td className="py-2 pr-4 text-zinc-900">{showChallenge ? challengeType : ""}</td>
+                        <td className="py-2 pr-4 text-zinc-600">{metricKey}</td>
+                        <td className="py-2 pr-4 text-right text-zinc-600 tabular-nums">{showChallenge ? entry.gamesPlayed : ""}</td>
+                        <td className="py-2 text-right font-mono tabular-nums">{formatScore(value)}</td>
+                      </tr>
+                    );
+                  })
+                );
+              })}
+              {scores!.global && (
+                Object.entries(scores!.global.metrics).map(([metricKey, value], i) => (
+                  <tr key={`global-${metricKey}`} className={i === 0 ? "border-t border-zinc-300 font-medium" : "font-medium"}>
+                    <td className="py-2 pr-4 text-zinc-900">{i === 0 ? "Global" : ""}</td>
+                    <td className="py-2 pr-4 text-zinc-600">{metricKey}</td>
+                    <td className="py-2 pr-4 text-right text-zinc-600 tabular-nums">{i === 0 ? scores!.global!.gamesPlayed : ""}</td>
+                    <td className="py-2 text-right font-mono tabular-nums">{formatScore(value)}</td>
                   </tr>
                 ))
-              )}
-              {scores!.global && (
-                <tr className="border-t border-zinc-300 font-medium">
-                  <td className="py-2 pr-4 text-zinc-900">Global</td>
-                  <td className="py-2 pr-4 text-zinc-600">average</td>
-                  <td className="py-2 pr-4 text-right text-zinc-600 tabular-nums">{scores!.global.gamesPlayed}</td>
-                  <td className="py-2 pr-4 text-right font-mono tabular-nums">{formatScore(scores!.global.security)}</td>
-                  <td className="py-2 text-right font-mono tabular-nums">{formatScore(scores!.global.utility)}</td>
-                </tr>
               )}
             </tbody>
           </table>

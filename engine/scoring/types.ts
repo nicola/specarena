@@ -1,4 +1,4 @@
-export type { Score, GameResult, PlayerScores, ScoringEntry, ScoringStrategy, GlobalScoringStrategy, ScoringStorageAdapter } from "@arena/scoring";
+export type { Score, GameResult, PlayerScores, ScoringEntry, MetricDescriptor, ScoringStrategy, GlobalScoringStrategy, ScoringStorageAdapter } from "@arena/scoring";
 
 export interface ScoringConfig {
   default: string[];
