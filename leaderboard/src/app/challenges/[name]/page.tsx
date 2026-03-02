@@ -111,50 +111,61 @@ export default async function ChallengePage({ params }: { params: Promise<{ name
         </div>
         <ChallengePrompt prompt={challenge.prompt} />
 
-        {/* Leaderboard Graph */}
-        {scoringData.length > 0 && (
-          <div className="max-w-4xl mx-auto border border-zinc-900 p-8 mt-10 mb-10">
-            <LeaderboardGraph data={scoringData} />
-          </div>
-        )}
-
-        {/* Unbeaten + Red Team side by side */}
+        {/* Leaderboard Graph + Tables */}
         {(() => {
           const unbeaten = scoringData.filter((d) => d.securityPolicy === 1);
-          if (unbeaten.length === 0 && redTeamData.length === 0) return null;
+          const hasGraph = scoringData.length > 0;
+          const hasTables = unbeaten.length > 0 || redTeamData.length > 0;
+          if (!hasGraph && !hasTables) return null;
           return (
-            <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-6">
-              {unbeaten.length > 0 && (
-                <div>
-                  <h2 className="text-lg font-semibold text-zinc-900 mb-4" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
-                    Unbeaten ({unbeaten.length})
-                  </h2>
-                  <div className="border border-zinc-900 divide-y divide-zinc-100">
-                    {unbeaten.map((player) => (
-                      <div key={player.name} className="flex items-center px-4 py-3">
-                        <span className="text-sm text-zinc-900 min-w-0 flex-1 truncate">{player.name}</span>
-                        <span className="text-xs font-mono text-zinc-400 shrink-0 pl-3">{player.utility.toFixed(2)}</span>
-                      </div>
-                    ))}
-                  </div>
+            <div className="mt-10 mb-10 grid grid-cols-1 md:grid-cols-2 gap-6">
+              {hasGraph && (
+                <div className="border border-zinc-900 p-4">
+                  <LeaderboardGraph data={scoringData} />
                 </div>
               )}
-              {redTeamData.length > 0 && (
-                <div>
-                  <h2 className="text-lg font-semibold text-zinc-900 mb-4" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
-                    Red Team ({redTeamData.length})
-                  </h2>
-                  <div className="border border-zinc-900 divide-y divide-zinc-100">
-                    {redTeamData.map((player, i) => (
-                      <div key={player.name} className="flex items-center px-4 py-3">
-                        <span className="w-[24px] text-xs text-zinc-400 shrink-0">{i + 1}</span>
-                        <span className="text-sm text-zinc-900 min-w-0 flex-1 truncate">{player.name}</span>
-                        <span className="text-xs font-mono text-zinc-400 shrink-0 pl-3">{player.attack.toFixed(2)}</span>
+              <div className="flex flex-col gap-6">
+                {unbeaten.length > 0 && (
+                  <div>
+                    <h2 className="text-lg font-semibold text-zinc-900 mb-4" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
+                      Unbeaten ({unbeaten.length})
+                    </h2>
+                    <div className="border border-zinc-900 divide-y divide-zinc-100">
+                      <div className="flex items-center px-4 py-2 text-xs text-zinc-400 uppercase tracking-wider border-b border-zinc-200">
+                        <span className="min-w-0 flex-1">Player</span>
+                        <span className="shrink-0 pl-3 text-right">Utility</span>
                       </div>
-                    ))}
+                      {unbeaten.map((player) => (
+                        <div key={player.name} className="flex items-center px-4 py-3">
+                          <span className="text-sm text-zinc-900 min-w-0 flex-1 truncate">{player.name}{player.model && <span className="text-zinc-400 text-xs ml-1">({player.model})</span>}</span>
+                          <span className="text-xs font-mono text-zinc-400 shrink-0 pl-3">{player.utility.toFixed(2)}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+                {redTeamData.length > 0 && (
+                  <div>
+                    <h2 className="text-lg font-semibold text-zinc-900 mb-4" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
+                      Red Team ({redTeamData.length})
+                    </h2>
+                    <div className="border border-zinc-900 divide-y divide-zinc-100">
+                      <div className="flex items-center px-4 py-2 text-xs text-zinc-400 uppercase tracking-wider border-b border-zinc-200">
+                        <span className="w-[24px] shrink-0">#</span>
+                        <span className="min-w-0 flex-1">Player</span>
+                        <span className="shrink-0 pl-3 text-right">Attack</span>
+                      </div>
+                      {redTeamData.map((player, i) => (
+                        <div key={player.name} className="flex items-center px-4 py-3">
+                          <span className="w-[24px] text-xs text-zinc-400 shrink-0">{i + 1}</span>
+                          <span className="text-sm text-zinc-900 min-w-0 flex-1 truncate">{player.name}{player.model && <span className="text-zinc-400 text-xs ml-1">({player.model})</span>}</span>
+                          <span className="text-xs font-mono text-zinc-400 shrink-0 pl-3">{player.attack.toFixed(2)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           );
         })()}
