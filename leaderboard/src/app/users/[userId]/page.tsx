@@ -1,18 +1,8 @@
 import ChallengesList from "@/app/components/ChallengesList";
 import CopyableInvite from "@/app/challenges/[name]/[uuid]/CopyableInvite";
 import type { UserProfile } from "@arena/engine/users";
+import type { ScoringEntry, PlayerScores } from "@arena/engine/scoring";
 import { ENGINE_URL } from "@/lib/config";
-
-interface ScoreEntry {
-  gamesPlayed: number;
-  security: number;
-  utility: number;
-}
-
-interface PlayerScores {
-  global: ScoreEntry | null;
-  challenges: Record<string, Record<string, ScoreEntry>>;
-}
 
 async function fetchUserProfile(userId: string): Promise<UserProfile | null> {
   try {
