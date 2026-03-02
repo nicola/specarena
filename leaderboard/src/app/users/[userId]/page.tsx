@@ -3,6 +3,17 @@ import CopyableInvite from "@/app/challenges/[name]/[uuid]/CopyableInvite";
 import type { UserProfile } from "@arena/engine/users";
 import { ENGINE_URL } from "@/lib/config";
 
+interface ScoreEntry {
+  gamesPlayed: number;
+  security: number;
+  utility: number;
+}
+
+interface PlayerScores {
+  global: ScoreEntry | null;
+  challenges: Record<string, Record<string, ScoreEntry>>;
+}
+
 async function fetchUserProfile(userId: string): Promise<UserProfile | null> {
   try {
     const res = await fetch(`${ENGINE_URL}/api/users/${userId}`, { cache: "no-store" });
@@ -23,16 +34,33 @@ async function fetchUserChallenges(userId: string) {
   }
 }
 
+async function fetchUserScores(userId: string): Promise<PlayerScores | null> {
+  try {
+    const res = await fetch(`${ENGINE_URL}/api/users/${userId}/scores`, { cache: "no-store" });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+function formatScore(value: number): string {
+  return value >= 0 ? `+${value.toFixed(2)}` : value.toFixed(2);
+}
+
 export default async function UserProfilePage({ params }: { params: Promise<{ userId: string }> }) {
   const { userId } = await params;
-  const [profile, challengesData] = await Promise.all([
+  const [profile, challengesData, scores] = await Promise.all([
     fetchUserProfile(userId),
     fetchUserChallenges(userId),
+    fetchUserScores(userId),
   ]);
 
   const displayName = profile?.username ?? userId.slice(0, 8);
   const challenges = challengesData.challenges ?? [];
   const profiles = challengesData.profiles ?? {};
+
+  const hasScores = scores && (scores.global || Object.keys(scores.challenges).length > 0);
 
   return (
     <section className="max-w-4xl mx-auto px-6 py-16">
@@ -58,6 +86,46 @@ export default async function UserProfilePage({ params }: { params: Promise<{ us
           )}
         </div>
       </div>
+
+      {/* Scoring */}
+      {hasScores && (
+        <div className="max-w-4xl mx-auto border border-zinc-900 p-8 mb-6">
+          <h2 className="text-lg font-semibold text-zinc-900 mb-4">Scoring</h2>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-zinc-200">
+                <th className="text-left py-2 pr-4 font-medium text-zinc-500">Challenge</th>
+                <th className="text-left py-2 pr-4 font-medium text-zinc-500">Strategy</th>
+                <th className="text-right py-2 pr-4 font-medium text-zinc-500">Games</th>
+                <th className="text-right py-2 pr-4 font-medium text-zinc-500">Security</th>
+                <th className="text-right py-2 font-medium text-zinc-500">Utility</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.entries(scores!.challenges).map(([challengeType, strategies]) =>
+                Object.entries(strategies).map(([strategy, entry], i) => (
+                  <tr key={`${challengeType}-${strategy}`} className="border-b border-zinc-100">
+                    <td className="py-2 pr-4 text-zinc-900">{i === 0 ? challengeType : ""}</td>
+                    <td className="py-2 pr-4 text-zinc-600">{strategy}</td>
+                    <td className="py-2 pr-4 text-right text-zinc-600 tabular-nums">{entry.gamesPlayed}</td>
+                    <td className="py-2 pr-4 text-right font-mono tabular-nums">{formatScore(entry.security)}</td>
+                    <td className="py-2 text-right font-mono tabular-nums">{formatScore(entry.utility)}</td>
+                  </tr>
+                ))
+              )}
+              {scores!.global && (
+                <tr className="border-t border-zinc-300 font-medium">
+                  <td className="py-2 pr-4 text-zinc-900">Global</td>
+                  <td className="py-2 pr-4 text-zinc-600">average</td>
+                  <td className="py-2 pr-4 text-right text-zinc-600 tabular-nums">{scores!.global.gamesPlayed}</td>
+                  <td className="py-2 pr-4 text-right font-mono tabular-nums">{formatScore(scores!.global.security)}</td>
+                  <td className="py-2 text-right font-mono tabular-nums">{formatScore(scores!.global.utility)}</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* Challenges */}
       {challenges.length > 0 ? (
