@@ -113,8 +113,8 @@ export default function LeaderboardGraph({ data = mockData, height = 400 }: Lead
     const labeled = data.filter((d) => labelSet.has(d.name));
 
     // Group nearby points into clusters to avoid overlapping labels
-    const pixelsPerUnitX = width / 3; // domain is [-1.5,1.5] = 3 units
-    const pixelsPerUnitY = height / 3;
+    const pixelsPerUnitX = (width - 20) / 2; // domain [-1,1] = 2 units, minus inset
+    const pixelsPerUnitY = (height - 20) / 2;
     const clusterThresholdPx = 40; // points within this pixel distance get grouped
 
     const clusters: { points: typeof labeled; x: number; y: number }[] = [];
@@ -144,33 +144,68 @@ export default function LeaderboardGraph({ data = mockData, height = 400 }: Lead
       const rep = cluster.points.find((p) => paretoSet.has(p.name)) || cluster.points[0];
       const others = cluster.points.length - 1;
       const label = others > 0 ? `${rep.name} +${others}` : rep.name;
+      const anchor = rep.securityPolicy > 0.5 ? "end" : rep.securityPolicy < -0.5 ? "start" : "middle";
+      const dxVal = anchor === "end" ? -8 : anchor === "start" ? 8 : 0;
       return {
         ...rep,
         text: label,
-        dx: 0,
+        dx: dxVal,
         dy: -12,
+        anchor,
+        isPareto: paretoSet.has(rep.name),
       };
+    });
+
+    // Remove non-pareto labels that overlap with pareto labels
+    const charW = 6.5; // approx px per char at fontSize 11
+    const labelH = 14;
+    const getBBox = (lbl: typeof labelPositions[0]) => {
+      const cx = lbl.securityPolicy * pixelsPerUnitX + lbl.dx;
+      const cy = -(lbl.utility * pixelsPerUnitY) + lbl.dy; // y is inverted in screen coords
+      const tw = lbl.text.length * charW;
+      let x0: number;
+      if (lbl.anchor === "end") x0 = cx - tw;
+      else if (lbl.anchor === "start") x0 = cx;
+      else x0 = cx - tw / 2;
+      return { x0, x1: x0 + tw, y0: cy - labelH / 2, y1: cy + labelH / 2 };
+    };
+    const overlaps = (a: ReturnType<typeof getBBox>, b: ReturnType<typeof getBBox>) =>
+      a.x0 < b.x1 && a.x1 > b.x0 && a.y0 < b.y1 && a.y1 > b.y0;
+
+    const paretoLabels = labelPositions.filter((l) => l.isPareto);
+    const visibleLabels = labelPositions.filter((lbl) => {
+      if (lbl.isPareto) return true;
+      const box = getBBox(lbl);
+      return !paretoLabels.some((pl) => overlaps(box, getBBox(pl)));
     });
 
     const chart = Plot.plot({
       width: width,
       height: height,
-      grid: true,
+      grid: false,
       style: {
         color: "#18181b",
         fontFamily: "var(--font-jost), Jost, sans-serif",
       },
+      marginBottom: 40,
       x: {
         label: "Security",
-        domain: [-1.5, 1.5],
+        domain: [-1, 1],
         ticks: [-1, 0, 1],
+        tickFormat: (d: number) => String(d),
+        inset: 10,
       },
       y: {
         label: "Utility",
-        domain: [-1.5, 1.5],
+        domain: [-1, 1],
         ticks: [-1, 0, 1],
+        tickFormat: (d: number) => String(d),
+        inset: 10,
       },
       marks: [
+        // Grid lines constrained to [-1, 1]
+        Plot.gridX([-1, 0, 1], { y1: -1, y2: 1 }),
+        Plot.gridY([-1, 0, 1], { x1: -1, x2: 1 }),
         // All points as dots
         Plot.dot(data, {
           x: "securityPolicy",
@@ -192,20 +227,20 @@ export default function LeaderboardGraph({ data = mockData, height = 400 }: Lead
             },
           },
         }),
-        // Labels (clustered to avoid overlap)
-        ...labelPositions.map((d) =>
-          Plot.text([d], {
+        // Labels (clustered, with non-pareto hidden if overlapping pareto)
+        ...visibleLabels.map((d) => {
+          return Plot.text([d], {
             x: "securityPolicy",
             y: "utility",
             text: "text",
             dx: d.dx,
             dy: d.dy,
-            fontSize: 10,
-            fill: "#000",
+            fontSize: 11,
+            fill: d.isPareto ? "#000" : "#a1a1aa",
             fontWeight: "600",
-            textAnchor: "middle",
-          })
-        ),
+            textAnchor: d.anchor,
+          });
+        }),
       ],
     });
 
@@ -214,11 +249,17 @@ export default function LeaderboardGraph({ data = mockData, height = 400 }: Lead
     // Style the chart to ensure axis labels and ticks are visible
     const svg = container.querySelector("svg");
     if (svg) {
-      // Style all text elements (axis labels and tick labels)
-      const textElements = svg.querySelectorAll("text");
-      textElements.forEach((text) => {
-        (text as SVGTextElement).setAttribute("fill", "#18181b");
+      // Set font on all text, but only override fill on axis text (not data labels)
+      svg.querySelectorAll("text").forEach((text) => {
         (text as SVGTextElement).setAttribute("font-family", "var(--font-jost), Jost, sans-serif");
+      });
+      svg.querySelectorAll("[aria-label*='axis'] text").forEach((text) => {
+        (text as SVGTextElement).setAttribute("fill", "#18181b");
+      });
+      // Bump axis label font size
+      svg.querySelectorAll("[aria-label='x-axis label'], [aria-label='y-axis label']").forEach((label) => {
+        const text = label.querySelector("text");
+        if (text) (text as SVGTextElement).setAttribute("font-size", "13");
       });
       // Style all line elements (grid lines and axis lines)
       const lineElements = svg.querySelectorAll("line");
