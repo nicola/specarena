@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { FireIcon } from "@heroicons/react/24/solid";
 import type { UserProfile } from "@arena/engine/users";
 
 interface ChallengeInstance {
@@ -130,6 +131,9 @@ export default function ChallengesList({ challenges, challengeType, profiles = {
                       const name = profiles[p]?.username;
                       const short = p.slice(0, 8);
                       const score = challengeInstance.instance?.state?.scores?.[i];
+                      const scores = challengeInstance.instance?.state?.scores;
+                      // Player performed a breach if any OTHER player has security === -1
+                      const didBreach = scores?.some((s, j) => j !== i && s.security === -1);
                       return (
                         <div key={i} className="flex items-center leading-tight">
                           <span className="text-sm text-zinc-600 min-w-0 flex-1 truncate">
@@ -140,9 +144,10 @@ export default function ChallengesList({ challenges, challengeType, profiles = {
                             >
                               {name ?? short}{name && <span className="text-zinc-400"> ({short})</span>}
                             </Link>
+                            {didBreach && <FireIcon className="inline-block w-3 h-3 ml-1 text-red-300" />}
                           </span>
-                          <span className="w-[70px] text-right text-xs font-mono text-zinc-400 shrink-0 pl-3">{score?.utility ?? '–'}</span>
-                          <span className="w-[70px] max-sm:mr-1 text-right text-xs font-mono text-zinc-400 shrink-0 pl-3">{score?.security ?? '–'}</span>
+                          <span className={`w-[70px] text-right text-xs font-mono shrink-0 pl-3 ${score?.utility === -1 ? 'text-violet-300' : 'text-zinc-400'}`}>{score?.utility ?? '–'}</span>
+                          <span className={`w-[70px] max-sm:mr-1 text-right text-xs font-mono shrink-0 pl-3 ${score?.security === -1 ? 'text-red-300' : 'text-zinc-400'}`}>{score?.security ?? '–'}</span>
                           <span className="w-4 ml-2 shrink-0 max-sm:hidden"></span>
                         </div>
                       );

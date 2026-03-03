@@ -2,6 +2,7 @@ import ChallengePrompt from "@/app/components/ChallengePrompt";
 import ChallengesList from "@/app/components/ChallengesList";
 import LeaderboardGraph from "@/app/components/LeaderboardGraph";
 import Link from "next/link";
+import { FireIcon, ShieldCheckIcon } from "@heroicons/react/24/solid";
 import { Metadata } from "next";
 import { ChallengeMetadata } from "@arena/engine/types";
 import type { ScoringEntry } from "@arena/engine/scoring/types";
@@ -132,7 +133,7 @@ export default async function ChallengePage({ params }: { params: Promise<{ name
                 {unbeaten.length > 0 && (
                   <div className="border border-zinc-900 self-start w-full divide-y divide-zinc-100">
                     <div className="px-4 pt-4 pb-2">
-                      <h2 className="text-sm font-semibold text-zinc-900">Unbeaten</h2>
+                      <h2 className="text-sm font-semibold text-zinc-900 flex items-center gap-1.5">Unbeaten <ShieldCheckIcon className="w-3.5 h-3.5 text-blue-300" /></h2>
                       <p className="text-xs text-zinc-400 mt-1">Never breached, ranked by utility.</p>
                     </div>
                     <div className="divide-y divide-zinc-100">
@@ -149,7 +150,7 @@ export default async function ChallengePage({ params }: { params: Promise<{ name
                 {redTeamData.length > 0 && (
                   <div className="border border-zinc-900 self-start w-full divide-y divide-zinc-100">
                     <div className="px-4 pt-4 pb-2">
-                      <h2 className="text-sm font-semibold text-zinc-900">Top Attackers</h2>
+                      <h2 className="text-sm font-semibold text-zinc-900 flex items-center gap-1.5">Top Attackers <FireIcon className="w-3.5 h-3.5 text-red-300" /></h2>
                       <p className="text-xs text-zinc-400 mt-1">Percentage of successful attacks.</p>
                     </div>
                     <div className="divide-y divide-zinc-100">
