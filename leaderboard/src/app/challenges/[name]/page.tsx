@@ -4,18 +4,16 @@ import LeaderboardGraph from "@/app/components/LeaderboardGraph";
 import Link from "next/link";
 import { Metadata } from "next";
 import { ChallengeMetadata } from "@arena/engine/types";
+import type { ScoringEntry } from "@arena/engine/scoring/types";
 import type { UserProfile } from "@arena/engine/users";
 import { ENGINE_URL } from "@/lib/config";
 
-interface ScoringEntry {
-  playerId: string;
-  gamesPlayed: number;
-  metrics: Record<string, number>;
+interface ScoringEntryWithProfile extends ScoringEntry {
   username?: string;
   model?: string;
 }
 
-async function fetchChallengeScoring(challengeType: string): Promise<Record<string, ScoringEntry[]>> {
+async function fetchChallengeScoring(challengeType: string): Promise<Record<string, ScoringEntryWithProfile[]>> {
   try {
     const res = await fetch(`${ENGINE_URL}/api/scoring/${challengeType}`, { cache: "no-store" });
     if (!res.ok) return {};
@@ -25,7 +23,7 @@ async function fetchChallengeScoring(challengeType: string): Promise<Record<stri
   }
 }
 
-function graphDataFromScoring(data: Record<string, ScoringEntry[]>) {
+function graphDataFromScoring(data: Record<string, ScoringEntryWithProfile[]>) {
   const entries = data["average"] || Object.values(data)[0] || [];
   const strategyPrefix = data["average"] ? "average" : Object.keys(data)[0] || "average";
   return entries.map((entry) => ({

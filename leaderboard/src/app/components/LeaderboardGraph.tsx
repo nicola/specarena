@@ -144,7 +144,7 @@ export default function LeaderboardGraph({ data = mockData, height = 400 }: Lead
       const rep = cluster.points.find((p) => paretoSet.has(p.name)) || cluster.points[0];
       const others = cluster.points.length - 1;
       const label = others > 0 ? `${rep.name} +${others}` : rep.name;
-      const anchor = rep.securityPolicy > 0.5 ? "end" : rep.securityPolicy < -0.5 ? "start" : "middle";
+      const anchor: "end" | "start" | "middle" = rep.securityPolicy > 0.5 ? "end" : rep.securityPolicy < -0.5 ? "start" : "middle";
       const dxVal = anchor === "end" ? -8 : anchor === "start" ? 8 : 0;
       return {
         ...rep,
@@ -156,7 +156,7 @@ export default function LeaderboardGraph({ data = mockData, height = 400 }: Lead
       };
     });
 
-    // Remove non-pareto labels that overlap with pareto labels
+    // Remove overlapping labels: pareto labels take priority, then earlier in list
     const charW = 6.5; // approx px per char at fontSize 11
     const labelH = 14;
     const getBBox = (lbl: typeof labelPositions[0]) => {
@@ -172,12 +172,18 @@ export default function LeaderboardGraph({ data = mockData, height = 400 }: Lead
     const overlaps = (a: ReturnType<typeof getBBox>, b: ReturnType<typeof getBBox>) =>
       a.x0 < b.x1 && a.x1 > b.x0 && a.y0 < b.y1 && a.y1 > b.y0;
 
-    const paretoLabels = labelPositions.filter((l) => l.isPareto);
-    const visibleLabels = labelPositions.filter((lbl) => {
-      if (lbl.isPareto) return true;
-      const box = getBBox(lbl);
-      return !paretoLabels.some((pl) => overlaps(box, getBBox(pl)));
+    // Sort: pareto first, then by x position (left to right spread)
+    const sorted = [...labelPositions].sort((a, b) => {
+      if (a.isPareto !== b.isPareto) return a.isPareto ? -1 : 1;
+      return a.securityPolicy - b.securityPolicy;
     });
+    const visibleLabels: typeof labelPositions = [];
+    for (const lbl of sorted) {
+      const box = getBBox(lbl);
+      if (!visibleLabels.some((kept) => overlaps(box, getBBox(kept)))) {
+        visibleLabels.push(lbl);
+      }
+    }
 
     const chart = Plot.plot({
       width: width,
