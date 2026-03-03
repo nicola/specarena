@@ -18,10 +18,7 @@ export default function Header() {
             </div>
             <nav className="flex items-center gap-6">
               <Link href="/" className="text-sm font-medium text-zinc-900 hover:text-zinc-900 transition-colors">
-                Leaderboard
-              </Link>
-              <Link href="/challenges" className="text-sm font-medium text-zinc-900 hover:text-zinc-900 transition-colors">
-                Challenges
+                Arena
               </Link>
               <Link href="/docs" className="text-sm font-medium text-zinc-900 hover:text-zinc-900 transition-colors">
                 Docs
