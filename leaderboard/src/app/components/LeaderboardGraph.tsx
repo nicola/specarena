@@ -111,40 +111,46 @@ export default function LeaderboardGraph({ data = mockData, height = 400 }: Lead
     }
 
     const labeled = data.filter((d) => labelSet.has(d.name));
-    const labelPositions = labeled.map((d) => ({
-      ...d,
-      dx: 0,
-      dy: -12,
-    }));
 
-    // Simple overlap avoidance: sort by position and nudge colliding labels
+    // Group nearby points into clusters to avoid overlapping labels
     const pixelsPerUnitX = width / 3; // domain is [-1.5,1.5] = 3 units
     const pixelsPerUnitY = height / 3;
-    const minDistPx = 14; // min vertical pixel distance between labels
+    const clusterThresholdPx = 40; // points within this pixel distance get grouped
 
-    labelPositions.sort((a, b) => {
-      const ax = a.securityPolicy * pixelsPerUnitX;
-      const ay = a.utility * pixelsPerUnitY;
-      const bx = b.securityPolicy * pixelsPerUnitX;
-      const by = b.utility * pixelsPerUnitY;
-      return ax - bx || by - ay;
-    });
-
-    for (let i = 1; i < labelPositions.length; i++) {
-      for (let j = 0; j < i; j++) {
-        const a = labelPositions[j];
-        const b = labelPositions[i];
-        const dxPx = Math.abs(
-          (b.securityPolicy - a.securityPolicy) * pixelsPerUnitX + b.dx - a.dx
-        );
-        const dyPx = Math.abs(
-          (b.utility - a.utility) * pixelsPerUnitY + b.dy - a.dy
-        );
-        if (dxPx < 60 && dyPx < minDistPx) {
-          b.dy = a.dy - minDistPx;
+    const clusters: { points: typeof labeled; x: number; y: number }[] = [];
+    for (const point of labeled) {
+      const px = point.securityPolicy * pixelsPerUnitX;
+      const py = point.utility * pixelsPerUnitY;
+      let merged = false;
+      for (const cluster of clusters) {
+        const dist = Math.hypot(px - cluster.x, py - cluster.y);
+        if (dist < clusterThresholdPx) {
+          cluster.points.push(point);
+          // Update cluster center
+          cluster.x = cluster.points.reduce((s, p) => s + p.securityPolicy * pixelsPerUnitX, 0) / cluster.points.length;
+          cluster.y = cluster.points.reduce((s, p) => s + p.utility * pixelsPerUnitY, 0) / cluster.points.length;
+          merged = true;
+          break;
         }
       }
+      if (!merged) {
+        clusters.push({ points: [point], x: px, y: py });
+      }
     }
+
+    // Build label positions from clusters
+    const labelPositions = clusters.map((cluster) => {
+      // Pick the best point (prefer pareto frontier) as the representative
+      const rep = cluster.points.find((p) => paretoSet.has(p.name)) || cluster.points[0];
+      const others = cluster.points.length - 1;
+      const label = others > 0 ? `${rep.name} +${others}` : rep.name;
+      return {
+        ...rep,
+        text: label,
+        dx: 0,
+        dy: -12,
+      };
+    });
 
     const chart = Plot.plot({
       width: width,
@@ -186,12 +192,12 @@ export default function LeaderboardGraph({ data = mockData, height = 400 }: Lead
             },
           },
         }),
-        // Labels only for Pareto frontier points
+        // Labels (clustered to avoid overlap)
         ...labelPositions.map((d) =>
           Plot.text([d], {
             x: "securityPolicy",
             y: "utility",
-            text: "name",
+            text: "text",
             dx: d.dx,
             dy: d.dy,
             fontSize: 10,

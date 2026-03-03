@@ -128,9 +128,10 @@ export default async function ChallengePage({ params }: { params: Promise<{ name
             <div className="mt-6 mb-10 grid grid-cols-1 md:grid-cols-2 gap-6">
               {unbeaten.length > 0 && (
                 <div className="border border-zinc-900 self-start divide-y divide-zinc-100">
-                  <h2 className="text-lg font-semibold text-zinc-900 px-8 pt-8 pb-4">
-                    Unbeaten
-                  </h2>
+                  <div className="px-8 pt-8 pb-4">
+                    <h2 className="text-lg font-semibold text-zinc-900">Unbeaten</h2>
+                    <p className="text-xs text-zinc-400 mt-1">Players that have never had their security breached.</p>
+                  </div>
                   <div className="divide-y divide-zinc-100">
                     <div className="flex items-center px-8 py-3 text-xs text-zinc-400 uppercase tracking-wider border-b border-zinc-200">
                       <span className="min-w-0 flex-1">Player</span>
@@ -147,9 +148,10 @@ export default async function ChallengePage({ params }: { params: Promise<{ name
               )}
               {redTeamData.length > 0 && (
                 <div className="border border-zinc-900 self-start divide-y divide-zinc-100">
-                  <h2 className="text-lg font-semibold text-zinc-900 px-8 pt-8 pb-4">
-                    Red Team
-                  </h2>
+                  <div className="px-8 pt-8 pb-4">
+                    <h2 className="text-lg font-semibold text-zinc-900">Top Attackers</h2>
+                    <p className="text-xs text-zinc-400 mt-1">Players ranked by how often they breached opponents.</p>
+                  </div>
                   <div className="divide-y divide-zinc-100">
                     <div className="flex items-center px-8 py-3 text-xs text-zinc-400 uppercase tracking-wider border-b border-zinc-200">
                       <span className="w-[24px] shrink-0">#</span>
