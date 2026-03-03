@@ -13,6 +13,7 @@ interface LeaderboardData {
 interface LeaderboardGraphProps {
   data?: LeaderboardData[];
   height?: number;
+  highlightName?: string;
 }
 
 // Mock leaderboard data (scores in [-2, 2] range)
@@ -34,7 +35,7 @@ const mockData: LeaderboardData[] = [
   { name: "Omicron", securityPolicy: 0.45, utility: 0.7 },
 ];
 
-export default function LeaderboardGraph({ data = mockData, height = 400 }: LeaderboardGraphProps) {
+export default function LeaderboardGraph({ data = mockData, height = 400, highlightName }: LeaderboardGraphProps) {
   const plotRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(800);
 
@@ -89,7 +90,12 @@ export default function LeaderboardGraph({ data = mockData, height = 400 }: Lead
       .filter((d) => paretoSet.has(d.name))
       .sort((a, b) => b.securityPolicy - a.securityPolicy || b.utility - a.utility);
 
+    const highlightSet = new Set<string>();
+    if (highlightName) highlightSet.add(highlightName);
+
     const labelSet = new Set(paretoSet);
+    // Always label the highlighted point
+    if (highlightName) labelSet.add(highlightName);
 
     // Compute how "dominated" each non-frontier point is:
     // the smallest amount any frontier point beats it by in BOTH dimensions
@@ -153,6 +159,7 @@ export default function LeaderboardGraph({ data = mockData, height = 400 }: Lead
         dy: -12,
         anchor,
         isPareto: paretoSet.has(rep.name),
+        isHighlight: highlightSet.has(rep.name),
       };
     });
 
@@ -172,8 +179,9 @@ export default function LeaderboardGraph({ data = mockData, height = 400 }: Lead
     const overlaps = (a: ReturnType<typeof getBBox>, b: ReturnType<typeof getBBox>) =>
       a.x0 < b.x1 && a.x1 > b.x0 && a.y0 < b.y1 && a.y1 > b.y0;
 
-    // Sort: pareto first, then by x position (left to right spread)
+    // Sort: highlighted first, then pareto, then by x position (left to right spread)
     const sorted = [...labelPositions].sort((a, b) => {
+      if (a.isHighlight !== b.isHighlight) return a.isHighlight ? -1 : 1;
       if (a.isPareto !== b.isPareto) return a.isPareto ? -1 : 1;
       return a.securityPolicy - b.securityPolicy;
     });
@@ -216,8 +224,10 @@ export default function LeaderboardGraph({ data = mockData, height = 400 }: Lead
         Plot.dot(data, {
           x: "securityPolicy",
           y: "utility",
-          fill: (d) => paretoSet.has(d.name) ? "#000" : "#a1a1aa",
-          r: (d) => paretoSet.has(d.name) ? 5 : 3,
+          fill: (d) => highlightSet.has(d.name) ? "#6366f1" : paretoSet.has(d.name) ? "#000" : "#a1a1aa",
+          r: (d) => highlightSet.has(d.name) ? 7 : paretoSet.has(d.name) ? 5 : 3,
+          stroke: (d) => highlightSet.has(d.name) ? "#4f46e5" : "none",
+          strokeWidth: (d) => highlightSet.has(d.name) ? 2 : 0,
           channels: {
             name: { value: "name", label: "Name" },
             model: { value: (d) => d.model ?? "—", label: "Model" },
@@ -242,7 +252,7 @@ export default function LeaderboardGraph({ data = mockData, height = 400 }: Lead
             dx: d.dx,
             dy: d.dy,
             fontSize: 11,
-            fill: d.isPareto ? "#000" : "#a1a1aa",
+            fill: d.isHighlight ? "#6366f1" : d.isPareto ? "#000" : "#a1a1aa",
             fontWeight: "600",
             textAnchor: d.anchor,
           });
@@ -282,7 +292,7 @@ export default function LeaderboardGraph({ data = mockData, height = 400 }: Lead
         container.innerHTML = "";
       }
     };
-  }, [width, height, data]);
+  }, [width, height, data, highlightName]);
 
   return (
     <div className="flex justify-center overflow-x-auto">
