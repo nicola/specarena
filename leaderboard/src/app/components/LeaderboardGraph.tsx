@@ -12,6 +12,7 @@ interface LeaderboardData {
 
 interface LeaderboardGraphProps {
   data?: LeaderboardData[];
+  height?: number;
 }
 
 // Mock leaderboard data (scores in [-2, 2] range)
@@ -33,7 +34,7 @@ const mockData: LeaderboardData[] = [
   { name: "Omicron", securityPolicy: 0.45, utility: 0.7 },
 ];
 
-export default function LeaderboardGraph({ data = mockData }: LeaderboardGraphProps) {
+export default function LeaderboardGraph({ data = mockData, height = 400 }: LeaderboardGraphProps) {
   const plotRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(800);
 
@@ -118,7 +119,7 @@ export default function LeaderboardGraph({ data = mockData }: LeaderboardGraphPr
 
     // Simple overlap avoidance: sort by position and nudge colliding labels
     const pixelsPerUnitX = width / 3; // domain is [-1.5,1.5] = 3 units
-    const pixelsPerUnitY = 400 / 3;
+    const pixelsPerUnitY = height / 3;
     const minDistPx = 14; // min vertical pixel distance between labels
 
     labelPositions.sort((a, b) => {
@@ -147,7 +148,7 @@ export default function LeaderboardGraph({ data = mockData }: LeaderboardGraphPr
 
     const chart = Plot.plot({
       width: width,
-      height: 400,
+      height: height,
       grid: true,
       style: {
         color: "#18181b",
@@ -228,7 +229,7 @@ export default function LeaderboardGraph({ data = mockData }: LeaderboardGraphPr
         container.innerHTML = "";
       }
     };
-  }, [width, data]);
+  }, [width, height, data]);
 
   return (
     <div className="flex justify-center overflow-x-auto">

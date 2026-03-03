@@ -29,6 +29,7 @@ function graphDataFromScoring(data: Record<string, ScoringEntry[]>) {
   const entries = data["average"] || Object.values(data)[0] || [];
   const strategyPrefix = data["average"] ? "average" : Object.keys(data)[0] || "average";
   return entries.map((entry) => ({
+    playerId: entry.playerId,
     name: entry.username ?? entry.playerId.slice(0, 8),
     securityPolicy: entry.metrics[`${strategyPrefix}:security`] ?? 0,
     utility: entry.metrics[`${strategyPrefix}:utility`] ?? 0,
@@ -81,6 +82,7 @@ export default async function ChallengePage({ params }: { params: Promise<{ name
   const scoringData = graphDataFromScoring(allScoring);
   const redTeamData = (allScoring["red-team"] || [])
     .map((entry) => ({
+      playerId: entry.playerId,
       name: entry.username ?? entry.playerId.slice(0, 8),
       attack: entry.metrics["red-team:attack"] ?? 0,
       model: entry.model,
@@ -109,63 +111,61 @@ export default async function ChallengePage({ params }: { params: Promise<{ name
             </Link>
           </div>
         </div>
-        <ChallengePrompt prompt={challenge.prompt} />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <ChallengePrompt prompt={challenge.prompt} />
+          {scoringData.length > 0 && (
+            <div className="border border-zinc-900 p-4 self-start">
+              <LeaderboardGraph data={scoringData} height={300} />
+            </div>
+          )}
+        </div>
 
-        {/* Leaderboard Graph + Tables */}
+        {/* Unbeaten + Red Team */}
         {(() => {
           const unbeaten = scoringData.filter((d) => d.securityPolicy === 1);
-          const hasGraph = scoringData.length > 0;
-          const hasTables = unbeaten.length > 0 || redTeamData.length > 0;
-          if (!hasGraph && !hasTables) return null;
+          if (unbeaten.length === 0 && redTeamData.length === 0) return null;
           return (
-            <div className="mt-10 mb-10 grid grid-cols-1 md:grid-cols-2 gap-6">
-              {hasGraph && (
-                <div className="border border-zinc-900 p-4">
-                  <LeaderboardGraph data={scoringData} />
+            <div className="mt-6 mb-10 grid grid-cols-1 md:grid-cols-2 gap-6">
+              {unbeaten.length > 0 && (
+                <div className="border border-zinc-900 self-start divide-y divide-zinc-100">
+                  <h2 className="text-lg font-semibold text-zinc-900 px-8 pt-8 pb-4">
+                    Unbeaten
+                  </h2>
+                  <div className="divide-y divide-zinc-100">
+                    <div className="flex items-center px-8 py-3 text-xs text-zinc-400 uppercase tracking-wider border-b border-zinc-200">
+                      <span className="min-w-0 flex-1">Player</span>
+                      <span className="shrink-0 pl-3 text-right">Utility</span>
+                    </div>
+                    {unbeaten.map((player) => (
+                      <div key={player.name} className="flex items-center px-8 py-3">
+                        <span className="text-sm text-zinc-900 min-w-0 flex-1 truncate"><Link href={`/users/${player.playerId}`} className="hover:text-zinc-600">{player.name}</Link>{player.model && <span className="text-zinc-400 text-xs ml-1">({player.model})</span>}</span>
+                        <span className="text-xs font-mono text-zinc-400 shrink-0 pl-3">{player.utility.toFixed(2)}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
-              <div className="flex flex-col gap-6">
-                {unbeaten.length > 0 && (
-                  <div>
-                    <h2 className="text-lg font-semibold text-zinc-900 mb-4" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
-                      Unbeaten ({unbeaten.length})
-                    </h2>
-                    <div className="border border-zinc-900 divide-y divide-zinc-100">
-                      <div className="flex items-center px-4 py-2 text-xs text-zinc-400 uppercase tracking-wider border-b border-zinc-200">
-                        <span className="min-w-0 flex-1">Player</span>
-                        <span className="shrink-0 pl-3 text-right">Utility</span>
-                      </div>
-                      {unbeaten.map((player) => (
-                        <div key={player.name} className="flex items-center px-4 py-3">
-                          <span className="text-sm text-zinc-900 min-w-0 flex-1 truncate">{player.name}{player.model && <span className="text-zinc-400 text-xs ml-1">({player.model})</span>}</span>
-                          <span className="text-xs font-mono text-zinc-400 shrink-0 pl-3">{player.utility.toFixed(2)}</span>
-                        </div>
-                      ))}
+              {redTeamData.length > 0 && (
+                <div className="border border-zinc-900 self-start divide-y divide-zinc-100">
+                  <h2 className="text-lg font-semibold text-zinc-900 px-8 pt-8 pb-4">
+                    Red Team
+                  </h2>
+                  <div className="divide-y divide-zinc-100">
+                    <div className="flex items-center px-8 py-3 text-xs text-zinc-400 uppercase tracking-wider border-b border-zinc-200">
+                      <span className="w-[24px] shrink-0">#</span>
+                      <span className="min-w-0 flex-1">Player</span>
+                      <span className="shrink-0 pl-3 text-right">Attack</span>
                     </div>
-                  </div>
-                )}
-                {redTeamData.length > 0 && (
-                  <div>
-                    <h2 className="text-lg font-semibold text-zinc-900 mb-4" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
-                      Red Team ({redTeamData.length})
-                    </h2>
-                    <div className="border border-zinc-900 divide-y divide-zinc-100">
-                      <div className="flex items-center px-4 py-2 text-xs text-zinc-400 uppercase tracking-wider border-b border-zinc-200">
-                        <span className="w-[24px] shrink-0">#</span>
-                        <span className="min-w-0 flex-1">Player</span>
-                        <span className="shrink-0 pl-3 text-right">Attack</span>
+                    {redTeamData.map((player, i) => (
+                      <div key={player.name} className="flex items-center px-8 py-3">
+                        <span className="w-[20px] text-xs text-zinc-400 shrink-0">{i + 1}</span>
+                        <span className="text-sm text-zinc-900 min-w-0 flex-1 truncate"><Link href={`/users/${player.playerId}`} className="hover:text-zinc-600">{player.name}</Link>{player.model && <span className="text-zinc-400 text-xs ml-1">({player.model})</span>}</span>
+                        <span className="text-xs font-mono text-zinc-400 shrink-0 pl-3">{player.attack.toFixed(2)}</span>
                       </div>
-                      {redTeamData.map((player, i) => (
-                        <div key={player.name} className="flex items-center px-4 py-3">
-                          <span className="w-[24px] text-xs text-zinc-400 shrink-0">{i + 1}</span>
-                          <span className="text-sm text-zinc-900 min-w-0 flex-1 truncate">{player.name}{player.model && <span className="text-zinc-400 text-xs ml-1">({player.model})</span>}</span>
-                          <span className="text-xs font-mono text-zinc-400 shrink-0 pl-3">{player.attack.toFixed(2)}</span>
-                        </div>
-                      ))}
-                    </div>
+                    ))}
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           );
         })()}
