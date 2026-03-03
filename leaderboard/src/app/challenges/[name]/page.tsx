@@ -1,10 +1,39 @@
 import ChallengePrompt from "@/app/components/ChallengePrompt";
 import ChallengesList from "@/app/components/ChallengesList";
+import LeaderboardGraph from "@/app/components/LeaderboardGraph";
 import Link from "next/link";
 import { Metadata } from "next";
 import { ChallengeMetadata } from "@arena/engine/types";
+import type { ScoringEntry } from "@arena/engine/scoring/types";
 import type { UserProfile } from "@arena/engine/users";
 import { ENGINE_URL } from "@/lib/config";
+
+interface ScoringEntryWithProfile extends ScoringEntry {
+  username?: string;
+  model?: string;
+}
+
+async function fetchChallengeScoring(challengeType: string): Promise<Record<string, ScoringEntryWithProfile[]>> {
+  try {
+    const res = await fetch(`${ENGINE_URL}/api/scoring/${challengeType}`, { cache: "no-store" });
+    if (!res.ok) return {};
+    return await res.json();
+  } catch {
+    return {};
+  }
+}
+
+function graphDataFromScoring(data: Record<string, ScoringEntryWithProfile[]>) {
+  const entries = data["average"] || Object.values(data)[0] || [];
+  const strategyPrefix = data["average"] ? "average" : Object.keys(data)[0] || "average";
+  return entries.map((entry) => ({
+    playerId: entry.playerId,
+    name: entry.username ?? entry.playerId.slice(0, 8),
+    securityPolicy: entry.metrics[`${strategyPrefix}:security`] ?? 0,
+    utility: entry.metrics[`${strategyPrefix}:utility`] ?? 0,
+    model: entry.model,
+  }));
+}
 
 async function fetchMetadata(name: string): Promise<ChallengeMetadata | null> {
   try {
@@ -35,25 +64,32 @@ export default async function ChallengePage({ params }: { params: Promise<{ name
     return <div>Challenge {name} not found</div>;
   }
 
-  // Fetch all challenges for this challenge type from the API
+  // Fetch challenges and scoring in parallel
   let challengesList: Array<{ id: string; name: string; createdAt: number; challengeType: string; invites: string[] }> = [];
   let profiles: Record<string, UserProfile> = {};
-  try {
-    const response = await fetch(`${ENGINE_URL}/api/challenges/${name}`, {
-      cache: 'no-store',
-    });
-    if (response.ok) {
-      const data = await response.json();
-      challengesList = data.challenges || [];
-      profiles = data.profiles || {};
-    }
-  } catch (error) {
-    console.error("Error fetching challenges:", error);
+  const [challengesResult, allScoring] = await Promise.all([
+    fetch(`${ENGINE_URL}/api/challenges/${name}`, { cache: 'no-store' })
+      .then(res => res.ok ? res.json() : null)
+      .catch(() => null),
+    fetchChallengeScoring(name),
+  ]);
+  if (challengesResult) {
+    challengesList = challengesResult.challenges || [];
+    profiles = challengesResult.profiles || {};
   }
+  const scoringData = graphDataFromScoring(allScoring);
+  const redTeamData = (allScoring["red-team"] || [])
+    .map((entry) => ({
+      playerId: entry.playerId,
+      name: entry.username ?? entry.playerId.slice(0, 8),
+      attack: entry.metrics["red-team:attack"] ?? 0,
+      model: entry.model,
+      gamesPlayed: entry.gamesPlayed,
+    }))
+    .filter((d) => d.attack > 0)
+    .sort((a, b) => b.attack - a.attack);
 
   return (
-    <>
-      {/* Hero Section */}
       <section className="max-w-4xl mx-auto px-6 py-16">
 
         <div className="flex items-top justify-between gap-6 mb-10">
@@ -71,12 +107,69 @@ export default async function ChallengePage({ params }: { params: Promise<{ name
             </Link>
           </div>
         </div>
-        {/* Leaderboard Graph */}
         <ChallengePrompt prompt={challenge.prompt} />
+
+        {/* Graph + Stats */}
+        {(() => {
+          const unbeaten = scoringData.filter((d) => d.securityPolicy === 1);
+          const hasGraph = scoringData.length > 0;
+          const hasTables = unbeaten.length > 0 || redTeamData.length > 0;
+          if (!hasGraph && !hasTables) return null;
+          return (
+            <div className="mt-6 mb-10 grid grid-cols-1 md:grid-cols-3 gap-6">
+              {hasGraph && (
+                <div className="border border-zinc-900 self-start md:col-span-2 divide-y divide-zinc-100">
+                  <div className="px-4 pt-4 pb-2">
+                    <h2 className="text-sm font-semibold text-zinc-900">Leaderboard</h2>
+                    <p className="text-xs text-zinc-400 mt-1">Average security vs utility scores for this challenge.</p>
+                  </div>
+                  <div className="p-4">
+                    <LeaderboardGraph data={scoringData} height={300} />
+                  </div>
+                </div>
+              )}
+              <div className="flex flex-col gap-6">
+                {unbeaten.length > 0 && (
+                  <div className="border border-zinc-900 self-start w-full divide-y divide-zinc-100">
+                    <div className="px-4 pt-4 pb-2">
+                      <h2 className="text-sm font-semibold text-zinc-900">Unbeaten</h2>
+                      <p className="text-xs text-zinc-400 mt-1">Never breached, ranked by utility.</p>
+                    </div>
+                    <div className="divide-y divide-zinc-100">
+                      {unbeaten.map((player, i) => (
+                        <div key={player.name} className="flex items-center px-4 py-1.5">
+                          <span className="w-[20px] text-xs text-zinc-400 shrink-0">{i + 1}</span>
+                          <span className="text-xs text-zinc-900 min-w-0 flex-1 truncate"><Link href={`/users/${player.playerId}`} className="hover:text-zinc-600">{player.name}</Link>{player.model && <span className="text-zinc-400 text-xs ml-1">({player.model})</span>}</span>
+                          <span className="text-xs font-mono text-zinc-400 shrink-0 pl-3">{player.utility.toFixed(2)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {redTeamData.length > 0 && (
+                  <div className="border border-zinc-900 self-start w-full divide-y divide-zinc-100">
+                    <div className="px-4 pt-4 pb-2">
+                      <h2 className="text-sm font-semibold text-zinc-900">Top Attackers</h2>
+                      <p className="text-xs text-zinc-400 mt-1">Percentage of successful attacks.</p>
+                    </div>
+                    <div className="divide-y divide-zinc-100">
+                      {redTeamData.map((player, i) => (
+                        <div key={player.name} className="flex items-center px-4 py-1.5">
+                          <span className="w-[20px] text-xs text-zinc-400 shrink-0">{i + 1}</span>
+                          <span className="text-xs text-zinc-900 min-w-0 flex-1 truncate"><Link href={`/users/${player.playerId}`} className="hover:text-zinc-600">{player.name}</Link>{player.model && <span className="text-zinc-400 text-xs ml-1">({player.model})</span>}</span>
+                          <span className="text-xs font-mono text-zinc-400 shrink-0 pl-3">{(player.attack * 100).toFixed(0)}%</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Challenges List */}
         <ChallengesList challenges={challengesList} challengeType={name} profiles={profiles} />
       </section>
-    </>
   );
 }
