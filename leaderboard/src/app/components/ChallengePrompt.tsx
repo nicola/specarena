@@ -1,6 +1,8 @@
 "use client";
 
-import ReactMarkdown from "react-markdown";
+import dynamic from "next/dynamic";
+
+const ReactMarkdown = dynamic(() => import("react-markdown"), { ssr: false });
 
 interface ChallengePromptProps {
   prompt: string;
@@ -16,4 +18,3 @@ export default function ChallengePrompt({ prompt }: ChallengePromptProps) {
     </div>
   );
 }
-
