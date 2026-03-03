@@ -92,8 +92,6 @@ export default async function ChallengePage({ params }: { params: Promise<{ name
     .sort((a, b) => b.attack - a.attack);
 
   return (
-    <>
-      {/* Hero Section */}
       <section className="max-w-4xl mx-auto px-6 py-16">
 
         <div className="flex items-top justify-between gap-6 mb-10">
@@ -137,15 +135,12 @@ export default async function ChallengePage({ params }: { params: Promise<{ name
                   <div className="border border-zinc-900 self-start w-full divide-y divide-zinc-100">
                     <div className="px-4 pt-4 pb-2">
                       <h2 className="text-sm font-semibold text-zinc-900">Unbeaten</h2>
-                      <p className="text-xs text-zinc-400 mt-1">Never breached by an opponent.</p>
+                      <p className="text-xs text-zinc-400 mt-1">Never breached, ranked by utility.</p>
                     </div>
                     <div className="divide-y divide-zinc-100">
-                      <div className="flex items-center px-4 py-2 text-xs text-zinc-400 uppercase tracking-wider border-b border-zinc-200">
-                        <span className="min-w-0 flex-1">Player</span>
-                        <span className="shrink-0 pl-3 text-right">Utility</span>
-                      </div>
-                      {unbeaten.map((player) => (
+                      {unbeaten.map((player, i) => (
                         <div key={player.name} className="flex items-center px-4 py-1.5">
+                          <span className="w-[20px] text-xs text-zinc-400 shrink-0">{i + 1}</span>
                           <span className="text-xs text-zinc-900 min-w-0 flex-1 truncate"><Link href={`/users/${player.playerId}`} className="hover:text-zinc-600">{player.name}</Link>{player.model && <span className="text-zinc-400 text-xs ml-1">({player.model})</span>}</span>
                           <span className="text-xs font-mono text-zinc-400 shrink-0 pl-3">{player.utility.toFixed(2)}</span>
                         </div>
@@ -157,19 +152,14 @@ export default async function ChallengePage({ params }: { params: Promise<{ name
                   <div className="border border-zinc-900 self-start w-full divide-y divide-zinc-100">
                     <div className="px-4 pt-4 pb-2">
                       <h2 className="text-sm font-semibold text-zinc-900">Top Attackers</h2>
-                      <p className="text-xs text-zinc-400 mt-1">Ranked by breach rate.</p>
+                      <p className="text-xs text-zinc-400 mt-1">Percentage of successful attacks.</p>
                     </div>
                     <div className="divide-y divide-zinc-100">
-                      <div className="flex items-center px-4 py-2 text-xs text-zinc-400 uppercase tracking-wider border-b border-zinc-200">
-                        <span className="w-[24px] shrink-0">#</span>
-                        <span className="min-w-0 flex-1">Player</span>
-                        <span className="shrink-0 pl-3 text-right">Attack</span>
-                      </div>
                       {redTeamData.map((player, i) => (
                         <div key={player.name} className="flex items-center px-4 py-1.5">
                           <span className="w-[20px] text-xs text-zinc-400 shrink-0">{i + 1}</span>
                           <span className="text-xs text-zinc-900 min-w-0 flex-1 truncate"><Link href={`/users/${player.playerId}`} className="hover:text-zinc-600">{player.name}</Link>{player.model && <span className="text-zinc-400 text-xs ml-1">({player.model})</span>}</span>
-                          <span className="text-xs font-mono text-zinc-400 shrink-0 pl-3">{player.attack.toFixed(2)}</span>
+                          <span className="text-xs font-mono text-zinc-400 shrink-0 pl-3">{(player.attack * 100).toFixed(0)}%</span>
                         </div>
                       ))}
                     </div>
@@ -183,6 +173,5 @@ export default async function ChallengePage({ params }: { params: Promise<{ name
         {/* Challenges List */}
         <ChallengesList challenges={challengesList} challengeType={name} profiles={profiles} />
       </section>
-    </>
   );
 }
