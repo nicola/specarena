@@ -10,7 +10,8 @@
     "test:challenges": "npm run test --workspace @arena/challenges",
     "test:api": "npm run test --workspace @arena/api",
     "test:leaderboard": "npm run test --workspace @arena/leaderboard --if-present",
-    "test:scoring": "npm run test --workspace @arena/scoring"
+    "test:scoring": "npm run test --workspace @arena/scoring",
+    "test:sql-storage": "node --import tsx --test --test-force-exit engine/storage/sql/test/*.test.ts"
   },
   "workspaces": ["engine", "challenges", "leaderboard", "api", "scoring", "cli"]
 }
