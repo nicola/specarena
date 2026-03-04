@@ -197,7 +197,7 @@ describe("REST API for user challenges", () => {
     const res1 = await request("GET", "/api/users/user_x/challenges");
     assert.equal(res1.status, 200);
     const data1 = await res1.json();
-    assert.equal(data1.count, 0);
+    assert.equal(data1.total, 0);
     assert.equal(data1.challenges.length, 0);
 
     // Now end the game by having both players guess
@@ -219,7 +219,7 @@ describe("REST API for user challenges", () => {
     const res2 = await request("GET", "/api/users/user_x/challenges");
     assert.equal(res2.status, 200);
     const data2 = await res2.json();
-    assert.equal(data2.count, 1);
+    assert.equal(data2.total, 1);
     assert.equal(data2.challenges[0].id, id);
   });
 });
