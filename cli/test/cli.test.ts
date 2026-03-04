@@ -109,16 +109,16 @@ describe("challenges list", () => {
   it("returns empty list", async () => {
     const r = await cli("challenges", "list");
     assert.equal(r.exitCode, 0);
-    const data = json(r) as { challenges: unknown[]; count: number };
+    const data = json(r) as { challenges: unknown[]; total: number };
     assert.deepEqual(data.challenges, []);
-    assert.equal(data.count, 0);
+    assert.equal(data.total, 0);
   });
 
   it("returns list by type", async () => {
     const r = await cli("challenges", "list", "psi");
     assert.equal(r.exitCode, 0);
-    const data = json(r) as { challenges: unknown[]; count: number };
-    assert.equal(data.count, 0);
+    const data = json(r) as { challenges: unknown[]; total: number };
+    assert.equal(data.total, 0);
   });
 });
 
