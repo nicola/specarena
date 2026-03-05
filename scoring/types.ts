@@ -48,6 +48,7 @@ export interface GlobalScoringStrategy {
 
 export interface ScoringStorageAdapter {
   getScores(challengeType: string): Promise<Record<string, ScoringEntry[]>>;
+  getScoresForPlayer(playerId: string): Promise<Record<string, Record<string, ScoringEntry>>>;
   getGlobalScores(): Promise<ScoringEntry[]>;
   clear(): Promise<void>;
   transaction<T>(fn: (store: ScoringStorageAdapter) => Promise<T>): Promise<T>;

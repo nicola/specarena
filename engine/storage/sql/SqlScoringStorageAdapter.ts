@@ -1,4 +1,4 @@
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, ne, sql } from "drizzle-orm";
 import type { ScoringEntry, ScoringStorageAdapter } from "@arena/scoring";
 import { scoringEntries } from "./schema";
 import type { Db } from "./db";
@@ -27,6 +27,31 @@ export class SqlScoringStorageAdapter implements ScoringStorageAdapter {
       };
       if (!result[row.strategyName]) result[row.strategyName] = [];
       result[row.strategyName].push(entry);
+    }
+    return result;
+  }
+
+  async getScoresForPlayer(
+    playerId: string,
+  ): Promise<Record<string, Record<string, ScoringEntry>>> {
+    const rows = await this.db
+      .select()
+      .from(scoringEntries)
+      .where(
+        and(
+          eq(scoringEntries.playerId, playerId),
+          ne(scoringEntries.challengeType, GLOBAL),
+        ),
+      );
+
+    const result: Record<string, Record<string, ScoringEntry>> = {};
+    for (const row of rows) {
+      if (!result[row.challengeType]) result[row.challengeType] = {};
+      result[row.challengeType][row.strategyName] = {
+        playerId: row.playerId,
+        gamesPlayed: row.gamesPlayed,
+        metrics: row.metrics as Record<string, number>,
+      };
     }
     return result;
   }
