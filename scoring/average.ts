@@ -1,4 +1,4 @@
-import type { ScoringStrategy, GameResult, ScoringStorageAdapter } from "./types";
+import { GAMES_PLAYED_KEY, type ScoringStrategy, type GameResult, type ScoringStorageAdapter } from "./types";
 
 interface AverageState {
   sumSecurity: number;
@@ -33,7 +33,7 @@ export const average: ScoringStrategy = {
       await store.setScoreEntry(result.challengeType, this.name, {
         playerId,
         metrics: {
-          "games_played:count": state.count,
+          [GAMES_PLAYED_KEY]: state.count,
           "average:security": state.sumSecurity / state.count,
           "average:utility": state.sumUtility / state.count,
         },

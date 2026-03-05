@@ -13,23 +13,7 @@ import type {
   ChallengeOperatorState,
   ChatMessage,
 } from "../../../types";
-
-function createTestDb() {
-  const sqliteDb = new Database(":memory:");
-  sqliteDb.pragma("foreign_keys = ON");
-  return new Kysely<DatabaseSchema>({
-    dialect: new SqliteDialect({ database: sqliteDb }),
-  });
-}
-
-async function migrate(db: Kysely<DatabaseSchema>) {
-  const migrator = new Migrator({
-    db,
-    provider: new StaticMigrationProvider(),
-  });
-  const { error } = await migrator.migrateToLatest();
-  if (error) throw error;
-}
+import { createTestDb, migrate } from "./test-helpers";
 
 function mockOperator(
   overrides: Partial<ChallengeOperatorState> = {}

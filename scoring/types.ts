@@ -1,3 +1,5 @@
+export const GAMES_PLAYED_KEY = "games_played:count";
+
 export interface Score {
   security: number;
   utility: number;

@@ -106,18 +106,19 @@ export class SqlScoringStorageAdapter implements ScoringStorageAdapter {
     playerId: string,
     state: T
   ): Promise<void> {
+    const json = JSON.stringify(state);
     await this.db
       .insertInto("strategy_state")
       .values({
         challenge_type: challengeType,
         strategy_name: strategyName,
         player_id: playerId,
-        state: JSON.stringify(state),
+        state: json,
       })
       .onConflict((oc) =>
         oc
           .columns(["challenge_type", "strategy_name", "player_id"])
-          .doUpdateSet({ state: JSON.stringify(state) })
+          .doUpdateSet({ state: json })
       )
       .execute();
   }

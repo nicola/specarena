@@ -1,4 +1,4 @@
-import type { ScoringStrategy, GameResult, ScoringStorageAdapter } from "./types";
+import { GAMES_PLAYED_KEY, type ScoringStrategy, type GameResult, type ScoringStorageAdapter } from "./types";
 
 interface RedTeamState {
   breaches: number;       // times this player caused a security breach
@@ -53,7 +53,7 @@ export const redTeam: ScoringStrategy = {
       await store.setScoreEntry(result.challengeType, this.name, {
         playerId,
         metrics: {
-          "games_played:count": state.gamesPlayed,
+          [GAMES_PLAYED_KEY]: state.gamesPlayed,
           "red-team:attack": state.breaches / state.gamesPlayed,
           "red-team:defend": 1 - state.timesBreached / state.gamesPlayed,
         },

@@ -1,4 +1,4 @@
-import type { GlobalScoringStrategy, GameResult, ScoringStorageAdapter } from "./types";
+import { GAMES_PLAYED_KEY, type GlobalScoringStrategy, type GameResult, type ScoringStorageAdapter } from "./types";
 
 interface GlobalAvgState {
   /** Sum of per-challenge metric values, keyed by metric key (remapped to global-average:*) */
@@ -30,20 +30,20 @@ export const globalAverage: GlobalScoringStrategy = {
       const state = await store.getGlobalStrategyState<GlobalAvgState>(playerId)
         ?? { metricSums: {}, challengeCount: 0, totalGames: 0, prevMetrics: {} };
 
-      const currentGames = current.metrics["games_played:count"] ?? 0;
+      const currentGames = current.metrics[GAMES_PLAYED_KEY] ?? 0;
       const prev = state.prevMetrics[result.challengeType];
       if (prev) {
         // Subtract old values, add new values
         for (const [key, value] of Object.entries(current.metrics)) {
-          if (key === "games_played:count") continue;
+          if (key === GAMES_PLAYED_KEY) continue;
           const globalKey = remapKey(challengeStrategyName, key);
           state.metricSums[globalKey] = (state.metricSums[globalKey] ?? 0) + value - (prev[key] ?? 0);
         }
-        state.totalGames += currentGames - (prev["games_played:count"] ?? 0);
+        state.totalGames += currentGames - (prev[GAMES_PLAYED_KEY] ?? 0);
       } else {
         // First time seeing this challenge for this player
         for (const [key, value] of Object.entries(current.metrics)) {
-          if (key === "games_played:count") continue;
+          if (key === GAMES_PLAYED_KEY) continue;
           const globalKey = remapKey(challengeStrategyName, key);
           state.metricSums[globalKey] = (state.metricSums[globalKey] ?? 0) + value;
         }
@@ -56,7 +56,7 @@ export const globalAverage: GlobalScoringStrategy = {
       await store.setGlobalStrategyState(playerId, state);
 
       const metrics: Record<string, number> = {
-        "games_played:count": state.totalGames,
+        [GAMES_PLAYED_KEY]: state.totalGames,
       };
       for (const [key, sum] of Object.entries(state.metricSums)) {
         metrics[key] = state.challengeCount > 0 ? sum / state.challengeCount : 0;

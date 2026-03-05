@@ -1,4 +1,4 @@
-import type { ScoringStrategy, GameResult, ScoringStorageAdapter } from "./types";
+import { GAMES_PLAYED_KEY, type ScoringStrategy, type GameResult, type ScoringStorageAdapter } from "./types";
 
 interface WinRateState {
   securityWins: number;
@@ -38,7 +38,7 @@ export const winRate: ScoringStrategy = {
       await store.setScoreEntry(result.challengeType, this.name, {
         playerId,
         metrics: {
-          "games_played:count": state.count,
+          [GAMES_PLAYED_KEY]: state.count,
           "win-rate:security": state.securityWins / state.count,
           "win-rate:utility": state.utilityWins / state.count,
         },

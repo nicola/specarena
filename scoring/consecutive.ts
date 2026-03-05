@@ -1,4 +1,4 @@
-import type { ScoringStrategy, GameResult, ScoringStorageAdapter } from "./types";
+import { GAMES_PLAYED_KEY, type ScoringStrategy, type GameResult, type ScoringStorageAdapter } from "./types";
 
 /** Per-challenge strategy: tracks current streak of consecutive successful games. */
 export const consecutive: ScoringStrategy = {
@@ -47,7 +47,7 @@ export const consecutive: ScoringStrategy = {
       await store.setScoreEntry(result.challengeType, this.name, {
         playerId,
         metrics: {
-          "games_played:count": (prev?.metrics["games_played:count"] ?? 0) + 1,
+          [GAMES_PLAYED_KEY]: (prev?.metrics[GAMES_PLAYED_KEY] ?? 0) + 1,
           "consecutive:security": security,
           "consecutive:utility": utility,
           "consecutive:attack": attack,

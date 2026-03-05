@@ -6,8 +6,8 @@ import type { ChatMessage } from "../../types";
 export class SqlChatStorageAdapter implements ChatStorageAdapter {
   constructor(private readonly db: Kysely<Database>) {}
 
-  async getNextIndex(channel: string): Promise<number> {
-    const row = await this.db
+  private async incrementCounter(conn: Kysely<Database>, channel: string): Promise<number> {
+    const row = await conn
       .insertInto("chat_channel_counters")
       .values({ channel, next_index: 1 })
       .onConflict((oc) =>
@@ -18,6 +18,10 @@ export class SqlChatStorageAdapter implements ChatStorageAdapter {
       .returning("next_index")
       .executeTakeFirstOrThrow();
     return row.next_index;
+  }
+
+  async getNextIndex(channel: string): Promise<number> {
+    return this.incrementCounter(this.db, channel);
   }
 
   async getMessagesForChannel(channel: string): Promise<ChatMessage[]> {
@@ -32,17 +36,7 @@ export class SqlChatStorageAdapter implements ChatStorageAdapter {
 
   async appendMessage(channel: string, message: ChatMessage): Promise<ChatMessage> {
     const stored = await this.db.transaction().execute(async (trx) => {
-      const row = await trx
-        .insertInto("chat_channel_counters")
-        .values({ channel, next_index: 1 })
-        .onConflict((oc) =>
-          oc.column("channel").doUpdateSet((eb) => ({
-            next_index: eb("chat_channel_counters.next_index", "+", 1),
-          }))
-        )
-        .returning("next_index")
-        .executeTakeFirstOrThrow();
-      const index = row.next_index;
+      const index = await this.incrementCounter(trx as unknown as Kysely<Database>, channel);
 
       await trx
         .insertInto("chat_messages")

@@ -1,9 +1,7 @@
 import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import { Kysely, Migrator, SqliteDialect } from "kysely";
-import Database from "better-sqlite3";
+import type { Kysely } from "kysely";
 import type { Database as DatabaseSchema } from "../schema";
-import { StaticMigrationProvider } from "../migrations";
 import { SqlArenaStorageAdapter } from "../SqlArenaStorageAdapter";
 import { SqlChatStorageAdapter } from "../SqlChatStorageAdapter";
 import { SqlUserStorageAdapter } from "../SqlUserStorageAdapter";
@@ -16,23 +14,7 @@ import { strategies, globalStrategies } from "../../../../scoring";
 import { createChallenge as psiFactory } from "../../../../challenges/psi/index";
 import { fromChallengeChannel } from "../../../types";
 import type { ChallengeMetadata } from "../../../types";
-
-function createTestDb() {
-  const sqliteDb = new Database(":memory:");
-  sqliteDb.pragma("foreign_keys = ON");
-  return new Kysely<DatabaseSchema>({
-    dialect: new SqliteDialect({ database: sqliteDb }),
-  });
-}
-
-async function migrate(db: Kysely<DatabaseSchema>) {
-  const migrator = new Migrator({
-    db,
-    provider: new StaticMigrationProvider(),
-  });
-  const { error } = await migrator.migrateToLatest();
-  if (error) throw error;
-}
+import { createTestDb, migrate } from "./test-helpers";
 
 const testConfig: EngineConfig = {
   challenges: [{ name: "psi", scoring: ["win-rate"] }],
