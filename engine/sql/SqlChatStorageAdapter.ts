@@ -12,7 +12,8 @@ export class SqlChatStorageAdapter implements ChatStorageAdapter {
   }
 
   async getNextIndex(channel: string): Promise<number> {
-    // Upsert counter: insert with 1, or increment existing
+    // Atomic upsert: insert with 1, or increment existing.
+    // Requires a dialect that supports RETURNING (SQLite 3.35+, Postgres).
     const result = await this.db
       .insertInto("channel_counters")
       .values({ channel, counter: 1 })
@@ -22,17 +23,7 @@ export class SqlChatStorageAdapter implements ChatStorageAdapter {
         }))
       )
       .returning("counter")
-      .executeTakeFirst();
-
-    // Fallback for dialects that don't support RETURNING on upsert
-    if (!result) {
-      const row = await this.db
-        .selectFrom("channel_counters")
-        .where("channel", "=", channel)
-        .select("counter")
-        .executeTakeFirst();
-      return row!.counter;
-    }
+      .executeTakeFirstOrThrow();
 
     return result.counter;
   }
@@ -50,10 +41,10 @@ export class SqlChatStorageAdapter implements ChatStorageAdapter {
       from: row.from_id,
       to: row.to_id ?? undefined,
       content: row.content,
-      index: row.idx,
+      index: row.idx ?? undefined,
       timestamp: row.timestamp,
       type: row.type ?? undefined,
-      redacted: row.redacted === 1 ? true : undefined,
+      redacted: row.redacted === 1,
     }));
   }
 
@@ -62,7 +53,7 @@ export class SqlChatStorageAdapter implements ChatStorageAdapter {
       .insertInto("chat_messages")
       .values({
         channel,
-        idx: message.index ?? 0,
+        idx: message.index ?? null,
         from_id: message.from,
         to_id: message.to ?? null,
         content: message.content,

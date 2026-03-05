@@ -430,3 +430,29 @@ for (const makeEngine of [inMemoryEngine, sqlEngine]) {
     scoringTests(engine);
   });
 }
+
+// ─── SQL-specific tests ─────────────────────────────────────
+
+describe("SQL Storage (SQL-specific)", () => {
+  const engine = sqlEngine();
+
+  beforeEach(() => engine.setup());
+  afterEach(() => engine.teardown());
+
+  it("transaction rolls back all writes on error", async () => {
+    const scoring = engine.scoring();
+    await assert.rejects(() =>
+      scoring.transaction(async (store) => {
+        await store.setScoreEntry("c1", "elo", {
+          playerId: "p1",
+          gamesPlayed: 1,
+          metrics: { r: 1000 },
+        });
+        throw new Error("deliberate failure");
+      })
+    );
+
+    // Write must not have persisted
+    assert.equal(await scoring.getScoreEntry("c1", "elo", "p1"), undefined);
+  });
+});

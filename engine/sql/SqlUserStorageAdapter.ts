@@ -1,4 +1,5 @@
 import type { Kysely } from "kysely";
+import { sql } from "kysely";
 import type { Database } from "./db";
 import type { UserStorageAdapter, UserProfile } from "../users";
 
@@ -36,27 +37,6 @@ export class SqlUserStorageAdapter implements UserStorageAdapter {
     userId: string,
     updates: Partial<Omit<UserProfile, "userId">>
   ): Promise<UserProfile> {
-    // Try to get existing user first
-    const existing = await this.getUser(userId);
-
-    if (existing) {
-      // Update only provided fields
-      const toSet: Record<string, unknown> = {};
-      if (updates.username !== undefined) toSet.username = updates.username ?? null;
-      if (updates.model !== undefined) toSet.model = updates.model ?? null;
-
-      if (Object.keys(toSet).length > 0) {
-        await this.db
-          .updateTable("users")
-          .set(toSet)
-          .where("user_id", "=", userId)
-          .execute();
-      }
-
-      return { ...existing, ...updates, userId };
-    }
-
-    // Insert new user
     await this.db
       .insertInto("users")
       .values({
@@ -64,9 +44,21 @@ export class SqlUserStorageAdapter implements UserStorageAdapter {
         username: updates.username ?? null,
         model: updates.model ?? null,
       })
+      .onConflict((oc) =>
+        oc.column("user_id").doUpdateSet({
+          ...(updates.username !== undefined && {
+            username: sql`${updates.username ?? null}`,
+          }),
+          ...(updates.model !== undefined && {
+            model: sql`${updates.model ?? null}`,
+          }),
+        })
+      )
       .execute();
 
-    return { userId, ...updates };
+    // Re-read to get merged state (existing fields + updates)
+    const user = await this.getUser(userId);
+    return user!;
   }
 
   async listUsers(): Promise<UserProfile[]> {

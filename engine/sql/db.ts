@@ -3,7 +3,7 @@ import type { Generated } from "kysely";
 export interface ChatMessagesTable {
   id: Generated<number>;
   channel: string;
-  idx: number;
+  idx: number | null;
   from_id: string;
   to_id: string | null;
   content: string;

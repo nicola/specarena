@@ -8,7 +8,7 @@ const migrations: Record<string, Migration> = {
         .createTable("chat_messages")
         .addColumn("id", "integer", (col) => col.primaryKey().autoIncrement())
         .addColumn("channel", "text", (col) => col.notNull())
-        .addColumn("idx", "integer", (col) => col.notNull())
+        .addColumn("idx", "integer")
         .addColumn("from_id", "text", (col) => col.notNull())
         .addColumn("to_id", "text")
         .addColumn("content", "text", (col) => col.notNull())

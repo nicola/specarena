@@ -3,7 +3,14 @@ import type { Database } from "./db";
 import type { ScoringEntry, ScoringStorageAdapter } from "@arena/scoring";
 
 export class SqlScoringStorageAdapter implements ScoringStorageAdapter {
-  constructor(private db: Kysely<Database> | Transaction<Database>) {}
+  private readonly inTransaction: boolean;
+
+  constructor(
+    private db: Kysely<Database> | Transaction<Database>,
+    inTransaction = false
+  ) {
+    this.inTransaction = inTransaction;
+  }
 
   async getScores(
     challengeType: string
@@ -49,13 +56,12 @@ export class SqlScoringStorageAdapter implements ScoringStorageAdapter {
   async transaction<T>(
     fn: (store: ScoringStorageAdapter) => Promise<T>
   ): Promise<T> {
-    // If we're already in a transaction, just run the function directly
-    if ("isTransaction" in this.db) {
+    if (this.inTransaction) {
       return fn(this);
     }
 
     return (this.db as Kysely<Database>).transaction().execute((trx) => {
-      return fn(new SqlScoringStorageAdapter(trx));
+      return fn(new SqlScoringStorageAdapter(trx, true));
     });
   }
 
