@@ -6,7 +6,7 @@ import {
   boolean,
   bigint,
   jsonb,
-  uniqueIndex,
+  primaryKey,
   index,
 } from "drizzle-orm/pg-core";
 
@@ -25,7 +25,7 @@ export const chatMessages = pgTable(
     from: text("from").notNull(),
     to: text("to"),
     content: text("content").notNull(),
-    timestamp: bigint("timestamp", { mode: "number" }),
+    timestamp: bigint("timestamp", { mode: "number" }).notNull(),
     type: text("type"),
     redacted: boolean("redacted").default(false),
   },
@@ -51,11 +51,7 @@ export const scoringEntries = pgTable(
     state: jsonb("state"),
   },
   (t) => [
-    uniqueIndex("scoring_entries_unique_idx").on(
-      t.challengeType,
-      t.strategyName,
-      t.playerId,
-    ),
+    primaryKey({ columns: [t.challengeType, t.strategyName, t.playerId] }),
     index("scoring_entries_challenge_type_idx").on(t.challengeType),
   ],
 );

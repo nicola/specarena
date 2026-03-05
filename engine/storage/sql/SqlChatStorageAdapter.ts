@@ -54,7 +54,7 @@ export class SqlChatStorageAdapter implements ChatStorageAdapter {
         from: row.from,
         content: row.content,
         index: row.index,
-        timestamp: row.timestamp ?? Date.now(),
+        timestamp: row.timestamp,
       };
       if (row.to !== null) msg.to = row.to;
       if (row.type !== null) msg.type = row.type;
@@ -64,11 +64,13 @@ export class SqlChatStorageAdapter implements ChatStorageAdapter {
   }
 
   async deleteChannel(channel: string): Promise<void> {
-    await this.db
-      .delete(chatMessages)
-      .where(eq(chatMessages.channel, channel));
-    await this.db
-      .delete(chatChannelCounters)
-      .where(eq(chatChannelCounters.channel, channel));
+    await this.db.transaction(async (tx) => {
+      await tx
+        .delete(chatMessages)
+        .where(eq(chatMessages.channel, channel));
+      await tx
+        .delete(chatChannelCounters)
+        .where(eq(chatChannelCounters.channel, channel));
+    });
   }
 }

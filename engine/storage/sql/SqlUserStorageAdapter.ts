@@ -33,18 +33,28 @@ export class SqlUserStorageAdapter implements UserStorageAdapter {
     userId: string,
     updates: Partial<Omit<UserProfile, "userId">>,
   ): Promise<UserProfile> {
-    const values: Record<string, unknown> = { userId };
-    if (updates.username !== undefined) values.username = updates.username;
-    if (updates.model !== undefined) values.model = updates.model;
+    const hasUpdates = Object.keys(updates).length > 0;
 
-    const rows = await this.db
-      .insert(users)
-      .values({ userId, ...updates })
-      .onConflictDoUpdate({
-        target: users.userId,
-        set: updates,
-      })
-      .returning();
+    const rows = hasUpdates
+      ? await this.db
+          .insert(users)
+          .values({ userId, ...updates })
+          .onConflictDoUpdate({
+            target: users.userId,
+            set: updates,
+          })
+          .returning()
+      : await this.db
+          .insert(users)
+          .values({ userId })
+          .onConflictDoNothing()
+          .returning();
+
+    // onConflictDoNothing returns no rows if the user already exists
+    if (rows.length === 0) {
+      const existing = await this.getUser(userId);
+      return existing!;
+    }
 
     return this.rowToProfile(rows[0]);
   }
