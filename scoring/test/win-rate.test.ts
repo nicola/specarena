@@ -103,12 +103,12 @@ describe("win-rate strategy (threshold-based)", () => {
     // alice: security wins 2/3, utility wins 2/3
     assert.ok(Math.abs(alice.metrics["win-rate:security"] - 2 / 3) < 1e-10);
     assert.ok(Math.abs(alice.metrics["win-rate:utility"] - 2 / 3) < 1e-10);
-    assert.equal(alice.gamesPlayed, 3);
+    assert.equal(alice.metrics["games_played:count"], 3);
 
     // bob: security wins 2/3, utility wins 1/3
     assert.ok(Math.abs(bob.metrics["win-rate:security"] - 2 / 3) < 1e-10);
     assert.ok(Math.abs(bob.metrics["win-rate:utility"] - 1 / 3) < 1e-10);
-    assert.equal(bob.gamesPlayed, 3);
+    assert.equal(bob.metrics["games_played:count"], 3);
   });
 
   it("works with any number of players (not just 2)", async () => {

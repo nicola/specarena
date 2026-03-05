@@ -7,11 +7,19 @@ import type {
   ChallengeOperatorState,
 } from "../../types";
 
+export type OperatorFactory = (challengeType: string, challengeId: string) => ChallengeOperator | undefined;
+
 export class SqlArenaStorageAdapter implements ArenaStorageAdapter {
   /** Live ChallengeOperator instances — not serializable. */
   private operators = new Map<string, ChallengeOperator>();
+  private operatorFactory?: OperatorFactory;
 
   constructor(private readonly db: Kysely<Database>) {}
+
+  /** Register a factory callback used to reconstruct operators on restart. */
+  setOperatorFactory(factory: OperatorFactory): void {
+    this.operatorFactory = factory;
+  }
 
   async clearRuntimeState(): Promise<void> {
     this.operators.clear();
@@ -78,6 +86,11 @@ export class SqlArenaStorageAdapter implements ArenaStorageAdapter {
       this.operators.set(challenge.id, challenge.instance);
     }
 
+    // Serialize challenge-specific game state if supported
+    const gameState = challenge.instance?.serialize
+      ? JSON.stringify(challenge.instance.serialize())
+      : null;
+
     // All SQL writes in a single transaction for atomicity
     await this.db.transaction().execute(async (trx) => {
       // Upsert challenge row
@@ -91,7 +104,7 @@ export class SqlArenaStorageAdapter implements ArenaStorageAdapter {
           game_started: state?.gameStarted ? 1 : 0,
           game_ended: state?.gameEnded ? 1 : 0,
           completed_at: state?.completedAt ?? null,
-          game_state: null,
+          game_state: gameState,
         })
         .onConflict((oc) =>
           oc.column("id").doUpdateSet({
@@ -100,6 +113,7 @@ export class SqlArenaStorageAdapter implements ArenaStorageAdapter {
             game_started: state?.gameStarted ? 1 : 0,
             game_ended: state?.gameEnded ? 1 : 0,
             completed_at: state?.completedAt ?? null,
+            game_state: gameState,
           })
         )
         .execute();
@@ -175,7 +189,8 @@ export class SqlArenaStorageAdapter implements ArenaStorageAdapter {
 
   /**
    * Hydrate a Challenge from a DB row + related tables.
-   * Attaches live operator from Map, or creates a read-only stub for completed games.
+   * Attaches live operator from Map, reconstructs from factory if available,
+   * or creates a read-only stub for completed/unrestorable games.
    */
   private async hydrateChallenge(row: {
     id: string;
@@ -240,7 +255,6 @@ export class SqlArenaStorageAdapter implements ArenaStorageAdapter {
     // Try live operator first
     let instance = this.operators.get(row.id);
     if (instance) {
-      // Keep operator's live state in sync — it's the source of truth for active games
       return {
         id: row.id,
         name: row.name,
@@ -249,6 +263,24 @@ export class SqlArenaStorageAdapter implements ArenaStorageAdapter {
         invites,
         instance,
       };
+    }
+
+    // Try to reconstruct from factory (for in-progress games)
+    if (this.operatorFactory && !state.gameEnded) {
+      const reconstructed = this.operatorFactory(row.challenge_type, row.id);
+      if (reconstructed?.restore) {
+        const gameState = row.game_state ? JSON.parse(row.game_state) : undefined;
+        reconstructed.restore(state, gameState);
+        this.operators.set(row.id, reconstructed);
+        return {
+          id: row.id,
+          name: row.name,
+          createdAt: row.created_at,
+          challengeType: row.challenge_type,
+          invites,
+          instance: reconstructed,
+        };
+      }
     }
 
     // Read-only stub for completed/historical games

@@ -401,19 +401,17 @@ describe("SqlChatStorageAdapter", () => {
   });
 
   it("getNextIndex uses counter table, not MAX scan", async () => {
-    // Insert messages with a gap (1, 2, 5) then delete middle ones.
-    // Counter-based approach should track the highest value, not rely on MAX.
-    for (const idx of [1, 2, 5]) {
+    // Counter increments atomically with each append, independent of message content.
+    for (let i = 0; i < 3; i++) {
       await adapter.appendMessage("ch1", {
         channel: "ch1",
         from: "alice",
-        content: `msg${idx}`,
-        index: idx,
-        timestamp: 1000 + idx,
+        content: `msg${i}`,
+        timestamp: 1000 + i,
       });
     }
-    // Counter should be at 5 (highest pre-set index), so getNextIndex returns 6
-    assert.equal(await adapter.getNextIndex("ch1"), 6);
+    // 3 messages appended → counter is at 3, next is 4
+    assert.equal(await adapter.getNextIndex("ch1"), 4);
   });
 
   it("clearRuntimeState removes all messages across all channels", async () => {
@@ -456,14 +454,12 @@ describe("SqlScoringStorageAdapter", () => {
   it("setScoreEntry and getScoreEntry round-trip", async () => {
     await adapter.setScoreEntry("psi", "elo", {
       playerId: "p1",
-      gamesPlayed: 5,
       metrics: { elo: 1200, winRate: 0.6 },
     });
 
     const entry = await adapter.getScoreEntry("psi", "elo", "p1");
     assert.ok(entry);
     assert.equal(entry.playerId, "p1");
-    assert.equal(entry.gamesPlayed, 5);
     assert.equal(entry.metrics.elo, 1200);
     assert.equal(entry.metrics.winRate, 0.6);
   });
@@ -471,18 +467,15 @@ describe("SqlScoringStorageAdapter", () => {
   it("setScoreEntry replaces existing metrics completely", async () => {
     await adapter.setScoreEntry("psi", "elo", {
       playerId: "p1",
-      gamesPlayed: 5,
       metrics: { elo: 1200, winRate: 0.6 },
     });
     await adapter.setScoreEntry("psi", "elo", {
       playerId: "p1",
-      gamesPlayed: 6,
       metrics: { elo: 1250 },
     });
 
     const entry = await adapter.getScoreEntry("psi", "elo", "p1");
     assert.ok(entry);
-    assert.equal(entry.gamesPlayed, 6);
     assert.equal(entry.metrics.elo, 1250);
     assert.equal(entry.metrics.winRate, undefined); // removed
   });
@@ -497,12 +490,10 @@ describe("SqlScoringStorageAdapter", () => {
   it("getScores groups by strategy name", async () => {
     await adapter.setScoreEntry("psi", "elo", {
       playerId: "p1",
-      gamesPlayed: 1,
       metrics: { elo: 1000 },
     });
     await adapter.setScoreEntry("psi", "winrate", {
       playerId: "p1",
-      gamesPlayed: 1,
       metrics: { rate: 0.5 },
     });
     const scores = await adapter.getScores("psi");
@@ -515,12 +506,10 @@ describe("SqlScoringStorageAdapter", () => {
   it("getScores returns multiple players per strategy", async () => {
     await adapter.setScoreEntry("psi", "avg", {
       playerId: "alice",
-      gamesPlayed: 3,
       metrics: { security: 0.8, utility: 0.9 },
     });
     await adapter.setScoreEntry("psi", "avg", {
       playerId: "bob",
-      gamesPlayed: 2,
       metrics: { security: 0.6, utility: 0.7 },
     });
 
@@ -530,38 +519,34 @@ describe("SqlScoringStorageAdapter", () => {
     const bob = scores.avg.find((e) => e.playerId === "bob");
     assert.ok(alice);
     assert.ok(bob);
-    assert.equal(alice.gamesPlayed, 3);
-    assert.equal(bob.gamesPlayed, 2);
+    assert.equal(alice.metrics.security, 0.8);
+    assert.equal(bob.metrics.security, 0.6);
   });
 
   it("challenge types are isolated", async () => {
     await adapter.setScoreEntry("psi", "avg", {
       playerId: "p1",
-      gamesPlayed: 1,
       metrics: { x: 1 },
     });
     await adapter.setScoreEntry("other", "avg", {
       playerId: "p1",
-      gamesPlayed: 2,
       metrics: { x: 2 },
     });
 
     const psi = await adapter.getScores("psi");
     const other = await adapter.getScores("other");
-    assert.equal(psi.avg[0].gamesPlayed, 1);
-    assert.equal(other.avg[0].gamesPlayed, 2);
+    assert.equal(psi.avg[0].metrics.x, 1);
+    assert.equal(other.avg[0].metrics.x, 2);
   });
 
   it("global score entry round-trips", async () => {
     await adapter.setGlobalScoreEntry({
       playerId: "p1",
-      gamesPlayed: 10,
       metrics: { totalElo: 2000 },
     });
     const entry = await adapter.getGlobalScoreEntry("p1");
     assert.ok(entry);
     assert.equal(entry.metrics.totalElo, 2000);
-    assert.equal(entry.gamesPlayed, 10);
   });
 
   it("getGlobalScoreEntry returns undefined for nonexistent", async () => {
@@ -571,12 +556,10 @@ describe("SqlScoringStorageAdapter", () => {
   it("getGlobalScores returns all global entries", async () => {
     await adapter.setGlobalScoreEntry({
       playerId: "p1",
-      gamesPlayed: 1,
       metrics: { x: 1 },
     });
     await adapter.setGlobalScoreEntry({
       playerId: "p2",
-      gamesPlayed: 2,
       metrics: { x: 2 },
     });
     const all = await adapter.getGlobalScores();
@@ -669,13 +652,11 @@ describe("SqlScoringStorageAdapter", () => {
   it("clear removes all score data and strategy state", async () => {
     await adapter.setScoreEntry("psi", "elo", {
       playerId: "p1",
-      gamesPlayed: 1,
       metrics: { x: 1 },
     });
     await adapter.setStrategyState("psi", "elo", "p1", { a: 1 });
     await adapter.setGlobalScoreEntry({
       playerId: "p1",
-      gamesPlayed: 1,
       metrics: { y: 2 },
     });
     await adapter.setGlobalStrategyState("p1", { b: 2 });
@@ -691,7 +672,6 @@ describe("SqlScoringStorageAdapter", () => {
   it("handles zero and negative metric values", async () => {
     await adapter.setScoreEntry("psi", "avg", {
       playerId: "p1",
-      gamesPlayed: 1,
       metrics: { security: 0, utility: -1 },
     });
     const entry = await adapter.getScoreEntry("psi", "avg", "p1");
@@ -703,7 +683,6 @@ describe("SqlScoringStorageAdapter", () => {
   it("handles fractional metric values", async () => {
     await adapter.setScoreEntry("psi", "avg", {
       playerId: "p1",
-      gamesPlayed: 1,
       metrics: { rate: 0.333333 },
     });
     const entry = await adapter.getScoreEntry("psi", "avg", "p1");

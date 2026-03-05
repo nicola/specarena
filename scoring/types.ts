@@ -28,7 +28,6 @@ export interface MetricDescriptor {
 
 export interface ScoringEntry {
   playerId: string;
-  gamesPlayed: number;
   metrics: Record<string, number>;
 }
 

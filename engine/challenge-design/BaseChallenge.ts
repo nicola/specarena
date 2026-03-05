@@ -110,6 +110,26 @@ export abstract class BaseChallenge<TGameState = {}> implements ChallengeOperato
     this.state.attributions.push({ from, to, type });
   }
 
+  // --- Serialization ---
+
+  // Serialize the challenge-specific game state for DB persistence.
+  // Subclasses should override if gameState contains non-JSON-serializable types (e.g. Sets).
+  serialize(): unknown {
+    return this.gameState;
+  }
+
+  // Restore operator from persisted state after a server restart.
+  // Reconstructs both the canonical operator state and challenge-specific game state.
+  restore(operatorState: ChallengeOperatorState, gameState: unknown): void {
+    Object.assign(this.state, operatorState);
+    if (gameState != null) {
+      this.restoreGameState(gameState);
+    }
+  }
+
+  // Hook for subclasses to deserialize challenge-specific game state.
+  protected restoreGameState(_data: unknown): void {}
+
   // --- Game lifecycle ---
 
   // Standard game-finalization helper used by challenges after scoring.

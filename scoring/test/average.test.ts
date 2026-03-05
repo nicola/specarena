@@ -58,11 +58,11 @@ describe("average strategy", () => {
 
     assert.equal(alice.metrics["average:security"], 1);
     assert.equal(alice.metrics["average:utility"], 1);
-    assert.equal(alice.gamesPlayed, 1);
+    assert.equal(alice.metrics["games_played:count"], 1);
 
     assert.equal(bob.metrics["average:security"], -1);
     assert.equal(bob.metrics["average:utility"], -1);
-    assert.equal(bob.gamesPlayed, 1);
+    assert.equal(bob.metrics["games_played:count"], 1);
   });
 
   it("two games — averages the scores", async () => {
@@ -76,11 +76,11 @@ describe("average strategy", () => {
 
     assert.equal(alice.metrics["average:security"], 0);
     assert.equal(alice.metrics["average:utility"], 0);
-    assert.equal(alice.gamesPlayed, 2);
+    assert.equal(alice.metrics["games_played:count"], 2);
 
     assert.equal(bob.metrics["average:security"], 0);
     assert.equal(bob.metrics["average:utility"], 0);
-    assert.equal(bob.gamesPlayed, 2);
+    assert.equal(bob.metrics["games_played:count"], 2);
   });
 
   it("asymmetric scores average correctly", async () => {
@@ -130,12 +130,12 @@ describe("average strategy", () => {
     ]);
 
     const alice = entries.find((e) => e.playerId === "alice")!;
-    assert.equal(alice.gamesPlayed, 2);
+    assert.equal(alice.metrics["games_played:count"], 2);
     assert.equal(alice.metrics["average:security"], 1); // (1+1)/2
     assert.equal(alice.metrics["average:utility"], 1); // (1+1)/2
 
     const charlie = entries.find((e) => e.playerId === "charlie")!;
-    assert.equal(charlie.gamesPlayed, 1);
+    assert.equal(charlie.metrics["games_played:count"], 1);
     assert.equal(charlie.metrics["average:security"], 0);
     assert.equal(charlie.metrics["average:utility"], 0);
   });

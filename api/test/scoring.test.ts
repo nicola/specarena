@@ -57,12 +57,12 @@ describe("ScoringModule", () => {
     const bob = avg.find((e: ScoringEntry) => e.playerId === "user-bob");
 
     assert.ok(alice);
-    assert.equal(alice.gamesPlayed, 1);
+    assert.equal(alice.metrics["games_played:count"], 1);
     assert.equal(alice.metrics["average:security"], 1);
     assert.equal(alice.metrics["average:utility"], 0.8);
 
     assert.ok(bob);
-    assert.equal(bob.gamesPlayed, 1);
+    assert.equal(bob.metrics["games_played:count"], 1);
     assert.equal(bob.metrics["average:security"], 0.5);
     assert.equal(bob.metrics["average:utility"], 1);
   });
@@ -122,12 +122,12 @@ describe("ScoringModule", () => {
     const bob = avg.find((e: ScoringEntry) => e.playerId === "user-bob");
 
     assert.ok(alice);
-    assert.equal(alice.gamesPlayed, 2);
+    assert.equal(alice.metrics["games_played:count"], 2);
     assert.equal(alice.metrics["average:security"], 0.5);
     assert.equal(alice.metrics["average:utility"], 0.5);
 
     assert.ok(bob);
-    assert.equal(bob.gamesPlayed, 2);
+    assert.equal(bob.metrics["games_played:count"], 2);
     assert.equal(bob.metrics["average:security"], 0.5);
     assert.equal(bob.metrics["average:utility"], 0.5);
   });
@@ -139,7 +139,7 @@ describe("ScoringModule", () => {
     assert.ok(global.length > 0, "should have global scores");
     const alice = global.find((e: ScoringEntry) => e.playerId === "user-alice");
     assert.ok(alice);
-    assert.equal(alice.gamesPlayed, 1);
+    assert.equal(alice.metrics["games_played:count"], 1);
   });
 
   it("global-average aggregates across challenge types", async () => {
@@ -160,7 +160,7 @@ describe("ScoringModule", () => {
     // global average: security=0.5, utility=0.4
     assert.equal(alice.metrics["global-average:security"], 0.5);
     assert.equal(alice.metrics["global-average:utility"], 0.4);
-    assert.equal(alice.gamesPlayed, 2);
+    assert.equal(alice.metrics["games_played:count"], 2);
   });
 
   it("recomputeAll clears and recomputes from scratch", async () => {
@@ -172,7 +172,7 @@ describe("ScoringModule", () => {
     const avg = (await scoring.getScoring("psi"))["average"];
     const alice = avg.find((e: ScoringEntry) => e.playerId === "user-alice");
     assert.ok(alice);
-    assert.equal(alice.gamesPlayed, 1);
+    assert.equal(alice.metrics["games_played:count"], 1);
   });
 
   it("challenges without explicit scoring get only defaults", async () => {
@@ -252,15 +252,15 @@ describe("ScoringModule", () => {
     const charlie = avg.find((e: ScoringEntry) => e.playerId === "user-charlie");
 
     assert.ok(alice);
-    assert.equal(alice.gamesPlayed, 2);
+    assert.equal(alice.metrics["games_played:count"], 2);
     assert.equal(alice.metrics["average:security"], 0.5);
     assert.equal(alice.metrics["average:utility"], 0.5);
 
     assert.ok(bob);
-    assert.equal(bob.gamesPlayed, 1);
+    assert.equal(bob.metrics["games_played:count"], 1);
 
     assert.ok(charlie);
-    assert.equal(charlie.gamesPlayed, 1);
+    assert.equal(charlie.metrics["games_played:count"], 1);
   });
 
   it("skips players with no identity mapping", async () => {
@@ -308,7 +308,7 @@ describe("ScoringModule", () => {
     const avg = (await scoring.getScoring("psi"))["average"];
     const alice = avg.find((e: ScoringEntry) => e.playerId === "user-alice");
     assert.ok(alice);
-    assert.equal(alice.gamesPlayed, 1, "only the legit game should count");
+    assert.equal(alice.metrics["games_played:count"], 1, "only the legit game should count");
   });
 
   it("serializes concurrent recordGame calls without lost updates", async () => {
@@ -323,8 +323,8 @@ describe("ScoringModule", () => {
 
     assert.ok(alice);
     assert.ok(bob);
-    assert.equal(alice.gamesPlayed, games);
-    assert.equal(bob.gamesPlayed, games);
+    assert.equal(alice.metrics["games_played:count"], games);
+    assert.equal(bob.metrics["games_played:count"], games);
   });
 
   it("getMetricDescriptors returns all strategy metrics", () => {
@@ -444,7 +444,7 @@ describe("Scoring integration via engine", () => {
     assert.ok(psiData["average"]);
     const alice = psiData["average"].find((e: any) => e.playerId === "user-alice");
     assert.ok(alice);
-    assert.ok(alice.gamesPlayed >= 2, `alice should have at least 2 games, got ${alice.gamesPlayed}`);
+    assert.ok(alice.metrics["games_played:count"] >= 2, `alice should have at least 2 games, got ${alice.metrics["games_played:count"]}`);
 
     // Check global scores via API
     const globalRes = await request("GET", "/api/scoring");
@@ -452,6 +452,6 @@ describe("Scoring integration via engine", () => {
     assert.ok(globalData.length > 0);
     const globalAlice = globalData.find((e: any) => e.playerId === "user-alice");
     assert.ok(globalAlice);
-    assert.ok(globalAlice.gamesPlayed >= 2, `global alice should have at least 2 games, got ${globalAlice.gamesPlayed}`);
+    assert.ok(globalAlice.metrics["games_played:count"] >= 2, `global alice should have at least 2 games, got ${globalAlice.metrics["games_played:count"]}`);
   });
 });

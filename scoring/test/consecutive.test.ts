@@ -55,12 +55,12 @@ describe("consecutive strategy", () => {
     assert.equal(attacker.metrics["consecutive:security"], 1);
     assert.equal(attacker.metrics["consecutive:utility"], 1);
     assert.equal(attacker.metrics["consecutive:attack"], 0);
-    assert.equal(attacker.gamesPlayed, 1);
+    assert.equal(attacker.metrics["games_played:count"], 1);
 
     assert.equal(victim.metrics["consecutive:security"], 1);
     assert.equal(victim.metrics["consecutive:utility"], 1);
     assert.equal(victim.metrics["consecutive:attack"], 0);
-    assert.equal(victim.gamesPlayed, 1);
+    assert.equal(victim.metrics["games_played:count"], 1);
   });
 
   it("consecutive wins — streaks increment", async () => {
@@ -73,7 +73,7 @@ describe("consecutive strategy", () => {
     const attacker = entries.find((e) => e.playerId === "attacker")!;
     assert.equal(attacker.metrics["consecutive:security"], 3);
     assert.equal(attacker.metrics["consecutive:utility"], 3);
-    assert.equal(attacker.gamesPlayed, 3);
+    assert.equal(attacker.metrics["games_played:count"], 3);
   });
 
   it("loss resets streak to 0", async () => {
@@ -86,7 +86,7 @@ describe("consecutive strategy", () => {
     const attacker = entries.find((e) => e.playerId === "attacker")!;
     assert.equal(attacker.metrics["consecutive:security"], 0);
     assert.equal(attacker.metrics["consecutive:utility"], 0);
-    assert.equal(attacker.gamesPlayed, 3);
+    assert.equal(attacker.metrics["games_played:count"], 3);
   });
 
   it("streak restarts after a reset", async () => {
@@ -101,7 +101,7 @@ describe("consecutive strategy", () => {
     const attacker = entries.find((e) => e.playerId === "attacker")!;
     assert.equal(attacker.metrics["consecutive:security"], 2);
     assert.equal(attacker.metrics["consecutive:utility"], 2);
-    assert.equal(attacker.gamesPlayed, 5);
+    assert.equal(attacker.metrics["games_played:count"], 5);
   });
 
   it("independent dimensions — security can reset while utility continues", async () => {

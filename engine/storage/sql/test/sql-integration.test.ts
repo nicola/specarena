@@ -149,7 +149,7 @@ describe("SQL adapters wired through ArenaEngine", () => {
       (e: ScoringEntry) => e.playerId === "alice"
     );
     assert.ok(alice);
-    assert.equal(alice.gamesPlayed, 1);
+    assert.equal(alice.metrics["games_played:count"], 1);
     assert.equal(alice.metrics["average:security"], 1);
     assert.equal(alice.metrics["average:utility"], 0.8);
   });
@@ -180,7 +180,7 @@ describe("SQL adapters wired through ArenaEngine", () => {
       (e: ScoringEntry) => e.playerId === "alice"
     );
     assert.ok(alice);
-    assert.equal(alice.gamesPlayed, 3);
+    assert.equal(alice.metrics["games_played:count"], 3);
     assert.equal(alice.metrics["average:security"], 1);
     assert.equal(alice.metrics["average:utility"], 1);
   });
@@ -207,7 +207,7 @@ describe("SQL adapters wired through ArenaEngine", () => {
       (e: ScoringEntry) => e.playerId === "alice"
     );
     assert.ok(alice);
-    assert.equal(alice.gamesPlayed, 1);
+    assert.equal(alice.metrics["games_played:count"], 1);
   });
 
   it("scoring recomputeAll works with SQL backend", async () => {
@@ -252,7 +252,7 @@ describe("SQL adapters wired through ArenaEngine", () => {
       (e: ScoringEntry) => e.playerId === "alice"
     );
     assert.ok(alice);
-    assert.equal(alice.gamesPlayed, 1); // only 1 game after recompute
+    assert.equal(alice.metrics["games_played:count"], 1); // only 1 game after recompute
   });
 
   it("concurrent scoring writes don't lose updates", async () => {
@@ -284,7 +284,7 @@ describe("SQL adapters wired through ArenaEngine", () => {
       (e: ScoringEntry) => e.playerId === "alice"
     );
     assert.ok(alice);
-    assert.equal(alice.gamesPlayed, games);
+    assert.equal(alice.metrics["games_played:count"], games);
   });
 
   it("getScoringForPlayer returns per-player breakdown", async () => {
@@ -471,7 +471,7 @@ describe("SQL adapter simulates server restart", () => {
       (e: ScoringEntry) => e.playerId === "alice"
     );
     assert.ok(alice);
-    assert.equal(alice.gamesPlayed, 1);
+    assert.equal(alice.metrics["games_played:count"], 1);
     assert.equal(alice.metrics["average:security"], 1);
 
     // Global survived
@@ -498,7 +498,7 @@ describe("SQL adapter simulates server restart", () => {
       (e: ScoringEntry) => e.playerId === "alice"
     );
     assert.ok(aliceUpdated);
-    assert.equal(aliceUpdated.gamesPlayed, 2);
+    assert.equal(aliceUpdated.metrics["games_played:count"], 2);
     assert.equal(aliceUpdated.metrics["average:security"], 0.5); // (1 + 0) / 2
   });
 });

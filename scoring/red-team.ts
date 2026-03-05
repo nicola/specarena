@@ -52,8 +52,8 @@ export const redTeam: ScoringStrategy = {
       await store.setStrategyState(result.challengeType, this.name, playerId, state);
       await store.setScoreEntry(result.challengeType, this.name, {
         playerId,
-        gamesPlayed: state.gamesPlayed,
         metrics: {
+          "games_played:count": state.gamesPlayed,
           "red-team:attack": state.breaches / state.gamesPlayed,
           "red-team:defend": 1 - state.timesBreached / state.gamesPlayed,
         },

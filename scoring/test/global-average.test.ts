@@ -61,11 +61,11 @@ describe("global-average strategy", () => {
 
     assert.equal(alice.metrics["global-average:security"], 1);
     assert.equal(alice.metrics["global-average:utility"], 1);
-    assert.equal(alice.gamesPlayed, 2);
+    assert.equal(alice.metrics["games_played:count"], 2);
 
     assert.equal(bob.metrics["global-average:security"], -1);
     assert.equal(bob.metrics["global-average:utility"], -1);
-    assert.equal(bob.gamesPlayed, 2);
+    assert.equal(bob.metrics["games_played:count"], 2);
   });
 
   it("two challenge types — averages across challenges", async () => {
@@ -83,12 +83,12 @@ describe("global-average strategy", () => {
     // alice: psi avg=(1,1) 2 games, gencrypto avg=(-1,-1) 3 games → global avg=(0,0), totalGames=5
     assert.equal(alice.metrics["global-average:security"], 0);
     assert.equal(alice.metrics["global-average:utility"], 0);
-    assert.equal(alice.gamesPlayed, 5);
+    assert.equal(alice.metrics["games_played:count"], 5);
 
     // bob: psi avg=(-1,-1) 2 games, gencrypto avg=(1,1) 3 games → global avg=(0,0), totalGames=5
     assert.equal(bob.metrics["global-average:security"], 0);
     assert.equal(bob.metrics["global-average:utility"], 0);
-    assert.equal(bob.gamesPlayed, 5);
+    assert.equal(bob.metrics["games_played:count"], 5);
   });
 
   it("player in only one challenge type — still averages by challenge count", async () => {
@@ -112,12 +112,12 @@ describe("global-average strategy", () => {
     // alice only in psi → challengeCount=1 → avg = psi scores
     assert.equal(alice.metrics["global-average:security"], 1);
     assert.equal(alice.metrics["global-average:utility"], 1);
-    assert.equal(alice.gamesPlayed, 2);
+    assert.equal(alice.metrics["games_played:count"], 2);
 
     const charlie = entries.find((e) => e.playerId === "charlie")!;
     assert.equal(charlie.metrics["global-average:security"], 0.5);
     assert.equal(charlie.metrics["global-average:utility"], 0.5);
-    assert.equal(charlie.gamesPlayed, 1);
+    assert.equal(charlie.metrics["games_played:count"], 1);
   });
 
   it("asymmetric per-challenge scores average correctly", async () => {
@@ -142,6 +142,6 @@ describe("global-average strategy", () => {
     // global avg: security=(0.8+0.2)/2=0.5, utility=(0.2+0.8)/2=0.5
     assert.ok(Math.abs(alice.metrics["global-average:security"] - 0.5) < 1e-10);
     assert.ok(Math.abs(alice.metrics["global-average:utility"] - 0.5) < 1e-10);
-    assert.equal(alice.gamesPlayed, 6);
+    assert.equal(alice.metrics["games_played:count"], 6);
   });
 });

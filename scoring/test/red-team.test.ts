@@ -57,11 +57,11 @@ describe("red-team strategy", () => {
 
     assert.equal(attacker.metrics["red-team:attack"], 1);     // caused 1 breach in 1 game
     assert.equal(attacker.metrics["red-team:defend"], 1);     // never breached
-    assert.equal(attacker.gamesPlayed, 1);
+    assert.equal(attacker.metrics["games_played:count"], 1);
 
     assert.equal(victim.metrics["red-team:attack"], 0);       // caused 0 breaches
     assert.equal(victim.metrics["red-team:defend"], 0);       // breached 1 time in 1 game
-    assert.equal(victim.gamesPlayed, 1);
+    assert.equal(victim.metrics["games_played:count"], 1);
   });
 
   it("no attributions — attack=0, defend=1", async () => {
@@ -99,11 +99,11 @@ describe("red-team strategy", () => {
     const attacker = entries.find((e) => e.playerId === "attacker")!;
     const victim = entries.find((e) => e.playerId === "victim")!;
 
-    assert.equal(attacker.gamesPlayed, 3);
+    assert.equal(attacker.metrics["games_played:count"], 3);
     assert.ok(Math.abs(attacker.metrics["red-team:attack"] - 1 / 3) < 1e-10);  // 1 breach in 3 games
     assert.ok(Math.abs(attacker.metrics["red-team:defend"] - 2 / 3) < 1e-10);  // breached 1 time in 3 games
 
-    assert.equal(victim.gamesPlayed, 3);
+    assert.equal(victim.metrics["games_played:count"], 3);
     assert.ok(Math.abs(victim.metrics["red-team:attack"] - 1 / 3) < 1e-10);    // 1 breach in 3 games
     assert.ok(Math.abs(victim.metrics["red-team:defend"] - 2 / 3) < 1e-10);    // breached 1 time in 3 games
   });

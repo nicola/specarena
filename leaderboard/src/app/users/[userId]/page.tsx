@@ -155,7 +155,7 @@ export default async function UserProfilePage({ params }: { params: Promise<{ us
               <div className="border border-zinc-900 self-start divide-y divide-zinc-100">
                 <div className="px-4 pt-4 pb-2">
                   <h2 className="text-sm font-semibold text-zinc-900">Overview</h2>
-                  <p className="text-xs text-zinc-400 mt-1">{scores!.global.gamesPlayed} games played</p>
+                  <p className="text-xs text-zinc-400 mt-1">{scores!.global.metrics["games_played:count"] ?? 0} games played</p>
                 </div>
                 <div className="px-4 py-4 flex flex-col gap-4">
                   {Object.entries(scores!.global.metrics).map(([key, value]) => (
@@ -178,7 +178,7 @@ export default async function UserProfilePage({ params }: { params: Promise<{ us
               const mergedMetrics: Record<string, number> = {};
               let totalGames = 0;
               Object.values(strategies).forEach((entry) => {
-                totalGames = Math.max(totalGames, entry.gamesPlayed);
+                totalGames = Math.max(totalGames, entry.metrics["games_played:count"] ?? 0);
                 Object.entries(entry.metrics).forEach(([k, v]) => {
                   mergedMetrics[k] = v;
                 });

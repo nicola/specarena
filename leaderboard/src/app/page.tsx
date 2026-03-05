@@ -7,7 +7,6 @@ const engineUrl = process.env.ENGINE_URL || "http://localhost:3001";
 
 interface ScoringEntry {
   playerId: string;
-  gamesPlayed: number;
   metrics: Record<string, number>;
   username?: string;
   model?: string;

@@ -155,7 +155,7 @@ describe("Engine restart mid-game with SQL storage", () => {
 
   // ── Mid-game scenarios ──────────────────────────────────────
 
-  it("mid-game challenge is listed after restart but operator is a read-only stub", async () => {
+  it("mid-game challenge is reconstructed after restart and game can continue", async () => {
     const { engine: e1 } = createSqlEngine(db);
     const challenge = await e1.createChallenge("psi");
     const [inv1, inv2] = challenge.invites;
@@ -173,7 +173,7 @@ describe("Engine restart mid-game with SQL storage", () => {
     assert.equal(list[0].id, challenge.id);
     assert.equal(list[0].challengeType, "psi");
 
-    // The live operator is gone → read-only stub, but game state is correct
+    // Operator is reconstructed with correct state
     const restored = await e2.getChallenge(challenge.id);
     assert.ok(restored);
     assert.equal(restored!.instance.state.gameStarted, true);
@@ -182,20 +182,31 @@ describe("Engine restart mid-game with SQL storage", () => {
       [inv1]: "alice",
       [inv2]: "bob",
     });
-    await assert.rejects(
-      () => restored!.instance.join(inv1),
-      /completed challenge/,
+
+    // Game can continue after restart — get private sets from surviving chat
+    const sync1 = await e2.challengeSync(challenge.id, inv1, 0);
+    const sync2 = await e2.challengeSync(challenge.id, inv2, 0);
+    const p1Msg = sync1.messages.find(
+      (m) => m.to === inv1 && m.content.includes("Your private set"),
     );
-    await assert.rejects(
-      () => restored!.instance.message({
-        channel: challenge.id,
-        from: inv1,
-        type: "guess",
-        content: "1, 2, 3",
-        timestamp: Date.now(),
-      }),
-      /completed challenge/,
+    const p2Msg = sync2.messages.find(
+      (m) => m.to === inv2 && m.content.includes("Your private set"),
     );
+    assert.ok(p1Msg);
+    assert.ok(p2Msg);
+
+    const p1Set = parseSet(p1Msg!.content);
+    const p2Set = parseSet(p2Msg!.content);
+    const intersection = [...p1Set].filter((n) => p2Set.has(n));
+    const guess = intersection.join(", ");
+
+    // Both players guess after restart — game completes
+    await e2.challengeMessage(challenge.id, inv1, "guess", guess);
+    await e2.challengeMessage(challenge.id, inv2, "guess", guess);
+
+    const completed = await e2.getChallenge(challenge.id);
+    assert.ok(completed);
+    assert.equal(completed!.instance.state.gameEnded, true);
   });
 
   it("mid-game with one player joined — join state survives restart", async () => {
@@ -266,6 +277,19 @@ describe("Engine restart mid-game with SQL storage", () => {
       assert.equal(restored!.instance.state.scores[i].security, scoresBefore[i].security);
       assert.equal(restored!.instance.state.scores[i].utility, scoresBefore[i].utility);
     }
+
+    // Game can continue after restart — second player guesses
+    const sync2 = await e2.challengeSync(challenge.id, inv2, 0);
+    const p2Msg = sync2.messages.find(
+      (m) => m.to === inv2 && m.content.includes("Your private set"),
+    );
+    assert.ok(p2Msg, "player 2 should see their set from before restart");
+    const p2Set = parseSet(p2Msg!.content);
+    await e2.challengeMessage(challenge.id, inv2, "guess", [...p2Set].slice(0, 2).join(", "));
+
+    const completed = await e2.getChallenge(challenge.id);
+    assert.ok(completed);
+    assert.equal(completed!.instance.state.gameEnded, true);
   });
 
   it("invite lookup still works after restart for mid-game challenge", async () => {
@@ -435,7 +459,7 @@ describe("Engine restart mid-game with SQL storage", () => {
       (e: ScoringEntry) => e.playerId === "alice",
     );
     assert.ok(aliceBefore);
-    assert.equal(aliceBefore.gamesPlayed, 1);
+    assert.equal(aliceBefore.metrics["games_played:count"], 1);
 
     // === Restart ===
     const { scoring: s2 } = createSqlEngine(db);
@@ -445,7 +469,7 @@ describe("Engine restart mid-game with SQL storage", () => {
       (e: ScoringEntry) => e.playerId === "alice",
     );
     assert.ok(aliceAfter);
-    assert.equal(aliceAfter.gamesPlayed, 1);
+    assert.equal(aliceAfter.metrics["games_played:count"], 1);
     assert.equal(
       aliceAfter.metrics["average:security"],
       aliceBefore.metrics["average:security"],
@@ -461,7 +485,7 @@ describe("Engine restart mid-game with SQL storage", () => {
       (e: ScoringEntry) => e.playerId === "alice",
     );
     assert.ok(aliceGlobal);
-    assert.equal(aliceGlobal.gamesPlayed, 1);
+    assert.equal(aliceGlobal.metrics["games_played:count"], 1);
   });
 
   it("scoring accumulates across restarts", async () => {
@@ -483,18 +507,18 @@ describe("Engine restart mid-game with SQL storage", () => {
       (e: ScoringEntry) => e.playerId === "alice",
     );
     assert.ok(alice);
-    assert.equal(alice.gamesPlayed, 2);
+    assert.equal(alice.metrics["games_played:count"], 2);
 
     const bob = scores["average"]?.find(
       (e: ScoringEntry) => e.playerId === "bob",
     );
     assert.ok(bob);
-    assert.equal(bob.gamesPlayed, 2);
+    assert.equal(bob.metrics["games_played:count"], 2);
 
     // Global accumulated too
     const playerScores = await s3.getScoringForPlayer("alice");
     assert.ok(playerScores.global);
-    assert.equal(playerScores.global.gamesPlayed, 2);
+    assert.equal(playerScores.global.metrics["games_played:count"], 2);
   });
 
   it("getScoresForPlayer works after restart", async () => {
@@ -510,7 +534,7 @@ describe("Engine restart mid-game with SQL storage", () => {
     assert.equal(playerScores.global.playerId, "alice");
     assert.ok(playerScores.challenges.psi);
     assert.ok(playerScores.challenges.psi["average"]);
-    assert.equal(playerScores.challenges.psi["average"].gamesPlayed, 1);
+    assert.equal(playerScores.challenges.psi["average"].metrics["games_played:count"], 1);
   });
 
   // ── User persistence across restart ─────────────────────────
@@ -582,7 +606,7 @@ describe("Engine restart mid-game with SQL storage", () => {
       (e: ScoringEntry) => e.playerId === "alice",
     );
     assert.ok(alice);
-    assert.equal(alice.gamesPlayed, 1);
+    assert.equal(alice.metrics["games_played:count"], 1);
   });
 
   // ── Multiple restarts ───────────────────────────────────────
@@ -627,7 +651,7 @@ describe("Engine restart mid-game with SQL storage", () => {
       (e: ScoringEntry) => e.playerId === "alice",
     );
     assert.ok(aliceScore);
-    assert.equal(aliceScore.gamesPlayed, 2);
+    assert.equal(aliceScore.metrics["games_played:count"], 2);
 
     // Global scores accumulated
     const global = await s3.getGlobalScoring();

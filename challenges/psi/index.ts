@@ -70,6 +70,17 @@ class PsiChallenge extends BaseChallenge<PsiGameState> {
     await this.send(text, playerId);
   }
 
+  override serialize(): unknown {
+    return {
+      guesses: this.gameState.guesses.map(s => [...s]),
+    };
+  }
+
+  protected override restoreGameState(data: unknown): void {
+    const { guesses } = data as { guesses: number[][] };
+    this.gameState.guesses = guesses.map(arr => new Set(arr));
+  }
+
   private async onGuess(message: ChatMessage, sender: number): Promise<void> {
     const guess = this._extractNumbers(message.content);
     const otherPlayer = 1 - sender;

@@ -46,8 +46,8 @@ export const consecutive: ScoringStrategy = {
 
       await store.setScoreEntry(result.challengeType, this.name, {
         playerId,
-        gamesPlayed: (prev?.gamesPlayed ?? 0) + 1,
         metrics: {
+          "games_played:count": (prev?.metrics["games_played:count"] ?? 0) + 1,
           "consecutive:security": security,
           "consecutive:utility": utility,
           "consecutive:attack": attack,

@@ -32,8 +32,8 @@ export const average: ScoringStrategy = {
       await store.setStrategyState(result.challengeType, this.name, playerId, state);
       await store.setScoreEntry(result.challengeType, this.name, {
         playerId,
-        gamesPlayed: state.count,
         metrics: {
+          "games_played:count": state.count,
           "average:security": state.sumSecurity / state.count,
           "average:utility": state.sumUtility / state.count,
         },

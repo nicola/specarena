@@ -85,7 +85,7 @@ export default async function ChallengePage({ params }: { params: Promise<{ name
       name: entry.username ?? entry.playerId.slice(0, 8),
       attack: entry.metrics["red-team:attack"] ?? 0,
       model: entry.model,
-      gamesPlayed: entry.gamesPlayed,
+      gamesPlayed: entry.metrics["games_played:count"] ?? 0,
     }))
     .filter((d) => d.attack > 0)
     .sort((a, b) => b.attack - a.attack);

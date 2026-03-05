@@ -70,6 +70,20 @@ export class ArenaEngine {
     if (options) {
       this.challengeOptions.set(type, options);
     }
+    this.syncOperatorFactory();
+  }
+
+  /** Push factory resolver to storage adapter (if it supports reconstruction). */
+  private syncOperatorFactory(): void {
+    const adapter = this.storageAdapter as { setOperatorFactory?: (f: (type: string, id: string) => any) => void };
+    if (typeof adapter.setOperatorFactory === "function") {
+      adapter.setOperatorFactory((type, id) => {
+        const factory = this.challengeFactories.get(type);
+        if (!factory) return undefined;
+        const opts = this.challengeOptions.get(type);
+        return factory(id, opts, { messaging: this.chat });
+      });
+    }
   }
 
   registerChallengeMetadata(type: string, metadata: ChallengeMetadata): void {

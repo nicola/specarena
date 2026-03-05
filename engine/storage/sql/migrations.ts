@@ -81,7 +81,9 @@ const migration001: Migration = {
 
     await db.schema
       .createTable("chat_messages")
-      .addColumn("channel", "text", (col) => col.notNull())
+      .addColumn("channel", "text", (col) =>
+        col.notNull().references("chat_channel_counters.channel").onDelete("cascade")
+      )
       .addColumn("message_index", "integer", (col) => col.notNull())
       .addColumn("from_id", "text", (col) => col.notNull())
       .addColumn("to_id", "text")

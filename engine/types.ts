@@ -33,6 +33,10 @@ export interface ChallengeOperator {
   join(invite: string, userId?: string): Promise<void>;
   message(message: ChatMessage): Promise<void>;
   state: ChallengeOperatorState;
+  /** Serialize challenge-specific game state for persistence. */
+  serialize?(): unknown;
+  /** Restore operator from persisted state after restart. */
+  restore?(operatorState: ChallengeOperatorState, gameState: unknown): void;
 }
 
 export enum ChallengeType {

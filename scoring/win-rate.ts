@@ -37,8 +37,8 @@ export const winRate: ScoringStrategy = {
       await store.setStrategyState(result.challengeType, this.name, playerId, state);
       await store.setScoreEntry(result.challengeType, this.name, {
         playerId,
-        gamesPlayed: state.count,
         metrics: {
+          "games_played:count": state.count,
           "win-rate:security": state.securityWins / state.count,
           "win-rate:utility": state.utilityWins / state.count,
         },
