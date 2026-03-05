@@ -7,8 +7,10 @@ export class SqlChatStorageAdapter implements ChatStorageAdapter {
   constructor(private db: Kysely<Database>) {}
 
   async clearRuntimeState(): Promise<void> {
-    await this.db.deleteFrom("chat_messages").execute();
-    await this.db.deleteFrom("channel_counters").execute();
+    await this.db.transaction().execute(async (trx) => {
+      await trx.deleteFrom("chat_messages").execute();
+      await trx.deleteFrom("channel_counters").execute();
+    });
   }
 
   async getNextIndex(channel: string): Promise<number> {
@@ -39,7 +41,7 @@ export class SqlChatStorageAdapter implements ChatStorageAdapter {
     return rows.map((row) => ({
       channel: row.channel,
       from: row.from_id,
-      to: row.to_id ?? undefined,
+      to: row.to_id,
       content: row.content,
       index: row.idx ?? undefined,
       timestamp: row.timestamp,
@@ -65,13 +67,15 @@ export class SqlChatStorageAdapter implements ChatStorageAdapter {
   }
 
   async deleteChannel(channel: string): Promise<void> {
-    await this.db
-      .deleteFrom("chat_messages")
-      .where("channel", "=", channel)
-      .execute();
-    await this.db
-      .deleteFrom("channel_counters")
-      .where("channel", "=", channel)
-      .execute();
+    await this.db.transaction().execute(async (trx) => {
+      await trx
+        .deleteFrom("chat_messages")
+        .where("channel", "=", channel)
+        .execute();
+      await trx
+        .deleteFrom("channel_counters")
+        .where("channel", "=", channel)
+        .execute();
+    });
   }
 }

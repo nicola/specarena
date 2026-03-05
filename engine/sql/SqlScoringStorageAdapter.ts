@@ -47,10 +47,22 @@ export class SqlScoringStorageAdapter implements ScoringStorageAdapter {
   }
 
   async clear(): Promise<void> {
-    await this.db.deleteFrom("score_entries").execute();
-    await this.db.deleteFrom("global_score_entries").execute();
-    await this.db.deleteFrom("strategy_state").execute();
-    await this.db.deleteFrom("global_strategy_state").execute();
+    const doDelete = async (
+      db: Kysely<Database> | Transaction<Database>
+    ) => {
+      await db.deleteFrom("score_entries").execute();
+      await db.deleteFrom("global_score_entries").execute();
+      await db.deleteFrom("strategy_state").execute();
+      await db.deleteFrom("global_strategy_state").execute();
+    };
+
+    if (this.inTransaction) {
+      await doDelete(this.db);
+    } else {
+      await (this.db as Kysely<Database>)
+        .transaction()
+        .execute((trx) => doDelete(trx));
+    }
   }
 
   async transaction<T>(

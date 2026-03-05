@@ -1,13 +1,14 @@
 import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import SQLite from "better-sqlite3";
-import { Kysely, SqliteDialect } from "kysely";
+import { Kysely, Migrator, SqliteDialect } from "kysely";
 import {
   createDatabase,
   migrateToLatest,
   SqlChatStorageAdapter,
   SqlUserStorageAdapter,
   SqlScoringStorageAdapter,
+  ArenaMigrationProvider,
 } from "./index";
 import type { Database } from "./db";
 import type { ChatStorageAdapter } from "../storage/InMemoryChatStorageAdapter";
@@ -133,6 +134,39 @@ function chatTests(engine: Engine) {
       assert.equal(await chat.getNextIndex("ch1"), 1);
     });
 
+    it("deleteChannel does not affect other channels", async () => {
+      const chat = engine.chat();
+      await chat.appendMessage("ch1", {
+        channel: "ch1",
+        from: "alice",
+        content: "msg1",
+        index: 1,
+        timestamp: 1000,
+      });
+      await chat.appendMessage("ch2", {
+        channel: "ch2",
+        from: "bob",
+        content: "msg2",
+        index: 1,
+        timestamp: 2000,
+      });
+      await chat.getNextIndex("ch1");
+      await chat.getNextIndex("ch2");
+
+      await chat.deleteChannel("ch1");
+
+      assert.deepEqual(await chat.getMessagesForChannel("ch1"), []);
+      const ch2Msgs = await chat.getMessagesForChannel("ch2");
+      assert.equal(ch2Msgs.length, 1);
+      assert.equal(ch2Msgs[0].from, "bob");
+      // ch2 counter unaffected — was 1, next is 2
+      assert.equal(await chat.getNextIndex("ch2"), 2);
+    });
+
+    it("deleteChannel on nonexistent channel is a no-op", async () => {
+      await engine.chat().deleteChannel("nonexistent");
+    });
+
     it("clearRuntimeState clears everything", async () => {
       const chat = engine.chat();
       await chat.appendMessage("ch1", {
@@ -230,6 +264,26 @@ function userTests(engine: Engine) {
       assert.equal(list.length, 2);
     });
 
+    it("setUser with empty updates returns existing user unchanged", async () => {
+      const users = engine.users();
+      await users.setUser("u1", { username: "Alice", model: "gpt-4" });
+      const result = await users.setUser("u1", {});
+      assert.equal(result.userId, "u1");
+      assert.equal(result.username, "Alice");
+      assert.equal(result.model, "gpt-4");
+    });
+
+    it("setUser creates user with no optional fields", async () => {
+      const users = engine.users();
+      const user = await users.setUser("u1", {});
+      assert.equal(user.userId, "u1");
+
+      const fetched = await users.getUser("u1");
+      assert.equal(fetched?.userId, "u1");
+      assert.equal(fetched?.username, undefined);
+      assert.equal(fetched?.model, undefined);
+    });
+
     it("clearRuntimeState clears all users", async () => {
       const users = engine.users();
       await users.setUser("u1", { username: "Alice" });
@@ -307,6 +361,28 @@ function scoringTests(engine: Engine) {
 
     it("getScores returns empty for unknown challengeType", async () => {
       assert.deepEqual(await engine.scoring().getScores("unknown"), {});
+    });
+
+    it("getScores isolates by challengeType", async () => {
+      const scoring = engine.scoring();
+      await scoring.setScoreEntry("c1", "elo", {
+        playerId: "p1",
+        gamesPlayed: 1,
+        metrics: { r: 1000 },
+      });
+      await scoring.setScoreEntry("c2", "elo", {
+        playerId: "p2",
+        gamesPlayed: 2,
+        metrics: { r: 2000 },
+      });
+
+      const c1 = await scoring.getScores("c1");
+      assert.equal(c1.elo.length, 1);
+      assert.equal(c1.elo[0].playerId, "p1");
+
+      const c2 = await scoring.getScores("c2");
+      assert.equal(c2.elo.length, 1);
+      assert.equal(c2.elo[0].playerId, "p2");
     });
 
     it("global score entries", async () => {
@@ -438,6 +514,45 @@ describe("SQL Storage (SQL-specific)", () => {
 
   beforeEach(() => engine.setup());
   afterEach(() => engine.teardown());
+
+  it("migration down drops all tables and re-up restores them", async () => {
+    const db = createDatabase(
+      new SqliteDialect({ database: new SQLite(":memory:") })
+    );
+    await migrateToLatest(db);
+
+    // Insert some data
+    const chat = new SqlChatStorageAdapter(db);
+    await chat.appendMessage("ch1", {
+      channel: "ch1",
+      from: "alice",
+      content: "hello",
+      index: 1,
+      timestamp: 1000,
+    });
+
+    // Migrate down
+    const migrator = new Migrator({
+      db,
+      provider: new ArenaMigrationProvider(),
+    });
+    await migrator.migrateDown();
+
+    // Tables should be gone — query should throw
+    await assert.rejects(
+      () => db.selectFrom("chat_messages").selectAll().execute(),
+      /no such table/
+    );
+
+    // Re-migrate up
+    await migrateToLatest(db);
+
+    // Should work again, but empty
+    const msgs = await chat.getMessagesForChannel("ch1");
+    assert.deepEqual(msgs, []);
+
+    await db.destroy();
+  });
 
   it("transaction rolls back all writes on error", async () => {
     const scoring = engine.scoring();

@@ -9,7 +9,7 @@ export interface ChatMessagesTable {
   content: string;
   timestamp: number;
   type: string | null;
-  redacted: number; // 0 or 1
+  redacted: 0 | 1;
 }
 
 export interface ChannelCountersTable {

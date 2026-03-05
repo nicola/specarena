@@ -37,6 +37,14 @@ export class SqlUserStorageAdapter implements UserStorageAdapter {
     userId: string,
     updates: Partial<Omit<UserProfile, "userId">>
   ): Promise<UserProfile> {
+    const updateSet: Record<string, unknown> = {};
+    if (updates.username !== undefined)
+      updateSet.username = sql`${updates.username ?? null}`;
+    if (updates.model !== undefined)
+      updateSet.model = sql`${updates.model ?? null}`;
+
+    const hasUpdates = Object.keys(updateSet).length > 0;
+
     await this.db
       .insertInto("users")
       .values({
@@ -45,14 +53,9 @@ export class SqlUserStorageAdapter implements UserStorageAdapter {
         model: updates.model ?? null,
       })
       .onConflict((oc) =>
-        oc.column("user_id").doUpdateSet({
-          ...(updates.username !== undefined && {
-            username: sql`${updates.username ?? null}`,
-          }),
-          ...(updates.model !== undefined && {
-            model: sql`${updates.model ?? null}`,
-          }),
-        })
+        hasUpdates
+          ? oc.column("user_id").doUpdateSet(updateSet)
+          : oc.column("user_id").doNothing()
       )
       .execute();
 
