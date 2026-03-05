@@ -1,5 +1,4 @@
 import type { Kysely } from "kysely";
-import { sql } from "kysely";
 import type { Database } from "./schema";
 import type { ChatStorageAdapter } from "../InMemoryChatStorageAdapter";
 import type { ChatMessage } from "../../types";
@@ -7,13 +6,22 @@ import type { ChatMessage } from "../../types";
 export class SqlChatStorageAdapter implements ChatStorageAdapter {
   constructor(private readonly db: Kysely<Database>) {}
 
-  async getNextIndex(channel: string): Promise<number> {
-    const result = await this.db
-      .selectFrom("chat_messages")
-      .select(sql<number>`COALESCE(MAX(message_index), 0) + 1`.as("next_index"))
-      .where("channel", "=", channel)
+  private async getNextIndexWithDb(db: Kysely<Database>, channel: string): Promise<number> {
+    const row = await db
+      .insertInto("chat_channel_counters")
+      .values({ channel, next_index: 1 })
+      .onConflict((oc) =>
+        oc.column("channel").doUpdateSet((eb) => ({
+          next_index: eb("chat_channel_counters.next_index", "+", 1),
+        }))
+      )
+      .returning("next_index")
       .executeTakeFirstOrThrow();
-    return result.next_index;
+    return row.next_index;
+  }
+
+  async getNextIndex(channel: string): Promise<number> {
+    return this.getNextIndexWithDb(this.db, channel);
   }
 
   async getMessagesForChannel(channel: string): Promise<ChatMessage[]> {
@@ -27,16 +35,26 @@ export class SqlChatStorageAdapter implements ChatStorageAdapter {
   }
 
   async appendMessage(channel: string, message: ChatMessage): Promise<ChatMessage> {
-    // Atomic index assignment inside a transaction to avoid race conditions.
-    // Two concurrent appends on the same channel will serialize at the DB write lock.
     const stored = await this.db.transaction().execute(async (trx) => {
-      const index = message.index ?? (await trx
-        .selectFrom("chat_messages")
-        .select(
-          sql<number>`COALESCE(MAX(message_index), 0) + 1`.as("next_index")
-        )
-        .where("channel", "=", channel)
-        .executeTakeFirstOrThrow()).next_index;
+      let index: number;
+      if (message.index != null) {
+        index = message.index;
+        // Sync counter to stay in sync with pre-assigned indices
+        await trx
+          .insertInto("chat_channel_counters")
+          .values({ channel, next_index: index })
+          .onConflict((oc) =>
+            oc.column("channel").doUpdateSet((eb) => ({
+              next_index: eb.fn("MAX", [
+                eb.ref("chat_channel_counters.next_index"),
+                eb.val(index),
+              ]),
+            }))
+          )
+          .execute();
+      } else {
+        index = await this.getNextIndexWithDb(trx, channel);
+      }
 
       await trx
         .insertInto("chat_messages")
@@ -57,14 +75,23 @@ export class SqlChatStorageAdapter implements ChatStorageAdapter {
   }
 
   async deleteChannel(channel: string): Promise<void> {
-    await this.db
-      .deleteFrom("chat_messages")
-      .where("channel", "=", channel)
-      .execute();
+    await this.db.transaction().execute(async (trx) => {
+      await trx
+        .deleteFrom("chat_messages")
+        .where("channel", "=", channel)
+        .execute();
+      await trx
+        .deleteFrom("chat_channel_counters")
+        .where("channel", "=", channel)
+        .execute();
+    });
   }
 
   async clearRuntimeState(): Promise<void> {
-    await this.db.deleteFrom("chat_messages").execute();
+    await this.db.transaction().execute(async (trx) => {
+      await trx.deleteFrom("chat_messages").execute();
+      await trx.deleteFrom("chat_channel_counters").execute();
+    });
   }
 
   private rowToMessage(row: {

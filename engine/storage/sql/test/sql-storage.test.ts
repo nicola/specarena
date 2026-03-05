@@ -64,7 +64,7 @@ describe("Migrations", () => {
     assert.equal(results?.length, 0);
   });
 
-  it("creates all 8 tables", async () => {
+  it("creates all 9 tables", async () => {
     const sqliteDb = new Database(":memory:");
     sqliteDb.pragma("foreign_keys = ON");
     const db = new Kysely<DatabaseSchema>({
@@ -84,6 +84,7 @@ describe("Migrations", () => {
       "challenge_invites",
       "challenge_scores",
       "challenges",
+      "chat_channel_counters",
       "chat_messages",
       "score_metrics",
       "strategy_state",
@@ -397,6 +398,22 @@ describe("SqlChatStorageAdapter", () => {
     });
     const msgs = await adapter.getMessagesForChannel("ch1");
     assert.equal(msgs[0].content, "");
+  });
+
+  it("getNextIndex uses counter table, not MAX scan", async () => {
+    // Insert messages with a gap (1, 2, 5) then delete middle ones.
+    // Counter-based approach should track the highest value, not rely on MAX.
+    for (const idx of [1, 2, 5]) {
+      await adapter.appendMessage("ch1", {
+        channel: "ch1",
+        from: "alice",
+        content: `msg${idx}`,
+        index: idx,
+        timestamp: 1000 + idx,
+      });
+    }
+    // Counter should be at 5 (highest pre-set index), so getNextIndex returns 6
+    assert.equal(await adapter.getNextIndex("ch1"), 6);
   });
 
   it("clearRuntimeState removes all messages across all channels", async () => {

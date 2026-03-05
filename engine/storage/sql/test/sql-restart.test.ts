@@ -173,9 +173,15 @@ describe("Engine restart mid-game with SQL storage", () => {
     assert.equal(list[0].id, challenge.id);
     assert.equal(list[0].challengeType, "psi");
 
-    // But the live operator is gone → read-only stub
+    // The live operator is gone → read-only stub, but game state is correct
     const restored = await e2.getChallenge(challenge.id);
     assert.ok(restored);
+    assert.equal(restored!.instance.state.gameStarted, true);
+    assert.equal(restored!.instance.state.players.length, 2);
+    assert.deepEqual(restored!.instance.state.playerIdentities, {
+      [inv1]: "alice",
+      [inv2]: "bob",
+    });
     await assert.rejects(
       () => restored!.instance.join(inv1),
       /completed challenge/,
@@ -192,7 +198,7 @@ describe("Engine restart mid-game with SQL storage", () => {
     );
   });
 
-  it("mid-game with one player joined — join state is lost after restart", async () => {
+  it("mid-game with one player joined — join state survives restart", async () => {
     const { engine: e1 } = createSqlEngine(db);
     const challenge = await e1.createChallenge("psi");
     const [inv1] = challenge.invites;
@@ -208,11 +214,58 @@ describe("Engine restart mid-game with SQL storage", () => {
     const restored = await e2.getChallenge(challenge.id);
     assert.ok(restored);
 
-    // setChallenge was only called at creation (before any joins),
-    // so the DB has no record of alice joining
-    assert.equal(restored!.instance.state.players.length, 0);
+    // setChallenge is called after join, so the DB has alice's join state
+    assert.equal(restored!.instance.state.players.length, 1);
     assert.equal(restored!.instance.state.gameStarted, false);
-    assert.deepEqual(restored!.instance.state.playerIdentities, {});
+    assert.deepEqual(restored!.instance.state.playerIdentities, { [inv1]: "alice" });
+  });
+
+  it("mid-game game progress (scores, attributions) survives restart after message", async () => {
+    const { engine: e1 } = createSqlEngine(db);
+    const challenge = await e1.createChallenge("psi");
+    const [inv1, inv2] = challenge.invites;
+
+    await e1.challengeJoin(inv1, "alice");
+    await e1.challengeJoin(inv2, "bob");
+    assert.equal(challenge.instance.state.gameStarted, true);
+
+    // Get the private sets so we can make a partial guess
+    const sync1 = await e1.challengeSync(challenge.id, inv1, 0);
+    const p1Msg = sync1.messages.find(
+      (m) => m.to === inv1 && m.content.includes("Your private set"),
+    );
+    assert.ok(p1Msg, "player 1 should receive their set");
+
+    const match = p1Msg!.content.match(/\{(.+)\}/);
+    assert.ok(match);
+    const p1Set = match![1].split(",").map((s) => parseInt(s.trim(), 10));
+
+    // One player guesses (partial game — only one of two has guessed)
+    await e1.challengeMessage(challenge.id, inv1, "guess", p1Set.slice(0, 2).join(", "));
+
+    // Game should NOT be ended yet (need both players to guess)
+    assert.equal(challenge.instance.state.gameEnded, false);
+
+    // Capture the scores after the partial guess
+    const scoresBefore = [...challenge.instance.state.scores];
+
+    // === Restart ===
+    const { engine: e2 } = createSqlEngine(db);
+
+    const restored = await e2.getChallenge(challenge.id);
+    assert.ok(restored);
+
+    // Game state is preserved
+    assert.equal(restored!.instance.state.gameStarted, true);
+    assert.equal(restored!.instance.state.gameEnded, false);
+    assert.equal(restored!.instance.state.players.length, 2);
+
+    // Scores survive (may be empty if no scores assigned mid-game, or have values)
+    assert.equal(restored!.instance.state.scores.length, scoresBefore.length);
+    for (let i = 0; i < scoresBefore.length; i++) {
+      assert.equal(restored!.instance.state.scores[i].security, scoresBefore[i].security);
+      assert.equal(restored!.instance.state.scores[i].utility, scoresBefore[i].utility);
+    }
   });
 
   it("invite lookup still works after restart for mid-game challenge", async () => {

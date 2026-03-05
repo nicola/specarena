@@ -33,6 +33,11 @@ export interface ChallengeAttributionsTable {
   type: string;
 }
 
+export interface ChatChannelCountersTable {
+  channel: string;
+  next_index: number;
+}
+
 export interface ChatMessagesTable {
   channel: string;
   message_index: number;
@@ -69,6 +74,7 @@ export interface Database {
   challenge_invites: ChallengeInvitesTable;
   challenge_scores: ChallengeScoresTable;
   challenge_attributions: ChallengeAttributionsTable;
+  chat_channel_counters: ChatChannelCountersTable;
   chat_messages: ChatMessagesTable;
   users: UsersTable;
   score_metrics: ScoreMetricsTable;

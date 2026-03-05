@@ -74,6 +74,12 @@ const migration001: Migration = {
       .execute();
 
     await db.schema
+      .createTable("chat_channel_counters")
+      .addColumn("channel", "text", (col) => col.primaryKey())
+      .addColumn("next_index", "integer", (col) => col.notNull().defaultTo(0))
+      .execute();
+
+    await db.schema
       .createTable("chat_messages")
       .addColumn("channel", "text", (col) => col.notNull())
       .addColumn("message_index", "integer", (col) => col.notNull())
