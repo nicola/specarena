@@ -1078,11 +1078,11 @@ describe("SqlArenaStorageAdapter", () => {
     // join/message should throw on read-only stub
     await assert.rejects(
       () => c.instance.join("inv1"),
-      /completed challenge/
+      /needs reconstruction/
     );
     await assert.rejects(
       () => c.instance.message({ channel: "c1", from: "x", content: "", timestamp: 0 }),
-      /completed challenge/
+      /needs reconstruction/
     );
   });
 

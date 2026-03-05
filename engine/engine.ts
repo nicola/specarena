@@ -28,6 +28,7 @@ export class ArenaEngine {
   private readonly challengeFactories: Map<string, ChallengeFactory>;
   private readonly challengeOptions: Map<string, Record<string, unknown>>;
   private readonly challengeMetadataMap: Map<string, ChallengeMetadata>;
+  private readonly activeOperators = new Set<string>();
   readonly chat: ChatEngine;
   scoring: ScoringModule | null;
 
@@ -58,6 +59,7 @@ export class ArenaEngine {
   }
 
   async clearRuntimeState(): Promise<void> {
+    this.activeOperators.clear();
     await Promise.all([
       this.storageAdapter.clearRuntimeState(),
       this.chat.clearRuntimeState(),
@@ -70,17 +72,29 @@ export class ArenaEngine {
     if (options) {
       this.challengeOptions.set(type, options);
     }
-    this.syncOperatorFactory();
   }
 
-  /** Push factory resolver to storage adapter (if it supports reconstruction). */
-  private syncOperatorFactory(): void {
-    this.storageAdapter.setOperatorFactory?.((type, id) => {
-      const factory = this.challengeFactories.get(type);
-      if (!factory) return undefined;
-      const opts = this.challengeOptions.get(type);
-      return factory(id, opts, { messaging: this.chat });
-    });
+  /**
+   * Reconstruct a real operator for a challenge loaded from storage (e.g. after restart).
+   * Uses the registered factory, then restores from persisted operator + game state.
+   * No-op if the challenge already has a live operator (tracked in activeOperators).
+   */
+  private async ensureOperator(challenge: Challenge): Promise<void> {
+    if (this.activeOperators.has(challenge.id)) return;
+    if (challenge.instance.state.gameEnded) return;
+
+    const factory = this.challengeFactories.get(challenge.challengeType);
+    if (!factory) return;
+
+    const opts = this.challengeOptions.get(challenge.challengeType);
+    const operator = factory(challenge.id, opts, { messaging: this.chat });
+    const gameState = challenge.instance.serialize();
+    operator.restore(challenge.instance.state, gameState);
+    challenge.instance = operator;
+    this.activeOperators.add(challenge.id);
+
+    // Update the adapter's cache so subsequent reads return the live operator
+    await this.storageAdapter.setChallenge(challenge);
   }
 
   registerChallengeMetadata(type: string, metadata: ChallengeMetadata): void {
@@ -110,6 +124,7 @@ export class ArenaEngine {
 
     await Promise.all(
       stale.map(async (challenge) => {
+        this.activeOperators.delete(challenge.id);
         await this.storageAdapter.deleteChallenge(challenge.id);
         await this.chat.deleteChannel(challenge.id);
         await this.chat.deleteChannel(toChallengeChannel(challenge.id));
@@ -143,6 +158,7 @@ export class ArenaEngine {
       instance,
     };
 
+    this.activeOperators.add(id);
     await this.storageAdapter.setChallenge(challenge);
     return challenge;
   }
@@ -169,6 +185,7 @@ export class ArenaEngine {
   async getChallengeFromInvite(invite: string): Promise<Result<Challenge>> {
     const challenge = await this.storageAdapter.getChallengeFromInvite(invite);
     if (challenge) {
+      await this.ensureOperator(challenge);
       return { success: true, data: challenge };
     }
     return {
@@ -183,14 +200,15 @@ export class ArenaEngine {
     if (!challenge) {
       return undefined;
     }
-    if (!this.isChallengeStale(challenge)) {
-      return challenge;
+    if (this.isChallengeStale(challenge)) {
+      this.activeOperators.delete(challenge.id);
+      await this.storageAdapter.deleteChallenge(challenge.id);
+      await this.chat.deleteChannel(challenge.id);
+      await this.chat.deleteChannel(toChallengeChannel(challenge.id));
+      return undefined;
     }
-
-    await this.storageAdapter.deleteChallenge(challenge.id);
-    await this.chat.deleteChannel(challenge.id);
-    await this.chat.deleteChannel(toChallengeChannel(challenge.id));
-    return undefined;
+    await this.ensureOperator(challenge);
+    return challenge;
   }
 
   async getChallengesByUserId(userId: string): Promise<Challenge[]> {

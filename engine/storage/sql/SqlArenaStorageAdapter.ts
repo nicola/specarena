@@ -10,14 +10,8 @@ import type {
 export class SqlArenaStorageAdapter implements ArenaStorageAdapter {
   /** Live ChallengeOperator instances — not serializable. */
   private operators = new Map<string, ChallengeOperator>();
-  private operatorFactory?: (type: string, id: string) => ChallengeOperator | undefined;
 
   constructor(private readonly db: Kysely<Database>) {}
-
-  /** Register a factory callback used to reconstruct operators on restart. */
-  setOperatorFactory(factory: (type: string, id: string) => ChallengeOperator | undefined): void {
-    this.operatorFactory = factory;
-  }
 
   async clearRuntimeState(): Promise<void> {
     this.operators.clear();
@@ -186,8 +180,8 @@ export class SqlArenaStorageAdapter implements ArenaStorageAdapter {
 
   /**
    * Hydrate a Challenge from a DB row + related tables.
-   * Attaches live operator from Map, reconstructs from factory if available,
-   * or creates a read-only stub for completed/unrestorable games.
+   * Attaches live operator from cache, or creates a read-only stub whose
+   * serialize() returns the persisted game state (for engine-side reconstruction).
    */
   private async hydrateChallenge(row: {
     id: string;
@@ -249,57 +243,23 @@ export class SqlArenaStorageAdapter implements ArenaStorageAdapter {
       attributions: attributions.length > 0 ? attributions : undefined,
     };
 
-    // Try live operator first
-    let instance = this.operators.get(row.id);
-    if (instance) {
-      return {
-        id: row.id,
-        name: row.name,
-        createdAt: row.created_at,
-        challengeType: row.challenge_type,
-        invites,
-        instance,
-      };
+    // Return cached live operator if available
+    const cached = this.operators.get(row.id);
+    if (cached) {
+      return { id: row.id, name: row.name, createdAt: row.created_at, challengeType: row.challenge_type, invites, instance: cached };
     }
 
-    // Try to reconstruct from factory (for in-progress games)
-    if (this.operatorFactory && !state.gameEnded) {
-      const reconstructed = this.operatorFactory(row.challenge_type, row.id);
-      if (reconstructed) {
-        const gameState = row.game_state ? JSON.parse(row.game_state) : undefined;
-        reconstructed.restore(state, gameState);
-        this.operators.set(row.id, reconstructed);
-        return {
-          id: row.id,
-          name: row.name,
-          createdAt: row.created_at,
-          challengeType: row.challenge_type,
-          invites,
-          instance: reconstructed,
-        };
-      }
-    }
-
-    // Read-only stub for completed/historical games
-    instance = {
+    // Stub: carries the DB state; serialize() returns persisted game state
+    // so the engine can reconstruct a real operator when needed.
+    const parsedGameState = row.game_state ? JSON.parse(row.game_state) : null;
+    const instance: ChallengeOperator = {
       state,
-      async join() {
-        throw new Error("Cannot join a completed challenge");
-      },
-      async message() {
-        throw new Error("Cannot message a completed challenge");
-      },
-      serialize() { return null; },
+      async join() { throw new Error("Operator not available — needs reconstruction"); },
+      async message() { throw new Error("Operator not available — needs reconstruction"); },
+      serialize() { return parsedGameState; },
       restore() {},
     };
 
-    return {
-      id: row.id,
-      name: row.name,
-      createdAt: row.created_at,
-      challengeType: row.challenge_type,
-      invites,
-      instance,
-    };
+    return { id: row.id, name: row.name, createdAt: row.created_at, challengeType: row.challenge_type, invites, instance };
   }
 }
