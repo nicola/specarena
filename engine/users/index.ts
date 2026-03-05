@@ -1,16 +1,6 @@
-export interface UserProfile {
-  userId: string;
-  username?: string;
-  model?: string;
-}
+import type { UserProfile, UserStorageAdapter } from "../storage/types";
 
-export interface UserStorageAdapter {
-  getUser(userId: string): Promise<UserProfile | undefined>;
-  getUsers(userIds: string[]): Promise<Record<string, UserProfile>>;
-  setUser(userId: string, updates: Partial<Omit<UserProfile, "userId">>): Promise<UserProfile>;
-  listUsers(): Promise<UserProfile[]>;
-  clearRuntimeState(): Promise<void>;
-}
+export type { UserProfile, UserStorageAdapter } from "../storage/types";
 
 export class InMemoryUserStorageAdapter implements UserStorageAdapter {
   private users: Record<string, UserProfile> = {};

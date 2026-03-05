@@ -5,15 +5,19 @@ import {
   ChallengeError,
   ChallengeFactory,
   ChallengeMetadata,
+  ChallengeOperator,
   ChallengeOperatorError,
+  ChallengeRecord,
   Result,
   fromChallengeChannel,
   toChallengeChannel,
 } from "./types";
 import { ChatEngine, createChatEngine } from "./chat/ChatEngine";
-import { ArenaStorageAdapter, InMemoryArenaStorageAdapter } from "./storage/InMemoryArenaStorageAdapter";
+import type { ArenaStorageAdapter } from "./storage/types";
+import { InMemoryArenaStorageAdapter } from "./storage/InMemoryArenaStorageAdapter";
+import type { UserStorageAdapter } from "./storage/types";
+import { InMemoryUserStorageAdapter } from "./users/index";
 import { ScoringModule } from "./scoring/index";
-import { UserStorageAdapter, InMemoryUserStorageAdapter } from "./users/index";
 
 export interface EngineOptions {
   storageAdapter?: ArenaStorageAdapter;
@@ -28,6 +32,7 @@ export class ArenaEngine {
   private readonly challengeFactories: Map<string, ChallengeFactory>;
   private readonly challengeOptions: Map<string, Record<string, unknown>>;
   private readonly challengeMetadataMap: Map<string, ChallengeMetadata>;
+  private readonly operators: Map<string, ChallengeOperator>;
   readonly chat: ChatEngine;
   scoring: ScoringModule | null;
 
@@ -37,13 +42,14 @@ export class ArenaEngine {
     this.challengeFactories = new Map<string, ChallengeFactory>();
     this.challengeOptions = new Map<string, Record<string, unknown>>();
     this.challengeMetadataMap = new Map<string, ChallengeMetadata>();
+    this.operators = new Map<string, ChallengeOperator>();
     this.scoring = options.scoring ?? null;
     this.chat = options.chatEngine ?? createChatEngine({
       isChannelRevealed: async (channel) => {
         const challengeId = fromChallengeChannel(channel);
         if (!challengeId) return false;
         const challenge = await this.getChallenge(challengeId);
-        return challenge?.instance?.state?.gameEnded ?? false;
+        return challenge?.state?.gameEnded ?? false;
       },
       onChallengeEvent: async (challengeId, event) => {
         if (event.type !== "game_ended" || !this.scoring) return;
@@ -58,6 +64,7 @@ export class ArenaEngine {
   }
 
   async clearRuntimeState(): Promise<void> {
+    this.operators.clear();
     await Promise.all([
       this.storageAdapter.clearRuntimeState(),
       this.chat.clearRuntimeState(),
@@ -84,10 +91,17 @@ export class ArenaEngine {
     return Object.fromEntries(this.challengeMetadataMap);
   }
 
-  private isChallengeStale(challenge: Challenge, now: number = Date.now()): boolean {
-    const gameEnded = challenge.instance?.state?.gameEnded ?? false;
+  private isChallengeStale(challenge: ChallengeRecord, now: number = Date.now()): boolean {
+    const gameEnded = challenge.state?.gameEnded ?? false;
     const cutoff = now - STALE_CHALLENGE_TIMEOUT_MS;
     return !gameEnded && challenge.createdAt < cutoff;
+  }
+
+  private async deleteChallengeData(challengeId: string): Promise<void> {
+    this.operators.delete(challengeId);
+    await this.storageAdapter.deleteChallenge(challengeId);
+    await this.chat.deleteChannel(challengeId);
+    await this.chat.deleteChannel(toChallengeChannel(challengeId));
   }
 
   async pruneStaleChallenges(now: number = Date.now()): Promise<number> {
@@ -98,17 +112,13 @@ export class ArenaEngine {
     }
 
     await Promise.all(
-      stale.map(async (challenge) => {
-        await this.storageAdapter.deleteChallenge(challenge.id);
-        await this.chat.deleteChannel(challenge.id);
-        await this.chat.deleteChannel(toChallengeChannel(challenge.id));
-      }),
+      stale.map((challenge) => this.deleteChallengeData(challenge.id)),
     );
 
     return stale.length;
   }
 
-  async listChallenges(): Promise<Challenge[]> {
+  async listChallenges(): Promise<ChallengeRecord[]> {
     return this.storageAdapter.listChallenges();
   }
 
@@ -123,12 +133,15 @@ export class ArenaEngine {
     const options = this.challengeOptions.get(challengeType);
     const instance = factory(id, options, { messaging: this.chat });
 
+    this.operators.set(id, instance);
+
     const challenge: Challenge = {
       id,
       name: challengeType,
       createdAt: Date.now(),
       challengeType,
       invites: [`inv_${crypto.randomUUID()}`, `inv_${crypto.randomUUID()}`],
+      state: instance.state,
       instance,
     };
 
@@ -136,8 +149,8 @@ export class ArenaEngine {
     return challenge;
   }
 
-  private isInviteFree(challenge: Challenge, invite: string): boolean {
-    return !challenge.instance?.state?.players?.includes(invite);
+  private isInviteFree(challenge: ChallengeRecord, invite: string): boolean {
+    return !challenge.state?.players?.includes(invite);
   }
 
   async getInvite(invite: string): Promise<Result<Challenge>> {
@@ -155,38 +168,49 @@ export class ArenaEngine {
     return result;
   }
 
+  private attachOperator(record: ChallengeRecord): Challenge | undefined {
+    const instance = this.operators.get(record.id);
+    if (!instance) return undefined;
+    return Object.assign(record, { instance }) as Challenge;
+  }
+
   async getChallengeFromInvite(invite: string): Promise<Result<Challenge>> {
-    const challenge = await this.storageAdapter.getChallengeFromInvite(invite);
-    if (challenge) {
-      return { success: true, data: challenge };
+    const record = await this.storageAdapter.getChallengeFromInvite(invite);
+    if (!record) {
+      return {
+        success: false,
+        error: ChallengeError.NOT_FOUND,
+        message: `Challenge not found for invite: ${invite}`,
+      };
     }
-    return {
-      success: false,
-      error: ChallengeError.NOT_FOUND,
-      message: `Challenge not found for invite: ${invite}`,
-    };
+    const challenge = this.attachOperator(record);
+    if (!challenge) {
+      return {
+        success: false,
+        error: ChallengeError.NOT_FOUND,
+        message: `Challenge not found for invite: ${invite}`,
+      };
+    }
+    return { success: true, data: challenge };
   }
 
   async getChallenge(challengeId: string): Promise<Challenge | undefined> {
-    const challenge = await this.storageAdapter.getChallenge(challengeId);
-    if (!challenge) {
+    const record = await this.storageAdapter.getChallenge(challengeId);
+    if (!record) {
       return undefined;
     }
-    if (!this.isChallengeStale(challenge)) {
-      return challenge;
+    if (this.isChallengeStale(record)) {
+      await this.deleteChallengeData(record.id);
+      return undefined;
     }
-
-    await this.storageAdapter.deleteChallenge(challenge.id);
-    await this.chat.deleteChannel(challenge.id);
-    await this.chat.deleteChannel(toChallengeChannel(challenge.id));
-    return undefined;
+    return this.attachOperator(record);
   }
 
-  async getChallengesByUserId(userId: string): Promise<Challenge[]> {
+  async getChallengesByUserId(userId: string): Promise<ChallengeRecord[]> {
     return this.storageAdapter.getChallengesByUserId(userId);
   }
 
-  async getChallengesByType(challengeType: string): Promise<Challenge[]> {
+  async getChallengesByType(challengeType: string): Promise<ChallengeRecord[]> {
     return (await this.storageAdapter.listChallenges())
       .filter((c) => c.challengeType === challengeType && !this.isChallengeStale(c))
       .sort((a, b) => b.createdAt - a.createdAt);
@@ -245,13 +269,13 @@ export class ArenaEngine {
 
   async getPlayerIdentities(challengeId: string): Promise<Record<string, string> | null> {
     const challenge = await this.getChallenge(challengeId);
-    if (!challenge?.instance?.state?.gameEnded) return null;
-    return challenge.instance.state.playerIdentities;
+    if (!challenge?.state?.gameEnded) return null;
+    return challenge.state.playerIdentities;
   }
 
   async resolvePlayerIdentity(challengeId: string, userIndex: number): Promise<string | null> {
     const challenge = await this.getChallenge(challengeId);
-    return challenge?.instance?.state?.players?.[userIndex] ?? null;
+    return challenge?.state?.players?.[userIndex] ?? null;
   }
 
   async challengeSync(channel: string, viewer: string | null, index: number) {
@@ -269,6 +293,7 @@ export function createEngine(options: EngineOptions = {}): ArenaEngine {
 
 export const defaultEngine = createEngine();
 export { ChatEngine, createChatEngine, defaultChatEngine } from "./chat/ChatEngine";
-export { ArenaStorageAdapter, InMemoryArenaStorageAdapter } from "./storage/InMemoryArenaStorageAdapter";
-export { ChatStorageAdapter, InMemoryChatStorageAdapter } from "./storage/InMemoryChatStorageAdapter";
-export { UserProfile, UserStorageAdapter, InMemoryUserStorageAdapter } from "./users/index";
+export type { ArenaStorageAdapter, ChatStorageAdapter, UserStorageAdapter, UserProfile } from "./storage/types";
+export { InMemoryArenaStorageAdapter } from "./storage/InMemoryArenaStorageAdapter";
+export { InMemoryChatStorageAdapter } from "./storage/InMemoryChatStorageAdapter";
+export { InMemoryUserStorageAdapter } from "./users/index";

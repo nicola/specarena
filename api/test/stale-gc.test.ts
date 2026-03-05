@@ -52,8 +52,8 @@ describe("Stale challenge garbage collection", () => {
 
     const instance = await defaultEngine.getChallenge(challenge.id);
     assert.ok(instance);
-    assert.equal(instance.instance.state.gameStarted, true);
-    assert.equal(instance.instance.state.gameEnded, false);
+    assert.equal(instance.state.gameStarted, true);
+    assert.equal(instance.state.gameEnded, false);
 
     instance.createdAt = Date.now() - STALE_MS;
     const removed = await defaultEngine.pruneStaleChallenges();
@@ -68,7 +68,7 @@ describe("Stale challenge garbage collection", () => {
     const instance = await defaultEngine.getChallenge(challenge.id);
     assert.ok(instance);
 
-    instance.instance.state.gameEnded = true;
+    instance.state.gameEnded = true;
     instance.createdAt = Date.now() - STALE_MS;
     await defaultEngine.pruneStaleChallenges();
 

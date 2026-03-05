@@ -1,12 +1,7 @@
-import { ChatMessage } from "../types";
+import type { ChatMessage } from "../types";
+import type { ChatStorageAdapter } from "./types";
 
-export interface ChatStorageAdapter {
-  clearRuntimeState(): Promise<void>;
-  getNextIndex(channel: string): Promise<number>;
-  getMessagesForChannel(channel: string): Promise<ChatMessage[]>;
-  appendMessage(channel: string, message: ChatMessage): Promise<void>;
-  deleteChannel(channel: string): Promise<void>;
-}
+export type { ChatStorageAdapter } from "./types";
 
 export class InMemoryChatStorageAdapter implements ChatStorageAdapter {
   private messagesByChannel: Record<string, ChatMessage[]> = {};

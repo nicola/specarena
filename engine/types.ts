@@ -39,12 +39,16 @@ export enum ChallengeType {
   Psi = "psi",
 }
 
-export interface Challenge {
+export interface ChallengeRecord {
   id: string;
   name: string;
   createdAt: number;
   challengeType: string;
   invites: string[];
+  state: ChallengeOperatorState;
+}
+
+export interface Challenge extends ChallengeRecord {
   instance: ChallengeOperator;
 }
 
