@@ -27,18 +27,35 @@ export class SqlChatStorageAdapter implements ChatStorageAdapter {
   }
 
   async appendMessage(channel: string, message: ChatMessage): Promise<void> {
-    await this.db
-      .insertInto("chat_messages")
-      .values({
-        channel,
-        message_index: message.index ?? 0,
-        from_id: message.from,
-        to_id: message.to ?? null,
-        content: message.content ?? "",
-        timestamp: message.timestamp,
-        type: message.type ?? null,
-      })
-      .execute();
+    // Atomic index assignment inside a transaction to avoid race conditions.
+    // Two concurrent appends on the same channel will serialize at the DB write lock.
+    await this.db.transaction().execute(async (trx) => {
+      const result = await trx
+        .selectFrom("chat_messages")
+        .select(
+          sql<number>`COALESCE(MAX(message_index), 0) + 1`.as("next_index")
+        )
+        .where("channel", "=", channel)
+        .executeTakeFirstOrThrow();
+
+      const index = result.next_index;
+
+      await trx
+        .insertInto("chat_messages")
+        .values({
+          channel,
+          message_index: index,
+          from_id: message.from,
+          to_id: message.to ?? null,
+          content: message.content ?? "",
+          timestamp: message.timestamp,
+          type: message.type ?? null,
+        })
+        .execute();
+
+      // Update the message object so callers see the actual assigned index
+      message.index = index;
+    });
   }
 
   async deleteChannel(channel: string): Promise<void> {

@@ -7,8 +7,11 @@ const GLOBAL_STRATEGY_NAME = "_global";
 
 export class SqlScoringStorageAdapter implements ScoringStorageAdapter {
   private transactionQueue: Promise<void> = Promise.resolve();
+  private readonly isTransaction: boolean;
 
-  constructor(private readonly db: Kysely<Database>) {}
+  constructor(private readonly db: Kysely<Database>, isTransaction = false) {
+    this.isTransaction = isTransaction;
+  }
 
   async getScores(
     challengeType: string
@@ -65,8 +68,16 @@ export class SqlScoringStorageAdapter implements ScoringStorageAdapter {
     fn: (store: ScoringStorageAdapter) => Promise<T>
   ): Promise<T> {
     const run = this.transactionQueue.then(
-      () => fn(this),
-      () => fn(this)
+      () =>
+        this.db.transaction().execute(async (trx) => {
+          const txAdapter = new SqlScoringStorageAdapter(trx as unknown as Kysely<Database>, true);
+          return fn(txAdapter);
+        }),
+      () =>
+        this.db.transaction().execute(async (trx) => {
+          const txAdapter = new SqlScoringStorageAdapter(trx as unknown as Kysely<Database>, true);
+          return fn(txAdapter);
+        })
     );
     this.transactionQueue = run.then(
       () => undefined,
@@ -138,14 +149,6 @@ export class SqlScoringStorageAdapter implements ScoringStorageAdapter {
     strategyName: string,
     entry: ScoringEntry
   ): Promise<void> {
-    // Delete existing metrics for this player+strategy, then insert new ones
-    await this.db
-      .deleteFrom("score_metrics")
-      .where("challenge_type", "=", challengeType)
-      .where("strategy_name", "=", strategyName)
-      .where("player_id", "=", entry.playerId)
-      .execute();
-
     const rows = Object.entries(entry.metrics).map(([key, value]) => ({
       challenge_type: challengeType,
       strategy_name: strategyName,
@@ -155,8 +158,30 @@ export class SqlScoringStorageAdapter implements ScoringStorageAdapter {
       games_played: entry.gamesPlayed,
     }));
 
-    if (rows.length > 0) {
-      await this.db.insertInto("score_metrics").values(rows).execute();
+    // Delete + insert in a single transaction for atomicity.
+    // When called from within transaction(), this.db is already a transaction
+    // connection, so the nested transaction() call becomes a savepoint.
+    const doWork = async (conn: Kysely<Database>) => {
+      await conn
+        .deleteFrom("score_metrics")
+        .where("challenge_type", "=", challengeType)
+        .where("strategy_name", "=", strategyName)
+        .where("player_id", "=", entry.playerId)
+        .execute();
+
+      if (rows.length > 0) {
+        await conn.insertInto("score_metrics").values(rows).execute();
+      }
+    };
+
+    // If we're already inside a DB transaction (this.db is a Transaction),
+    // just run directly. Otherwise wrap in a transaction.
+    if (this.isTransaction) {
+      await doWork(this.db);
+    } else {
+      await this.db.transaction().execute((trx) =>
+        doWork(trx as unknown as Kysely<Database>)
+      );
     }
   }
 

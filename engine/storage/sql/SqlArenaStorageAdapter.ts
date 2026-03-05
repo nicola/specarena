@@ -73,93 +73,95 @@ export class SqlArenaStorageAdapter implements ArenaStorageAdapter {
   async setChallenge(challenge: Challenge): Promise<void> {
     const state = challenge.instance?.state;
 
-    // Store the live operator
+    // Store the live operator (in-memory, not part of DB transaction)
     if (challenge.instance) {
       this.operators.set(challenge.id, challenge.instance);
     }
 
-    // Upsert challenge row
-    await this.db
-      .insertInto("challenges")
-      .values({
-        id: challenge.id,
-        name: challenge.name,
-        challenge_type: challenge.challengeType,
-        created_at: challenge.createdAt,
-        game_started: state?.gameStarted ? 1 : 0,
-        game_ended: state?.gameEnded ? 1 : 0,
-        completed_at: state?.completedAt ?? null,
-        game_state: null, // reserved for future challenge-specific state
-      })
-      .onConflict((oc) =>
-        oc.column("id").doUpdateSet({
+    // All SQL writes in a single transaction for atomicity
+    await this.db.transaction().execute(async (trx) => {
+      // Upsert challenge row
+      await trx
+        .insertInto("challenges")
+        .values({
+          id: challenge.id,
           name: challenge.name,
           challenge_type: challenge.challengeType,
+          created_at: challenge.createdAt,
           game_started: state?.gameStarted ? 1 : 0,
           game_ended: state?.gameEnded ? 1 : 0,
           completed_at: state?.completedAt ?? null,
+          game_state: null,
         })
-      )
-      .execute();
-
-    // Sync invites: delete old, insert current
-    await this.db
-      .deleteFrom("challenge_invites")
-      .where("challenge_id", "=", challenge.id)
-      .execute();
-
-    if (challenge.invites.length > 0) {
-      const playerIdentities = state?.playerIdentities ?? {};
-      const players = state?.players ?? [];
-      const inviteRows = challenge.invites.map((invite, idx) => ({
-        invite,
-        challenge_id: challenge.id,
-        player_index: idx,
-        user_id: playerIdentities[invite] ?? null,
-      }));
-      await this.db
-        .insertInto("challenge_invites")
-        .values(inviteRows)
+        .onConflict((oc) =>
+          oc.column("id").doUpdateSet({
+            name: challenge.name,
+            challenge_type: challenge.challengeType,
+            game_started: state?.gameStarted ? 1 : 0,
+            game_ended: state?.gameEnded ? 1 : 0,
+            completed_at: state?.completedAt ?? null,
+          })
+        )
         .execute();
-    }
 
-    // Sync scores
-    await this.db
-      .deleteFrom("challenge_scores")
-      .where("challenge_id", "=", challenge.id)
-      .execute();
-
-    if (state?.scores && state.scores.length > 0) {
-      const scoreRows = state.scores.map((score, idx) => ({
-        challenge_id: challenge.id,
-        player_index: idx,
-        security: score.security,
-        utility: score.utility,
-      }));
-      await this.db
-        .insertInto("challenge_scores")
-        .values(scoreRows)
+      // Sync invites: delete old, insert current
+      await trx
+        .deleteFrom("challenge_invites")
+        .where("challenge_id", "=", challenge.id)
         .execute();
-    }
 
-    // Sync attributions
-    await this.db
-      .deleteFrom("challenge_attributions")
-      .where("challenge_id", "=", challenge.id)
-      .execute();
+      if (challenge.invites.length > 0) {
+        const playerIdentities = state?.playerIdentities ?? {};
+        const inviteRows = challenge.invites.map((invite, idx) => ({
+          invite,
+          challenge_id: challenge.id,
+          player_index: idx,
+          user_id: playerIdentities[invite] ?? null,
+        }));
+        await trx
+          .insertInto("challenge_invites")
+          .values(inviteRows)
+          .execute();
+      }
 
-    if (state?.attributions && state.attributions.length > 0) {
-      const attrRows = state.attributions.map((a) => ({
-        challenge_id: challenge.id,
-        from_idx: a.from,
-        to_idx: a.to,
-        type: a.type,
-      }));
-      await this.db
-        .insertInto("challenge_attributions")
-        .values(attrRows)
+      // Sync scores
+      await trx
+        .deleteFrom("challenge_scores")
+        .where("challenge_id", "=", challenge.id)
         .execute();
-    }
+
+      if (state?.scores && state.scores.length > 0) {
+        const scoreRows = state.scores.map((score, idx) => ({
+          challenge_id: challenge.id,
+          player_index: idx,
+          security: score.security,
+          utility: score.utility,
+        }));
+        await trx
+          .insertInto("challenge_scores")
+          .values(scoreRows)
+          .execute();
+      }
+
+      // Sync attributions
+      await trx
+        .deleteFrom("challenge_attributions")
+        .where("challenge_id", "=", challenge.id)
+        .execute();
+
+      if (state?.attributions && state.attributions.length > 0) {
+        const attrRows = state.attributions.map((a) => ({
+          challenge_id: challenge.id,
+          from_idx: a.from,
+          to_idx: a.to,
+          type: a.type,
+        }));
+        await trx
+          .insertInto("challenge_attributions")
+          .values(attrRows)
+          .execute();
+      }
+    });
   }
 
   async deleteChallenge(challengeId: string): Promise<void> {
