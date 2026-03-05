@@ -2,22 +2,19 @@ import LeaderboardGraph from "./components/LeaderboardGraph";
 import ChallengeCard from "./components/ChallengeCard";
 import Link from "next/link";
 import { ArrowRightIcon } from "@heroicons/react/24/outline";
+import type { ScoringEntry } from "@arena/engine/scoring/types";
+import { ENGINE_URL } from "@/lib/config";
 
-const engineUrl = process.env.ENGINE_URL || "http://localhost:3001";
-
-interface ScoringEntry {
-  playerId: string;
-  gamesPlayed: number;
-  metrics: Record<string, number>;
+interface ScoringEntryWithProfile extends ScoringEntry {
   username?: string;
   model?: string;
 }
 
 async function fetchGlobalScoring() {
   try {
-    const res = await fetch(`${engineUrl}/api/scoring`, { cache: "no-store" });
+    const res = await fetch(`${ENGINE_URL}/api/scoring`, { cache: "no-store" });
     if (!res.ok) return [];
-    const data: ScoringEntry[] = await res.json();
+    const data: ScoringEntryWithProfile[] = await res.json();
     return data.map((entry) => ({
       name: entry.username ?? entry.playerId.slice(0, 8),
       securityPolicy: entry.metrics["global-average:security"] ?? 0,

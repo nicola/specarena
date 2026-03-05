@@ -111,9 +111,12 @@ export class ScoringModule {
   async getScoringForPlayer(playerId: string): Promise<PlayerScores> {
     const challengeTypes = this.config.challenges.map((c) => c.name);
 
+    const allData = await Promise.all(
+      challengeTypes.map((ct) => this.store.getScores(ct).then((data) => [ct, data] as const))
+    );
+
     const challenges: PlayerScores["challenges"] = {};
-    for (const ct of challengeTypes) {
-      const data = await this.store.getScores(ct);
+    for (const [ct, data] of allData) {
       const filtered: Record<string, ScoringEntry> = {};
       for (const [strategy, entries] of Object.entries(data)) {
         const entry = entries.find((e) => e.playerId === playerId);

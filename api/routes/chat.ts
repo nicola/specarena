@@ -5,6 +5,7 @@ import { ChatSendSchema, SyncSchema } from "../schemas";
 import { getIdentity, IdentityEnv } from "./identity";
 
 const SSE_KEEPALIVE_INTERVAL_MS = 30_000;
+const encoder = new TextEncoder();
 
 export function createChatRoutes(engine: ArenaEngine = defaultEngine) {
   const app = new Hono<IdentityEnv>();
@@ -63,7 +64,7 @@ export function createChatRoutes(engine: ArenaEngine = defaultEngine) {
         // Send initial messages (redacted for non-visible DMs)
         const { messages: initialMessages } = await chat.chatSync(uuid, viewer, 0);
         const initialData = JSON.stringify({ type: "initial", messages: initialMessages });
-        controller.enqueue(new TextEncoder().encode(`data: ${initialData}\n\n`));
+        controller.enqueue(encoder.encode(`data: ${initialData}\n\n`));
 
         // If the game has already ended, send game_ended event with state + profiles
         const challengeId = fromChallengeChannel(uuid) ?? uuid;
@@ -78,7 +79,7 @@ export function createChatRoutes(engine: ArenaEngine = defaultEngine) {
             type: "game_ended",
             data: { ...challenge.instance.state, profiles },
           });
-          controller.enqueue(new TextEncoder().encode(`data: ${endedData}\n\n`));
+          controller.enqueue(encoder.encode(`data: ${endedData}\n\n`));
         }
 
         // Subscribe to new messages with viewer identity
@@ -98,7 +99,7 @@ export function createChatRoutes(engine: ArenaEngine = defaultEngine) {
         // Send keepalive ping every 30 seconds
         const keepAliveInterval = setInterval(() => {
           try {
-            controller.enqueue(new TextEncoder().encode(`: ping\n\n`));
+            controller.enqueue(encoder.encode(`: ping\n\n`));
           } catch {
             clearInterval(keepAliveInterval);
             unsubscribe();

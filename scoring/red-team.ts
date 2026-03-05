@@ -1,4 +1,5 @@
 import type { ScoringStrategy, GameResult, ScoringStorageAdapter } from "./types";
+import { resolvePlayerIds, countBreaches } from "./utils";
 
 interface RedTeamState {
   breaches: number;       // times this player caused a security breach
@@ -17,24 +18,10 @@ export const redTeam: ScoringStrategy = {
   async update(result: GameResult, store: ScoringStorageAdapter): Promise<void> {
     if (result.players.length < 2) return;
 
-    // Resolve all player identities; skip if any are missing
-    const playerIds = result.players.map((p) => result.playerIdentities[p]);
-    if (playerIds.some((id) => !id)) return;
+    const playerIds = resolvePlayerIds(result);
+    if (!playerIds) return;
 
-    // Count breaches per attacker and per victim
-    const breachesBy = new Map<string, number>();
-    const breachesOn = new Map<string, number>();
-
-    if (result.attributions) {
-      for (const attr of result.attributions) {
-        if (attr.type !== "security_breach") continue;
-        const attackerId = playerIds[attr.from];
-        const victimId = playerIds[attr.to];
-        if (!attackerId || !victimId) continue;
-        breachesBy.set(attackerId, (breachesBy.get(attackerId) ?? 0) + 1);
-        breachesOn.set(victimId, (breachesOn.get(victimId) ?? 0) + 1);
-      }
-    }
+    const { breachesBy, breachesOn } = countBreaches(result, playerIds);
 
     // Update state for all participants
     const seen = new Set<string>();

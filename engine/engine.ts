@@ -98,11 +98,11 @@ export class ArenaEngine {
     }
 
     await Promise.all(
-      stale.map(async (challenge) => {
-        await this.storageAdapter.deleteChallenge(challenge.id);
-        await this.chat.deleteChannel(challenge.id);
-        await this.chat.deleteChannel(toChallengeChannel(challenge.id));
-      }),
+      stale.map((challenge) => Promise.all([
+        this.storageAdapter.deleteChallenge(challenge.id),
+        this.chat.deleteChannel(challenge.id),
+        this.chat.deleteChannel(toChallengeChannel(challenge.id)),
+      ])),
     );
 
     return stale.length;
@@ -176,9 +176,11 @@ export class ArenaEngine {
       return challenge;
     }
 
-    await this.storageAdapter.deleteChallenge(challenge.id);
-    await this.chat.deleteChannel(challenge.id);
-    await this.chat.deleteChannel(toChallengeChannel(challenge.id));
+    await Promise.all([
+      this.storageAdapter.deleteChallenge(challenge.id),
+      this.chat.deleteChannel(challenge.id),
+      this.chat.deleteChannel(toChallengeChannel(challenge.id)),
+    ]);
     return undefined;
   }
 
@@ -220,11 +222,11 @@ export class ArenaEngine {
   async challengeMessage(challengeId: string, from: string, messageType: string, content: string) {
     const challenge = await this.getChallenge(challengeId);
 
-    await this.chat.sendChallengeMessage(challengeId, from, (messageType ? `(${messageType}) ` : "") + content, "operator");
-
     if (!challenge || !challenge.instance) {
       return { error: "Challenge not found" };
     }
+
+    await this.chat.sendChallengeMessage(challengeId, from, (messageType ? `(${messageType}) ` : "") + content, "operator");
 
     try {
       await challenge.instance.message({

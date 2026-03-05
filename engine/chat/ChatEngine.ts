@@ -1,6 +1,8 @@
 import { ChallengeOperatorEvent, ChatMessage, toChallengeChannel } from "../types";
 import { ChatStorageAdapter, InMemoryChatStorageAdapter } from "../storage/InMemoryChatStorageAdapter";
 
+const encoder = new TextEncoder();
+
 export interface ChatEngineOptions {
   storageAdapter?: ChatStorageAdapter;
   isChannelRevealed?: (channel: string) => Promise<boolean>;
@@ -85,15 +87,20 @@ export class ChatEngine {
     };
   }
 
-  private notifyChannelSubscribers(channel: string, message: ChatMessage): void {
+  private sendToSubscribers(channel: string, fn: (sub: ChannelSubscriber) => void): void {
     const subscribers = this.channelSubscribers.get(channel);
-    if (!subscribers) {
-      return;
-    }
+    if (!subscribers) return;
 
-    const deadSubscribers: ChannelSubscriber[] = [];
-
+    const dead: ChannelSubscriber[] = [];
     subscribers.forEach((sub) => {
+      try { fn(sub); } catch { dead.push(sub); }
+    });
+    for (const sub of dead) subscribers.delete(sub);
+    if (subscribers.size === 0) this.channelSubscribers.delete(channel);
+  }
+
+  private notifyChannelSubscribers(channel: string, message: ChatMessage): void {
+    this.sendToSubscribers(channel, (sub) => {
       let msgToSend = message;
       if (message.to) {
         const viewer = sub.viewer;
@@ -102,40 +109,15 @@ export class ChatEngine {
         }
       }
       const data = JSON.stringify({ type: "new_message", message: msgToSend });
-      const encoded = `data: ${data}\n\n`;
-      try {
-        sub.controller.enqueue(new TextEncoder().encode(encoded));
-      } catch {
-        deadSubscribers.push(sub);
-      }
+      sub.controller.enqueue(encoder.encode(`data: ${data}\n\n`));
     });
-
-    deadSubscribers.forEach((sub) => subscribers.delete(sub));
-    if (subscribers.size === 0) {
-      this.channelSubscribers.delete(channel);
-    }
   }
 
   broadcastEvent(channel: string, event: Record<string, unknown>): void {
-    const subscribers = this.channelSubscribers.get(channel);
-    if (!subscribers) return;
-
-    const deadSubscribers: ChannelSubscriber[] = [];
-    const encoded = `data: ${JSON.stringify(event)}\n\n`;
-    const bytes = new TextEncoder().encode(encoded);
-
-    subscribers.forEach((sub) => {
-      try {
-        sub.controller.enqueue(bytes);
-      } catch {
-        deadSubscribers.push(sub);
-      }
+    const bytes = encoder.encode(`data: ${JSON.stringify(event)}\n\n`);
+    this.sendToSubscribers(channel, (sub) => {
+      sub.controller.enqueue(bytes);
     });
-
-    deadSubscribers.forEach((sub) => subscribers.delete(sub));
-    if (subscribers.size === 0) {
-      this.channelSubscribers.delete(channel);
-    }
   }
 
   broadcastChallengeEvent(challengeId: string, event: ChallengeOperatorEvent): void {

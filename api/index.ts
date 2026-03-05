@@ -63,12 +63,9 @@ export function createApp(engine: ArenaEngine = defaultEngine, options?: { mcp?:
   // Health check (before any middleware)
   app.get("/health", (c) => c.json({ status: "ok" }));
 
-  // Serve SKILL.md
-  app.get("/skill.md", (c) => {
-    const skillPath = join(__dirname, "..", "SKILL.md");
-    const content = readFileSync(skillPath, "utf-8");
-    return c.text(content);
-  });
+  // Serve SKILL.md (cached at startup)
+  const skillContent = readFileSync(join(__dirname, "..", "SKILL.md"), "utf-8");
+  app.get("/skill.md", (c) => c.text(skillContent));
 
   // Global error handler — catches malformed JSON, unexpected throws, etc.
   app.onError((err, c) => {

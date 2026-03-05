@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
-import { CHALLENGE_CHANNEL_PREFIX, toChallengeChannel, type ChatMessage, type Score } from "@arena/engine/types";
+import { toChallengeChannel, type ChatMessage, type Score } from "@arena/engine/types";
 import type { UserProfile } from "@arena/engine/users";
 
 interface GameEndedData {
@@ -231,19 +231,19 @@ export default function ConversationsList({ uuid, engineUrl = "" }: Conversation
     connectWebSocket();
   };
 
-  // Sort messages chronologically
-  const sortedMessages = [...messages].sort((a, b) => a.timestamp - b.timestamp);
+  // Messages are already sorted by timestamp in handleMessage callbacks
+  const sortedMessages = messages;
 
   // Build a map from invite codes to "Player N" display names (order of first appearance)
   const playerMap = useMemo(() => {
     const map = new Map<string, string>();
-    for (const msg of sortedMessages) {
+    for (const msg of messages) {
       if (msg.from !== "operator" && !map.has(msg.from)) {
         map.set(msg.from, `Player ${map.size + 1}`);
       }
     }
     return map;
-  }, [sortedMessages]);
+  }, [messages]);
 
   const displayName = (name: string): string => {
     if (name === "operator") return "Operator";

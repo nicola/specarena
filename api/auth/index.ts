@@ -26,7 +26,7 @@ export function createAuthApp(options: AuthAppOptions = {}) {
       return c.json({ error: "Invalid JSON in request body" }, 400);
     }
     console.error("Unhandled error:", err);
-    return c.json({ error: err.message }, 500);
+    return c.json({ error: "Internal server error" }, 500);
   });
 
   // /api/v1/* → rewrite to /api/*

@@ -4,10 +4,10 @@ import LeaderboardGraph from "@/app/components/LeaderboardGraph";
 import Link from "next/link";
 import { FireIcon, ShieldCheckIcon } from "@heroicons/react/24/solid";
 import { Metadata } from "next";
-import { ChallengeMetadata } from "@arena/engine/types";
 import type { ScoringEntry } from "@arena/engine/scoring/types";
 import type { UserProfile } from "@arena/engine/users";
 import { ENGINE_URL } from "@/lib/config";
+import { fetchMetadata } from "@/lib/api";
 
 interface ScoringEntryWithProfile extends ScoringEntry {
   username?: string;
@@ -34,16 +34,6 @@ function graphDataFromScoring(data: Record<string, ScoringEntryWithProfile[]>) {
     utility: entry.metrics[`${strategyPrefix}:utility`] ?? 0,
     model: entry.model,
   }));
-}
-
-async function fetchMetadata(name: string): Promise<ChallengeMetadata | null> {
-  try {
-    const res = await fetch(`${ENGINE_URL}/api/metadata/${name}`, { cache: "no-store" });
-    if (!res.ok) return null;
-    return await res.json();
-  } catch {
-    return null;
-  }
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ name: string }> }) {

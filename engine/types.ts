@@ -35,10 +35,6 @@ export interface ChallengeOperator {
   state: ChallengeOperatorState;
 }
 
-export enum ChallengeType {
-  Psi = "psi",
-}
-
 export interface Challenge {
   id: string;
   name: string;
@@ -68,12 +64,6 @@ export interface ChallengeMetadata {
   methods: { name: string; description: string }[];
   icon?: string;
   color?: string;
-}
-
-export interface ChallengeConfig {
-  name: string;
-  options?: Record<string, unknown>;
-  scoring?: string[];
 }
 
 export interface GameEndedEvent {

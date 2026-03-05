@@ -1,4 +1,5 @@
 import type { ScoringStrategy, GameResult, ScoringStorageAdapter } from "./types";
+import { resolvePlayerIds, countBreaches } from "./utils";
 
 /** Per-challenge strategy: tracks current streak of consecutive successful games. */
 export const consecutive: ScoringStrategy = {
@@ -12,20 +13,10 @@ export const consecutive: ScoringStrategy = {
   async update(result: GameResult, store: ScoringStorageAdapter): Promise<void> {
     if (result.players.length < 2) return;
 
-    // Resolve player identities; skip if any are missing
-    const playerIds = result.players.map((p) => result.playerIdentities[p]);
-    if (playerIds.some((id) => !id)) return;
+    const playerIds = resolvePlayerIds(result);
+    if (!playerIds) return;
 
-    // Count breaches per attacker (same attribution scan as red-team)
-    const breachesBy = new Map<string, number>();
-    if (result.attributions) {
-      for (const attr of result.attributions) {
-        if (attr.type !== "security_breach") continue;
-        const attackerId = playerIds[attr.from];
-        if (!attackerId) continue;
-        breachesBy.set(attackerId, (breachesBy.get(attackerId) ?? 0) + 1);
-      }
-    }
+    const { breachesBy } = countBreaches(result, playerIds);
 
     // Update streaks for all participants
     const seen = new Set<string>();

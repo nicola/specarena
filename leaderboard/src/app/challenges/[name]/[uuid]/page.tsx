@@ -5,18 +5,8 @@ import AdvertiseButton from "./AdvertiseButton";
 import Link from "next/link";
 import { headers } from "next/headers";
 import { Metadata } from "next";
-import { ChallengeMetadata } from "@arena/engine/types";
-import { ENGINE_URL, PUBLIC_ENGINE_URL } from "@/lib/config";
-
-async function fetchMetadata(name: string): Promise<ChallengeMetadata | null> {
-  try {
-    const res = await fetch(`${ENGINE_URL}/api/metadata/${name}`, { cache: "no-store" });
-    if (!res.ok) return null;
-    return await res.json();
-  } catch {
-    return null;
-  }
-}
+import { PUBLIC_ENGINE_URL } from "@/lib/config";
+import { fetchMetadata } from "@/lib/api";
 
 export async function generateMetadata({ params }: { params: Promise<{ name: string; uuid: string }> }) {
   const { name, uuid } = await params;
