@@ -114,12 +114,16 @@ export function createApp(engine: ArenaEngine = defaultEngine, options?: { mcp?:
   return app;
 }
 
+let shutdownDb: (() => Promise<void>) | undefined;
+
 function createDefaultApp(): Hono {
   if (!process.env.DATABASE_URL) {
     return createApp();
   }
 
-  const { db } = createDb();
+  const { db, client } = createDb();
+  shutdownDb = () => client.end();
+
   const engine = createEngine({
     chatStorageAdapter: new SqlChatStorageAdapter(db),
     userStorage: new SqlUserStorageAdapter(db),
@@ -131,3 +135,8 @@ function createDefaultApp(): Hono {
 
 const app = createDefaultApp();
 export default app;
+
+/** Close the database connection pool. No-op if using in-memory storage. */
+export async function shutdown(): Promise<void> {
+  await shutdownDb?.();
+}
