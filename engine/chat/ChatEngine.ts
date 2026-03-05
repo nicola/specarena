@@ -149,19 +149,17 @@ export class ChatEngine {
   }
 
   async sendMessage(channel: string, from: string, content: string, to?: string | null): Promise<ChatMessage> {
-    const index = await this.storageAdapter.getNextIndex(channel);
     const message: ChatMessage = {
       channel,
       from,
       to,
       content: content || "",
-      index,
       timestamp: Date.now(),
     };
 
-    await this.storageAdapter.appendMessage(channel, message);
-    this.notifyChannelSubscribers(channel, message);
-    return message;
+    const stored = await this.storageAdapter.appendMessage(channel, message);
+    this.notifyChannelSubscribers(channel, stored);
+    return stored;
   }
 
   async chatSend(channel: string, from: string, content: string, to?: string | null) {

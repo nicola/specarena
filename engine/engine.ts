@@ -203,6 +203,7 @@ export class ArenaEngine {
 
     try {
       await challenge.instance.join(invite, userId);
+      await this.storageAdapter.setChallenge(challenge);
     } catch (error) {
       if (error instanceof ChallengeOperatorError) {
         return { error: error.message, code: error.code };
@@ -234,6 +235,7 @@ export class ArenaEngine {
         content,
         timestamp: Date.now(),
       });
+      await this.storageAdapter.setChallenge(challenge);
       return { ok: "Message sent" };
     } catch (error) {
       if (error instanceof ChallengeOperatorError) {

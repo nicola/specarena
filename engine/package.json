@@ -12,7 +12,8 @@
     "./challenge-design/BaseChallenge": "./challenge-design/BaseChallenge.ts",
     "./scoring": "./scoring/index.ts",
     "./scoring/types": "./scoring/types.ts",
-    "./users": "./users/index.ts"
+    "./users": "./users/index.ts",
+    "./storage/sql": "./storage/sql/index.ts"
   },
   "scripts": {
     "prune:stale": "node --import tsx scripts/prune-stale-challenges.ts",
@@ -20,6 +21,7 @@
   },
   "dependencies": {
     "@arena/scoring": "*",
+    "kysely": "^0.28.8",
     "prando": "^6.0.1",
     "zod": "^3.25.76"
   },
