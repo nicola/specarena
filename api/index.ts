@@ -117,20 +117,22 @@ export function createApp(engine: ArenaEngine = defaultEngine, options?: { mcp?:
 let shutdownDb: (() => Promise<void>) | undefined;
 
 function createDefaultApp(): Hono {
-  if (!process.env.DATABASE_URL) {
-    return createApp();
+  const storage = process.env.STORAGE ?? "memory";
+
+  if (storage === "sql") {
+    const { db, client } = createDb();
+    shutdownDb = () => client.end();
+
+    const engine = createEngine({
+      chatStorageAdapter: new SqlChatStorageAdapter(db),
+      userStorage: new SqlUserStorageAdapter(db),
+    });
+
+    console.log("Using SQL storage adapters");
+    return createApp(engine, { scoringStorageAdapter: new SqlScoringStorageAdapter(db) });
   }
 
-  const { db, client } = createDb();
-  shutdownDb = () => client.end();
-
-  const engine = createEngine({
-    chatStorageAdapter: new SqlChatStorageAdapter(db),
-    userStorage: new SqlUserStorageAdapter(db),
-  });
-
-  console.log("Using SQL storage adapters (DATABASE_URL is set)");
-  return createApp(engine, { scoringStorageAdapter: new SqlScoringStorageAdapter(db) });
+  return createApp();
 }
 
 const app = createDefaultApp();
