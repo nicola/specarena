@@ -15,13 +15,13 @@ async function fetchUserProfile(userId: string): Promise<UserProfile | null> {
   }
 }
 
-async function fetchUserChallenges(userId: string) {
+async function fetchUserChallenges(userId: string, limit: number, offset: number) {
   try {
-    const res = await fetch(`${ENGINE_URL}/api/users/${userId}/challenges`, { cache: "no-store" });
-    if (!res.ok) return { challenges: [], profiles: {} };
+    const res = await fetch(`${ENGINE_URL}/api/users/${userId}/challenges?limit=${limit}&offset=${offset}`, { cache: "no-store" });
+    if (!res.ok) return { challenges: [], profiles: {}, total: 0 };
     return await res.json();
   } catch {
-    return { challenges: [], profiles: {} };
+    return { challenges: [], profiles: {}, total: 0 };
   }
 }
 
@@ -87,11 +87,15 @@ function metricColor(key: string, value: number): string {
   return "text-zinc-900";
 }
 
-export default async function UserProfilePage({ params }: { params: Promise<{ userId: string }> }) {
+export default async function UserProfilePage({ params, searchParams }: { params: Promise<{ userId: string }>; searchParams: Promise<{ page?: string }> }) {
   const { userId } = await params;
+  const { page: pageParam } = await searchParams;
+  const page = Math.max(1, parseInt(pageParam || "1", 10) || 1);
+  const pageSize = 50;
+  const offset = (page - 1) * pageSize;
   const [profile, challengesData, scores, globalScoring] = await Promise.all([
     fetchUserProfile(userId),
-    fetchUserChallenges(userId),
+    fetchUserChallenges(userId, pageSize, offset),
     fetchUserScores(userId),
     fetchGlobalScoring(),
   ]);
@@ -107,6 +111,7 @@ export default async function UserProfilePage({ params }: { params: Promise<{ us
   }));
   const challenges = challengesData.challenges ?? [];
   const profiles = challengesData.profiles ?? {};
+  const challengesTotal = challengesData.total ?? challenges.length;
 
   const hasScores = scores && (scores.global || Object.keys(scores.challenges).length > 0);
 
@@ -209,11 +214,15 @@ export default async function UserProfilePage({ params }: { params: Promise<{ us
       )}
 
       {/* Challenges */}
-      {challenges.length > 0 ? (
+      {challenges.length > 0 || challengesTotal > 0 ? (
         <ChallengesList
           challenges={challenges}
           challengeType=""
           profiles={profiles}
+          total={challengesTotal}
+          page={page}
+          pageSize={pageSize}
+          basePath={`/users/${userId}`}
         />
       ) : (
         <div className="border border-zinc-900 p-8 text-center">

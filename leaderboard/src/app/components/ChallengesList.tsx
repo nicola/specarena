@@ -27,6 +27,10 @@ interface ChallengesListProps {
   challenges: ChallengeInstance[];
   challengeType: string;
   profiles?: Record<string, UserProfile>;
+  total?: number;
+  page?: number;
+  pageSize?: number;
+  basePath?: string;
 }
 
 const formatDate = (timestamp: number) => {
@@ -78,13 +82,16 @@ const getGameStatus = (challengeInstance: ChallengeInstance) => {
   }
 };
 
-export default function ChallengesList({ challenges, challengeType, profiles = {} }: ChallengesListProps) {
+export default function ChallengesList({ challenges, challengeType, profiles = {}, total, page = 1, pageSize = 50, basePath }: ChallengesListProps) {
   const router = useRouter();
+  const displayTotal = total ?? challenges.length;
+  const totalPages = pageSize > 0 ? Math.ceil(displayTotal / pageSize) : 1;
+  const hasPagination = basePath && totalPages > 1;
 
   return (
     <div className="mt-12">
       <h2 className="text-2xl font-semibold text-zinc-900 mb-6" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
-        Challenges ({challenges.length})
+        Challenges ({displayTotal})
       </h2>
       {challenges.length === 0 ? (
         <div className="border border-zinc-900 p-8 text-center">
@@ -181,6 +188,25 @@ export default function ChallengesList({ challenges, challengeType, profiles = {
               </div>
             );
           })}
+        </div>
+      )}
+      {hasPagination && (
+        <div className="flex items-center justify-between mt-4 text-sm">
+          {page > 1 ? (
+            <Link href={page === 2 ? basePath : `${basePath}?page=${page - 1}`} className="text-zinc-600 hover:text-zinc-900">
+              Previous
+            </Link>
+          ) : (
+            <span className="text-zinc-300">Previous</span>
+          )}
+          <span className="text-zinc-400">Page {page} of {totalPages}</span>
+          {page < totalPages ? (
+            <Link href={`${basePath}?page=${page + 1}`} className="text-zinc-600 hover:text-zinc-900">
+              Next
+            </Link>
+          ) : (
+            <span className="text-zinc-300">Next</span>
+          )}
         </div>
       )}
     </div>

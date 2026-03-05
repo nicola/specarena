@@ -57,8 +57,12 @@ export async function generateMetadata({ params }: { params: Promise<{ name: str
   return metadata;
 }
 
-export default async function ChallengePage({ params }: { params: Promise<{ name: string }> }) {
+export default async function ChallengePage({ params, searchParams }: { params: Promise<{ name: string }>; searchParams: Promise<{ page?: string }> }) {
   const { name } = await params;
+  const { page: pageParam } = await searchParams;
+  const page = Math.max(1, parseInt(pageParam || "1", 10) || 1);
+  const pageSize = 50;
+  const offset = (page - 1) * pageSize;
 
   const challenge = await fetchMetadata(name);
   if (!challenge) {
@@ -68,8 +72,9 @@ export default async function ChallengePage({ params }: { params: Promise<{ name
   // Fetch challenges and scoring in parallel
   let challengesList: Array<{ id: string; name: string; createdAt: number; challengeType: string; invites: string[] }> = [];
   let profiles: Record<string, UserProfile> = {};
+  let challengesTotal = 0;
   const [challengesResult, allScoring] = await Promise.all([
-    fetch(`${ENGINE_URL}/api/challenges/${name}`, { cache: 'no-store' })
+    fetch(`${ENGINE_URL}/api/challenges/${name}?limit=${pageSize}&offset=${offset}`, { cache: 'no-store' })
       .then(res => res.ok ? res.json() : null)
       .catch(() => null),
     fetchChallengeScoring(name),
@@ -77,6 +82,7 @@ export default async function ChallengePage({ params }: { params: Promise<{ name
   if (challengesResult) {
     challengesList = challengesResult.challenges || [];
     profiles = challengesResult.profiles || {};
+    challengesTotal = challengesResult.total ?? challengesList.length;
   }
   const scoringData = graphDataFromScoring(allScoring);
   const redTeamData = (allScoring["red-team"] || [])
@@ -170,7 +176,7 @@ export default async function ChallengePage({ params }: { params: Promise<{ name
         })()}
 
         {/* Challenges List */}
-        <ChallengesList challenges={challengesList} challengeType={name} profiles={profiles} />
+        <ChallengesList challenges={challengesList} challengeType={name} profiles={profiles} total={challengesTotal} page={page} pageSize={pageSize} basePath={`/challenges/${name}`} />
       </section>
   );
 }
