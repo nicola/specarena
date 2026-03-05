@@ -1,11 +1,12 @@
 import { readFileSync } from "fs";
 import { join } from "path";
 import { Hono } from "hono";
-import { ArenaEngine, defaultEngine } from "@arena/engine/engine";
+import { ArenaEngine, createEngine, defaultEngine } from "@arena/engine/engine";
 import { ChallengeFactory, ChallengeMetadata } from "@arena/engine/types";
 import { ScoringModule } from "@arena/engine/scoring";
-import type { EngineConfig } from "@arena/engine/scoring/types";
+import type { EngineConfig, ScoringStorageAdapter } from "@arena/engine/scoring/types";
 import { strategies, globalStrategies } from "@arena/scoring";
+import { createDb, SqlChatStorageAdapter, SqlUserStorageAdapter, SqlScoringStorageAdapter } from "@arena/engine/storage/sql";
 import { createArenaHandler } from "./mcp/arena";
 import { createChatHandler } from "./mcp/chat";
 import { createChallengeRoutes } from "./routes/challenges";
@@ -49,13 +50,13 @@ export function registerChallengesFromConfig(engine: ArenaEngine, config?: Engin
   }
 }
 
-export function createApp(engine: ArenaEngine = defaultEngine, options?: { mcp?: boolean }): Hono {
+export function createApp(engine: ArenaEngine = defaultEngine, options?: { mcp?: boolean; scoringStorageAdapter?: ScoringStorageAdapter }): Hono {
   const mcp = options?.mcp ?? true;
 
   // Load config and initialize scoring
   const config = loadConfig();
   if (!engine.scoring) {
-    engine.scoring = new ScoringModule(config, strategies, globalStrategies);
+    engine.scoring = new ScoringModule(config, strategies, globalStrategies, options?.scoringStorageAdapter);
   }
   registerChallengesFromConfig(engine, config);
   const app = new Hono();
@@ -113,5 +114,20 @@ export function createApp(engine: ArenaEngine = defaultEngine, options?: { mcp?:
   return app;
 }
 
-const app = createApp();
+function createDefaultApp(): Hono {
+  if (!process.env.DATABASE_URL) {
+    return createApp();
+  }
+
+  const { db } = createDb();
+  const engine = createEngine({
+    chatStorageAdapter: new SqlChatStorageAdapter(db),
+    userStorage: new SqlUserStorageAdapter(db),
+  });
+
+  console.log("Using SQL storage adapters (DATABASE_URL is set)");
+  return createApp(engine, { scoringStorageAdapter: new SqlScoringStorageAdapter(db) });
+}
+
+const app = createDefaultApp();
 export default app;

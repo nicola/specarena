@@ -12,12 +12,14 @@ import {
 } from "./types";
 import { ChatEngine, createChatEngine } from "./chat/ChatEngine";
 import { ArenaStorageAdapter, InMemoryArenaStorageAdapter } from "./storage/InMemoryArenaStorageAdapter";
+import type { ChatStorageAdapter } from "./storage/InMemoryChatStorageAdapter";
 import { ScoringModule } from "./scoring/index";
 import { UserStorageAdapter, InMemoryUserStorageAdapter } from "./users/index";
 
 export interface EngineOptions {
   storageAdapter?: ArenaStorageAdapter;
   chatEngine?: ChatEngine;
+  chatStorageAdapter?: ChatStorageAdapter;
   scoring?: ScoringModule;
   userStorage?: UserStorageAdapter;
 }
@@ -39,6 +41,7 @@ export class ArenaEngine {
     this.challengeMetadataMap = new Map<string, ChallengeMetadata>();
     this.scoring = options.scoring ?? null;
     this.chat = options.chatEngine ?? createChatEngine({
+      storageAdapter: options.chatStorageAdapter,
       isChannelRevealed: async (channel) => {
         const challengeId = fromChallengeChannel(channel);
         if (!challengeId) return false;
