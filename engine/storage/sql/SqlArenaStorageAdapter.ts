@@ -7,17 +7,15 @@ import type {
   ChallengeOperatorState,
 } from "../../types";
 
-export type OperatorFactory = (challengeType: string, challengeId: string) => ChallengeOperator | undefined;
-
 export class SqlArenaStorageAdapter implements ArenaStorageAdapter {
   /** Live ChallengeOperator instances — not serializable. */
   private operators = new Map<string, ChallengeOperator>();
-  private operatorFactory?: OperatorFactory;
+  private operatorFactory?: (type: string, id: string) => ChallengeOperator | undefined;
 
   constructor(private readonly db: Kysely<Database>) {}
 
   /** Register a factory callback used to reconstruct operators on restart. */
-  setOperatorFactory(factory: OperatorFactory): void {
+  setOperatorFactory(factory: (type: string, id: string) => ChallengeOperator | undefined): void {
     this.operatorFactory = factory;
   }
 
@@ -86,8 +84,7 @@ export class SqlArenaStorageAdapter implements ArenaStorageAdapter {
       this.operators.set(challenge.id, challenge.instance);
     }
 
-    // Serialize challenge-specific game state if supported
-    const gameState = challenge.instance?.serialize
+    const gameState = challenge.instance
       ? JSON.stringify(challenge.instance.serialize())
       : null;
 
@@ -268,7 +265,7 @@ export class SqlArenaStorageAdapter implements ArenaStorageAdapter {
     // Try to reconstruct from factory (for in-progress games)
     if (this.operatorFactory && !state.gameEnded) {
       const reconstructed = this.operatorFactory(row.challenge_type, row.id);
-      if (reconstructed?.restore) {
+      if (reconstructed) {
         const gameState = row.game_state ? JSON.parse(row.game_state) : undefined;
         reconstructed.restore(state, gameState);
         this.operators.set(row.id, reconstructed);
@@ -292,6 +289,8 @@ export class SqlArenaStorageAdapter implements ArenaStorageAdapter {
       async message() {
         throw new Error("Cannot message a completed challenge");
       },
+      serialize() { return null; },
+      restore() {},
     };
 
     return {

@@ -34,9 +34,9 @@ export interface ChallengeOperator {
   message(message: ChatMessage): Promise<void>;
   state: ChallengeOperatorState;
   /** Serialize challenge-specific game state for persistence. */
-  serialize?(): unknown;
+  serialize(): unknown;
   /** Restore operator from persisted state after restart. */
-  restore?(operatorState: ChallengeOperatorState, gameState: unknown): void;
+  restore(operatorState: ChallengeOperatorState, gameState: unknown): void;
 }
 
 export enum ChallengeType {

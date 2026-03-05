@@ -21,6 +21,8 @@ function mockChallenge(id: string, invites: string[]): Challenge {
       },
       async join() {},
       async message() {},
+      serialize() { return null; },
+      restore() {},
     },
   };
 }

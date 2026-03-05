@@ -366,6 +366,8 @@ describe("SQL adapter simulates server restart", () => {
         },
         async join() {},
         async message() {},
+        serialize() { return null; },
+        restore() {},
       },
     });
 

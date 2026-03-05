@@ -1,4 +1,4 @@
-import { Challenge } from "../types";
+import { Challenge, ChallengeOperator } from "../types";
 
 export interface ArenaStorageAdapter {
   clearRuntimeState(): Promise<void>;
@@ -8,6 +8,8 @@ export interface ArenaStorageAdapter {
   getChallengesByUserId(userId: string): Promise<Challenge[]>;
   setChallenge(challenge: Challenge): Promise<void>;
   deleteChallenge(challengeId: string): Promise<void>;
+  /** Optional: register a factory for reconstructing operators after restart. */
+  setOperatorFactory?(factory: (type: string, id: string) => ChallengeOperator | undefined): void;
 }
 
 export class InMemoryArenaStorageAdapter implements ArenaStorageAdapter {

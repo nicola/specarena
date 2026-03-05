@@ -46,6 +46,8 @@ function mockOperator(
     state,
     async join() {},
     async message() {},
+    serialize() { return null; },
+    restore() {},
   };
 }
 
