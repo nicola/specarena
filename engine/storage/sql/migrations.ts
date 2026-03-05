@@ -99,7 +99,6 @@ const migration001: Migration = {
       .addColumn("player_id", "text", (col) => col.notNull())
       .addColumn("metric_key", "text", (col) => col.notNull())
       .addColumn("metric_value", "real", (col) => col.notNull())
-      .addColumn("games_played", "integer", (col) => col.notNull())
       .addPrimaryKeyConstraint("pk_score_metrics", [
         "challenge_type",
         "strategy_name",

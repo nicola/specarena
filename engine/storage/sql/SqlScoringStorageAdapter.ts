@@ -4,6 +4,7 @@ import type { ScoringEntry, ScoringStorageAdapter } from "@arena/scoring";
 
 const GLOBAL_CHALLENGE_TYPE = "_global";
 const GLOBAL_STRATEGY_NAME = "_global";
+const GAMES_PLAYED_KEY = "_games_played";
 
 export class SqlScoringStorageAdapter implements ScoringStorageAdapter {
   private transactionQueue: Promise<void> = Promise.resolve();
@@ -34,10 +35,14 @@ export class SqlScoringStorageAdapter implements ScoringStorageAdapter {
       }
       let entry = strategyMap.get(row.player_id);
       if (!entry) {
-        entry = { gamesPlayed: row.games_played, metrics: {} };
+        entry = { gamesPlayed: 0, metrics: {} };
         strategyMap.set(row.player_id, entry);
       }
-      entry.metrics[row.metric_key] = row.metric_value;
+      if (row.metric_key === GAMES_PLAYED_KEY) {
+        entry.gamesPlayed = row.metric_value;
+      } else {
+        entry.metrics[row.metric_key] = row.metric_value;
+      }
     }
 
     for (const [strategyName, playerMap] of grouped) {
@@ -149,14 +154,22 @@ export class SqlScoringStorageAdapter implements ScoringStorageAdapter {
     strategyName: string,
     entry: ScoringEntry
   ): Promise<void> {
-    const rows = Object.entries(entry.metrics).map(([key, value]) => ({
-      challenge_type: challengeType,
-      strategy_name: strategyName,
-      player_id: entry.playerId,
-      metric_key: key,
-      metric_value: value,
-      games_played: entry.gamesPlayed,
-    }));
+    const rows = [
+      ...Object.entries(entry.metrics).map(([key, value]) => ({
+        challenge_type: challengeType,
+        strategy_name: strategyName,
+        player_id: entry.playerId,
+        metric_key: key,
+        metric_value: value,
+      })),
+      {
+        challenge_type: challengeType,
+        strategy_name: strategyName,
+        player_id: entry.playerId,
+        metric_key: GAMES_PLAYED_KEY,
+        metric_value: entry.gamesPlayed,
+      },
+    ];
 
     // Delete + insert in a single transaction for atomicity.
     // When called from within transaction(), this.db is already a transaction
@@ -200,15 +213,16 @@ export class SqlScoringStorageAdapter implements ScoringStorageAdapter {
 
     if (rows.length === 0) return undefined;
 
+    let gamesPlayed = 0;
     const metrics: Record<string, number> = {};
     for (const row of rows) {
-      metrics[row.metric_key] = row.metric_value;
+      if (row.metric_key === GAMES_PLAYED_KEY) {
+        gamesPlayed = row.metric_value;
+      } else {
+        metrics[row.metric_key] = row.metric_value;
+      }
     }
-    return {
-      playerId,
-      gamesPlayed: rows[0].games_played,
-      metrics,
-    };
+    return { playerId, gamesPlayed, metrics };
   }
 
   async setGlobalScoreEntry(entry: ScoringEntry): Promise<void> {
@@ -248,11 +262,15 @@ export class SqlScoringStorageAdapter implements ScoringStorageAdapter {
       if (!strategies[row.strategy_name]) {
         strategies[row.strategy_name] = {
           playerId,
-          gamesPlayed: row.games_played,
+          gamesPlayed: 0,
           metrics: {},
         };
       }
-      strategies[row.strategy_name].metrics[row.metric_key] = row.metric_value;
+      if (row.metric_key === GAMES_PLAYED_KEY) {
+        strategies[row.strategy_name].gamesPlayed = row.metric_value;
+      } else {
+        strategies[row.strategy_name].metrics[row.metric_key] = row.metric_value;
+      }
     }
 
     return result;

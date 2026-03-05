@@ -55,7 +55,6 @@ export interface ScoreMetricsTable {
   player_id: string;
   metric_key: string;
   metric_value: number;
-  games_played: number;
 }
 
 export interface StrategyStateTable {
