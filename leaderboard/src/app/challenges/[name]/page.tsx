@@ -4,15 +4,9 @@ import LeaderboardGraph from "@/app/components/LeaderboardGraph";
 import Link from "next/link";
 import { FireIcon, ShieldCheckIcon } from "@heroicons/react/24/solid";
 import { Metadata } from "next";
-import type { ScoringEntry } from "@arena/engine/scoring/types";
 import type { UserProfile } from "@arena/engine/users";
 import { ENGINE_URL } from "@/lib/config";
-import { fetchMetadata } from "@/lib/api";
-
-interface ScoringEntryWithProfile extends ScoringEntry {
-  username?: string;
-  model?: string;
-}
+import { fetchMetadata, type ScoringEntryWithProfile } from "@/lib/api";
 
 async function fetchChallengeScoring(challengeType: string): Promise<Record<string, ScoringEntryWithProfile[]>> {
   try {

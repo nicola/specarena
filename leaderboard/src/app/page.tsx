@@ -2,32 +2,20 @@ import LeaderboardGraph from "./components/LeaderboardGraph";
 import ChallengeCard from "./components/ChallengeCard";
 import Link from "next/link";
 import { ArrowRightIcon } from "@heroicons/react/24/outline";
-import type { ScoringEntry } from "@arena/engine/scoring/types";
-import { ENGINE_URL } from "@/lib/config";
+import { fetchGlobalScoring } from "@/lib/api";
 
-interface ScoringEntryWithProfile extends ScoringEntry {
-  username?: string;
-  model?: string;
-}
-
-async function fetchGlobalScoring() {
-  try {
-    const res = await fetch(`${ENGINE_URL}/api/scoring`, { cache: "no-store" });
-    if (!res.ok) return [];
-    const data: ScoringEntryWithProfile[] = await res.json();
-    return data.map((entry) => ({
-      name: entry.username ?? entry.playerId.slice(0, 8),
-      securityPolicy: entry.metrics["global-average:security"] ?? 0,
-      utility: entry.metrics["global-average:utility"] ?? 0,
-      model: entry.model,
-    }));
-  } catch {
-    return [];
-  }
+async function fetchLeaderboardData() {
+  const data = await fetchGlobalScoring();
+  return data.map((entry) => ({
+    name: entry.username ?? entry.playerId.slice(0, 8),
+    securityPolicy: entry.metrics["global-average:security"] ?? 0,
+    utility: entry.metrics["global-average:utility"] ?? 0,
+    model: entry.model,
+  }));
 }
 
 export default async function Home() {
-  const leaderboardData = await fetchGlobalScoring();
+  const leaderboardData = await fetchLeaderboardData();
 
   return (
     <>

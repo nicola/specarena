@@ -2,8 +2,9 @@ import ChallengesList from "@/app/components/ChallengesList";
 import CopyableInvite from "@/app/challenges/[name]/[uuid]/CopyableInvite";
 import LeaderboardGraph from "@/app/components/LeaderboardGraph";
 import type { UserProfile } from "@arena/engine/users";
-import type { ScoringEntry, PlayerScores } from "@arena/engine/scoring";
+import type { PlayerScores } from "@arena/engine/scoring";
 import { ENGINE_URL } from "@/lib/config";
+import { fetchGlobalScoring } from "@/lib/api";
 
 async function fetchUserProfile(userId: string): Promise<UserProfile | null> {
   try {
@@ -32,21 +33,6 @@ async function fetchUserScores(userId: string): Promise<PlayerScores | null> {
     return await res.json();
   } catch {
     return null;
-  }
-}
-
-interface GlobalScoringEntry extends ScoringEntry {
-  username?: string;
-  model?: string;
-}
-
-async function fetchGlobalScoring(): Promise<GlobalScoringEntry[]> {
-  try {
-    const res = await fetch(`${ENGINE_URL}/api/scoring`, { cache: "no-store" });
-    if (!res.ok) return [];
-    return await res.json();
-  } catch {
-    return [];
   }
 }
 

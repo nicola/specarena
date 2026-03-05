@@ -231,9 +231,6 @@ export default function ConversationsList({ uuid, engineUrl = "" }: Conversation
     connectWebSocket();
   };
 
-  // Messages are already sorted by timestamp in handleMessage callbacks
-  const sortedMessages = messages;
-
   // Build a map from invite codes to "Player N" display names (order of first appearance)
   const playerMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -321,8 +318,8 @@ export default function ConversationsList({ uuid, engineUrl = "" }: Conversation
 
       {/* Messages Container */}
       <div className="flex-1 overflow-y-auto space-y-6 pr-2">
-        {sortedMessages.map((message, idx) => {
-          const prevMessage = idx > 0 ? sortedMessages[idx - 1] : null;
+        {messages.map((message, idx) => {
+          const prevMessage = idx > 0 ? messages[idx - 1] : null;
           const currentConversation = getConversationKey(message);
           const prevConversation = prevMessage ? getConversationKey(prevMessage) : null;
           const conversationChanged = currentConversation !== prevConversation;
