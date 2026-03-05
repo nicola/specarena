@@ -61,6 +61,7 @@ export interface ScoringStorageAdapter {
   getScoreEntry(challengeType: string, strategyName: string, playerId: string): Promise<ScoringEntry | undefined>;
   setGlobalScoreEntry(entry: ScoringEntry): Promise<void>;
   getGlobalScoreEntry(playerId: string): Promise<ScoringEntry | undefined>;
+  getScoresForPlayer(playerId: string): Promise<Record<string, Record<string, ScoringEntry>>>;
 }
 
 export interface PlayerScores {

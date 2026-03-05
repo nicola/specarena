@@ -24,9 +24,18 @@ async function main() {
   const app = createApp(engine);
 
   console.log(`Starting Arena engine server on port ${port}...`);
-  serve({ fetch: app.fetch, port }, (info) => {
+  const server = serve({ fetch: app.fetch, port }, (info) => {
     console.log(`Arena engine server running at http://localhost:${info.port}`);
   });
+
+  const shutdown = async () => {
+    console.log("Shutting down...");
+    server.close();
+    await storage.close?.();
+    process.exit(0);
+  };
+  process.on("SIGTERM", shutdown);
+  process.on("SIGINT", shutdown);
 }
 
 main().catch((err) => {

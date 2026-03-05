@@ -228,4 +228,33 @@ export class SqlScoringStorageAdapter implements ScoringStorageAdapter {
       playerId
     );
   }
+
+  async getScoresForPlayer(
+    playerId: string
+  ): Promise<Record<string, Record<string, ScoringEntry>>> {
+    const rows = await this.db
+      .selectFrom("score_metrics")
+      .selectAll()
+      .where("player_id", "=", playerId)
+      .where("challenge_type", "!=", GLOBAL_CHALLENGE_TYPE)
+      .execute();
+
+    const result: Record<string, Record<string, ScoringEntry>> = {};
+    for (const row of rows) {
+      if (!result[row.challenge_type]) {
+        result[row.challenge_type] = {};
+      }
+      const strategies = result[row.challenge_type];
+      if (!strategies[row.strategy_name]) {
+        strategies[row.strategy_name] = {
+          playerId,
+          gamesPlayed: row.games_played,
+          metrics: {},
+        };
+      }
+      strategies[row.strategy_name].metrics[row.metric_key] = row.metric_value;
+    }
+
+    return result;
+  }
 }

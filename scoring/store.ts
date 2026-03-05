@@ -91,4 +91,19 @@ export class InMemoryScoringStore implements ScoringStorageAdapter {
   async getGlobalScoreEntry(playerId: string): Promise<ScoringEntry | undefined> {
     return this.globalScores.get(playerId);
   }
+
+  async getScoresForPlayer(playerId: string): Promise<Record<string, Record<string, ScoringEntry>>> {
+    const result: Record<string, Record<string, ScoringEntry>> = {};
+    for (const [challengeType, strategies] of this.scores) {
+      const filtered: Record<string, ScoringEntry> = {};
+      for (const [strategyName, playerMap] of strategies) {
+        const entry = playerMap.get(playerId);
+        if (entry) filtered[strategyName] = entry;
+      }
+      if (Object.keys(filtered).length > 0) {
+        result[challengeType] = filtered;
+      }
+    }
+    return result;
+  }
 }

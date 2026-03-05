@@ -24,6 +24,7 @@ export interface StorageAdapters {
   chat: ChatStorageAdapter;
   users: UserStorageAdapter;
   scoring: ScoringStorageAdapter;
+  close?: () => Promise<void>;
 }
 
 export async function createStorage(): Promise<StorageAdapters> {
@@ -57,6 +58,10 @@ export async function createStorage(): Promise<StorageAdapters> {
       chat: new SqlChatStorageAdapter(db),
       users: new SqlUserStorageAdapter(db),
       scoring: new SqlScoringStorageAdapter(db),
+      async close() {
+        await db.destroy();
+        sqliteDb.close();
+      },
     };
   }
 
