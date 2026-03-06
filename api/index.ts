@@ -13,6 +13,7 @@ import { createInviteRoutes } from "./routes/invites";
 import { createChatRoutes } from "./routes/chat";
 import { createArenaRoutes } from "./routes/arena";
 import { createResolveIdentity } from "./routes/identity";
+import { createBodyParser } from "./auth/middleware";
 import { createScoringRoutes } from "./routes/scoring";
 import { createUserRoutes } from "./routes/users";
 
@@ -86,7 +87,8 @@ export function createApp(engine: ArenaEngine = defaultEngine, options?: { mcp?:
     return app.fetch(new Request(url.toString(), c.req.raw));
   });
 
-  // Resolve identity from query/body params (standalone mode)
+  // Parse body once, then resolve identity from query/body params (standalone mode)
+  app.use("*", createBodyParser());
   app.use("*", createResolveIdentity());
 
   // Mount REST routes

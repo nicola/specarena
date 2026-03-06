@@ -6,7 +6,7 @@ import {
 } from "../index";
 import { AuthEngine } from "./AuthEngine";
 import { generateSecret, hashPublicKey } from "./utils";
-import { createAuthUser } from "./middleware";
+import { createAuthUser, createBodyParser, getBody } from "./middleware";
 
 export interface AuthAppOptions {
   secret?: string;
@@ -36,12 +36,13 @@ export function createAuthApp(options: AuthAppOptions = {}) {
     return app.fetch(new Request(url.toString(), c.req.raw));
   });
 
-  // Permissive auth: sets identity for all routes
+  // Parse body once, then resolve auth identity
+  app.use("*", createBodyParser());
   app.use("*", createAuthUser(engine, auth));
 
   // Ad-hoc join: verify Ed25519 signature, call engine.challengeJoin(), mint session key
   app.post("/api/arena/join", async (c) => {
-    const body = await c.req.json();
+    const body = getBody(c) ?? await c.req.json();
     const { invite, publicKey, signature, timestamp } = body;
 
     if (!invite) {
@@ -75,7 +76,7 @@ export function createAuthApp(options: AuthAppOptions = {}) {
 
   // Signed user profile update
   app.post("/api/users", async (c) => {
-    const body = await c.req.json();
+    const body = getBody(c) ?? await c.req.json();
     const { publicKey, signature, timestamp, username, model } = body;
 
     if (!publicKey || !signature || !timestamp) {

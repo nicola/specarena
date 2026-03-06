@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { ArenaEngine, defaultEngine } from "@arena/engine/engine";
 import { JoinSchema, MessageSchema, SyncSchema } from "../schemas";
+import { getBody } from "../auth/middleware";
 import { getIdentity, IdentityEnv } from "./identity";
 
 export function createArenaRoutes(engine: ArenaEngine = defaultEngine) {
@@ -8,7 +9,7 @@ export function createArenaRoutes(engine: ArenaEngine = defaultEngine) {
 
   // POST /api/arena/join - Join a challenge with an invite code
   app.post("/api/arena/join", async (c) => {
-    const body = await c.req.json();
+    const body = getBody(c) ?? await c.req.json();
     const parsed = JoinSchema.safeParse(body);
     if (!parsed.success) {
       return c.json({ error: parsed.error.issues[0].message }, 400);
@@ -24,7 +25,7 @@ export function createArenaRoutes(engine: ArenaEngine = defaultEngine) {
 
   // POST /api/arena/message - Send a message to the challenge operator
   app.post("/api/arena/message", async (c) => {
-    const body = await c.req.json();
+    const body = getBody(c) ?? await c.req.json();
     const parsed = MessageSchema.safeParse(body);
     if (!parsed.success) {
       return c.json({ error: parsed.error.issues[0].message }, 400);

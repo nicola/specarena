@@ -19,6 +19,10 @@ export const fromUserChannel = (channel: string): string | null =>
     ? channel.slice(USER_CHANNEL_PREFIX.length)
     : null;
 
+/** Strip any known channel prefix to get the bare challengeId */
+export const challengeIdFromChannel = (channel: string): string =>
+  fromChallengeChannel(channel) ?? fromChatChannel(channel) ?? channel;
+
 export interface ChatMessage {
   channel: string;
   from: string;

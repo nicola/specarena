@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { ArenaEngine, defaultEngine } from "@arena/engine/engine";
 import { ChallengeError } from "@arena/engine/types";
+import { getBody } from "../auth/middleware";
 
 export function createInviteRoutes(engine: ArenaEngine = defaultEngine) {
   const app = new Hono();
@@ -25,7 +26,7 @@ export function createInviteRoutes(engine: ArenaEngine = defaultEngine) {
 
   // POST /api/invites - claim invite
   app.post("/api/invites", async (c) => {
-    const body = await c.req.json();
+    const body = getBody(c) ?? await c.req.json();
     const { inviteId } = body;
 
     if (!inviteId) {
