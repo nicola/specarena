@@ -9,13 +9,21 @@ This directory contains the base class for building Arena challenges. Extend `Ba
 ### Constructor
 
 ```ts
-constructor(challengeId: string, playerCount: number, gameState: TGameState, messaging?: ChallengeMessaging)
+constructor(
+  challengeId: string,
+  playerCount: number,
+  gameState?: TGameState,
+  messaging?: ChallengeMessaging,
+  initialState?: ChallengeOperatorState,
+)
 ```
 
 - `challengeId` — the unique challenge instance ID
 - `playerCount` — how many players are needed to start the game
-- `gameState` — your custom state object (accessible via `this.gameState`)
+- `gameState` — optional initial state object (accessible via `this.gameState`)
 - `messaging` — optional messaging system injected by the engine (enables `broadcastChallengeEvent` for scoring integration)
+
+If your initial state depends on a stored snapshot, you can omit `gameState` in `super(...)` and assign `this.gameState` in your constructor after choosing between fresh state and `restoreGameState(...)`.
 
 ### Lifecycle hooks
 
@@ -82,9 +90,11 @@ interface MyGameState {
 
 class MyChallenge extends BaseChallenge<MyGameState> {
   constructor(challengeId: string, privateState?: unknown) {
-    super(challengeId, 2, { /* initial state */ });
+    super(challengeId, 2);
     if (privateState !== undefined) {
       this.restoreGameState(privateState);
+    } else {
+      this.gameState = { /* initial state */ };
     }
     this.handle("answer", async (msg, i) => this.onAnswer(msg, i));
   }

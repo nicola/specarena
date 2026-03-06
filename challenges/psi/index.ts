@@ -66,10 +66,17 @@ class PsiChallenge extends BaseChallenge<PsiGameState> {
     initialState?: ChallengeOperatorState,
     privateState?: PersistedPsiState,
   ) {
-    super(params.challengeId, params.players, createInitialGameState(params), messaging, initialState);
+    super(params.challengeId, params.players, undefined, messaging, initialState);
 
     if (privateState !== undefined) {
       this.restoreGameState(privateState);
+    } else {
+      const { userSets, intersectionSet } = userSetsFromParams(params);
+      this.gameState = {
+        userSets,
+        intersectionSet,
+        guesses: Array.from({ length: params.players }, () => new Set<number>()),
+      };
     }
 
     this.handle("guess", (msg, playerIndex) => this.onGuess(msg, playerIndex));
@@ -154,15 +161,6 @@ class PsiChallenge extends BaseChallenge<PsiGameState> {
       guesses: this.gameState.guesses.map((set) => [...set].sort((a, b) => a - b)),
     };
   }
-}
-
-function createInitialGameState(params: PsiChallengeParams): PsiGameState {
-  const { userSets, intersectionSet } = userSetsFromParams(params);
-  return {
-    userSets,
-    intersectionSet,
-    guesses: Array.from({ length: params.players }, () => new Set<number>()),
-  };
 }
 
 function userSetsFromParams(params: PsiChallengeParams): { userSets: Set<number>[], intersectionSet: Set<number> } {

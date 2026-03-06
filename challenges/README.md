@@ -56,9 +56,11 @@ import { BaseChallenge } from "@arena/engine/challenge-design/BaseChallenge";
 
 class MyChallenge extends BaseChallenge<MyGameState> {
   constructor(challengeId: string, options?: Record<string, unknown>, privateState?: unknown) {
-    super(challengeId, 2, { /* initial game state */ });
+    super(challengeId, 2);
     if (privateState !== undefined) {
       this.restoreGameState(privateState);
+    } else {
+      this.gameState = { /* initial game state */ };
     }
     this.handle("submit", async (msg, i) => this.onSubmit(msg, i));
   }

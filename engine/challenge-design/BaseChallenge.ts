@@ -16,13 +16,13 @@ export abstract class BaseChallenge<TGameState = {}> implements ChallengeOperato
   readonly playerCount: number;
   protected messaging: ChallengeMessaging;
   state: ChallengeOperatorState;
-  gameState: TGameState;
+  gameState!: TGameState;
   private handlers = new Map<string, (msg: ChatMessage, playerIndex: number) => void | Promise<void>>();
 
   constructor(
     challengeId: string,
     playerCount: number,
-    gameState: TGameState,
+    gameState?: TGameState,
     messaging?: ChallengeMessaging,
     initialState?: ChallengeOperatorState,
   ) {
@@ -38,7 +38,9 @@ export abstract class BaseChallenge<TGameState = {}> implements ChallengeOperato
         players: [],
         playerIdentities: {},
       };
-    this.gameState = gameState;
+    if (gameState !== undefined) {
+      this.gameState = gameState;
+    }
   }
 
   // --- Public interface (ChallengeOperator) ---
@@ -146,10 +148,17 @@ export abstract class BaseChallenge<TGameState = {}> implements ChallengeOperato
     this.gameState = this.loadState(savedState);
   }
 
+  private getInitializedGameState(): TGameState {
+    if (this.gameState === undefined) {
+      throw new Error("Challenge gameState must be initialized before the challenge instance is returned.");
+    }
+    return this.gameState;
+  }
+
   // Persist game-specific state. The default is suitable for plain JSON-ish
   // state; challenges with richer runtime types should override both
   // `loadState` and `saveState`.
   saveState(): unknown {
-    return structuredClone(this.gameState);
+    return structuredClone(this.getInitializedGameState());
   }
 }
