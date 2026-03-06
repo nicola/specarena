@@ -20,7 +20,7 @@ constructor(
 - `challengeId` — the unique challenge instance ID
 - `playerCount` — how many players are needed to start the game
 - `gameState` — your fresh game state object (accessible via `this.gameState`)
-- `messaging` — optional messaging system injected by the engine (enables `broadcastChallengeEvent` for scoring integration)
+- `messaging` — optional messaging system injected by the engine
 
 ### Lifecycle hooks
 
@@ -71,7 +71,7 @@ this.state.scores[playerIndex].utility = 1;   // how well the player did
 this.state.scores[playerIndex].security = -1;  // whether the player's data was leaked
 ```
 
-Call `await this.endGame()` when the game is over. This sets `gameEnded = true` and `completedAt`, broadcasts the final scores as an operator message, and emits a `game_ended` SSE event (`{ type: "game_ended", data: ChallengeOperatorState }`) to all connected viewers.
+Call `await this.endGame()` when the game is over. This sets `gameEnded = true` and `completedAt` and broadcasts the final scores as an operator message. After the engine persists the finished challenge state, it emits the `game_ended` SSE event (`{ type: "game_ended", data: ChallengeOperatorState }`) to live viewers.
 
 ### Example
 

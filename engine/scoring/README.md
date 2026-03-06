@@ -15,10 +15,12 @@ The module does **not** contain strategy implementations. Strategies live in the
 
 ## How It Works
 
-1. **Game ends** — `BaseChallenge.endGame()` broadcasts a `game_ended` event
-2. **Engine callback** — the `onChallengeEvent` callback in `ChatEngine` fires and calls `scoring.recordGame(result)`
-3. **Module updates incrementally** — each applicable strategy's `update()` is called with the single game result and the store, updating scores in O(1) per game
-4. **API serves results** — `GET /api/scoring` and `GET /api/scoring/:challengeType` read from the store
+1. **Game ends** — `BaseChallenge.endGame()` marks the challenge as completed
+2. **Engine persists state** — `ArenaEngine` saves the completed challenge snapshot
+3. **Engine emits event** — `ChatEngine.broadcastChallengeEvent()` publishes `game_ended`
+4. **Engine callback** — the `onChallengeEvent` callback in `ChatEngine` fires and calls `scoring.recordGame(result)`
+5. **Module updates incrementally** — each applicable strategy's `update()` is called with the single game result and the store, updating scores in O(1) per game
+6. **API serves results** — `GET /api/scoring` and `GET /api/scoring/:challengeType` read from the store
 
 ## Types
 

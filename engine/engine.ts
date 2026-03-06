@@ -6,6 +6,7 @@ import {
   ChallengeError,
   ChallengeFactory,
   ChallengeMetadata,
+  ChallengeOperatorEvent,
   ChallengeOperatorError,
   ChallengeOperatorState,
   Result,
@@ -46,6 +47,9 @@ export class ArenaEngine {
         if (!challengeId) return false;
         const challenge = await this.getChallenge(challengeId);
         return challenge?.state.gameEnded ?? false;
+      },
+      onChallengeEvent: (challengeId, event) => {
+        void this.handleChallengeEvent(challengeId, event);
       },
     });
   }
@@ -134,8 +138,13 @@ export class ArenaEngine {
     };
   }
 
-  private async recordGameIfEnded(previousState: ChallengeOperatorState, challenge: Challenge): Promise<void> {
-    if (!this.scoring || previousState.gameEnded || !challenge.state.gameEnded) {
+  private async handleChallengeEvent(challengeId: string, event: ChallengeOperatorEvent): Promise<void> {
+    if (event.type !== "game_ended" || !this.scoring) {
+      return;
+    }
+
+    const challenge = await this.getChallenge(challengeId);
+    if (!challenge) {
       return;
     }
 
@@ -146,6 +155,15 @@ export class ArenaEngine {
 
     this.scoring.recordGame(result)
       .catch((err) => console.error("Scoring recordGame failed:", err));
+  }
+
+  private publishChallengeEvents(previousState: ChallengeOperatorState, challenge: Challenge): void {
+    if (!previousState.gameEnded && challenge.state.gameEnded) {
+      this.chat.broadcastChallengeEvent(challenge.id, {
+        type: "game_ended",
+        data: this.cloneChallengeState(challenge.state),
+      });
+    }
   }
 
   private async deleteChallengeArtifacts(challengeId: string): Promise<void> {
@@ -287,7 +305,7 @@ export class ArenaEngine {
       await runtime.instance.join(invite, userId);
       const updatedChallenge = this.snapshotChallenge(runtime);
       await this.storageAdapter.setChallenge(updatedChallenge);
-      await this.recordGameIfEnded(previousState, updatedChallenge);
+      this.publishChallengeEvents(previousState, updatedChallenge);
     } catch (error) {
       if (error instanceof ChallengeOperatorError) {
         return { error: error.message, code: error.code };
@@ -324,7 +342,7 @@ export class ArenaEngine {
       });
       const updatedChallenge = this.snapshotChallenge(runtime);
       await this.storageAdapter.setChallenge(updatedChallenge);
-      await this.recordGameIfEnded(previousState, updatedChallenge);
+      this.publishChallengeEvents(previousState, updatedChallenge);
       return { ok: "Message sent" };
     } catch (error) {
       if (error instanceof ChallengeOperatorError) {
