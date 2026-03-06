@@ -78,15 +78,19 @@ export abstract class BaseChallenge<TPrivateState = {}> implements ChallengeOper
 
   // --- Serialization / Restore ---
 
-  serializePrivateState(): unknown {
-    return this.privateState;
+  save(): ChallengeOperatorState {
+    return { ...this.state, privateState: this.serializePrivateState() };
   }
 
-  restore(operatorState: ChallengeOperatorState, privateState?: unknown): void {
-    this.state = operatorState;
-    if (privateState !== undefined) {
-      this.restorePrivateState(privateState);
+  restore(state: ChallengeOperatorState): void {
+    this.state = state;
+    if (state.privateState !== undefined) {
+      this.restorePrivateState(state.privateState);
     }
+  }
+
+  protected serializePrivateState(): unknown {
+    return this.privateState;
   }
 
   protected restorePrivateState(data: unknown): void {

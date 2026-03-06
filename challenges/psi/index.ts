@@ -65,7 +65,7 @@ class PsiChallenge extends BaseChallenge<PsiGameState> {
     this.handle("guess", (msg, playerIndex) => this.onGuess(msg, playerIndex));
   }
 
-  override serializePrivateState(): unknown {
+  protected override serializePrivateState(): unknown {
     return {
       userSets: this.privateState.userSets.map(s => [...s]),
       intersectionSet: [...this.privateState.intersectionSet],
