@@ -24,7 +24,7 @@ export interface EngineOptions {
 }
 
 export class ArenaEngine {
-  private readonly storageAdapter: ArenaStorageAdapter;
+  readonly storageAdapter: ArenaStorageAdapter;
   readonly users: UserStorageAdapter;
   private readonly challengeFactories: Map<string, ChallengeFactory>;
   private readonly challengeOptions: Map<string, Record<string, unknown>>;

@@ -379,7 +379,8 @@ describe("Scoring integration via engine", () => {
     await defaultEngine.challengeMessage(challengeId, invites[0], "guess", guessContent);
     await defaultEngine.challengeMessage(challengeId, invites[1], "guess", guessContent);
 
-    assert.equal(challenge.state.gameEnded, true);
+    const updated = await defaultEngine.getChallenge(challengeId);
+    assert.equal(updated!.state.gameEnded, true);
 
     await defaultEngine.scoring!.waitForIdle();
 
@@ -433,7 +434,8 @@ describe("Scoring integration via engine", () => {
 
       await defaultEngine.challengeMessage(challengeId, invites[0], "guess", intersection.join(", "));
       await defaultEngine.challengeMessage(challengeId, invites[1], "guess", intersection.join(", "));
-      assert.equal(challenge.state.gameEnded, true);
+      const updated = await defaultEngine.getChallenge(challengeId);
+      assert.equal(updated!.state.gameEnded, true);
     }
 
     await defaultEngine.scoring!.waitForIdle();

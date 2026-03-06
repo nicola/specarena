@@ -28,10 +28,11 @@ describe("Stale challenge garbage collection", () => {
 
   it("prunes stale unstarted challenges from storage and invite lookup", async () => {
     const challenge = await createPsiChallenge();
-    const instance = await defaultEngine.getChallenge(challenge.id);
-    assert.ok(instance);
+    const record = await defaultEngine.getChallenge(challenge.id);
+    assert.ok(record);
 
-    instance.createdAt = Date.now() - STALE_MS;
+    record.createdAt = Date.now() - STALE_MS;
+    await defaultEngine.storageAdapter.setChallenge(record);
     const removed = await defaultEngine.pruneStaleChallenges();
     assert.equal(removed, 1);
 
@@ -50,12 +51,13 @@ describe("Stale challenge garbage collection", () => {
     await request("POST", "/api/arena/join", { invite: challenge.invites[0] });
     await request("POST", "/api/arena/join", { invite: challenge.invites[1] });
 
-    const instance = await defaultEngine.getChallenge(challenge.id);
-    assert.ok(instance);
-    assert.equal(instance.state.gameStarted, true);
-    assert.equal(instance.state.gameEnded, false);
+    const record = await defaultEngine.getChallenge(challenge.id);
+    assert.ok(record);
+    assert.equal(record.state.gameStarted, true);
+    assert.equal(record.state.gameEnded, false);
 
-    instance.createdAt = Date.now() - STALE_MS;
+    record.createdAt = Date.now() - STALE_MS;
+    await defaultEngine.storageAdapter.setChallenge(record);
     const removed = await defaultEngine.pruneStaleChallenges();
     assert.equal(removed, 1);
 
@@ -65,11 +67,12 @@ describe("Stale challenge garbage collection", () => {
 
   it("does not prune old challenges that have ended", async () => {
     const challenge = await createPsiChallenge();
-    const instance = await defaultEngine.getChallenge(challenge.id);
-    assert.ok(instance);
+    const record = await defaultEngine.getChallenge(challenge.id);
+    assert.ok(record);
 
-    instance.state.gameEnded = true;
-    instance.createdAt = Date.now() - STALE_MS;
+    record.state.gameEnded = true;
+    record.createdAt = Date.now() - STALE_MS;
+    await defaultEngine.storageAdapter.setChallenge(record);
     await defaultEngine.pruneStaleChallenges();
 
     const typed = await defaultEngine.getChallengesByType("psi");
@@ -78,12 +81,13 @@ describe("Stale challenge garbage collection", () => {
 
   it("removes chat data for stale challenge channels", async () => {
     const challenge = await createPsiChallenge();
-    const instance = await defaultEngine.getChallenge(challenge.id);
-    assert.ok(instance);
+    const record = await defaultEngine.getChallenge(challenge.id);
+    assert.ok(record);
 
     await defaultEngine.chat.sendMessage(challenge.id, "a", "public");
     await defaultEngine.chat.sendMessage(toChallengeChannel(challenge.id), "operator", "private", "a");
-    instance.createdAt = Date.now() - STALE_MS;
+    record.createdAt = Date.now() - STALE_MS;
+    await defaultEngine.storageAdapter.setChallenge(record);
     await defaultEngine.pruneStaleChallenges();
 
     const publicChannel = await defaultEngine.chat.getMessagesForChannel(challenge.id);

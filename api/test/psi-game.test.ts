@@ -102,18 +102,20 @@ describe("PSI game simulation", () => {
     // 1. Create challenge
     const { id: challengeId, invites } = await createPsiChallenge();
     const [invite1, invite2] = invites;
-    const challenge = await getChallengeOrThrow(challengeId);
+    let challenge = await getChallengeOrThrow(challengeId);
 
     assert.equal(challenge.state.gameStarted, false);
     assert.equal(challenge.state.gameEnded, false);
 
     // 2. Player 1 joins
     await challengeJoin(invite1);
+    challenge = await getChallengeOrThrow(challengeId);
     assert.equal(challenge.state.players.length, 1);
     assert.equal(challenge.state.gameStarted, false);
 
     // 3. Player 2 joins → game starts
     await challengeJoin(invite2);
+    challenge = await getChallengeOrThrow(challengeId);
     assert.equal(challenge.state.players.length, 2);
     assert.equal(challenge.state.gameStarted, true);
 
@@ -144,12 +146,14 @@ describe("PSI game simulation", () => {
     // 7. Player 1 guesses the exact intersection
     const guessContent = [...intersection].join(", ");
     await challengeMessage(challengeId, invite1, "guess", guessContent);
+    challenge = await getChallengeOrThrow(challengeId);
     assert.equal(challenge.state.gameEnded, false, "game not over until both guess");
 
     // 8. Player 2 also guesses the exact intersection
     await challengeMessage(challengeId, invite2, "guess", guessContent);
 
     // 9. Game ended
+    challenge = await getChallengeOrThrow(challengeId);
     assert.equal(challenge.state.gameEnded, true);
 
     // 10. Perfect scores: utility=1, security=1 for both
@@ -177,11 +181,10 @@ describe("PSI game simulation", () => {
     await challengeJoin(invite1);
     await challengeJoin(invite2);
 
-    const challenge = await getChallengeOrThrow(challengeId);
-
     // Player 1 guesses completely wrong numbers (1, 2, 3 are below the range [100,900])
     await challengeMessage(challengeId, invite1, "guess", "1 2 3");
 
+    const challenge = await getChallengeOrThrow(challengeId);
     assert.equal(challenge.state.scores[0].utility, -1, "wrong guess → utility=-1");
   });
 
@@ -208,8 +211,9 @@ describe("PSI game simulation", () => {
     const guessContent = [...intersection, extraFromP2].join(", ");
     await challengeMessage(challengeId, invite1, "guess", guessContent);
 
-    assert.equal(challenge.state.scores[0].utility, 1, "intersection + extra → utility=1");
-    assert.equal(challenge.state.scores[1].security, -1, "opponent security=-1 (leaked)");
+    const updated = await getChallengeOrThrow(challengeId);
+    assert.equal(updated.state.scores[0].utility, 1, "intersection + extra → utility=1");
+    assert.equal(updated.state.scores[1].security, -1, "opponent security=-1 (leaked)");
   });
 
   it("missed intersection: subset of intersection → utility=0", async () => {
@@ -232,8 +236,9 @@ describe("PSI game simulation", () => {
     const partialGuess = [[...intersection][0]].join(", ");
     await challengeMessage(challengeId, invite1, "guess", partialGuess);
 
-    assert.equal(challenge.state.scores[0].utility, 0, "partial intersection → utility=0");
-    assert.equal(challenge.state.scores[1].security, 1, "no extra leak → security=1");
+    const updated = await getChallengeOrThrow(challengeId);
+    assert.equal(updated.state.scores[0].utility, 0, "partial intersection → utility=0");
+    assert.equal(updated.state.scores[1].security, 1, "no extra leak → security=1");
   });
 
   it("duplicate guess returns DUPLICATE_GUESS error code", async () => {
@@ -274,7 +279,8 @@ describe("PSI game simulation", () => {
     await challengeMessage(challengeId, invites[0], "guess", "100 200 300");
 
     // Score should remain 0 (guess not processed)
-    assert.equal(challenge.state.scores[0].utility, 0);
+    const updated = await getChallengeOrThrow(challengeId);
+    assert.equal(updated.state.scores[0].utility, 0);
   });
 
   it("challenge_sync filtering: player cannot see opponent private messages", async () => {
@@ -305,7 +311,7 @@ describe("PSI game simulation", () => {
     await challengeJoin(invite1);
     await challengeJoin(invite2);
 
-    const challenge = await getChallengeOrThrow(challengeId);
+    let challenge = await getChallengeOrThrow(challengeId);
 
     // During game: null viewer sees DMs as redacted
     const midGameSync = await challengeSync(challengeId, null, 0);
@@ -321,6 +327,7 @@ describe("PSI game simulation", () => {
 
     await challengeMessage(challengeId, invite1, "guess", guessContent);
     await challengeMessage(challengeId, invite2, "guess", guessContent);
+    challenge = await getChallengeOrThrow(challengeId);
     assert.equal(challenge.state.gameEnded, true);
 
     // After game ends: null viewer sees everything unredacted
