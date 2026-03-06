@@ -97,14 +97,15 @@ describe("PSI game via MCP protocol", () => {
     assert.equal(join1.ChallengeID, challengeId);
     assert.equal(join1.ChallengeInfo.name, "Private Set Intersection");
 
-    const instance = await defaultEngine.getChallenge(challengeId);
-    assert.ok(instance);
-    assert.equal(instance.state.gameStarted, false);
+    let fetched = await defaultEngine.getChallenge(challengeId);
+    assert.ok(fetched);
+    assert.equal(fetched.gameStarted, false);
 
     // 3. Player 2 joins → game starts
     const join2 = await callTool(arena, "challenge_join", { invite: invite2 });
     assert.equal(join2.ChallengeID, challengeId);
-    assert.equal(instance.state.gameStarted, true);
+    fetched = (await defaultEngine.getChallenge(challengeId))!;
+    assert.equal(fetched.gameStarted, true);
 
     // 4. Player 1 syncs to get private set
     const sync1 = await callTool(arena, "challenge_sync", {
@@ -173,7 +174,8 @@ describe("PSI game via MCP protocol", () => {
       content: [...intersection].join(", "),
     });
     assert.equal(guess1.ok, "Message sent");
-    assert.equal(instance.state.gameEnded, false);
+    fetched = (await defaultEngine.getChallenge(challengeId))!;
+    assert.equal(fetched.gameEnded, false);
 
     // 10. Player 2 guesses exact intersection
     await callTool(arena, "challenge_message", {
@@ -184,8 +186,9 @@ describe("PSI game via MCP protocol", () => {
     });
 
     // 11. Game ended with perfect scores
-    assert.equal(instance.state.gameEnded, true);
-    const scores = instance.state.scores;
+    fetched = (await defaultEngine.getChallenge(challengeId))!;
+    assert.equal(fetched.gameEnded, true);
+    const scores = fetched.scores;
     assert.equal(scores[0].utility, 1, "player 1 utility=1");
     assert.equal(scores[0].security, 1, "player 1 security=1");
     assert.equal(scores[1].utility, 1, "player 2 utility=1");

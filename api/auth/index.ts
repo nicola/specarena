@@ -67,7 +67,7 @@ export function createAuthApp(options: AuthAppOptions = {}) {
     if (!challenge.success) {
       return c.json(result);
     }
-    const userIndex = challenge.data.state.players.indexOf(invite);
+    const userIndex = challenge.data.players.indexOf(invite);
     const sessionKey = auth.createSessionKey(challenge.data.id, userIndex);
 
     return c.json({ ...result, sessionKey });

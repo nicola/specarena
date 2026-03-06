@@ -10,8 +10,8 @@ export async function collectUserProfiles(
 ): Promise<Record<string, UserProfile>> {
   const userIds = new Set<string>();
   for (const c of challenges) {
-    if (c.state?.playerIdentities) {
-      for (const userId of Object.values(c.state.playerIdentities)) {
+    if (c.playerIdentities) {
+      for (const userId of Object.values(c.playerIdentities)) {
         userIds.add(userId);
       }
     }

@@ -161,9 +161,9 @@ describe("e2e: two agents play a full PSI game via CLI", () => {
     // ── 8. Verify game ended in engine ──────────────────────────────
     const finalChallenge = await engine.getChallenge(id);
     assert.ok(finalChallenge, "challenge should still exist");
-    assert.ok(finalChallenge.state.gameEnded, "game should have ended");
+    assert.ok(finalChallenge.gameEnded, "game should have ended");
 
-    const scores = finalChallenge.state.scores;
+    const scores = finalChallenge.scores;
     assert.equal(scores.length, 2);
 
     // Both guessed exactly the intersection:
@@ -232,8 +232,8 @@ describe("e2e: two agents play a full PSI game via CLI", () => {
 
     // ── Verify scores ───────────────────────────────────────────────
     const final = await engine.getChallenge(id);
-    assert.ok(final!.state.gameEnded);
-    const scores = final!.state.scores;
+    assert.ok(final!.gameEnded);
+    const scores = final!.scores;
 
     // Agent A guessed extra elements from B's set:
     // - A gets utility=1 (found intersection + extras, capped at 1)

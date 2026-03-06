@@ -37,7 +37,8 @@ describe("PSI challenge with isolated engine instances", () => {
     const join2 = await engine.challengeJoin(invite2);
     assert.equal(join1.ChallengeID, challenge.id);
     assert.equal(join2.ChallengeID, challenge.id);
-    assert.equal(challenge.state.gameStarted, true);
+    const afterJoin = (await engine.getChallenge(challenge.id))!;
+    assert.equal(afterJoin.gameStarted, true);
 
     const sync1 = await engine.challengeSync(challenge.id, invite1, 0);
     const sync2 = await engine.challengeSync(challenge.id, invite2, 0);
@@ -56,11 +57,12 @@ describe("PSI challenge with isolated engine instances", () => {
     const result2 = await engine.challengeMessage(challenge.id, invite2, "guess", guess);
     assert.equal(result1.ok, "Message sent");
     assert.equal(result2.ok, "Message sent");
-    assert.equal(challenge.state.gameEnded, true);
-    assert.equal(challenge.state.scores[0].utility, 1);
-    assert.equal(challenge.state.scores[0].security, 1);
-    assert.equal(challenge.state.scores[1].utility, 1);
-    assert.equal(challenge.state.scores[1].security, 1);
+    const final = (await engine.getChallenge(challenge.id))!;
+    assert.equal(final.gameEnded, true);
+    assert.equal(final.scores[0].utility, 1);
+    assert.equal(final.scores[0].security, 1);
+    assert.equal(final.scores[1].utility, 1);
+    assert.equal(final.scores[1].security, 1);
   });
 
   it("keeps challenge and chat storage isolated between engine instances", async () => {

@@ -163,15 +163,15 @@ describe("e2e: full PSI game via CLI with auth", () => {
 
     // ── 11. Verify scores ────────────────────────────────────────────
     const final = await engine.getChallenge(id);
-    assert.ok(final!.state.gameEnded, "game should have ended");
-    const scores = final!.state.scores;
+    assert.ok(final!.gameEnded, "game should have ended");
+    const scores = final!.scores;
     assert.equal(scores[0].utility, 1, "agent A utility: 1 (exact intersection)");
     assert.equal(scores[0].security, 1, "agent A security: 1");
     assert.equal(scores[1].utility, 1, "agent B utility: 1 (exact intersection)");
     assert.equal(scores[1].security, 1, "agent B security: 1");
 
     // ── 12. Verify playerIdentities are set (auth derives userId) ────
-    const identities = final!.state.playerIdentities;
+    const identities = final!.playerIdentities;
     assert.ok(identities[invA], "agent A should have a userId from public key");
     assert.ok(identities[invB], "agent B should have a userId from public key");
     assert.notEqual(identities[invA], identities[invB], "different keys → different userIds");

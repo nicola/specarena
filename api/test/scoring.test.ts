@@ -189,19 +189,13 @@ describe("ScoringModule", () => {
       createdAt: Date.now(),
       challengeType: "psi",
       invites: ["inv_1", "inv_2"],
-      state: {
-        gameStarted: true,
-        gameEnded: false,
-        scores: [],
-        players: [],
-        playerIdentities: {},
-      },
-      instance: {
-        join: async () => {},
-        message: async () => {},
-      },
+      gameStarted: true,
+      gameEnded: false,
+      scores: [],
+      players: [],
+      playerIdentities: {},
     };
-    assert.equal(ScoringModule.challengeToGameResult(challenge), null);
+    assert.equal(ScoringModule.challengeToGameResult(challenge as any), null);
   });
 
   it("challengeToGameResult converts ended game", () => {
@@ -211,19 +205,13 @@ describe("ScoringModule", () => {
       createdAt: 12345,
       challengeType: "psi",
       invites: ["inv_1", "inv_2"],
-      state: {
-        gameStarted: true,
-        gameEnded: true,
-        scores: [{ security: 1, utility: 1 }],
-        players: ["inv_1"],
-        playerIdentities: { inv_1: "user-1" },
-      },
-      instance: {
-        join: async () => {},
-        message: async () => {},
-      },
+      gameStarted: true,
+      gameEnded: true,
+      scores: [{ security: 1, utility: 1 }],
+      players: ["inv_1"],
+      playerIdentities: { inv_1: "user-1" },
     };
-    const result = ScoringModule.challengeToGameResult(challenge);
+    const result = ScoringModule.challengeToGameResult(challenge as any);
     assert.ok(result);
     assert.equal(result.gameId, "c1");
     assert.equal(result.challengeType, "psi");
@@ -379,7 +367,7 @@ describe("Scoring integration via engine", () => {
     await defaultEngine.challengeMessage(challengeId, invites[0], "guess", guessContent);
     await defaultEngine.challengeMessage(challengeId, invites[1], "guess", guessContent);
 
-    assert.equal(challenge.state.gameEnded, true);
+    assert.equal(challenge.gameEnded, true);
 
     await defaultEngine.scoring!.waitForIdle();
 
@@ -433,7 +421,7 @@ describe("Scoring integration via engine", () => {
 
       await defaultEngine.challengeMessage(challengeId, invites[0], "guess", intersection.join(", "));
       await defaultEngine.challengeMessage(challengeId, invites[1], "guess", intersection.join(", "));
-      assert.equal(challenge.state.gameEnded, true);
+      assert.equal(challenge.gameEnded, true);
     }
 
     await defaultEngine.scoring!.waitForIdle();

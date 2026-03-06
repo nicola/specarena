@@ -11,13 +11,11 @@ function mockChallenge(id: string, invites: string[]): ChallengeRecord {
     challengeType: "psi",
     createdAt: Date.now(),
     invites,
-    state: {
-      gameStarted: false,
-      gameEnded: false,
-      scores: [],
-      players: [],
-      playerIdentities: {},
-    },
+    gameStarted: false,
+    gameEnded: false,
+    scores: [],
+    players: [],
+    playerIdentities: {},
   };
 }
 

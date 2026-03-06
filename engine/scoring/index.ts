@@ -144,18 +144,17 @@ export class ScoringModule {
 
   /** Convert a completed Challenge to a GameResult. Returns null if game hasn't ended. */
   static challengeToGameResult(challenge: ChallengeRecord): GameResult | null {
-    const state = challenge.state;
-    if (!state?.gameEnded) return null;
+    if (!challenge.gameEnded) return null;
 
     return {
       gameId: challenge.id,
       challengeType: challenge.challengeType,
       createdAt: challenge.createdAt,
-      completedAt: state.completedAt ?? Date.now(),
-      scores: state.scores,
-      players: state.players,
-      playerIdentities: state.playerIdentities,
-      attributions: state.attributions,
+      completedAt: challenge.completedAt ?? Date.now(),
+      scores: challenge.scores,
+      players: challenge.players,
+      playerIdentities: challenge.playerIdentities,
+      attributions: challenge.attributions,
     };
   }
 }

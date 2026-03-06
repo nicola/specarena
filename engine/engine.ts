@@ -44,7 +44,7 @@ export class ArenaEngine {
         const challengeId = fromChallengeChannel(channel);
         if (!challengeId) return false;
         const record = await this.storageAdapter.getChallenge(challengeId);
-        return record?.state?.gameEnded ?? false;
+        return record?.gameEnded ?? false;
       },
       onChallengeEvent: async (challengeId, event) => {
         if (event.type !== "game_ended" || !this.scoring) return;
@@ -87,7 +87,7 @@ export class ArenaEngine {
 
   private isChallengeStale(record: ChallengeRecord, now: number = Date.now()): boolean {
     const cutoff = now - STALE_CHALLENGE_TIMEOUT_MS;
-    return !record.state.gameEnded && record.createdAt < cutoff;
+    return !record.gameEnded && record.createdAt < cutoff;
   }
 
   private async deleteChallengeFull(id: string): Promise<void> {
@@ -122,16 +122,16 @@ export class ArenaEngine {
     const options = this.challengeOptions.get(challengeType);
     const instance = factory(id, options, { messaging: this.chat });
 
-    const challenge: Challenge = {
+    const record: ChallengeRecord = {
       id,
       name: challengeType,
       createdAt: Date.now(),
       challengeType,
       invites: [`inv_${crypto.randomUUID()}`, `inv_${crypto.randomUUID()}`],
-      state: instance.state,
-      privateState: instance.serializePrivateState(),
-      instance,
+      ...instance.save(),
     };
+    Object.defineProperty(record, "instance", { value: instance, enumerable: false, configurable: true });
+    const challenge = record as Challenge;
 
     await this.storageAdapter.setChallenge(challenge);
     return challenge;
@@ -148,17 +148,18 @@ export class ArenaEngine {
     if (!factory) throw new Error(`Unknown challenge type: ${record.challengeType}`);
     const options = this.challengeOptions.get(record.challengeType);
     const instance = factory(record.id, options, { messaging: this.chat });
-    instance.restore(record.state, record.privateState);
-    return Object.assign(record, { instance }) as Challenge;
+    instance.restore(record);
+    Object.defineProperty(record, "instance", { value: instance, enumerable: false, configurable: true });
+    return record as Challenge;
   }
 
   private async persistChallenge(challenge: Challenge): Promise<void> {
-    challenge.privateState = challenge.instance.serializePrivateState();
+    Object.assign(challenge, challenge.instance.save());
     await this.storageAdapter.setChallenge(challenge);
   }
 
   private isInviteFree(challenge: ChallengeRecord, invite: string): boolean {
-    return !challenge.state.players.includes(invite);
+    return !challenge.players.includes(invite);
   }
 
   async getInvite(invite: string): Promise<Result<Challenge>> {
@@ -267,13 +268,13 @@ export class ArenaEngine {
 
   async getPlayerIdentities(challengeId: string): Promise<Record<string, string> | null> {
     const record = await this.storageAdapter.getChallenge(challengeId);
-    if (!record?.state?.gameEnded) return null;
-    return record.state.playerIdentities;
+    if (!record?.gameEnded) return null;
+    return record.playerIdentities;
   }
 
   async resolvePlayerIdentity(challengeId: string, userIndex: number): Promise<string | null> {
     const record = await this.storageAdapter.getChallenge(challengeId);
-    return record?.state?.players?.[userIndex] ?? null;
+    return record?.players?.[userIndex] ?? null;
   }
 
   async challengeSync(channel: string, viewer: string | null, index: number) {
