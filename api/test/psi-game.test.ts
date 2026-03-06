@@ -87,7 +87,7 @@ describe("PSI game simulation", () => {
     assert.ok(data.invites[0].startsWith("inv_"));
     assert.ok(data.invites[1].startsWith("inv_"));
     assert.equal("instance" in data, false);
-    assert.equal("persistedState" in data, false);
+    assert.equal("privateState" in data, false);
   });
 
   it("GET /api/challenges/psi lists created challenges", async () => {
@@ -98,22 +98,22 @@ describe("PSI game simulation", () => {
     const listed = data.challenges.find((ch: any) => ch.id === c.id);
     assert.ok(listed);
     assert.equal("invites" in listed, false);
-    assert.equal("persistedState" in listed, false);
+    assert.equal("privateState" in listed, false);
     assert.equal("instance" in listed, false);
   });
 
   it("stores PSI private game state in a serializable challenge snapshot", async () => {
     const { id } = await createPsiChallenge();
     const challenge = await getChallengeOrThrow(id);
-    const persistedState = challenge.persistedState as {
+    const privateState = challenge.privateState as {
       userSets: number[][];
       intersectionSet: number[];
       guesses: number[][];
     };
 
-    assert.ok(Array.isArray(persistedState.userSets[0]));
-    assert.ok(Array.isArray(persistedState.intersectionSet));
-    assert.ok(Array.isArray(persistedState.guesses[0]));
+    assert.ok(Array.isArray(privateState.userSets[0]));
+    assert.ok(Array.isArray(privateState.intersectionSet));
+    assert.ok(Array.isArray(privateState.guesses[0]));
   });
 
   // -- Full game flow --

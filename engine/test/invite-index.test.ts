@@ -51,4 +51,20 @@ describe("InMemoryArenaStorageAdapter invite index", () => {
     const byInvite = await adapter.getChallengeFromInvite("inv_a");
     assert.equal(byInvite, undefined);
   });
+
+  it("returns cloned challenge records so callers cannot mutate storage by reference", async () => {
+    const adapter = new InMemoryArenaStorageAdapter();
+    const challenge = mockChallenge("c1", ["inv_a", "inv_b"]);
+    await adapter.setChallenge(challenge);
+
+    const loaded = await adapter.getChallenge("c1");
+    assert.ok(loaded);
+    loaded.createdAt = 0;
+    loaded.state.players.push("inv_a");
+
+    const reloaded = await adapter.getChallenge("c1");
+    assert.ok(reloaded);
+    assert.notEqual(reloaded.createdAt, 0);
+    assert.deepEqual(reloaded.state.players, []);
+  });
 });

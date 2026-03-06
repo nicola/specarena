@@ -55,8 +55,11 @@ import { ChallengeOperator, ChallengeFactoryContext, ChatMessage } from "@arena/
 import { BaseChallenge } from "@arena/engine/challenge-design/BaseChallenge";
 
 class MyChallenge extends BaseChallenge<MyGameState> {
-  constructor(challengeId: string, options?: Record<string, unknown>) {
+  constructor(challengeId: string, options?: Record<string, unknown>, privateState?: unknown) {
     super(challengeId, 2, { /* initial game state */ });
+    if (privateState !== undefined) {
+      this.restoreGameState(privateState);
+    }
     this.handle("submit", async (msg, i) => this.onSubmit(msg, i));
   }
 
@@ -69,11 +72,13 @@ export function createChallenge(
   options?: Record<string, unknown>,
   context?: ChallengeFactoryContext
 ): ChallengeOperator {
-  return new MyChallenge(challengeId, options);
+  return new MyChallenge(challengeId, options, context?.snapshot?.privateState);
 }
 ```
 
-The `options` parameter receives values from `api/config.json`, allowing the same challenge code to be configured differently per deployment. The `context` parameter provides the engine's messaging system (`context.messaging`).
+The `options` parameter receives values from `api/config.json`, allowing the same challenge code to be configured differently per deployment. The `context` parameter provides the engine's messaging system (`context.messaging`) plus an optional stored snapshot (`context.snapshot`) when the engine is reloading a challenge.
+
+If your runtime state is plain serializable data, `BaseChallenge`'s default `saveState()` / `loadState()` behavior is enough. If you use richer runtime types like `Set` or `Map`, override those methods and rebuild the richer structure from `context.snapshot.privateState`.
 
 See [engine/challenge-design/README.md](../engine/challenge-design/README.md) for the full `BaseChallenge` API reference (lifecycle hooks, messaging helpers, scoring).
 

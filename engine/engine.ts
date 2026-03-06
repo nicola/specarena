@@ -86,8 +86,8 @@ export class ArenaEngine {
     return structuredClone(state);
   }
 
-  private clonePersistedState<T>(persistedState: T): T {
-    return structuredClone(persistedState);
+  private clonePrivateState<T>(privateState: T): T {
+    return structuredClone(privateState);
   }
 
   private instantiateChallenge(challenge: Challenge): ActiveChallenge {
@@ -101,9 +101,9 @@ export class ArenaEngine {
       messaging: this.chat,
       snapshot: {
         state: this.cloneChallengeState(challenge.state),
-        persistedState: challenge.persistedState === undefined
+        privateState: challenge.privateState === undefined
           ? undefined
-          : this.clonePersistedState(challenge.persistedState),
+          : this.clonePrivateState(challenge.privateState),
       },
     });
 
@@ -118,7 +118,7 @@ export class ArenaEngine {
   }
 
   private snapshotChallenge(runtime: ActiveChallenge): Challenge {
-    const persistedState = runtime.instance.serializeState?.();
+    const privateState = runtime.instance.saveState?.();
     return {
       id: runtime.id,
       name: runtime.name,
@@ -127,7 +127,7 @@ export class ArenaEngine {
       invites: [...runtime.invites],
       playerCount: runtime.instance.playerCount,
       state: this.cloneChallengeState(runtime.instance.state),
-      persistedState: persistedState === undefined ? undefined : structuredClone(persistedState),
+      privateState: privateState === undefined ? undefined : structuredClone(privateState),
     };
   }
 

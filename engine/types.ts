@@ -34,7 +34,7 @@ export interface ChallengeOperator {
   join(invite: string, userId?: string): Promise<void>;
   message(message: ChatMessage): Promise<void>;
   state: ChallengeOperatorState;
-  serializeState?(): unknown;
+  saveState?(): unknown;
 }
 
 export enum ChallengeType {
@@ -49,7 +49,7 @@ export interface Challenge {
   invites: string[];
   playerCount: number;
   state: ChallengeOperatorState;
-  persistedState?: unknown;
+  privateState?: unknown;
 }
 
 export interface ActiveChallenge {
@@ -63,7 +63,7 @@ export interface ActiveChallenge {
 
 export interface ChallengeHydrationSnapshot {
   state: ChallengeOperatorState;
-  persistedState?: unknown;
+  privateState?: unknown;
 }
 
 export class ChallengeOperatorError extends Error {

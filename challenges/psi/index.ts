@@ -59,33 +59,18 @@ interface PersistedPsiState {
   guesses: number[][];
 }
 
-function hydrateGameState(snapshot?: PersistedPsiState): PsiGameState | null {
-  if (!snapshot) return null;
-  return {
-    userSets: snapshot.userSets.map((set) => new Set(set)),
-    intersectionSet: new Set(snapshot.intersectionSet),
-    guesses: snapshot.guesses.map((set) => new Set(set)),
-  };
-}
-
 class PsiChallenge extends BaseChallenge<PsiGameState> {
   constructor(
     params: PsiChallengeParams,
     messaging?: ChallengeMessaging,
     initialState?: ChallengeOperatorState,
-    persistedState?: PersistedPsiState,
+    privateState?: PersistedPsiState,
   ) {
-    const hydratedState = hydrateGameState(persistedState);
-    const gameState = hydratedState ?? (() => {
-      const { userSets, intersectionSet } = userSetsFromParams(params);
-      return {
-        userSets,
-        intersectionSet,
-        guesses: Array.from({ length: params.players }, () => new Set<number>()),
-      };
-    })();
+    super(params.challengeId, params.players, createInitialGameState(params), messaging, initialState);
 
-    super(params.challengeId, params.players, gameState, messaging, initialState);
+    if (privateState !== undefined) {
+      this.restoreGameState(privateState);
+    }
 
     this.handle("guess", (msg, playerIndex) => this.onGuess(msg, playerIndex));
   }
@@ -153,13 +138,31 @@ class PsiChallenge extends BaseChallenge<PsiGameState> {
     return null;
   }
 
-  serializeState(): unknown {
+  protected loadState(savedState: unknown): PsiGameState {
+    const snapshot = savedState as PersistedPsiState;
+    return {
+      userSets: snapshot.userSets.map((set) => new Set(set)),
+      intersectionSet: new Set(snapshot.intersectionSet),
+      guesses: snapshot.guesses.map((set) => new Set(set)),
+    };
+  }
+
+  saveState(): PersistedPsiState {
     return {
       userSets: this.gameState.userSets.map((set) => [...set].sort((a, b) => a - b)),
       intersectionSet: [...this.gameState.intersectionSet].sort((a, b) => a - b),
       guesses: this.gameState.guesses.map((set) => [...set].sort((a, b) => a - b)),
     };
   }
+}
+
+function createInitialGameState(params: PsiChallengeParams): PsiGameState {
+  const { userSets, intersectionSet } = userSetsFromParams(params);
+  return {
+    userSets,
+    intersectionSet,
+    guesses: Array.from({ length: params.players }, () => new Set<number>()),
+  };
 }
 
 function userSetsFromParams(params: PsiChallengeParams): { userSets: Set<number>[], intersectionSet: Set<number> } {
@@ -201,5 +204,5 @@ export function createChallenge(
     challengeId,
     ...DEFAULT_CONFIG,
     ...options,
-  } as PsiChallengeParams, context?.messaging, snapshot?.state, snapshot?.persistedState as PersistedPsiState | undefined);
+  } as PsiChallengeParams, context?.messaging, snapshot?.state, snapshot?.privateState as PersistedPsiState | undefined);
 }

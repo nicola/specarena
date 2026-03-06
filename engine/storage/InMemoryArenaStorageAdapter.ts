@@ -14,22 +14,28 @@ export class InMemoryArenaStorageAdapter implements ArenaStorageAdapter {
   private challengesById: Record<string, Challenge> = {};
   private inviteToChallengeId: Record<string, string> = {};
 
+  private cloneChallenge(challenge: Challenge): Challenge {
+    return structuredClone(challenge);
+  }
+
   async clearRuntimeState(): Promise<void> {
     this.challengesById = {};
     this.inviteToChallengeId = {};
   }
 
   async listChallenges(): Promise<Challenge[]> {
-    return Object.values(this.challengesById);
+    return Object.values(this.challengesById).map((challenge) => this.cloneChallenge(challenge));
   }
 
   async getChallenge(challengeId: string): Promise<Challenge | undefined> {
-    return this.challengesById[challengeId];
+    const challenge = this.challengesById[challengeId];
+    return challenge ? this.cloneChallenge(challenge) : undefined;
   }
 
   async getChallengeFromInvite(invite: string): Promise<Challenge | undefined> {
     const challengeId = this.inviteToChallengeId[invite];
-    return challengeId ? this.challengesById[challengeId] : undefined;
+    const challenge = challengeId ? this.challengesById[challengeId] : undefined;
+    return challenge ? this.cloneChallenge(challenge) : undefined;
   }
 
   async getChallengesByUserId(userId: string): Promise<Challenge[]> {
@@ -38,6 +44,7 @@ export class InMemoryArenaStorageAdapter implements ArenaStorageAdapter {
         const identities = c.state.playerIdentities;
         return identities && Object.values(identities).includes(userId);
       })
+      .map((challenge) => this.cloneChallenge(challenge))
       .sort((a, b) => b.createdAt - a.createdAt);
   }
 
@@ -49,7 +56,7 @@ export class InMemoryArenaStorageAdapter implements ArenaStorageAdapter {
       }
     }
 
-    this.challengesById[challenge.id] = challenge;
+    this.challengesById[challenge.id] = this.cloneChallenge(challenge);
     for (const invite of challenge.invites) {
       this.inviteToChallengeId[invite] = challenge.id;
     }

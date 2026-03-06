@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 
 import app from "../index";
 import { defaultEngine } from "@arena/engine/engine";
-import { toChallengeChannel } from "@arena/engine/types";
+import { Challenge, toChallengeChannel } from "@arena/engine/types";
 
 const STALE_MS = 11 * 60 * 1000;
 
@@ -21,6 +21,17 @@ async function createPsiChallenge() {
   return res.json();
 }
 
+async function updateStoredChallenge(challengeId: string, updater: (challenge: Challenge) => void) {
+  const storage = (defaultEngine as any).storageAdapter as {
+    getChallenge(id: string): Promise<Challenge | undefined>;
+    setChallenge(challenge: Challenge): Promise<void>;
+  };
+  const challenge = await storage.getChallenge(challengeId);
+  assert.ok(challenge);
+  updater(challenge);
+  await storage.setChallenge(challenge);
+}
+
 describe("Stale challenge garbage collection", () => {
   beforeEach(async () => {
     await defaultEngine.clearRuntimeState();
@@ -31,7 +42,9 @@ describe("Stale challenge garbage collection", () => {
     const instance = await defaultEngine.getChallenge(challenge.id);
     assert.ok(instance);
 
-    instance.createdAt = Date.now() - STALE_MS;
+    await updateStoredChallenge(challenge.id, (stored) => {
+      stored.createdAt = Date.now() - STALE_MS;
+    });
     const removed = await defaultEngine.pruneStaleChallenges();
     assert.equal(removed, 1);
 
@@ -55,7 +68,9 @@ describe("Stale challenge garbage collection", () => {
     assert.equal(instance.state.gameStarted, true);
     assert.equal(instance.state.gameEnded, false);
 
-    instance.createdAt = Date.now() - STALE_MS;
+    await updateStoredChallenge(challenge.id, (stored) => {
+      stored.createdAt = Date.now() - STALE_MS;
+    });
     const removed = await defaultEngine.pruneStaleChallenges();
     assert.equal(removed, 1);
 
@@ -68,8 +83,10 @@ describe("Stale challenge garbage collection", () => {
     const instance = await defaultEngine.getChallenge(challenge.id);
     assert.ok(instance);
 
-    instance.state.gameEnded = true;
-    instance.createdAt = Date.now() - STALE_MS;
+    await updateStoredChallenge(challenge.id, (stored) => {
+      stored.state.gameEnded = true;
+      stored.createdAt = Date.now() - STALE_MS;
+    });
     await defaultEngine.pruneStaleChallenges();
 
     const typed = await defaultEngine.getChallengesByType("psi");
@@ -83,7 +100,9 @@ describe("Stale challenge garbage collection", () => {
 
     await defaultEngine.chat.sendMessage(challenge.id, "a", "public");
     await defaultEngine.chat.sendMessage(toChallengeChannel(challenge.id), "operator", "private", "a");
-    instance.createdAt = Date.now() - STALE_MS;
+    await updateStoredChallenge(challenge.id, (stored) => {
+      stored.createdAt = Date.now() - STALE_MS;
+    });
     await defaultEngine.pruneStaleChallenges();
 
     const publicChannel = await defaultEngine.chat.getMessagesForChannel(challenge.id);

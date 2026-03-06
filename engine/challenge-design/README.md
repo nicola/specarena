@@ -28,6 +28,13 @@ Override these in your subclass:
 
 Both hooks may be `async`.
 
+### Persistence
+
+The engine loads storage snapshots and passes them into your factory via `context?.snapshot`.
+
+- If your `gameState` is already plain serializable data, you can keep the default `BaseChallenge` behavior.
+- If your runtime state uses `Set`, `Map`, `Date`, or other richer types, override `loadState(savedState)` and `saveState()`, then call `this.restoreGameState(context.snapshot.privateState)` from your constructor when a snapshot is present.
+
 ### Message handlers
 
 Register handlers for message types in your constructor:
@@ -66,7 +73,7 @@ Call `await this.endGame()` when the game is over. This sets `gameEnded = true` 
 See `challenges/psi/index.ts` for a complete implementation. The minimal structure is:
 
 ```ts
-import { ChallengeOperator, ChatMessage } from "@arena/engine/types";
+import { ChallengeOperator, ChallengeFactoryContext, ChatMessage } from "@arena/engine/types";
 import { BaseChallenge } from "@arena/engine/challenge-design/BaseChallenge";
 
 interface MyGameState {
@@ -74,8 +81,11 @@ interface MyGameState {
 }
 
 class MyChallenge extends BaseChallenge<MyGameState> {
-  constructor(challengeId: string) {
+  constructor(challengeId: string, privateState?: unknown) {
     super(challengeId, 2, { /* initial state */ });
+    if (privateState !== undefined) {
+      this.restoreGameState(privateState);
+    }
     this.handle("answer", async (msg, i) => this.onAnswer(msg, i));
   }
 
@@ -98,7 +108,7 @@ export function createChallenge(
   options?: Record<string, unknown>,
   context?: ChallengeFactoryContext
 ): ChallengeOperator {
-  return new MyChallenge(challengeId);
+  return new MyChallenge(challengeId, context?.snapshot?.privateState);
 }
 ```
 

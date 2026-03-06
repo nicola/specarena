@@ -135,9 +135,21 @@ export abstract class BaseChallenge<TGameState = {}> implements ChallengeOperato
     });
   }
 
-  // Challenge implementations can override this when their internal state
-  // is not directly JSON-serializable.
-  serializeState(): unknown {
-    return this.gameState;
+  // Rehydrate game-specific state from a stored snapshot. Challenges that
+  // use Set/Map/Date or other richer runtime types can override this and then
+  // call `restoreGameState(snapshot)` from their constructor.
+  protected loadState(savedState: unknown): TGameState {
+    return structuredClone(savedState) as TGameState;
+  }
+
+  protected restoreGameState(savedState: unknown): void {
+    this.gameState = this.loadState(savedState);
+  }
+
+  // Persist game-specific state. The default is suitable for plain JSON-ish
+  // state; challenges with richer runtime types should override both
+  // `loadState` and `saveState`.
+  saveState(): unknown {
+    return structuredClone(this.gameState);
   }
 }
