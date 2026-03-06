@@ -6,7 +6,7 @@ import {
 } from "../index";
 import { AuthEngine } from "./AuthEngine";
 import { generateSecret, hashPublicKey } from "./utils";
-import { createAuthUser, createBodyParser } from "./middleware";
+import { createAuthUser, createBodyParser, getBody } from "./middleware";
 
 export interface AuthAppOptions {
   secret?: string;
@@ -42,7 +42,7 @@ export function createAuthApp(options: AuthAppOptions = {}) {
 
   // Ad-hoc join: verify Ed25519 signature, call engine.challengeJoin(), mint session key
   app.post("/api/arena/join", async (c) => {
-    const body = c.get("parsedBody") ?? await c.req.json();
+    const body = getBody(c) ?? await c.req.json();
     const { invite, publicKey, signature, timestamp } = body;
 
     if (!invite) {
@@ -76,7 +76,7 @@ export function createAuthApp(options: AuthAppOptions = {}) {
 
   // Signed user profile update
   app.post("/api/users", async (c) => {
-    const body = c.get("parsedBody") ?? await c.req.json();
+    const body = getBody(c) ?? await c.req.json();
     const { publicKey, signature, timestamp, username, model } = body;
 
     if (!publicKey || !signature || !timestamp) {

@@ -1,7 +1,7 @@
 import { Context, Next } from "hono";
 import crypto from "node:crypto";
 import { ArenaEngine } from "@arena/engine/engine";
-import { fromChallengeChannel, fromChatChannel } from "@arena/engine/types";
+import { challengeIdFromChannel } from "@arena/engine/types";
 import { AuthEngine } from "./AuthEngine";
 import { hashPublicKey } from "./utils";
 
@@ -10,16 +10,17 @@ function extractBearerToken(header: string | undefined): string | undefined {
   return header.slice(7);
 }
 
+const BODY_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
 /**
  * Parse body once and store on context for downstream use.
- * Extracts channel (from query/body/URL param), content (from body), and challengeId (stripped prefix).
+ * Extracts challengeId (from query/body channel, prefix-stripped) and parsedBody.
  */
 export function createBodyParser() {
   return async (c: Context, next: Next) => {
-    let channel: string | null = c.req.query("channel") ?? c.req.query("challengeId") ?? null;
     let parsedBody: Record<string, unknown> | null = null;
 
-    if (c.req.method === "POST") {
+    if (BODY_METHODS.has(c.req.method)) {
       try {
         parsedBody = await c.req.raw.clone().json();
       } catch {
@@ -27,20 +28,22 @@ export function createBodyParser() {
       }
     }
 
-    if (!channel && parsedBody) {
-      channel = (parsedBody.challengeId || parsedBody.channel) as string | null;
-    }
-
-    const challengeId = channel
-      ? (fromChallengeChannel(channel) ?? fromChatChannel(channel) ?? channel)
-      : null;
+    const channel: string | null =
+      c.req.query("channel")
+      ?? c.req.query("challengeId")
+      ?? (parsedBody?.challengeId || parsedBody?.channel) as string | null
+      ?? null;
 
     c.set("channel", channel);
-    c.set("challengeId", challengeId);
+    c.set("challengeId", channel ? challengeIdFromChannel(channel) : null);
     c.set("parsedBody", parsedBody);
 
     return next();
   };
+}
+
+export function getBody(c: Context): Record<string, unknown> | null {
+  return c.get("parsedBody") ?? null;
 }
 
 function getEd25519Params(c: Context): { publicKey: string; signature: string; timestamp: number } | null {
@@ -94,7 +97,7 @@ export function createAuthUser(engine: ArenaEngine, auth: AuthEngine) {
   return async (c: Context, next: Next) => {
     const key = extractBearerToken(c.req.header("Authorization")) ?? c.req.query("key");
     const channel: string | null = c.get("channel");
-    const parsedBody: Record<string, unknown> | null = c.get("parsedBody");
+    const parsedBody = getBody(c);
     const challengeId: string | null = c.get("challengeId");
 
     let resolved: { identity: string } | { error: string; status: 401 };

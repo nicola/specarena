@@ -1,4 +1,5 @@
 import { Context, Next } from "hono";
+import { getBody } from "../auth/middleware";
 
 export type IdentityEnv = { Variables: { identity?: string } };
 
@@ -9,8 +10,7 @@ export function createResolveIdentity() {
     // Standalone mode — read from param or parsed body
     let from = c.req.query("from");
     if (!from) {
-      const parsedBody: Record<string, unknown> | null = c.get("parsedBody");
-      from = (parsedBody?.from as string) ?? null;
+      from = (getBody(c)?.from as string) ?? null;
     }
     if (from) c.set("identity", from);
     return next();

@@ -1,7 +1,8 @@
 import { Hono } from "hono";
 import { ArenaEngine, defaultEngine } from "@arena/engine/engine";
-import { fromChallengeChannel, fromChatChannel } from "@arena/engine/types";
+import { challengeIdFromChannel } from "@arena/engine/types";
 import { ChatSendSchema, SyncSchema } from "../schemas";
+import { getBody } from "../auth/middleware";
 import { getIdentity, IdentityEnv } from "./identity";
 
 const SSE_KEEPALIVE_INTERVAL_MS = 30_000;
@@ -12,7 +13,7 @@ export function createChatRoutes(engine: ArenaEngine = defaultEngine) {
 
   // POST /api/chat/send - Send a chat message
   app.post("/api/chat/send", async (c) => {
-    const body = c.get("parsedBody") ?? await c.req.json();
+    const body = getBody(c) ?? await c.req.json();
     const parsed = ChatSendSchema.safeParse(body);
     if (!parsed.success) {
       return c.json({ error: parsed.error.issues[0].message }, 400);
@@ -57,7 +58,7 @@ export function createChatRoutes(engine: ArenaEngine = defaultEngine) {
   app.get("/api/chat/ws/:uuid", (c) => {
     const uuid = c.req.param("uuid");
     const viewer = getIdentity(c);
-    const challengeId = fromChallengeChannel(uuid) ?? fromChatChannel(uuid) ?? uuid;
+    const challengeId = challengeIdFromChannel(uuid);
 
     const stream = new ReadableStream({
       async start(controller) {
