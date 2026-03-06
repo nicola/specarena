@@ -13,7 +13,7 @@ import { defaultChatEngine } from "../chat/ChatEngine";
 // 2) registering handlers via `handle("method", handler)`
 export abstract class BaseChallenge<TGameState = {}> implements ChallengeOperator {
   protected challengeId: string;
-  protected playerCount: number;
+  readonly playerCount: number;
   protected messaging: ChallengeMessaging;
   state: ChallengeOperatorState;
   gameState: TGameState;
@@ -125,5 +125,11 @@ export abstract class BaseChallenge<TGameState = {}> implements ChallengeOperato
       type: "game_ended",
       data: this.state,
     });
+  }
+
+  // Challenge implementations can override this when their internal state
+  // is not directly JSON-serializable.
+  serializeState(): unknown {
+    return this.gameState;
   }
 }

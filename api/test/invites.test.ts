@@ -40,9 +40,10 @@ describe("Invites REST API", () => {
     assert.equal(res.status, 200);
 
     const data = await res.json();
-    assert.ok(data.id, "response should include challenge id");
+    assert.ok(data.challengeId, "response should include challenge id");
     assert.equal(data.challengeType, "psi");
-    assert.ok(data.invites.includes(invites[0]));
+    assert.equal(data.inviteId, invites[0]);
+    assert.equal("invites" in data, false, "invite lookup should not leak sibling invites");
   });
 
   it("GET /api/invites/:inviteId returns 404 for nonexistent invite", async () => {
@@ -57,9 +58,7 @@ describe("Invites REST API", () => {
     const { id, invites } = await createPsiChallenge();
 
     // Join with the invite (claims it)
-    const challenge = await defaultEngine.getChallenge(id);
-    assert.ok(challenge);
-    await challenge.instance.join(invites[0]);
+    await defaultEngine.challengeJoin(invites[0]);
 
     const res = await request("GET", `/api/invites/${invites[0]}`);
     assert.equal(res.status, 409);
@@ -72,9 +71,7 @@ describe("Invites REST API", () => {
     const { id, invites } = await createPsiChallenge();
 
     // Claim first invite
-    const challenge = await defaultEngine.getChallenge(id);
-    assert.ok(challenge);
-    await challenge.instance.join(invites[0]);
+    await defaultEngine.challengeJoin(invites[0]);
 
     // First invite → 409
     const res1 = await request("GET", `/api/invites/${invites[0]}`);
@@ -117,9 +114,7 @@ describe("Invites REST API", () => {
     const { id, invites } = await createPsiChallenge();
 
     // Claim the invite first
-    const challenge = await defaultEngine.getChallenge(id);
-    assert.ok(challenge);
-    await challenge.instance.join(invites[0]);
+    await defaultEngine.challengeJoin(invites[0]);
 
     const res = await request("POST", "/api/invites", { inviteId: invites[0] });
     assert.equal(res.status, 409);
@@ -142,12 +137,12 @@ describe("Invites REST API", () => {
     // c1's invite resolves to c1
     const res1 = await request("GET", `/api/invites/${c1.invites[0]}`);
     const data1 = await res1.json();
-    assert.equal(data1.id, c1.id);
+    assert.equal(data1.challengeId, c1.id);
 
     // c2's invite resolves to c2
     const res2 = await request("GET", `/api/invites/${c2.invites[0]}`);
     const data2 = await res2.json();
-    assert.equal(data2.id, c2.id);
+    assert.equal(data2.challengeId, c2.id);
   });
 
   // -- Both invites claimed --
@@ -164,7 +159,7 @@ describe("Invites REST API", () => {
     assert.equal(r2.status, 200);
 
     // Claim first
-    await challenge.instance.join(invites[0]);
+    await defaultEngine.challengeJoin(invites[0]);
 
     // First → 409, second → 200
     const r3 = await request("GET", `/api/invites/${invites[0]}`);
@@ -173,7 +168,7 @@ describe("Invites REST API", () => {
     assert.equal(r4.status, 200);
 
     // Claim second
-    await challenge.instance.join(invites[1]);
+    await defaultEngine.challengeJoin(invites[1]);
 
     // Both → 409
     const r5 = await request("GET", `/api/invites/${invites[0]}`);

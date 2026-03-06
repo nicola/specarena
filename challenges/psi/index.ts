@@ -127,6 +127,14 @@ class PsiChallenge extends BaseChallenge<PsiGameState> {
     }
     return null;
   }
+
+  serializeState(): unknown {
+    return {
+      userSets: this.gameState.userSets.map((set) => [...set].sort((a, b) => a - b)),
+      intersectionSet: [...this.gameState.intersectionSet].sort((a, b) => a - b),
+      guesses: this.gameState.guesses.map((set) => [...set].sort((a, b) => a - b)),
+    };
+  }
 }
 
 function userSetsFromParams(params: PsiChallengeParams): { userSets: Set<number>[], intersectionSet: Set<number> } {

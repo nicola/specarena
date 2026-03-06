@@ -2,6 +2,16 @@ import { Hono } from "hono";
 import { ArenaEngine, defaultEngine } from "@arena/engine/engine";
 import { ChallengeError } from "@arena/engine/types";
 
+function toInviteStatusResponse(inviteId: string, challengeId: string, challengeType: string, createdAt: number, playerCount: number) {
+  return {
+    inviteId,
+    challengeId,
+    challengeType,
+    createdAt,
+    playerCount,
+  };
+}
+
 export function createInviteRoutes(engine: ArenaEngine = defaultEngine) {
   const app = new Hono();
 
@@ -20,7 +30,15 @@ export function createInviteRoutes(engine: ArenaEngine = defaultEngine) {
       return c.json({ error: result.message }, 500);
     }
 
-    return c.json(result.data);
+    return c.json(
+      toInviteStatusResponse(
+        inviteId,
+        result.data.id,
+        result.data.challengeType,
+        result.data.createdAt,
+        result.data.playerCount,
+      ),
+    );
   });
 
   // POST /api/invites - claim invite

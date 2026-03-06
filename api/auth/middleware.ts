@@ -61,7 +61,7 @@ export function createAuthUser(engine: ArenaEngine, auth: AuthEngine) {
       return c.json({ error: "Authentication required" }, 401);
     }
 
-    const identity = await engine.resolvePlayerIdentity(challengeId, validation.userIndex);
+    const identity = await engine.resolvePlayerInvite(challengeId, validation.userIndex);
     c.set("identity", identity ?? "viewer");
     return next();
   };

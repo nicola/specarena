@@ -30,9 +30,11 @@ export interface ChallengeOperatorState {
 }
 
 export interface ChallengeOperator {
+  readonly playerCount: number;
   join(invite: string, userId?: string): Promise<void>;
   message(message: ChatMessage): Promise<void>;
   state: ChallengeOperatorState;
+  serializeState?(): unknown;
 }
 
 export enum ChallengeType {
@@ -40,6 +42,17 @@ export enum ChallengeType {
 }
 
 export interface Challenge {
+  id: string;
+  name: string;
+  createdAt: number;
+  challengeType: string;
+  invites: string[];
+  playerCount: number;
+  state: ChallengeOperatorState;
+  persistedState?: unknown;
+}
+
+export interface ActiveChallenge {
   id: string;
   name: string;
   createdAt: number;

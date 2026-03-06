@@ -658,7 +658,7 @@ describe("Player identities — stored after authenticated join", () => {
 
     const challenge = await engine.getChallenge(id);
     assert.ok(challenge);
-    const identities = challenge.instance.state.playerIdentities;
+    const identities = challenge.state.playerIdentities;
 
     assert.equal(identities[invites[0]], hashPublicKey(keyA.publicKey));
     assert.equal(identities[invites[1]], hashPublicKey(keyB.publicKey));

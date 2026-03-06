@@ -144,8 +144,8 @@ export class ScoringModule {
 
   /** Convert a completed Challenge to a GameResult. Returns null if game hasn't ended. */
   static challengeToGameResult(challenge: Challenge): GameResult | null {
-    const state = challenge.instance?.state;
-    if (!state?.gameEnded) return null;
+    const state = challenge.state;
+    if (!state.gameEnded) return null;
 
     return {
       gameId: challenge.id,

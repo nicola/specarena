@@ -11,16 +11,13 @@ function mockChallenge(id: string, invites: string[]): Challenge {
     challengeType: "psi",
     createdAt: Date.now(),
     invites,
-    instance: {
-      state: {
-        gameStarted: false,
-        gameEnded: false,
-        scores: [],
-        players: [],
-        playerIdentities: {},
-      },
-      async join() {},
-      async message() {},
+    playerCount: 2,
+    state: {
+      gameStarted: false,
+      gameEnded: false,
+      scores: [],
+      players: [],
+      playerIdentities: {},
     },
   };
 }

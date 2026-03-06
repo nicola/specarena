@@ -3,6 +3,31 @@ import { ArenaEngine, defaultEngine } from "@arena/engine/engine";
 import type { Challenge } from "@arena/engine/types";
 import type { UserProfile } from "@arena/engine/users";
 
+function toChallengeSummary(challenge: Challenge) {
+  return {
+    id: challenge.id,
+    name: challenge.name,
+    createdAt: challenge.createdAt,
+    challengeType: challenge.challengeType,
+    playerCount: challenge.playerCount,
+    state: {
+      ...challenge.state,
+      players: Array.from({ length: challenge.state.players.length }, () => ""),
+    },
+  };
+}
+
+function toChallengeCreatedResponse(challenge: Challenge) {
+  return {
+    id: challenge.id,
+    name: challenge.name,
+    createdAt: challenge.createdAt,
+    challengeType: challenge.challengeType,
+    invites: [...challenge.invites],
+    playerCount: challenge.playerCount,
+  };
+}
+
 /** Collect all user profiles referenced in playerIdentities across challenges. */
 export async function collectUserProfiles(
   engine: ArenaEngine,
@@ -10,10 +35,8 @@ export async function collectUserProfiles(
 ): Promise<Record<string, UserProfile>> {
   const userIds = new Set<string>();
   for (const c of challenges) {
-    if (c.instance?.state?.playerIdentities) {
-      for (const userId of Object.values(c.instance.state.playerIdentities)) {
-        userIds.add(userId);
-      }
+    for (const userId of Object.values(c.state.playerIdentities)) {
+      userIds.add(userId);
     }
   }
   if (userIds.size === 0) return {};
@@ -46,7 +69,7 @@ export function createChallengeRoutes(engine: ArenaEngine = defaultEngine) {
     const total = challengesList.length;
     const sliced = challengesList.slice(offset, offset + limit);
     const profiles = await collectUserProfiles(engine, sliced);
-    return c.json({ challenges: sliced, total, limit, offset, profiles });
+    return c.json({ challenges: sliced.map(toChallengeSummary), total, limit, offset, profiles });
   });
 
   // GET /api/challenges/:name - list by type
@@ -59,7 +82,7 @@ export function createChallengeRoutes(engine: ArenaEngine = defaultEngine) {
       const total = challengesList.length;
       const sliced = challengesList.slice(offset, offset + limit);
       const profiles = await collectUserProfiles(engine, sliced);
-      return c.json({ challenges: sliced, total, limit, offset, profiles });
+      return c.json({ challenges: sliced.map(toChallengeSummary), total, limit, offset, profiles });
     } catch (error) {
       console.error("Error fetching challenges:", error);
       return c.json({ error: "Failed to fetch challenges" }, 500);
@@ -71,7 +94,7 @@ export function createChallengeRoutes(engine: ArenaEngine = defaultEngine) {
     const name = c.req.param("name");
     try {
       const challenge = await engine.createChallenge(name);
-      return c.json(challenge);
+      return c.json(toChallengeCreatedResponse(challenge));
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to create challenge";
       if (message.startsWith("Unknown challenge type")) {

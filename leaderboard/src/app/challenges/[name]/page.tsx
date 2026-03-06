@@ -70,7 +70,20 @@ export default async function ChallengePage({ params, searchParams }: { params: 
   }
 
   // Fetch challenges and scoring in parallel
-  let challengesList: Array<{ id: string; name: string; createdAt: number; challengeType: string; invites: string[] }> = [];
+  let challengesList: Array<{
+    id: string;
+    name: string;
+    createdAt: number;
+    challengeType: string;
+    playerCount: number;
+    state: {
+      gameStarted?: boolean;
+      gameEnded?: boolean;
+      players: string[];
+      playerIdentities?: Record<string, string>;
+      scores?: { security: number; utility: number }[];
+    };
+  }> = [];
   let profiles: Record<string, UserProfile> = {};
   let challengesTotal = 0;
   const [challengesResult, allScoring] = await Promise.all([
