@@ -5,8 +5,10 @@
   "exports": {
     "./engine": "./engine.ts",
     "./chat/ChatEngine": "./chat/ChatEngine.ts",
+    "./storage/types": "./storage/types.ts",
     "./storage/InMemoryArenaStorageAdapter": "./storage/InMemoryArenaStorageAdapter.ts",
     "./storage/InMemoryChatStorageAdapter": "./storage/InMemoryChatStorageAdapter.ts",
+    "./storage/InMemoryUserStorageAdapter": "./storage/InMemoryUserStorageAdapter.ts",
     "./types": "./types.ts",
     "./utils": "./utils.ts",
     "./challenge-design/BaseChallenge": "./challenge-design/BaseChallenge.ts",

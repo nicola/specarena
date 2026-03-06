@@ -12,9 +12,10 @@ import {
   toChallengeChannel,
 } from "./types";
 import { ChatEngine, createChatEngine } from "./chat/ChatEngine";
-import { ArenaStorageAdapter, InMemoryArenaStorageAdapter, PaginationOptions, PaginatedResult } from "./storage/InMemoryArenaStorageAdapter";
+import type { ArenaStorageAdapter, PaginationOptions, PaginatedResult, UserStorageAdapter } from "./storage/types";
+import { InMemoryArenaStorageAdapter } from "./storage/InMemoryArenaStorageAdapter";
+import { InMemoryUserStorageAdapter } from "./storage/InMemoryUserStorageAdapter";
 import { ScoringModule } from "./scoring/index";
-import { UserStorageAdapter, InMemoryUserStorageAdapter } from "./users/index";
 
 export interface EngineOptions {
   storageAdapter?: ArenaStorageAdapter;
@@ -296,6 +297,7 @@ export function createEngine(options: EngineOptions = {}): ArenaEngine {
 
 export const defaultEngine = createEngine();
 export { ChatEngine, createChatEngine, defaultChatEngine } from "./chat/ChatEngine";
-export { ArenaStorageAdapter, InMemoryArenaStorageAdapter, PaginationOptions, PaginatedResult } from "./storage/InMemoryArenaStorageAdapter";
-export { ChatStorageAdapter, InMemoryChatStorageAdapter } from "./storage/InMemoryChatStorageAdapter";
-export { UserProfile, UserStorageAdapter, InMemoryUserStorageAdapter } from "./users/index";
+export type { ArenaStorageAdapter, ChatStorageAdapter, UserStorageAdapter, UserProfile, PaginationOptions, PaginatedResult } from "./storage/types";
+export { InMemoryArenaStorageAdapter } from "./storage/InMemoryArenaStorageAdapter";
+export { InMemoryChatStorageAdapter } from "./storage/InMemoryChatStorageAdapter";
+export { InMemoryUserStorageAdapter } from "./storage/InMemoryUserStorageAdapter";
