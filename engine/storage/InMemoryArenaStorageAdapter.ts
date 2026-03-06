@@ -1,25 +1,5 @@
 import { ChallengeRecord } from "../types";
-
-export interface PaginationOptions {
-  limit?: number;
-  offset?: number;
-}
-
-export interface PaginatedResult<T> {
-  items: T[];
-  total: number;
-}
-
-export interface ArenaStorageAdapter {
-  clearRuntimeState(): Promise<void>;
-  listChallenges(options?: PaginationOptions): Promise<PaginatedResult<ChallengeRecord>>;
-  getChallenge(challengeId: string): Promise<ChallengeRecord | undefined>;
-  getChallengeFromInvite(invite: string): Promise<ChallengeRecord | undefined>;
-  getChallengesByUserId(userId: string, options?: PaginationOptions): Promise<PaginatedResult<ChallengeRecord>>;
-  getChallengesByType(challengeType: string, options?: PaginationOptions): Promise<PaginatedResult<ChallengeRecord>>;
-  setChallenge(challenge: ChallengeRecord): Promise<void>;
-  deleteChallenge(challengeId: string): Promise<void>;
-}
+import type { ArenaStorageAdapter, PaginationOptions, PaginatedResult } from "./types";
 
 function applyPagination<T>(items: T[], options?: PaginationOptions): PaginatedResult<T> {
   const total = items.length;
