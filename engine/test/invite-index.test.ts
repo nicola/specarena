@@ -2,25 +2,21 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 import { InMemoryArenaStorageAdapter } from "../storage/InMemoryArenaStorageAdapter";
-import { Challenge } from "../types";
+import { ChallengeRecord } from "../types";
 
-function mockChallenge(id: string, invites: string[]): Challenge {
+function mockChallenge(id: string, invites: string[]): ChallengeRecord {
   return {
     id,
     name: "psi",
     challengeType: "psi",
     createdAt: Date.now(),
     invites,
-    instance: {
-      state: {
-        gameStarted: false,
-        gameEnded: false,
-        scores: [],
-        players: [],
-        playerIdentities: {},
-      },
-      async join() {},
-      async message() {},
+    state: {
+      gameStarted: false,
+      gameEnded: false,
+      scores: [],
+      players: [],
+      playerIdentities: {},
     },
   };
 }

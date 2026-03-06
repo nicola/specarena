@@ -33,18 +33,25 @@ export interface ChallengeOperator {
   join(invite: string, userId?: string): Promise<void>;
   message(message: ChatMessage): Promise<void>;
   state: ChallengeOperatorState;
+  serializePrivateState(): unknown;
+  restore(operatorState: ChallengeOperatorState, privateState?: unknown): void;
 }
 
 export enum ChallengeType {
   Psi = "psi",
 }
 
-export interface Challenge {
+export interface ChallengeRecord {
   id: string;
   name: string;
   createdAt: number;
   challengeType: string;
   invites: string[];
+  state: ChallengeOperatorState;
+  privateState?: unknown;
+}
+
+export interface Challenge extends ChallengeRecord {
   instance: ChallengeOperator;
 }
 

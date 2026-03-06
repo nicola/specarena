@@ -65,8 +65,23 @@ class PsiChallenge extends BaseChallenge<PsiGameState> {
     this.handle("guess", (msg, playerIndex) => this.onGuess(msg, playerIndex));
   }
 
+  override serializePrivateState(): unknown {
+    return {
+      userSets: this.privateState.userSets.map(s => [...s]),
+      intersectionSet: [...this.privateState.intersectionSet],
+      guesses: this.privateState.guesses.map(s => [...s]),
+    };
+  }
+
+  protected override restorePrivateState(data: unknown): void {
+    const d = data as { userSets: number[][]; intersectionSet: number[]; guesses: number[][] };
+    this.privateState.userSets = d.userSets.map(arr => new Set(arr));
+    this.privateState.intersectionSet = new Set(d.intersectionSet);
+    this.privateState.guesses = d.guesses.map(arr => new Set(arr));
+  }
+
   protected async onPlayerJoin(playerId: string, playerIndex: number): Promise<void> {
-    const text = `Your private set is: {${[...this.gameState.userSets[playerIndex]].sort().join(", ")}}.`;
+    const text = `Your private set is: {${[...this.privateState.userSets[playerIndex]].sort().join(", ")}}.`;
     await this.send(text, playerId);
   }
 
@@ -78,16 +93,16 @@ class PsiChallenge extends BaseChallenge<PsiGameState> {
       throw new ChallengeOperatorError("INVALID_GUESS", "Invalid guess format.");
     }
 
-    if (this.gameState.guesses[sender].size > 0) {
+    if (this.privateState.guesses[sender].size > 0) {
       throw new ChallengeOperatorError("DUPLICATE_GUESS", "Guess already made.");
     }
 
-    if (guess.size > this.gameState.userSets[otherPlayer].size) {
+    if (guess.size > this.privateState.userSets[otherPlayer].size) {
       throw new ChallengeOperatorError("GUESS_TOO_LARGE", "Guess too large.");
     }
 
-    const target = setIntersection(this.gameState.userSets[sender], this.gameState.userSets[otherPlayer]);
-    const otherPlayerSet = this.gameState.userSets[otherPlayer];
+    const target = setIntersection(this.privateState.userSets[sender], this.privateState.userSets[otherPlayer]);
+    const otherPlayerSet = this.privateState.userSets[otherPlayer];
 
     const intersectionFound = eqSet(setIntersection(guess, target), target);
     const wrongGuess = setDifference(guess, otherPlayerSet).size;
@@ -109,9 +124,9 @@ class PsiChallenge extends BaseChallenge<PsiGameState> {
 - Utility: ${this.state.scores[sender].utility}
 - Target: {${[...target].sort().join(", ")}}
 `, message.from);
-    this.gameState.guesses[sender] = guess;
+    this.privateState.guesses[sender] = guess;
 
-    if (this.gameState.guesses.every(guess => guess.size > 0)) {
+    if (this.privateState.guesses.every(guess => guess.size > 0)) {
       await this.endGame();
     }
   }

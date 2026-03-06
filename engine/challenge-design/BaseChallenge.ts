@@ -11,15 +11,15 @@ import { defaultChatEngine } from "../chat/ChatEngine";
 // Challenge authors are expected to focus on game-specific logic by:
 // 1) overriding hooks (`onPlayerJoin`, `onGameStart`)
 // 2) registering handlers via `handle("method", handler)`
-export abstract class BaseChallenge<TGameState = {}> implements ChallengeOperator {
+export abstract class BaseChallenge<TPrivateState = {}> implements ChallengeOperator {
   protected challengeId: string;
   protected playerCount: number;
   protected messaging: ChallengeMessaging;
   state: ChallengeOperatorState;
-  gameState: TGameState;
+  privateState: TPrivateState;
   private handlers = new Map<string, (msg: ChatMessage, playerIndex: number) => void | Promise<void>>();
 
-  constructor(challengeId: string, playerCount: number, gameState: TGameState, messaging?: ChallengeMessaging) {
+  constructor(challengeId: string, playerCount: number, privateState: TPrivateState, messaging?: ChallengeMessaging) {
     this.challengeId = challengeId;
     this.playerCount = playerCount;
     this.messaging = messaging ?? defaultChatEngine;
@@ -30,7 +30,7 @@ export abstract class BaseChallenge<TGameState = {}> implements ChallengeOperato
       players: [],
       playerIdentities: {},
     };
-    this.gameState = gameState;
+    this.privateState = privateState;
   }
 
   // --- Public interface (ChallengeOperator) ---
@@ -74,6 +74,23 @@ export abstract class BaseChallenge<TGameState = {}> implements ChallengeOperato
     }
 
     await handler(message, playerIndex);
+  }
+
+  // --- Serialization / Restore ---
+
+  serializePrivateState(): unknown {
+    return this.privateState;
+  }
+
+  restore(operatorState: ChallengeOperatorState, privateState?: unknown): void {
+    Object.assign(this.state, operatorState);
+    if (privateState !== undefined) {
+      this.restorePrivateState(privateState);
+    }
+  }
+
+  protected restorePrivateState(data: unknown): void {
+    this.privateState = data as TPrivateState;
   }
 
   // --- Lifecycle hooks for subclasses ---

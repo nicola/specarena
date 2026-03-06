@@ -5,7 +5,9 @@ import {
   ChallengeError,
   ChallengeFactory,
   ChallengeMetadata,
+  ChallengeOperator,
   ChallengeOperatorError,
+  ChallengeRecord,
   Result,
   fromChallengeChannel,
   toChallengeChannel,
@@ -24,6 +26,7 @@ export interface EngineOptions {
 
 export class ArenaEngine {
   private readonly storageAdapter: ArenaStorageAdapter;
+  private readonly operators: Map<string, ChallengeOperator> = new Map();
   readonly users: UserStorageAdapter;
   private readonly challengeFactories: Map<string, ChallengeFactory>;
   private readonly challengeOptions: Map<string, Record<string, unknown>>;
@@ -43,7 +46,7 @@ export class ArenaEngine {
         const challengeId = fromChallengeChannel(channel);
         if (!challengeId) return false;
         const challenge = await this.getChallenge(challengeId);
-        return challenge?.instance?.state?.gameEnded ?? false;
+        return challenge?.state?.gameEnded ?? false;
       },
       onChallengeEvent: async (challengeId, event) => {
         if (event.type !== "game_ended" || !this.scoring) return;
@@ -58,6 +61,7 @@ export class ArenaEngine {
   }
 
   async clearRuntimeState(): Promise<void> {
+    this.operators.clear();
     await Promise.all([
       this.storageAdapter.clearRuntimeState(),
       this.chat.clearRuntimeState(),
@@ -84,31 +88,30 @@ export class ArenaEngine {
     return Object.fromEntries(this.challengeMetadataMap);
   }
 
-  private isChallengeStale(challenge: Challenge, now: number = Date.now()): boolean {
-    const gameEnded = challenge.instance?.state?.gameEnded ?? false;
+  private isChallengeStale(record: ChallengeRecord, now: number = Date.now()): boolean {
     const cutoff = now - STALE_CHALLENGE_TIMEOUT_MS;
-    return !gameEnded && challenge.createdAt < cutoff;
+    return !record.state.gameEnded && record.createdAt < cutoff;
+  }
+
+  private async deleteChallengeFull(id: string): Promise<void> {
+    this.operators.delete(id);
+    await this.storageAdapter.deleteChallenge(id);
+    await this.chat.deleteChannel(id);
+    await this.chat.deleteChannel(toChallengeChannel(id));
   }
 
   async pruneStaleChallenges(now: number = Date.now()): Promise<number> {
     const challenges = await this.storageAdapter.listChallenges();
-    const stale = challenges.filter((challenge) => this.isChallengeStale(challenge, now));
+    const stale = challenges.filter((c) => this.isChallengeStale(c, now));
     if (stale.length === 0) {
       return 0;
     }
 
-    await Promise.all(
-      stale.map(async (challenge) => {
-        await this.storageAdapter.deleteChallenge(challenge.id);
-        await this.chat.deleteChannel(challenge.id);
-        await this.chat.deleteChannel(toChallengeChannel(challenge.id));
-      }),
-    );
-
+    await Promise.all(stale.map((c) => this.deleteChallengeFull(c.id)));
     return stale.length;
   }
 
-  async listChallenges(): Promise<Challenge[]> {
+  async listChallenges(): Promise<ChallengeRecord[]> {
     return this.storageAdapter.listChallenges();
   }
 
@@ -129,15 +132,39 @@ export class ArenaEngine {
       createdAt: Date.now(),
       challengeType,
       invites: [`inv_${crypto.randomUUID()}`, `inv_${crypto.randomUUID()}`],
+      state: instance.state,
       instance,
     };
 
+    this.operators.set(id, instance);
     await this.storageAdapter.setChallenge(challenge);
     return challenge;
   }
 
-  private isInviteFree(challenge: Challenge, invite: string): boolean {
-    return !challenge.instance?.state?.players?.includes(invite);
+  async restoreChallenge(record: ChallengeRecord): Promise<Challenge> {
+    const factory = this.challengeFactories.get(record.challengeType);
+    if (!factory) {
+      throw new Error(`Unknown challenge type: ${record.challengeType}`);
+    }
+
+    const options = this.challengeOptions.get(record.challengeType);
+    const instance = factory(record.id, options, { messaging: this.chat });
+    instance.restore(record.state, record.privateState);
+
+    const restored: ChallengeRecord = { ...record, state: instance.state };
+    this.operators.set(record.id, instance);
+    await this.storageAdapter.setChallenge(restored);
+    return { ...restored, instance };
+  }
+
+  private hydrate(record: ChallengeRecord): Challenge | undefined {
+    const instance = this.operators.get(record.id);
+    if (!instance) return undefined;
+    return Object.assign(record, { instance }) as Challenge;
+  }
+
+  private isInviteFree(challenge: ChallengeRecord, invite: string): boolean {
+    return !challenge.state.players.includes(invite);
   }
 
   async getInvite(invite: string): Promise<Result<Challenge>> {
@@ -156,37 +183,43 @@ export class ArenaEngine {
   }
 
   async getChallengeFromInvite(invite: string): Promise<Result<Challenge>> {
-    const challenge = await this.storageAdapter.getChallengeFromInvite(invite);
-    if (challenge) {
-      return { success: true, data: challenge };
+    const record = await this.storageAdapter.getChallengeFromInvite(invite);
+    if (!record) {
+      return {
+        success: false,
+        error: ChallengeError.NOT_FOUND,
+        message: `Challenge not found for invite: ${invite}`,
+      };
     }
-    return {
-      success: false,
-      error: ChallengeError.NOT_FOUND,
-      message: `Challenge not found for invite: ${invite}`,
-    };
+    const challenge = this.hydrate(record);
+    if (!challenge) {
+      return {
+        success: false,
+        error: ChallengeError.NOT_FOUND,
+        message: `Challenge operator not found`,
+      };
+    }
+    return { success: true, data: challenge };
   }
 
   async getChallenge(challengeId: string): Promise<Challenge | undefined> {
-    const challenge = await this.storageAdapter.getChallenge(challengeId);
-    if (!challenge) {
+    const record = await this.storageAdapter.getChallenge(challengeId);
+    if (!record) {
       return undefined;
     }
-    if (!this.isChallengeStale(challenge)) {
-      return challenge;
+    if (this.isChallengeStale(record)) {
+      await this.deleteChallengeFull(record.id);
+      return undefined;
     }
 
-    await this.storageAdapter.deleteChallenge(challenge.id);
-    await this.chat.deleteChannel(challenge.id);
-    await this.chat.deleteChannel(toChallengeChannel(challenge.id));
-    return undefined;
+    return this.hydrate(record);
   }
 
-  async getChallengesByUserId(userId: string): Promise<Challenge[]> {
+  async getChallengesByUserId(userId: string): Promise<ChallengeRecord[]> {
     return this.storageAdapter.getChallengesByUserId(userId);
   }
 
-  async getChallengesByType(challengeType: string): Promise<Challenge[]> {
+  async getChallengesByType(challengeType: string): Promise<ChallengeRecord[]> {
     return (await this.storageAdapter.listChallenges())
       .filter((c) => c.challengeType === challengeType && !this.isChallengeStale(c))
       .sort((a, b) => b.createdAt - a.createdAt);
@@ -245,13 +278,13 @@ export class ArenaEngine {
 
   async getPlayerIdentities(challengeId: string): Promise<Record<string, string> | null> {
     const challenge = await this.getChallenge(challengeId);
-    if (!challenge?.instance?.state?.gameEnded) return null;
-    return challenge.instance.state.playerIdentities;
+    if (!challenge?.state?.gameEnded) return null;
+    return challenge.state.playerIdentities;
   }
 
   async resolvePlayerIdentity(challengeId: string, userIndex: number): Promise<string | null> {
     const challenge = await this.getChallenge(challengeId);
-    return challenge?.instance?.state?.players?.[userIndex] ?? null;
+    return challenge?.state?.players?.[userIndex] ?? null;
   }
 
   async challengeSync(channel: string, viewer: string | null, index: number) {
