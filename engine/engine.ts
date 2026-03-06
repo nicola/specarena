@@ -5,7 +5,6 @@ import {
   ChallengeError,
   ChallengeFactory,
   ChallengeMetadata,
-  ChallengeOperator,
   ChallengeOperatorError,
   ChallengeRecord,
   Result,
@@ -26,7 +25,6 @@ export interface EngineOptions {
 
 export class ArenaEngine {
   private readonly storageAdapter: ArenaStorageAdapter;
-  private readonly operators: Map<string, ChallengeOperator> = new Map();
   readonly users: UserStorageAdapter;
   private readonly challengeFactories: Map<string, ChallengeFactory>;
   private readonly challengeOptions: Map<string, Record<string, unknown>>;
@@ -45,14 +43,14 @@ export class ArenaEngine {
       isChannelRevealed: async (channel) => {
         const challengeId = fromChallengeChannel(channel);
         if (!challengeId) return false;
-        const challenge = await this.getChallenge(challengeId);
-        return challenge?.state?.gameEnded ?? false;
+        const record = await this.storageAdapter.getChallenge(challengeId);
+        return record?.state?.gameEnded ?? false;
       },
       onChallengeEvent: async (challengeId, event) => {
         if (event.type !== "game_ended" || !this.scoring) return;
-        const challenge = await this.getChallenge(challengeId);
-        if (!challenge) return;
-        const result = ScoringModule.challengeToGameResult(challenge);
+        const record = await this.storageAdapter.getChallenge(challengeId);
+        if (!record) return;
+        const result = ScoringModule.challengeToGameResult(record);
         if (!result) return;
         this.scoring.recordGame(result)
           .catch((err) => console.error("Scoring recordGame failed:", err));
@@ -61,7 +59,6 @@ export class ArenaEngine {
   }
 
   async clearRuntimeState(): Promise<void> {
-    this.operators.clear();
     await Promise.all([
       this.storageAdapter.clearRuntimeState(),
       this.chat.clearRuntimeState(),
@@ -94,7 +91,6 @@ export class ArenaEngine {
   }
 
   private async deleteChallengeFull(id: string): Promise<void> {
-    this.operators.delete(id);
     await this.storageAdapter.deleteChallenge(id);
     await this.chat.deleteChannel(id);
     await this.chat.deleteChannel(toChallengeChannel(id));
@@ -133,34 +129,32 @@ export class ArenaEngine {
       challengeType,
       invites: [`inv_${crypto.randomUUID()}`, `inv_${crypto.randomUUID()}`],
       state: instance.state,
+      privateState: instance.serializePrivateState(),
       instance,
     };
 
-    this.operators.set(id, instance);
     await this.storageAdapter.setChallenge(challenge);
     return challenge;
   }
 
   async restoreChallenge(record: ChallengeRecord): Promise<Challenge> {
-    const factory = this.challengeFactories.get(record.challengeType);
-    if (!factory) {
-      throw new Error(`Unknown challenge type: ${record.challengeType}`);
-    }
+    const challenge = this.hydrate(record);
+    await this.storageAdapter.setChallenge(challenge);
+    return challenge;
+  }
 
+  private hydrate(record: ChallengeRecord): Challenge {
+    const factory = this.challengeFactories.get(record.challengeType);
+    if (!factory) throw new Error(`Unknown challenge type: ${record.challengeType}`);
     const options = this.challengeOptions.get(record.challengeType);
     const instance = factory(record.id, options, { messaging: this.chat });
     instance.restore(record.state, record.privateState);
-
-    const restored: ChallengeRecord = { ...record, state: instance.state };
-    this.operators.set(record.id, instance);
-    await this.storageAdapter.setChallenge(restored);
-    return { ...restored, instance };
+    return Object.assign(record, { instance }) as Challenge;
   }
 
-  private hydrate(record: ChallengeRecord): Challenge | undefined {
-    const instance = this.operators.get(record.id);
-    if (!instance) return undefined;
-    return Object.assign(record, { instance }) as Challenge;
+  private async persistChallenge(challenge: Challenge): Promise<void> {
+    challenge.privateState = challenge.instance.serializePrivateState();
+    await this.storageAdapter.setChallenge(challenge);
   }
 
   private isInviteFree(challenge: ChallengeRecord, invite: string): boolean {
@@ -191,15 +185,7 @@ export class ArenaEngine {
         message: `Challenge not found for invite: ${invite}`,
       };
     }
-    const challenge = this.hydrate(record);
-    if (!challenge) {
-      return {
-        success: false,
-        error: ChallengeError.NOT_FOUND,
-        message: `Challenge operator not found`,
-      };
-    }
-    return { success: true, data: challenge };
+    return { success: true, data: this.hydrate(record) };
   }
 
   async getChallenge(challengeId: string): Promise<Challenge | undefined> {
@@ -243,6 +229,8 @@ export class ArenaEngine {
       return { error: error instanceof Error ? error.message : String(error) };
     }
 
+    await this.persistChallenge(challenge);
+
     const metadata = this.getChallengeMetadata(challenge.challengeType);
     return {
       ChallengeID: challenge.id,
@@ -267,6 +255,7 @@ export class ArenaEngine {
         content,
         timestamp: Date.now(),
       });
+      await this.persistChallenge(challenge);
       return { ok: "Message sent" };
     } catch (error) {
       if (error instanceof ChallengeOperatorError) {
@@ -277,14 +266,14 @@ export class ArenaEngine {
   }
 
   async getPlayerIdentities(challengeId: string): Promise<Record<string, string> | null> {
-    const challenge = await this.getChallenge(challengeId);
-    if (!challenge?.state?.gameEnded) return null;
-    return challenge.state.playerIdentities;
+    const record = await this.storageAdapter.getChallenge(challengeId);
+    if (!record?.state?.gameEnded) return null;
+    return record.state.playerIdentities;
   }
 
   async resolvePlayerIdentity(challengeId: string, userIndex: number): Promise<string | null> {
-    const challenge = await this.getChallenge(challengeId);
-    return challenge?.state?.players?.[userIndex] ?? null;
+    const record = await this.storageAdapter.getChallenge(challengeId);
+    return record?.state?.players?.[userIndex] ?? null;
   }
 
   async challengeSync(channel: string, viewer: string | null, index: number) {

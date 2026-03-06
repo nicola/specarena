@@ -83,7 +83,7 @@ export abstract class BaseChallenge<TPrivateState = {}> implements ChallengeOper
   }
 
   restore(operatorState: ChallengeOperatorState, privateState?: unknown): void {
-    Object.assign(this.state, operatorState);
+    this.state = operatorState;
     if (privateState !== undefined) {
       this.restorePrivateState(privateState);
     }
