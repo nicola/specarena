@@ -1,6 +1,7 @@
 import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 
+import crypto from "node:crypto";
 import { generateKeyPair, generateSecret, hashPublicKey, sign } from "../auth/utils";
 import { createAuthApp } from "../auth/index";
 
@@ -25,12 +26,16 @@ async function request(method: string, path: string, body?: object, headers?: Re
   });
 }
 
-function signSend(privateKey: string, timestamp: number) {
-  return sign(privateKey, `arena:v1:send:${timestamp}`);
+function sha256hex(content: string): string {
+  return crypto.createHash("sha256").update(content).digest("hex");
 }
 
-function signChannelRead(privateKey: string, timestamp: number) {
-  return sign(privateKey, `arena:v1:channel-read:${timestamp}`);
+function signSend(privateKey: string, channel: string, content: string, timestamp: number) {
+  return sign(privateKey, `arena:v1:send:${channel}:${sha256hex(content)}:${timestamp}`);
+}
+
+function signChannelRead(privateKey: string, channel: string, timestamp: number) {
+  return sign(privateKey, `arena:v1:channel-read:${channel}:${timestamp}`);
 }
 
 async function createChallenge() {
@@ -62,10 +67,12 @@ describe("User channels — Ed25519 signed write", () => {
 
   it("POST to user channel with valid signature succeeds", async () => {
     const timestamp = Date.now();
-    const signature = signSend(keyA.privateKey, timestamp);
+    const channel = `user_${hashA}`;
+    const content = "hello user channel";
+    const signature = signSend(keyA.privateKey, channel, content, timestamp);
     const res = await request("POST", "/api/chat/send", {
-      channel: `user_${hashA}`,
-      content: "hello user channel",
+      channel,
+      content,
     }, {
       "Content-Type": "application/json",
     });
@@ -78,7 +85,7 @@ describe("User channels — Ed25519 signed write", () => {
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ channel: `user_${hashA}`, content: "hello user channel" }),
+        body: JSON.stringify({ channel, content }),
       }
     );
     assert.equal(res2.status, 200);
@@ -96,7 +103,7 @@ describe("User channels — Ed25519 signed write", () => {
 
   it("POST to user channel with expired timestamp returns 401", async () => {
     const staleTimestamp = Date.now() - 10 * 60 * 1000;
-    const signature = signSend(keyA.privateKey, staleTimestamp);
+    const signature = signSend(keyA.privateKey, `user_${hashA}`, "expired", staleTimestamp);
     const res = await app.request(
       `/api/chat/send?publicKey=${keyA.publicKey}&signature=${signature}&timestamp=${staleTimestamp}`,
       {
@@ -111,7 +118,7 @@ describe("User channels — Ed25519 signed write", () => {
   it("POST to user channel with wrong key returns 401", async () => {
     const timestamp = Date.now();
     // Sign with A's key but send B's publicKey
-    const signature = signSend(keyA.privateKey, timestamp);
+    const signature = signSend(keyA.privateKey, `user_${hashA}`, "wrong key", timestamp);
     const res = await app.request(
       `/api/chat/send?publicKey=${keyB.publicKey}&signature=${signature}&timestamp=${timestamp}`,
       {
@@ -128,23 +135,24 @@ describe("User channels — Ed25519 signed read", () => {
   beforeEach(async () => engine.clearRuntimeState());
 
   it("GET user channel as owner shows full messages", async () => {
+    const channel = `user_${hashA}`;
     // First send a message to the user channel
     const sendTs = Date.now();
-    const sendSig = signSend(keyA.privateKey, sendTs);
+    const sendSig = signSend(keyA.privateKey, channel, "secret msg", sendTs);
     await app.request(
       `/api/chat/send?publicKey=${keyA.publicKey}&signature=${sendSig}&timestamp=${sendTs}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ channel: `user_${hashA}`, content: "secret msg" }),
+        body: JSON.stringify({ channel, content: "secret msg" }),
       }
     );
 
     // Read as owner
     const readTs = Date.now();
-    const readSig = signChannelRead(keyA.privateKey, readTs);
+    const readSig = signChannelRead(keyA.privateKey, channel, readTs);
     const res = await app.request(
-      `/api/chat/sync?channel=user_${hashA}&index=0&publicKey=${keyA.publicKey}&signature=${readSig}&timestamp=${readTs}`
+      `/api/chat/sync?channel=${channel}&index=0&publicKey=${keyA.publicKey}&signature=${readSig}&timestamp=${readTs}`
     );
     assert.equal(res.status, 200);
     const data = await res.json();
@@ -154,23 +162,24 @@ describe("User channels — Ed25519 signed read", () => {
   });
 
   it("GET user channel as different user shows redacted messages", async () => {
+    const channel = `user_${hashA}`;
     // Send a message to A's channel
     const sendTs = Date.now();
-    const sendSig = signSend(keyA.privateKey, sendTs);
+    const sendSig = signSend(keyA.privateKey, channel, "private", sendTs);
     await app.request(
       `/api/chat/send?publicKey=${keyA.publicKey}&signature=${sendSig}&timestamp=${sendTs}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ channel: `user_${hashA}`, content: "private" }),
+        body: JSON.stringify({ channel, content: "private" }),
       }
     );
 
     // Read as B
     const readTs = Date.now();
-    const readSig = signChannelRead(keyB.privateKey, readTs);
+    const readSig = signChannelRead(keyB.privateKey, channel, readTs);
     const res = await app.request(
-      `/api/chat/sync?channel=user_${hashA}&index=0&publicKey=${keyB.publicKey}&signature=${readSig}&timestamp=${readTs}`
+      `/api/chat/sync?channel=${channel}&index=0&publicKey=${keyB.publicKey}&signature=${readSig}&timestamp=${readTs}`
     );
     assert.equal(res.status, 200);
     const data = await res.json();
@@ -182,15 +191,16 @@ describe("User channels — Ed25519 signed read", () => {
   });
 
   it("GET user channel without signature shows redacted messages", async () => {
+    const channel = `user_${hashA}`;
     // Send a message
     const sendTs = Date.now();
-    const sendSig = signSend(keyA.privateKey, sendTs);
+    const sendSig = signSend(keyA.privateKey, channel, "viewer test", sendTs);
     await app.request(
       `/api/chat/send?publicKey=${keyA.publicKey}&signature=${sendSig}&timestamp=${sendTs}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ channel: `user_${hashA}`, content: "viewer test" }),
+        body: JSON.stringify({ channel, content: "viewer test" }),
       }
     );
 
@@ -209,24 +219,26 @@ describe("User channels — cross-user messaging", () => {
   beforeEach(async () => engine.clearRuntimeState());
 
   it("user A sends invite to user B's channel, B can read it", async () => {
+    const channel = `user_${hashB}`;
+    const content = "hey B, join my game!";
     // A sends to B's channel
     const sendTs = Date.now();
-    const sendSig = signSend(keyA.privateKey, sendTs);
+    const sendSig = signSend(keyA.privateKey, channel, content, sendTs);
     const sendRes = await app.request(
       `/api/chat/send?publicKey=${keyA.publicKey}&signature=${sendSig}&timestamp=${sendTs}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ channel: `user_${hashB}`, content: "hey B, join my game!" }),
+        body: JSON.stringify({ channel, content }),
       }
     );
     assert.equal(sendRes.status, 200);
 
     // B reads their own channel
     const readTs = Date.now();
-    const readSig = signChannelRead(keyB.privateKey, readTs);
+    const readSig = signChannelRead(keyB.privateKey, channel, readTs);
     const res = await app.request(
-      `/api/chat/sync?channel=user_${hashB}&index=0&publicKey=${keyB.publicKey}&signature=${readSig}&timestamp=${readTs}`
+      `/api/chat/sync?channel=${channel}&index=0&publicKey=${keyB.publicKey}&signature=${readSig}&timestamp=${readTs}`
     );
     assert.equal(res.status, 200);
     const data = await res.json();
@@ -234,23 +246,24 @@ describe("User channels — cross-user messaging", () => {
   });
 
   it("user A cannot read user B's channel", async () => {
+    const channel = `user_${hashB}`;
     // Send to B's channel
     const sendTs = Date.now();
-    const sendSig = signSend(keyA.privateKey, sendTs);
+    const sendSig = signSend(keyA.privateKey, channel, "secret for B", sendTs);
     await app.request(
       `/api/chat/send?publicKey=${keyA.publicKey}&signature=${sendSig}&timestamp=${sendTs}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ channel: `user_${hashB}`, content: "secret for B" }),
+        body: JSON.stringify({ channel, content: "secret for B" }),
       }
     );
 
     // A tries to read B's channel
     const readTs = Date.now();
-    const readSig = signChannelRead(keyA.privateKey, readTs);
+    const readSig = signChannelRead(keyA.privateKey, channel, readTs);
     const res = await app.request(
-      `/api/chat/sync?channel=user_${hashB}&index=0&publicKey=${keyA.publicKey}&signature=${readSig}&timestamp=${readTs}`
+      `/api/chat/sync?channel=${channel}&index=0&publicKey=${keyA.publicKey}&signature=${readSig}&timestamp=${readTs}`
     );
     assert.equal(res.status, 200);
     const data = await res.json();
@@ -275,13 +288,15 @@ describe("Invites channel — open reads, signed writes", () => {
 
   it("POST to invites channel with valid signature succeeds", async () => {
     const timestamp = Date.now();
-    const signature = signSend(keyA.privateKey, timestamp);
+    const channel = "invites";
+    const content = "join my game: inv_abc";
+    const signature = signSend(keyA.privateKey, channel, content, timestamp);
     const res = await app.request(
       `/api/chat/send?publicKey=${keyA.publicKey}&signature=${signature}&timestamp=${timestamp}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ channel: "invites", content: "join my game: inv_abc" }),
+        body: JSON.stringify({ channel, content }),
       }
     );
     assert.equal(res.status, 200);
@@ -295,6 +310,57 @@ describe("Invites channel — open reads, signed writes", () => {
       content: "no auth invite",
     });
     assert.equal(res.status, 400);
+  });
+});
+
+describe("Ed25519 replay prevention", () => {
+  beforeEach(async () => engine.clearRuntimeState());
+
+  it("signature for channel A rejected on channel B (cross-channel replay)", async () => {
+    const timestamp = Date.now();
+    const channelA = `user_${hashA}`;
+    const channelB = `user_${hashB}`;
+    const content = "hello";
+    // Sign for channel A
+    const signature = signSend(keyA.privateKey, channelA, content, timestamp);
+    // Try to use it on channel B
+    const res = await app.request(
+      `/api/chat/send?publicKey=${keyA.publicKey}&signature=${signature}&timestamp=${timestamp}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ channel: channelB, content }),
+      }
+    );
+    assert.equal(res.status, 401);
+  });
+
+  it("signature for content A rejected when sending content B", async () => {
+    const timestamp = Date.now();
+    const channel = `user_${hashA}`;
+    // Sign for "hello"
+    const signature = signSend(keyA.privateKey, channel, "hello", timestamp);
+    // Try to send "goodbye" with that signature
+    const res = await app.request(
+      `/api/chat/send?publicKey=${keyA.publicKey}&signature=${signature}&timestamp=${timestamp}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ channel, content: "goodbye" }),
+      }
+    );
+    assert.equal(res.status, 401);
+  });
+
+  it("read signature for channel A rejected on channel B", async () => {
+    const timestamp = Date.now();
+    const channelA = `user_${hashA}`;
+    const channelB = `user_${hashB}`;
+    const readSig = signChannelRead(keyA.privateKey, channelA, timestamp);
+    const res = await app.request(
+      `/api/chat/sync?channel=${channelB}&index=0&publicKey=${keyA.publicKey}&signature=${readSig}&timestamp=${timestamp}`
+    );
+    assert.equal(res.status, 401);
   });
 });
 

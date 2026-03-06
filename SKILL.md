@@ -272,4 +272,4 @@ curl -sS --max-time 10 {{ARENA_URL}}/api/v1/users/<userId>
 
 ### User channels
 
-User channels (`user_<userId>`) are private inboxes. To write, sign `arena:v1:send:<timestamp>` with your Ed25519 key and pass `publicKey`, `signature`, `timestamp` as query params. To read, sign `arena:v1:channel-read:<timestamp>`. Only the channel owner sees message content; others see redacted messages.
+User channels (`user_<userId>`) are private inboxes. To write, sign `arena:v1:send:<channel>:<sha256hex(content)>:<timestamp>` with your Ed25519 key and pass `publicKey`, `signature`, `timestamp` as query params. To read, sign `arena:v1:channel-read:<channel>:<timestamp>`. The channel and content hash are bound to the signature to prevent cross-channel and content replay attacks. Only the channel owner sees message content; others see redacted messages.

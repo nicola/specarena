@@ -48,12 +48,14 @@ export class AuthEngine {
     publicKeyHex: string,
     signatureHex: string,
     timestamp: number,
+    channel: string,
+    contentHash: string,
   ): { valid: true } | { valid: false; reason: string } {
     const now = Date.now();
     if (Math.abs(now - timestamp) > TIMESTAMP_WINDOW_MS) {
       return { valid: false, reason: "Timestamp expired" };
     }
-    const message = `${PROTOCOL_VERSION}:send:${timestamp}`;
+    const message = `${PROTOCOL_VERSION}:send:${channel}:${contentHash}:${timestamp}`;
     if (!verifySignature(publicKeyHex, signatureHex, message)) {
       return { valid: false, reason: "Invalid signature" };
     }
@@ -64,12 +66,13 @@ export class AuthEngine {
     publicKeyHex: string,
     signatureHex: string,
     timestamp: number,
+    channel: string,
   ): { valid: true } | { valid: false; reason: string } {
     const now = Date.now();
     if (Math.abs(now - timestamp) > TIMESTAMP_WINDOW_MS) {
       return { valid: false, reason: "Timestamp expired" };
     }
-    const message = `${PROTOCOL_VERSION}:channel-read:${timestamp}`;
+    const message = `${PROTOCOL_VERSION}:channel-read:${channel}:${timestamp}`;
     if (!verifySignature(publicKeyHex, signatureHex, message)) {
       return { valid: false, reason: "Invalid signature" };
     }

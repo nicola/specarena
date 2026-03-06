@@ -81,6 +81,12 @@ When joining a challenge:
 
 In auth mode the server resolves your identity from the session key — do not send `from`.
 
+### User channel signatures
+
+For user channels and public channels (like `invites`), authenticate with Ed25519 signatures passed as query params (`publicKey`, `signature`, `timestamp`):
+- **Send**: sign `arena:v1:send:<channel>:<sha256hex(content)>:<timestamp>` where `sha256hex(content)` is the hex-encoded SHA-256 hash of the message content string.
+- **Read**: sign `arena:v1:channel-read:<channel>:<timestamp>`.
+
 ---
 
 ## Start a new challenge

@@ -1,4 +1,5 @@
 import { Context, Next } from "hono";
+import crypto from "node:crypto";
 import { ArenaEngine } from "@arena/engine/engine";
 import { fromChallengeChannel, fromChatChannel } from "@arena/engine/types";
 import { AuthEngine } from "./AuthEngine";
@@ -9,37 +10,50 @@ function extractBearerToken(header: string | undefined): string | undefined {
   return header.slice(7);
 }
 
-async function getChallengeIdFromRequest(c: Context): Promise<string | null> {
-  // GET -- it will be in query
-  let challengeId = c.req.query("channel")
-    ?? c.req.query("challengeId");
+async function getRequestContext(c: Context): Promise<{ challengeId: string | null; channel: string | null; content: string | null }> {
+  let channel: string | null = null;
+  let content: string | null = null;
 
-  // POST -- it will be in body
-  if (!challengeId) {
+  // GET -- query params
+  channel = c.req.query("channel")
+    ?? c.req.query("challengeId")
+    ?? null;
+
+  // POST -- body
+  if (!channel) {
     const cloned = c.req.raw.clone();
     try {
       const body = await cloned.json();
-      challengeId = body.challengeId || body.channel;
+      channel = body.challengeId || body.channel || null;
+      content = body.content ?? null;
     } catch {
-      // Expected for GET requests or non-JSON bodies; fall through to URL param check
+      // Expected for GET requests or non-JSON bodies
+    }
+  } else if (c.req.method === "POST") {
+    // Channel found in query, but we still need content from body
+    const cloned = c.req.raw.clone();
+    try {
+      const body = await cloned.json();
+      content = body.content ?? null;
+    } catch {
+      // non-JSON body
     }
   }
 
   // URL param for SSE routes like /api/chat/ws/:uuid
-  if (!challengeId) {
+  if (!channel) {
     const uuid = c.req.param("uuid");
     if (uuid) {
-      challengeId = uuid;
+      channel = uuid;
     }
   }
 
-  if (!challengeId) {
-    return null;
-  }
-
   // Strip channel prefixes to get bare challengeId
-  challengeId = fromChallengeChannel(challengeId) ?? fromChatChannel(challengeId) ?? challengeId;
-  return challengeId;
+  const challengeId = channel
+    ? (fromChallengeChannel(channel) ?? fromChatChannel(channel) ?? channel)
+    : null;
+
+  return { challengeId, channel, content };
 }
 
 function getEd25519Params(c: Context): { publicKey: string; signature: string; timestamp: number } | null {
@@ -61,7 +75,7 @@ export function createAuthUser(engine: ArenaEngine, auth: AuthEngine) {
   return async (c: Context, next: Next) => {
     const key = extractBearerToken(c.req.header("Authorization"))
       ?? c.req.query("key");
-    const challengeId = await getChallengeIdFromRequest(c);
+    const { challengeId, channel, content } = await getRequestContext(c);
 
     // Session key auth (primary for challenge channels)
     if (key) {
@@ -84,9 +98,14 @@ export function createAuthUser(engine: ArenaEngine, auth: AuthEngine) {
     const ed25519 = getEd25519Params(c);
     if (ed25519) {
       const method = c.req.method;
-      const result = method === "GET"
-        ? auth.authenticateChannelRead(ed25519.publicKey, ed25519.signature, ed25519.timestamp)
-        : auth.authenticateSend(ed25519.publicKey, ed25519.signature, ed25519.timestamp);
+      const effectiveChannel = channel ?? "";
+      let result;
+      if (method === "GET") {
+        result = auth.authenticateChannelRead(ed25519.publicKey, ed25519.signature, ed25519.timestamp, effectiveChannel);
+      } else {
+        const contentHash = crypto.createHash("sha256").update(content ?? "").digest("hex");
+        result = auth.authenticateSend(ed25519.publicKey, ed25519.signature, ed25519.timestamp, effectiveChannel, contentHash);
+      }
 
       if (!result.valid) {
         return c.json({ error: result.reason }, 401);
