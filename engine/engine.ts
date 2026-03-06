@@ -128,7 +128,7 @@ export class ArenaEngine {
       createdAt: Date.now(),
       challengeType,
       invites: [`inv_${crypto.randomUUID()}`, `inv_${crypto.randomUUID()}`],
-      state: instance.save(),
+      state: instance.serialize(),
       instance,
     };
 
@@ -152,7 +152,7 @@ export class ArenaEngine {
   }
 
   private async persistChallenge(challenge: Challenge): Promise<void> {
-    challenge.state = challenge.instance.save();
+    challenge.state = challenge.instance.serialize();
     await this.storageAdapter.setChallenge(challenge);
   }
 

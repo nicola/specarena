@@ -33,7 +33,7 @@ export interface ChallengeOperatorState {
 export interface ChallengeOperator {
   join(invite: string, userId?: string): Promise<void>;
   message(message: ChatMessage): Promise<void>;
-  save(): ChallengeOperatorState;
+  serialize(): ChallengeOperatorState;
   restore(state: ChallengeOperatorState): void;
 }
 
