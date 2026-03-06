@@ -30,7 +30,6 @@ export interface ChallengeOperatorState {
 }
 
 export interface ChallengeOperator {
-  readonly playerCount: number;
   join(invite: string, userId?: string): Promise<void>;
   message(message: ChatMessage): Promise<void>;
   state: ChallengeOperatorState;
@@ -53,12 +52,7 @@ export interface Challenge {
   privateState?: unknown;
 }
 
-export interface ActiveChallenge {
-  id: string;
-  name: string;
-  createdAt: number;
-  challengeType: string;
-  invites: string[];
+export interface ActiveChallenge extends Challenge {
   instance: ChallengeOperator;
 }
 

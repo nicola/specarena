@@ -14,7 +14,6 @@ function createRestorableChallenge(
   _context?: ChallengeFactoryContext,
 ): ChallengeOperator {
   return {
-    playerCount: 2,
     state: {
       gameStarted: false,
       gameEnded: false,

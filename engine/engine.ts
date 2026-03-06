@@ -97,22 +97,25 @@ export class ArenaEngine {
     }
 
     const options = this.challengeOptions.get(challenge.challengeType);
+    const state = this.cloneChallengeState(challenge.state);
+    const privateState = challenge.privateState === undefined
+      ? undefined
+      : this.clonePrivateState(challenge.privateState);
     const instance = factory(challenge.id, options, { messaging: this.chat });
-    instance.state = this.cloneChallengeState(challenge.state);
+    instance.state = state;
 
-    if (challenge.privateState !== undefined) {
+    if (privateState !== undefined) {
       if (!instance.restoreState) {
         throw new Error(`Challenge type ${challenge.challengeType} cannot restore private state.`);
       }
-      instance.restoreState(this.clonePrivateState(challenge.privateState));
+      instance.restoreState(privateState);
     }
 
     return {
-      id: challenge.id,
-      name: challenge.name,
-      createdAt: challenge.createdAt,
-      challengeType: challenge.challengeType,
+      ...challenge,
       invites: [...challenge.invites],
+      state,
+      privateState,
       instance,
     };
   }
@@ -125,7 +128,7 @@ export class ArenaEngine {
       createdAt: runtime.createdAt,
       challengeType: runtime.challengeType,
       invites: [...runtime.invites],
-      playerCount: runtime.instance.playerCount,
+      playerCount: runtime.playerCount,
       state: this.cloneChallengeState(runtime.instance.state),
       privateState: privateState === undefined ? undefined : structuredClone(privateState),
     };
@@ -192,6 +195,8 @@ export class ArenaEngine {
 
     const options = this.challengeOptions.get(challengeType);
     const instance = factory(id, options, { messaging: this.chat });
+    const state = this.cloneChallengeState(instance.state);
+    instance.state = state;
 
     const runtime: ActiveChallenge = {
       id,
@@ -199,6 +204,9 @@ export class ArenaEngine {
       createdAt: Date.now(),
       challengeType,
       invites: [`inv_${crypto.randomUUID()}`, `inv_${crypto.randomUUID()}`],
+      playerCount: state.scores.length,
+      state,
+      privateState: undefined,
       instance,
     };
 
