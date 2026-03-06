@@ -1,4 +1,4 @@
-import { ChallengeOperatorEvent, ChatMessage, toChallengeChannel } from "../types";
+import { ChallengeOperatorEvent, ChatMessage, toChallengeChannel, toChatChannel, fromUserChannel } from "../types";
 import { ChatStorageAdapter, InMemoryChatStorageAdapter } from "../storage/InMemoryChatStorageAdapter";
 
 export interface ChatEngineOptions {
@@ -54,6 +54,16 @@ export class ChatEngine {
 
   private async syncChannel(channel: string, viewer: string | null, index: number) {
     const messages = await this.getMessagesForChannel(channel);
+
+    // User channels: only the owner sees content; everyone else gets redacted
+    const userChannelOwner = fromUserChannel(channel);
+    if (userChannelOwner) {
+      const result = messages
+        .filter((msg) => msg.index !== undefined && msg.index >= index)
+        .map((msg) => (viewer === userChannelOwner ? msg : this.redactMessage(msg)));
+      return { messages: result, count: result.length };
+    }
+
     const revealed = (await this.isChannelRevealed?.(channel)) ?? false;
     const result = messages
       .filter((msg) => msg.index !== undefined && msg.index >= index)
@@ -91,11 +101,16 @@ export class ChatEngine {
       return;
     }
 
+    const userChannelOwner = fromUserChannel(channel);
     const deadSubscribers: ChannelSubscriber[] = [];
 
     subscribers.forEach((sub) => {
       let msgToSend = message;
-      if (message.to) {
+      if (userChannelOwner) {
+        if (sub.viewer !== userChannelOwner) {
+          msgToSend = this.redactMessage(message);
+        }
+      } else if (message.to) {
         const viewer = sub.viewer;
         if (!viewer || (message.to !== viewer && message.from !== viewer)) {
           msgToSend = this.redactMessage(message);
@@ -139,7 +154,7 @@ export class ChatEngine {
   }
 
   broadcastChallengeEvent(challengeId: string, event: ChallengeOperatorEvent): void {
-    this.broadcastEvent(challengeId, event);
+    this.broadcastEvent(toChatChannel(challengeId), event);
     this.broadcastEvent(toChallengeChannel(challengeId), event);
     this.onChallengeEvent?.(challengeId, event);
   }

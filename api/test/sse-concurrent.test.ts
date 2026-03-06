@@ -216,10 +216,10 @@ describe("Concurrent SSE streams — engine level (no auth)", () => {
     await request("POST", "/api/arena/join", { invite: c2.invites[0] });
     await request("POST", "/api/arena/join", { invite: c2.invites[1] });
 
-    // Simulate two challenge pages: each opens bare + prefixed streams (4 total)
-    const v1bare = await openSSE(c1.id);
+    // Simulate two challenge pages: each opens chat + prefixed streams (4 total)
+    const v1bare = await openSSE(`chat_${c1.id}`);
     const v1pref = await openSSE(`challenge_${c1.id}`);
-    const v2bare = await openSSE(c2.id);
+    const v2bare = await openSSE(`chat_${c2.id}`);
     const v2pref = await openSSE(`challenge_${c2.id}`);
 
     try {
@@ -292,7 +292,7 @@ describe("Concurrent SSE streams — engine level (no auth)", () => {
     await request("POST", "/api/arena/join", { invite: invites[0] });
     await request("POST", "/api/arena/join", { invite: invites[1] });
 
-    const vBare = await openSSE(id);
+    const vBare = await openSSE(`chat_${id}`);
     const vPrefixed = await openSSE(`challenge_${id}`);
 
     try {

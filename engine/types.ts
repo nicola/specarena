@@ -1,8 +1,22 @@
+export const CHAT_CHANNEL_PREFIX = "chat_";
+export const toChatChannel = (id: string) => `${CHAT_CHANNEL_PREFIX}${id}`;
+export const fromChatChannel = (channel: string): string | null =>
+  channel.startsWith(CHAT_CHANNEL_PREFIX)
+    ? channel.slice(CHAT_CHANNEL_PREFIX.length)
+    : null;
+
 export const CHALLENGE_CHANNEL_PREFIX = "challenge_";
 export const toChallengeChannel = (id: string) => `${CHALLENGE_CHANNEL_PREFIX}${id}`;
 export const fromChallengeChannel = (channel: string): string | null =>
   channel.startsWith(CHALLENGE_CHANNEL_PREFIX)
     ? channel.slice(CHALLENGE_CHANNEL_PREFIX.length)
+    : null;
+
+export const USER_CHANNEL_PREFIX = "user_";
+export const toUserChannel = (userId: string) => `${USER_CHANNEL_PREFIX}${userId}`;
+export const fromUserChannel = (channel: string): string | null =>
+  channel.startsWith(USER_CHANNEL_PREFIX)
+    ? channel.slice(USER_CHANNEL_PREFIX.length)
     : null;
 
 export interface ChatMessage {

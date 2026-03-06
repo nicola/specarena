@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { ArenaEngine, defaultEngine } from "@arena/engine/engine";
-import { fromChallengeChannel } from "@arena/engine/types";
+import { fromChallengeChannel, fromChatChannel } from "@arena/engine/types";
 import { ChatSendSchema, SyncSchema } from "../schemas";
 import { getIdentity, IdentityEnv } from "./identity";
 
@@ -66,7 +66,7 @@ export function createChatRoutes(engine: ArenaEngine = defaultEngine) {
         controller.enqueue(new TextEncoder().encode(`data: ${initialData}\n\n`));
 
         // If the game has already ended, send game_ended event with state + profiles
-        const challengeId = fromChallengeChannel(uuid) ?? uuid;
+        const challengeId = fromChallengeChannel(uuid) ?? fromChatChannel(uuid) ?? uuid;
         const challenge = await engine.getChallenge(challengeId);
         if (challenge?.instance?.state?.gameEnded) {
           const identities = challenge.instance.state.playerIdentities ?? {};

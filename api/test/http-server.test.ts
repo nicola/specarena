@@ -133,14 +133,14 @@ describe("HTTP server — REST routes don't collide with MCP wildcards", () => {
 
     // Chat between players (this was the 500 bug)
     const chatRes = await req("POST", "/api/chat/send", {
-      channel: id,
+      channel: `chat_${id}`,
       from: invites[0],
       content: "Hey opponent!",
     });
     assert.equal(chatRes.status, 200);
 
     // Read chat
-    const syncRes = await req("GET", `/api/chat/sync?channel=${id}&from=${invites[0]}&index=0`);
+    const syncRes = await req("GET", `/api/chat/sync?channel=chat_${id}&from=${invites[0]}&index=0`);
     assert.equal(syncRes.status, 200);
     const syncData = await syncRes.json();
     assert.ok(syncData.messages.some((m: any) => m.content === "Hey opponent!"));
@@ -231,7 +231,7 @@ describe("HTTP server — /api/v1 routes mirror /api", () => {
 
     // Chat via v1
     const chatRes = await req("POST", "/api/v1/chat/send", {
-      channel: id, from: invites[0], content: "v1 chat",
+      channel: `chat_${id}`, from: invites[0], content: "v1 chat",
     });
     assert.equal(chatRes.status, 200);
 

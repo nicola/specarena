@@ -676,7 +676,7 @@ describe("Player identities — stored after authenticated join", () => {
       { challengeId: id, messageType: "guess", content: "100" });
 
     // Late viewer connects and receives game_ended
-    const res = await request("GET", `/api/chat/ws/${id}`);
+    const res = await request("GET", `/api/chat/ws/chat_${id}`);
     const reader = res.body!.getReader();
     const buf = { s: "" };
 

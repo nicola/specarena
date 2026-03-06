@@ -1,7 +1,8 @@
 import { Context, Next } from "hono";
 import { ArenaEngine } from "@arena/engine/engine";
-import { fromChallengeChannel } from "@arena/engine/types";
+import { fromChallengeChannel, fromChatChannel } from "@arena/engine/types";
 import { AuthEngine } from "./AuthEngine";
+import { hashPublicKey } from "./utils";
 
 function extractBearerToken(header: string | undefined): string | undefined {
   if (!header?.startsWith("Bearer ")) return undefined;
@@ -36,8 +37,25 @@ async function getChallengeIdFromRequest(c: Context): Promise<string | null> {
     return null;
   }
 
-  challengeId = fromChallengeChannel(challengeId) ?? challengeId;
+  // Strip channel prefixes to get bare challengeId
+  challengeId = fromChallengeChannel(challengeId) ?? fromChatChannel(challengeId) ?? challengeId;
   return challengeId;
+}
+
+function getEd25519Params(c: Context): { publicKey: string; signature: string; timestamp: number } | null {
+  // Try query params first, then body (body was already parsed upstream)
+  const publicKey = c.req.query("publicKey");
+  const signature = c.req.query("signature");
+  const timestampStr = c.req.query("timestamp");
+
+  if (publicKey && signature && timestampStr) {
+    const timestamp = Number(timestampStr);
+    if (!isNaN(timestamp)) {
+      return { publicKey, signature, timestamp };
+    }
+  }
+
+  return null;
 }
 
 export function createAuthUser(engine: ArenaEngine, auth: AuthEngine) {
@@ -46,23 +64,41 @@ export function createAuthUser(engine: ArenaEngine, auth: AuthEngine) {
       ?? c.req.query("key");
     const challengeId = await getChallengeIdFromRequest(c);
 
-    if (!key) {
-      c.set("identity", "viewer");
+    // Session key auth (primary for challenge channels)
+    if (key) {
+      if (!challengeId) {
+        c.set("identity", "viewer");
+        return next();
+      }
+
+      const validation = auth.validateSessionKey(key, challengeId);
+      if (!validation.valid) {
+        return c.json({ error: "Authentication required" }, 401);
+      }
+
+      const identity = await engine.resolvePlayerIdentity(challengeId, validation.userIndex);
+      c.set("identity", identity ?? "viewer");
       return next();
     }
 
-    if (!challengeId) {
-      c.set("identity", "viewer");
+    // Ed25519 signature auth (for user channels, invites channel, etc.)
+    const ed25519 = getEd25519Params(c);
+    if (ed25519) {
+      const method = c.req.method;
+      const result = method === "GET"
+        ? auth.authenticateChannelRead(ed25519.publicKey, ed25519.signature, ed25519.timestamp)
+        : auth.authenticateSend(ed25519.publicKey, ed25519.signature, ed25519.timestamp);
+
+      if (!result.valid) {
+        return c.json({ error: result.reason }, 401);
+      }
+
+      const userId = hashPublicKey(ed25519.publicKey);
+      c.set("identity", userId);
       return next();
     }
 
-    const validation = auth.validateSessionKey(key, challengeId);
-    if (!validation.valid) {
-      return c.json({ error: "Authentication required" }, 401);
-    }
-
-    const identity = await engine.resolvePlayerIdentity(challengeId, validation.userIndex);
-    c.set("identity", identity ?? "viewer");
+    c.set("identity", "viewer");
     return next();
   };
 }

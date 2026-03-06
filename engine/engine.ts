@@ -9,6 +9,7 @@ import {
   Result,
   fromChallengeChannel,
   toChallengeChannel,
+  toChatChannel,
 } from "./types";
 import { ChatEngine, createChatEngine } from "./chat/ChatEngine";
 import { ArenaStorageAdapter, InMemoryArenaStorageAdapter } from "./storage/InMemoryArenaStorageAdapter";
@@ -100,7 +101,7 @@ export class ArenaEngine {
     await Promise.all(
       stale.map(async (challenge) => {
         await this.storageAdapter.deleteChallenge(challenge.id);
-        await this.chat.deleteChannel(challenge.id);
+        await this.chat.deleteChannel(toChatChannel(challenge.id));
         await this.chat.deleteChannel(toChallengeChannel(challenge.id));
       }),
     );
