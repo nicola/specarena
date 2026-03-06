@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { ArenaEngine, defaultEngine } from "@arena/engine/engine";
 import { UserUpdateSchema } from "../schemas";
 import { getIdentity, IdentityEnv } from "./identity";
-import { collectUserProfiles } from "./challenges";
+import { collectUserProfiles, parsePagination, paginate } from "./challenges";
 
 export function createUserRoutes(engine: ArenaEngine = defaultEngine) {
   const app = new Hono<IdentityEnv>();
@@ -42,12 +42,10 @@ export function createUserRoutes(engine: ArenaEngine = defaultEngine) {
   // (must be registered before the :userId catch-all below)
   app.get("/api/users/:userId/challenges", async (c) => {
     const userId = c.req.param("userId");
-    const limit = Math.max(1, parseInt(c.req.query("limit") || "50", 10) || 50);
-    const offset = Math.max(0, parseInt(c.req.query("offset") || "0", 10) || 0);
+    const { limit, offset } = parsePagination(c);
     const all = await engine.getChallengesByUserId(userId);
     const challenges = all.filter((c) => c.state?.gameEnded);
-    const total = challenges.length;
-    const sliced = challenges.slice(offset, offset + limit);
+    const { sliced, total } = paginate(challenges, limit, offset);
     const profiles = await collectUserProfiles(engine, sliced);
     return c.json({ challenges: sliced, total, limit, offset, profiles });
   });

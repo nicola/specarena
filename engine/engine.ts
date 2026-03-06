@@ -148,7 +148,7 @@ export class ArenaEngine {
     const options = this.challengeOptions.get(record.challengeType);
     const instance = factory(record.id, options, { messaging: this.chat });
     instance.restore(record.state);
-    return Object.assign(record, { instance }) as Challenge;
+    return { ...record, instance };
   }
 
   private async persistChallenge(challenge: Challenge): Promise<void> {
@@ -160,19 +160,23 @@ export class ArenaEngine {
     return !challenge.state.players.includes(invite);
   }
 
-  async getInvite(invite: string): Promise<Result<Challenge>> {
-    const result = await this.getChallengeFromInvite(invite);
-    if (!result.success) {
-      return result;
+  async getInvite(invite: string): Promise<Result<ChallengeRecord>> {
+    const record = await this.storageAdapter.getChallengeFromInvite(invite);
+    if (!record) {
+      return {
+        success: false,
+        error: ChallengeError.NOT_FOUND,
+        message: `Challenge not found for invite: ${invite}`,
+      };
     }
-    if (!this.isInviteFree(result.data, invite)) {
+    if (!this.isInviteFree(record, invite)) {
       return {
         success: false,
         error: ChallengeError.INVITE_ALREADY_USED,
         message: `Invite already used: ${invite}`,
       };
     }
-    return result;
+    return { success: true, data: record };
   }
 
   async getChallengeFromInvite(invite: string): Promise<Result<Challenge>> {

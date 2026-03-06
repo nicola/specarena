@@ -63,6 +63,12 @@ export class InMemoryArenaStorageAdapter implements ArenaStorageAdapter {
   }
 
   async deleteChallenge(challengeId: string): Promise<void> {
+    const prev = this.challengesById[challengeId];
+    if (prev) {
+      for (const invite of prev.invites) {
+        delete this.inviteToChallengeId[invite];
+      }
+    }
     delete this.challengesById[challengeId];
   }
 }

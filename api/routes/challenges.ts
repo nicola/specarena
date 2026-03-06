@@ -1,7 +1,20 @@
 import { Hono } from "hono";
+import type { Context } from "hono";
 import { ArenaEngine, defaultEngine } from "@arena/engine/engine";
 import type { ChallengeRecord } from "@arena/engine/types";
 import type { UserProfile } from "@arena/engine/users";
+
+export function parsePagination(c: Context, defaultLimit = 50) {
+  const limit = Math.max(1, parseInt(c.req.query("limit") || String(defaultLimit), 10) || defaultLimit);
+  const offset = Math.max(0, parseInt(c.req.query("offset") || "0", 10) || 0);
+  return { limit, offset };
+}
+
+export function paginate<T>(items: T[], limit: number, offset: number) {
+  const total = items.length;
+  const sliced = items.slice(offset, offset + limit);
+  return { sliced, total, limit, offset };
+}
 
 /** Collect all user profiles referenced in playerIdentities across challenges. */
 export async function collectUserProfiles(
@@ -40,11 +53,9 @@ export function createChallengeRoutes(engine: ArenaEngine = defaultEngine) {
 
   // GET /api/challenges - list all challenges
   app.get("/api/challenges", async (c) => {
-    const limit = Math.max(1, parseInt(c.req.query("limit") || "50", 10) || 50);
-    const offset = Math.max(0, parseInt(c.req.query("offset") || "0", 10) || 0);
+    const { limit, offset } = parsePagination(c);
     const challengesList = await engine.listChallenges();
-    const total = challengesList.length;
-    const sliced = challengesList.slice(offset, offset + limit);
+    const { sliced, total } = paginate(challengesList, limit, offset);
     const profiles = await collectUserProfiles(engine, sliced);
     return c.json({ challenges: sliced, total, limit, offset, profiles });
   });
@@ -53,11 +64,9 @@ export function createChallengeRoutes(engine: ArenaEngine = defaultEngine) {
   app.get("/api/challenges/:name", async (c) => {
     const name = c.req.param("name");
     try {
-      const limit = Math.max(1, parseInt(c.req.query("limit") || "50", 10) || 50);
-      const offset = Math.max(0, parseInt(c.req.query("offset") || "0", 10) || 0);
+      const { limit, offset } = parsePagination(c);
       const challengesList = await engine.getChallengesByType(name);
-      const total = challengesList.length;
-      const sliced = challengesList.slice(offset, offset + limit);
+      const { sliced, total } = paginate(challengesList, limit, offset);
       const profiles = await collectUserProfiles(engine, sliced);
       return c.json({ challenges: sliced, total, limit, offset, profiles });
     } catch (error) {
