@@ -128,8 +128,7 @@ export class ArenaEngine {
       createdAt: Date.now(),
       challengeType,
       invites: [`inv_${crypto.randomUUID()}`, `inv_${crypto.randomUUID()}`],
-      state: instance.state,
-      privateState: instance.serializePrivateState(),
+      state: instance.save(),
       instance,
     };
 
@@ -148,12 +147,12 @@ export class ArenaEngine {
     if (!factory) throw new Error(`Unknown challenge type: ${record.challengeType}`);
     const options = this.challengeOptions.get(record.challengeType);
     const instance = factory(record.id, options, { messaging: this.chat });
-    instance.restore(record.state, record.privateState);
+    instance.restore(record.state);
     return Object.assign(record, { instance }) as Challenge;
   }
 
   private async persistChallenge(challenge: Challenge): Promise<void> {
-    challenge.privateState = challenge.instance.serializePrivateState();
+    challenge.state = challenge.instance.save();
     await this.storageAdapter.setChallenge(challenge);
   }
 

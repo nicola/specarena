@@ -27,14 +27,14 @@ export interface ChallengeOperatorState {
   players: string[];
   playerIdentities: Record<string, string>; // invite → userId
   attributions?: Attribution[];
+  privateState?: unknown;
 }
 
 export interface ChallengeOperator {
   join(invite: string, userId?: string): Promise<void>;
   message(message: ChatMessage): Promise<void>;
-  state: ChallengeOperatorState;
-  serializePrivateState(): unknown;
-  restore(operatorState: ChallengeOperatorState, privateState?: unknown): void;
+  save(): ChallengeOperatorState;
+  restore(state: ChallengeOperatorState): void;
 }
 
 export enum ChallengeType {
@@ -48,7 +48,6 @@ export interface ChallengeRecord {
   challengeType: string;
   invites: string[];
   state: ChallengeOperatorState;
-  privateState?: unknown;
 }
 
 export interface Challenge extends ChallengeRecord {
