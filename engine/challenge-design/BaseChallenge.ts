@@ -16,31 +16,26 @@ export abstract class BaseChallenge<TGameState = {}> implements ChallengeOperato
   readonly playerCount: number;
   protected messaging: ChallengeMessaging;
   state: ChallengeOperatorState;
-  gameState!: TGameState;
+  gameState: TGameState;
   private handlers = new Map<string, (msg: ChatMessage, playerIndex: number) => void | Promise<void>>();
 
   constructor(
     challengeId: string,
     playerCount: number,
-    gameState?: TGameState,
+    gameState: TGameState,
     messaging?: ChallengeMessaging,
-    initialState?: ChallengeOperatorState,
   ) {
     this.challengeId = challengeId;
     this.playerCount = playerCount;
     this.messaging = messaging ?? defaultChatEngine;
-    this.state = initialState
-      ? structuredClone(initialState)
-      : {
-        gameStarted: false,
-        gameEnded: false,
-        scores: Array.from({ length: playerCount }, (): Score => ({ security: 0, utility: 0 })),
-        players: [],
-        playerIdentities: {},
-      };
-    if (gameState !== undefined) {
-      this.gameState = gameState;
-    }
+    this.state = {
+      gameStarted: false,
+      gameEnded: false,
+      scores: Array.from({ length: playerCount }, (): Score => ({ security: 0, utility: 0 })),
+      players: [],
+      playerIdentities: {},
+    };
+    this.gameState = gameState;
   }
 
   // --- Public interface (ChallengeOperator) ---
@@ -137,36 +132,21 @@ export abstract class BaseChallenge<TGameState = {}> implements ChallengeOperato
     });
   }
 
-  // Rehydrate game-specific state from a stored snapshot. Challenges that
-  // use Set/Map/Date or other richer runtime types can override this and then
-  // call `restoreGameState(snapshot)` from their constructor.
+  // Rehydrate game-specific state from stored data. Challenges that use
+  // Set/Map/Date or other richer runtime types can override this to rebuild
+  // their richer runtime shape from stored JSON-like data.
   protected loadState(savedState: unknown): TGameState {
     return structuredClone(savedState) as TGameState;
   }
 
-  protected restoreGameState(savedState: unknown): void {
+  restoreState(savedState: unknown): void {
     this.gameState = this.loadState(savedState);
-  }
-
-  protected initializeGameState(createInitialState: () => TGameState, savedState?: unknown): void {
-    if (savedState !== undefined) {
-      this.restoreGameState(savedState);
-      return;
-    }
-    this.gameState = createInitialState();
-  }
-
-  private getInitializedGameState(): TGameState {
-    if (this.gameState === undefined) {
-      throw new Error("Challenge gameState must be initialized before the challenge instance is returned.");
-    }
-    return this.gameState;
   }
 
   // Persist game-specific state. The default is suitable for plain JSON-ish
   // state; challenges with richer runtime types should override both
   // `loadState` and `saveState`.
   saveState(): unknown {
-    return structuredClone(this.getInitializedGameState());
+    return structuredClone(this.gameState);
   }
 }

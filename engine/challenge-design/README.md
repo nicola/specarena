@@ -12,18 +12,15 @@ This directory contains the base class for building Arena challenges. Extend `Ba
 constructor(
   challengeId: string,
   playerCount: number,
-  gameState?: TGameState,
+  gameState: TGameState,
   messaging?: ChallengeMessaging,
-  initialState?: ChallengeOperatorState,
 )
 ```
 
 - `challengeId` — the unique challenge instance ID
 - `playerCount` — how many players are needed to start the game
-- `gameState` — optional initial state object (accessible via `this.gameState`)
+- `gameState` — your fresh game state object (accessible via `this.gameState`)
 - `messaging` — optional messaging system injected by the engine (enables `broadcastChallengeEvent` for scoring integration)
-
-If your initial state depends on a stored snapshot, you can omit `gameState` in `super(...)` and call `this.initializeGameState(() => freshState, privateState)` in your constructor.
 
 ### Lifecycle hooks
 
@@ -38,10 +35,10 @@ Both hooks may be `async`.
 
 ### Persistence
 
-The engine loads storage snapshots and passes them into your factory via `context?.snapshot`.
+The engine restores stored state after it creates the challenge instance.
 
 - If your `gameState` is already plain serializable data, you can keep the default `BaseChallenge` behavior.
-- If your runtime state uses `Set`, `Map`, `Date`, or other richer types, override `loadState(savedState)` and `saveState()`, then call `this.initializeGameState(() => freshState, context.snapshot?.privateState)` from your constructor.
+- If your runtime state uses `Set`, `Map`, `Date`, or other richer types, override `loadState(savedState)` and `saveState()`. The engine will call `restoreState(savedState)` for you during hydration.
 
 ### Message handlers
 
@@ -89,11 +86,8 @@ interface MyGameState {
 }
 
 class MyChallenge extends BaseChallenge<MyGameState> {
-  constructor(challengeId: string, privateState?: unknown) {
-    super(challengeId, 2);
-    this.initializeGameState(() => {
-      return { /* initial state */ };
-    }, privateState);
+  constructor(challengeId: string) {
+    super(challengeId, 2, { /* initial state */ });
     this.handle("answer", async (msg, i) => this.onAnswer(msg, i));
   }
 
@@ -116,7 +110,7 @@ export function createChallenge(
   options?: Record<string, unknown>,
   context?: ChallengeFactoryContext
 ): ChallengeOperator {
-  return new MyChallenge(challengeId, context?.snapshot?.privateState);
+  return new MyChallenge(challengeId);
 }
 ```
 

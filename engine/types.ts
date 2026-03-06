@@ -34,6 +34,7 @@ export interface ChallengeOperator {
   join(invite: string, userId?: string): Promise<void>;
   message(message: ChatMessage): Promise<void>;
   state: ChallengeOperatorState;
+  restoreState?(savedState: unknown): void;
   saveState?(): unknown;
 }
 
@@ -59,11 +60,6 @@ export interface ActiveChallenge {
   challengeType: string;
   invites: string[];
   instance: ChallengeOperator;
-}
-
-export interface ChallengeHydrationSnapshot {
-  state: ChallengeOperatorState;
-  privateState?: unknown;
 }
 
 export class ChallengeOperatorError extends Error {
@@ -109,7 +105,6 @@ export interface ChallengeMessaging {
 
 export interface ChallengeFactoryContext {
   messaging: ChallengeMessaging;
-  snapshot?: ChallengeHydrationSnapshot;
 }
 
 export type ChallengeFactory = (

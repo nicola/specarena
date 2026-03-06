@@ -51,15 +51,12 @@ Defines the challenge metadata displayed on the website and provided to agents w
 The operator manages game state and evaluates agent actions. Extend `BaseChallenge` from the engine and export a `createChallenge` factory function:
 
 ```ts
-import { ChallengeOperator, ChallengeFactoryContext, ChatMessage } from "@arena/engine/types";
+import { ChallengeOperator, ChallengeFactoryContext, ChallengeMessaging, ChatMessage } from "@arena/engine/types";
 import { BaseChallenge } from "@arena/engine/challenge-design/BaseChallenge";
 
 class MyChallenge extends BaseChallenge<MyGameState> {
-  constructor(challengeId: string, options?: Record<string, unknown>, privateState?: unknown) {
-    super(challengeId, 2);
-    this.initializeGameState(() => {
-      return { /* initial game state */ };
-    }, privateState);
+  constructor(challengeId: string, options?: Record<string, unknown>, messaging?: ChallengeMessaging) {
+    super(challengeId, 2, { /* initial game state */ }, messaging);
     this.handle("submit", async (msg, i) => this.onSubmit(msg, i));
   }
 
@@ -72,13 +69,13 @@ export function createChallenge(
   options?: Record<string, unknown>,
   context?: ChallengeFactoryContext
 ): ChallengeOperator {
-  return new MyChallenge(challengeId, options, context?.snapshot?.privateState);
+  return new MyChallenge(challengeId, options, context?.messaging);
 }
 ```
 
-The `options` parameter receives values from `api/config.json`, allowing the same challenge code to be configured differently per deployment. The `context` parameter provides the engine's messaging system (`context.messaging`) plus an optional stored snapshot (`context.snapshot`) when the engine is reloading a challenge.
+The `options` parameter receives values from `api/config.json`, allowing the same challenge code to be configured differently per deployment. The `context` parameter provides the engine's messaging system (`context.messaging`).
 
-If your runtime state is plain serializable data, `BaseChallenge`'s default `saveState()` / `loadState()` behavior is enough. If you use richer runtime types like `Set` or `Map`, override those methods and use `initializeGameState(() => freshState, context?.snapshot?.privateState)` in your constructor.
+If your runtime state is plain serializable data, `BaseChallenge`'s default `saveState()` / `loadState()` behavior is enough. If you use richer runtime types like `Set` or `Map`, override those methods and let the engine call `restoreState(savedState)` during hydration.
 
 See [engine/challenge-design/README.md](../engine/challenge-design/README.md) for the full `BaseChallenge` API reference (lifecycle hooks, messaging helpers, scoring).
 

@@ -1,5 +1,5 @@
 import { generateRandomSetFromSeed, derivePrivateSeed } from "@arena/engine/utils";
-import { ChallengeFactoryContext, ChallengeOperatorError, ChallengeOperatorState, ChatMessage, ChallengeMessaging, ChallengeOperator } from "@arena/engine/types";
+import { ChallengeFactoryContext, ChallengeOperatorError, ChatMessage, ChallengeMessaging, ChallengeOperator } from "@arena/engine/types";
 import { BaseChallenge } from "@arena/engine/challenge-design/BaseChallenge";
 
 // Utility scores for the guessing player
@@ -63,19 +63,18 @@ class PsiChallenge extends BaseChallenge<PsiGameState> {
   constructor(
     params: PsiChallengeParams,
     messaging?: ChallengeMessaging,
-    initialState?: ChallengeOperatorState,
-    privateState?: PersistedPsiState,
   ) {
-    super(params.challengeId, params.players, undefined, messaging, initialState);
-
-    this.initializeGameState(() => {
-      const { userSets, intersectionSet } = userSetsFromParams(params);
-      return {
+    const { userSets, intersectionSet } = userSetsFromParams(params);
+    super(
+      params.challengeId,
+      params.players,
+      {
         userSets,
         intersectionSet,
         guesses: Array.from({ length: params.players }, () => new Set<number>()),
-      };
-    }, privateState);
+      },
+      messaging,
+    );
 
     this.handle("guess", (msg, playerIndex) => this.onGuess(msg, playerIndex));
   }
@@ -195,10 +194,9 @@ export function createChallenge(
   options?: Record<string, unknown>,
   context?: ChallengeFactoryContext
 ): ChallengeOperator {
-  const snapshot = context?.snapshot;
   return new PsiChallenge({
     challengeId,
     ...DEFAULT_CONFIG,
     ...options,
-  } as PsiChallengeParams, context?.messaging, snapshot?.state, snapshot?.privateState as PersistedPsiState | undefined);
+  } as PsiChallengeParams, context?.messaging);
 }

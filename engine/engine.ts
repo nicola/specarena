@@ -97,15 +97,15 @@ export class ArenaEngine {
     }
 
     const options = this.challengeOptions.get(challenge.challengeType);
-    const instance = factory(challenge.id, options, {
-      messaging: this.chat,
-      snapshot: {
-        state: this.cloneChallengeState(challenge.state),
-        privateState: challenge.privateState === undefined
-          ? undefined
-          : this.clonePrivateState(challenge.privateState),
-      },
-    });
+    const instance = factory(challenge.id, options, { messaging: this.chat });
+    instance.state = this.cloneChallengeState(challenge.state);
+
+    if (challenge.privateState !== undefined) {
+      if (!instance.restoreState) {
+        throw new Error(`Challenge type ${challenge.challengeType} cannot restore private state.`);
+      }
+      instance.restoreState(this.clonePrivateState(challenge.privateState));
+    }
 
     return {
       id: challenge.id,
