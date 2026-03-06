@@ -61,6 +61,11 @@ export interface ActiveChallenge {
   instance: ChallengeOperator;
 }
 
+export interface ChallengeHydrationSnapshot {
+  state: ChallengeOperatorState;
+  persistedState?: unknown;
+}
+
 export class ChallengeOperatorError extends Error {
   constructor(public readonly code: string, message: string) {
     super(message);
@@ -104,6 +109,7 @@ export interface ChallengeMessaging {
 
 export interface ChallengeFactoryContext {
   messaging: ChallengeMessaging;
+  snapshot?: ChallengeHydrationSnapshot;
 }
 
 export type ChallengeFactory = (

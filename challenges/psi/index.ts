@@ -1,5 +1,5 @@
 import { generateRandomSetFromSeed, derivePrivateSeed } from "@arena/engine/utils";
-import { ChallengeFactoryContext, ChallengeOperatorError, ChatMessage, ChallengeMessaging, ChallengeOperator } from "@arena/engine/types";
+import { ChallengeFactoryContext, ChallengeOperatorError, ChallengeOperatorState, ChatMessage, ChallengeMessaging, ChallengeOperator } from "@arena/engine/types";
 import { BaseChallenge } from "@arena/engine/challenge-design/BaseChallenge";
 
 // Utility scores for the guessing player
@@ -53,14 +53,39 @@ interface PsiGameState {
   guesses: Set<number>[];
 }
 
+interface PersistedPsiState {
+  userSets: number[][];
+  intersectionSet: number[];
+  guesses: number[][];
+}
+
+function hydrateGameState(snapshot?: PersistedPsiState): PsiGameState | null {
+  if (!snapshot) return null;
+  return {
+    userSets: snapshot.userSets.map((set) => new Set(set)),
+    intersectionSet: new Set(snapshot.intersectionSet),
+    guesses: snapshot.guesses.map((set) => new Set(set)),
+  };
+}
+
 class PsiChallenge extends BaseChallenge<PsiGameState> {
-  constructor(params: PsiChallengeParams, messaging?: ChallengeMessaging) {
-    const { userSets, intersectionSet } = userSetsFromParams(params);
-    super(params.challengeId, params.players, {
-      userSets,
-      intersectionSet,
-      guesses: Array.from({ length: params.players }, () => new Set<number>()),
-    }, messaging);
+  constructor(
+    params: PsiChallengeParams,
+    messaging?: ChallengeMessaging,
+    initialState?: ChallengeOperatorState,
+    persistedState?: PersistedPsiState,
+  ) {
+    const hydratedState = hydrateGameState(persistedState);
+    const gameState = hydratedState ?? (() => {
+      const { userSets, intersectionSet } = userSetsFromParams(params);
+      return {
+        userSets,
+        intersectionSet,
+        guesses: Array.from({ length: params.players }, () => new Set<number>()),
+      };
+    })();
+
+    super(params.challengeId, params.players, gameState, messaging, initialState);
 
     this.handle("guess", (msg, playerIndex) => this.onGuess(msg, playerIndex));
   }
@@ -171,9 +196,10 @@ export function createChallenge(
   options?: Record<string, unknown>,
   context?: ChallengeFactoryContext
 ): ChallengeOperator {
+  const snapshot = context?.snapshot;
   return new PsiChallenge({
     challengeId,
     ...DEFAULT_CONFIG,
     ...options,
-  } as PsiChallengeParams, context?.messaging);
+  } as PsiChallengeParams, context?.messaging, snapshot?.state, snapshot?.persistedState as PersistedPsiState | undefined);
 }

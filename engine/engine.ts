@@ -30,7 +30,6 @@ export class ArenaEngine {
   private readonly challengeFactories: Map<string, ChallengeFactory>;
   private readonly challengeOptions: Map<string, Record<string, unknown>>;
   private readonly challengeMetadataMap: Map<string, ChallengeMetadata>;
-  private readonly challengeRuntimes: Map<string, ActiveChallenge>;
   readonly chat: ChatEngine;
   scoring: ScoringModule | null;
 
@@ -40,7 +39,6 @@ export class ArenaEngine {
     this.challengeFactories = new Map<string, ChallengeFactory>();
     this.challengeOptions = new Map<string, Record<string, unknown>>();
     this.challengeMetadataMap = new Map<string, ChallengeMetadata>();
-    this.challengeRuntimes = new Map<string, ActiveChallenge>();
     this.scoring = options.scoring ?? null;
     this.chat = options.chatEngine ?? createChatEngine({
       isChannelRevealed: async (channel) => {
@@ -48,17 +46,6 @@ export class ArenaEngine {
         if (!challengeId) return false;
         const challenge = await this.getChallenge(challengeId);
         return challenge?.state.gameEnded ?? false;
-      },
-      onChallengeEvent: async (challengeId, event) => {
-        if (event.type !== "game_ended" || !this.scoring) return;
-        const runtime = this.challengeRuntimes.get(challengeId);
-        if (!runtime) return;
-        const challenge = this.snapshotChallenge(runtime);
-        await this.storageAdapter.setChallenge(challenge);
-        const result = ScoringModule.challengeToGameResult(challenge);
-        if (!result) return;
-        this.scoring.recordGame(result)
-          .catch((err) => console.error("Scoring recordGame failed:", err));
       },
     });
   }
@@ -69,7 +56,6 @@ export class ArenaEngine {
       this.chat.clearRuntimeState(),
       this.users.clearRuntimeState(),
     ]);
-    this.challengeRuntimes.clear();
   }
 
   registerChallengeFactory(type: string, factory: ChallengeFactory, options?: Record<string, unknown>): void {
@@ -100,6 +86,37 @@ export class ArenaEngine {
     return structuredClone(state);
   }
 
+  private clonePersistedState<T>(persistedState: T): T {
+    return structuredClone(persistedState);
+  }
+
+  private instantiateChallenge(challenge: Challenge): ActiveChallenge {
+    const factory = this.challengeFactories.get(challenge.challengeType);
+    if (!factory) {
+      throw new Error(`Unknown challenge type: ${challenge.challengeType}`);
+    }
+
+    const options = this.challengeOptions.get(challenge.challengeType);
+    const instance = factory(challenge.id, options, {
+      messaging: this.chat,
+      snapshot: {
+        state: this.cloneChallengeState(challenge.state),
+        persistedState: challenge.persistedState === undefined
+          ? undefined
+          : this.clonePersistedState(challenge.persistedState),
+      },
+    });
+
+    return {
+      id: challenge.id,
+      name: challenge.name,
+      createdAt: challenge.createdAt,
+      challengeType: challenge.challengeType,
+      invites: [...challenge.invites],
+      instance,
+    };
+  }
+
   private snapshotChallenge(runtime: ActiveChallenge): Challenge {
     const persistedState = runtime.instance.serializeState?.();
     return {
@@ -114,9 +131,22 @@ export class ArenaEngine {
     };
   }
 
+  private async recordGameIfEnded(previousState: ChallengeOperatorState, challenge: Challenge): Promise<void> {
+    if (!this.scoring || previousState.gameEnded || !challenge.state.gameEnded) {
+      return;
+    }
+
+    const result = ScoringModule.challengeToGameResult(challenge);
+    if (!result) {
+      return;
+    }
+
+    this.scoring.recordGame(result)
+      .catch((err) => console.error("Scoring recordGame failed:", err));
+  }
+
   private async deleteChallengeArtifacts(challengeId: string): Promise<void> {
     await this.storageAdapter.deleteChallenge(challengeId);
-    this.challengeRuntimes.delete(challengeId);
     await this.chat.deleteChannel(challengeId);
     await this.chat.deleteChannel(toChallengeChannel(challengeId));
   }
@@ -172,7 +202,6 @@ export class ArenaEngine {
       instance,
     };
 
-    this.challengeRuntimes.set(id, runtime);
     const challenge = this.snapshotChallenge(runtime);
     await this.storageAdapter.setChallenge(challenge);
     return challenge;
@@ -221,10 +250,7 @@ export class ArenaEngine {
       return challenge;
     }
 
-    await this.storageAdapter.deleteChallenge(challenge.id);
-    this.challengeRuntimes.delete(challenge.id);
-    await this.chat.deleteChannel(challenge.id);
-    await this.chat.deleteChannel(toChallengeChannel(challenge.id));
+    await this.deleteChallengeArtifacts(challenge.id);
     return undefined;
   }
 
@@ -246,14 +272,14 @@ export class ArenaEngine {
     }
 
     const challenge = result.data;
-    const runtime = this.challengeRuntimes.get(challenge.id);
-    if (!runtime) {
-      return { error: "Challenge runtime not found" };
-    }
+    const previousState = this.cloneChallengeState(challenge.state);
+    const runtime = this.instantiateChallenge(challenge);
 
     try {
       await runtime.instance.join(invite, userId);
-      await this.storageAdapter.setChallenge(this.snapshotChallenge(runtime));
+      const updatedChallenge = this.snapshotChallenge(runtime);
+      await this.storageAdapter.setChallenge(updatedChallenge);
+      await this.recordGameIfEnded(previousState, updatedChallenge);
     } catch (error) {
       if (error instanceof ChallengeOperatorError) {
         return { error: error.message, code: error.code };
@@ -270,11 +296,13 @@ export class ArenaEngine {
 
   async challengeMessage(challengeId: string, from: string, messageType: string, content: string) {
     const challenge = await this.getChallenge(challengeId);
-    const runtime = this.challengeRuntimes.get(challengeId);
 
-    if (!challenge || !runtime) {
+    if (!challenge) {
       return { error: "Challenge not found" };
     }
+
+    const previousState = this.cloneChallengeState(challenge.state);
+    const runtime = this.instantiateChallenge(challenge);
 
     await this.chat.sendChallengeMessage(challengeId, from, (messageType ? `(${messageType}) ` : "") + content, "operator");
 
@@ -286,7 +314,9 @@ export class ArenaEngine {
         content,
         timestamp: Date.now(),
       });
-      await this.storageAdapter.setChallenge(this.snapshotChallenge(runtime));
+      const updatedChallenge = this.snapshotChallenge(runtime);
+      await this.storageAdapter.setChallenge(updatedChallenge);
+      await this.recordGameIfEnded(previousState, updatedChallenge);
       return { ok: "Message sent" };
     } catch (error) {
       if (error instanceof ChallengeOperatorError) {
@@ -311,8 +341,12 @@ export class ArenaEngine {
     return this.resolvePlayerInvite(challengeId, userIndex);
   }
 
-  getRuntimeChallenge(challengeId: string): ActiveChallenge | undefined {
-    return this.challengeRuntimes.get(challengeId);
+  async hydrateChallenge(challengeId: string): Promise<ActiveChallenge | undefined> {
+    const challenge = await this.getChallenge(challengeId);
+    if (!challenge) {
+      return undefined;
+    }
+    return this.instantiateChallenge(challenge);
   }
 
   async challengeSync(channel: string, viewer: string | null, index: number) {

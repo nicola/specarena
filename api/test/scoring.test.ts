@@ -359,7 +359,7 @@ describe("Scoring integration via engine", () => {
     await defaultEngine.challengeJoin(invites[0], "user-alice");
     await defaultEngine.challengeJoin(invites[1], "user-bob");
 
-    const challenge = defaultEngine.getRuntimeChallenge(challengeId);
+    const challenge = await defaultEngine.hydrateChallenge(challengeId);
     assert.ok(challenge);
 
     // Get private sets and compute intersection
@@ -418,7 +418,7 @@ describe("Scoring integration via engine", () => {
       await defaultEngine.challengeJoin(invites[0], "user-alice");
       await defaultEngine.challengeJoin(invites[1], "user-bob");
 
-      const challenge = defaultEngine.getRuntimeChallenge(challengeId);
+      const challenge = await defaultEngine.hydrateChallenge(challengeId);
       assert.ok(challenge);
 
       const gameState = (challenge.instance as any).gameState;

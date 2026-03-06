@@ -83,7 +83,7 @@ describe("e2e: two agents play a full PSI game via CLI", () => {
     assert.equal(joinB.exitCode, 0, "agent B join should succeed");
 
     // ── 3. Read the actual game state from the engine ────────────────
-    const challenge = engine.getRuntimeChallenge(id);
+    const challenge = await engine.hydrateChallenge(id);
     assert.ok(challenge, "challenge should exist in engine");
 
     // Access the BaseChallenge gameState (PsiGameState)
@@ -206,7 +206,7 @@ describe("e2e: two agents play a full PSI game via CLI", () => {
     const { ChallengeID } = json(joinB) as { ChallengeID: string };
 
     // Read game state
-    const challenge = engine.getRuntimeChallenge(id);
+    const challenge = await engine.hydrateChallenge(id);
     assert.ok(challenge);
     const gameState = (challenge.instance as any).gameState as {
       userSets: Set<number>[];

@@ -217,7 +217,7 @@ describe("PSI game simulation", () => {
     await challengeJoin(invite1);
     await challengeJoin(invite2);
 
-    const runtime = defaultEngine.getRuntimeChallenge(challengeId);
+    const runtime = await defaultEngine.hydrateChallenge(challengeId);
     assert.ok(runtime);
     const gameState = (runtime.instance as any).gameState;
     const p1Set: Set<number> = gameState.userSets[0];
@@ -246,7 +246,7 @@ describe("PSI game simulation", () => {
     await challengeJoin(invite1);
     await challengeJoin(invite2);
 
-    const runtime = defaultEngine.getRuntimeChallenge(challengeId);
+    const runtime = await defaultEngine.hydrateChallenge(challengeId);
     assert.ok(runtime);
     const gameState = (runtime.instance as any).gameState;
     const p1Set: Set<number> = gameState.userSets[0];
@@ -343,7 +343,7 @@ describe("PSI game simulation", () => {
     assert.ok(redactedDMs.length > 0, "before game ends, DMs should be redacted for null viewer");
 
     // Play to completion
-    const runtime = defaultEngine.getRuntimeChallenge(challengeId);
+    const runtime = await defaultEngine.hydrateChallenge(challengeId);
     assert.ok(runtime);
     const gameState = (runtime.instance as any).gameState;
     const p1Set: Set<number> = gameState.userSets[0];

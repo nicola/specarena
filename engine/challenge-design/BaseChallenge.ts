@@ -19,17 +19,25 @@ export abstract class BaseChallenge<TGameState = {}> implements ChallengeOperato
   gameState: TGameState;
   private handlers = new Map<string, (msg: ChatMessage, playerIndex: number) => void | Promise<void>>();
 
-  constructor(challengeId: string, playerCount: number, gameState: TGameState, messaging?: ChallengeMessaging) {
+  constructor(
+    challengeId: string,
+    playerCount: number,
+    gameState: TGameState,
+    messaging?: ChallengeMessaging,
+    initialState?: ChallengeOperatorState,
+  ) {
     this.challengeId = challengeId;
     this.playerCount = playerCount;
     this.messaging = messaging ?? defaultChatEngine;
-    this.state = {
-      gameStarted: false,
-      gameEnded: false,
-      scores: Array.from({ length: playerCount }, (): Score => ({ security: 0, utility: 0 })),
-      players: [],
-      playerIdentities: {},
-    };
+    this.state = initialState
+      ? structuredClone(initialState)
+      : {
+        gameStarted: false,
+        gameEnded: false,
+        scores: Array.from({ length: playerCount }, (): Score => ({ security: 0, utility: 0 })),
+        players: [],
+        playerIdentities: {},
+      };
     this.gameState = gameState;
   }
 

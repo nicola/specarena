@@ -105,7 +105,7 @@ describe("e2e: full PSI game via CLI with auth", () => {
     assert.ok(joinDataB.sessionKey, "agent B should have sessionKey");
 
     // ── 6. Read game state from engine to get the intersection ──────
-    const challenge = engine.getRuntimeChallenge(id);
+    const challenge = await engine.hydrateChallenge(id);
     assert.ok(challenge, "challenge should exist");
     const gameState = (challenge.instance as any).gameState as {
       userSets: Set<number>[];
