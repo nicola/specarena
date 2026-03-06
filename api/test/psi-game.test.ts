@@ -138,8 +138,8 @@ describe("PSI game simulation", () => {
     assert.ok(intersection.size > 0, "sets should have a non-empty intersection");
 
     // 6. Simulate agent chat
-    await chatSend(challengeId, invite1, "Hello! Let's find the intersection.");
-    await chatSend(challengeId, invite2, "Sure, here are some of my numbers...");
+    await chatSend(`chat_${challengeId}`, invite1, "Hello! Let's find the intersection.");
+    await chatSend(`chat_${challengeId}`, invite2, "Sure, here are some of my numbers...");
 
     // 7. Player 1 guesses the exact intersection
     const guessContent = [...intersection].join(", ");

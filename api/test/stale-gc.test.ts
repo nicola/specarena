@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 
 import app from "../index";
 import { defaultEngine } from "@arena/engine/engine";
-import { toChallengeChannel } from "@arena/engine/types";
+import { toChallengeChannel, toChatChannel } from "@arena/engine/types";
 
 const STALE_MS = 11 * 60 * 1000;
 
@@ -81,12 +81,12 @@ describe("Stale challenge garbage collection", () => {
     const instance = await defaultEngine.getChallenge(challenge.id);
     assert.ok(instance);
 
-    await defaultEngine.chat.sendMessage(challenge.id, "a", "public");
+    await defaultEngine.chat.sendMessage(toChatChannel(challenge.id), "a", "public");
     await defaultEngine.chat.sendMessage(toChallengeChannel(challenge.id), "operator", "private", "a");
     instance.createdAt = Date.now() - STALE_MS;
     await defaultEngine.pruneStaleChallenges();
 
-    const publicChannel = await defaultEngine.chat.getMessagesForChannel(challenge.id);
+    const publicChannel = await defaultEngine.chat.getMessagesForChannel(toChatChannel(challenge.id));
     const privateChannel = await defaultEngine.chat.getMessagesForChannel(toChallengeChannel(challenge.id));
     assert.equal(publicChannel.length, 0);
     assert.equal(privateChannel.length, 0);

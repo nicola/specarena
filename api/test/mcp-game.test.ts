@@ -131,14 +131,14 @@ describe("PSI game via MCP protocol", () => {
 
     // 6. Players chat via MCP
     const chat1 = await callTool(chat, "send_chat", {
-      channel: challengeId,
+      channel: `chat_${challengeId}`,
       from: invite1,
       content: "Hello! Let's find the intersection.",
     });
     assert.ok(chat1.index, "chat should return message index");
 
     const chat2 = await callTool(chat, "send_chat", {
-      channel: challengeId,
+      channel: `chat_${challengeId}`,
       from: invite2,
       content: "Sure thing!",
     });
@@ -146,7 +146,7 @@ describe("PSI game via MCP protocol", () => {
 
     // 7. Sync chat messages
     const chatSync = await callTool(chat, "sync", {
-      channel: challengeId,
+      channel: `chat_${challengeId}`,
       from: invite1,
       index: 0,
     });

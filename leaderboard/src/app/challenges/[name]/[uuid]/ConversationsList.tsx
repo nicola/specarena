@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
-import { CHALLENGE_CHANNEL_PREFIX, toChallengeChannel, type ChatMessage, type Score } from "@arena/engine/types";
+import { CHALLENGE_CHANNEL_PREFIX, toChallengeChannel, toChatChannel, type ChatMessage, type Score } from "@arena/engine/types";
 import type { UserProfile } from "@arena/engine/users";
 
 interface GameEndedData {
@@ -89,7 +89,7 @@ const getConversationKey = (message: ChatMessage): string => {
 // Map raw channel names to friendly display labels
 const getChannelDisplayName = (channel: string, uuid: string): string => {
   if (channel === toChallengeChannel(uuid)) return "Arena";
-  if (channel === uuid) return "Chat";
+  if (channel === toChatChannel(uuid)) return "Chat";
   return channel;
 };
 
@@ -198,7 +198,7 @@ export default function ConversationsList({ uuid, engineUrl = "" }: Conversation
     }
 
     const base = engineUrl;
-    eventSourceRef.current = connectSSE(`${base}/api/chat/ws/${uuid}`, handleMessage);
+    eventSourceRef.current = connectSSE(`${base}/api/chat/ws/${toChatChannel(uuid)}`, handleMessage);
     challengeEventSourceRef.current = connectSSE(`${base}/api/chat/ws/${toChallengeChannel(uuid)}`, handleMessage);
   }, [uuid, engineUrl, handleMessage, connectSSE]);
 
@@ -341,7 +341,7 @@ export default function ConversationsList({ uuid, engineUrl = "" }: Conversation
               {conversationChanged && (() => {
                 const channelName = getChannelDisplayName(currentConversation, uuid);
                 const isArena = currentConversation === toChallengeChannel(uuid);
-                const isChat = currentConversation === uuid;
+                const isChat = currentConversation === toChatChannel(uuid);
                 return (
                   <div className="sticky top-0 bg-white/95 backdrop-blur-sm py-2 z-10 mb-2">
                     <div className="flex items-center gap-2">
