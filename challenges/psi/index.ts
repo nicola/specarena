@@ -68,16 +68,14 @@ class PsiChallenge extends BaseChallenge<PsiGameState> {
   ) {
     super(params.challengeId, params.players, undefined, messaging, initialState);
 
-    if (privateState !== undefined) {
-      this.restoreGameState(privateState);
-    } else {
+    this.initializeGameState(() => {
       const { userSets, intersectionSet } = userSetsFromParams(params);
-      this.gameState = {
+      return {
         userSets,
         intersectionSet,
         guesses: Array.from({ length: params.players }, () => new Set<number>()),
       };
-    }
+    }, privateState);
 
     this.handle("guess", (msg, playerIndex) => this.onGuess(msg, playerIndex));
   }

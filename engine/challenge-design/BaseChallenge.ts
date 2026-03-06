@@ -148,6 +148,14 @@ export abstract class BaseChallenge<TGameState = {}> implements ChallengeOperato
     this.gameState = this.loadState(savedState);
   }
 
+  protected initializeGameState(createInitialState: () => TGameState, savedState?: unknown): void {
+    if (savedState !== undefined) {
+      this.restoreGameState(savedState);
+      return;
+    }
+    this.gameState = createInitialState();
+  }
+
   private getInitializedGameState(): TGameState {
     if (this.gameState === undefined) {
       throw new Error("Challenge gameState must be initialized before the challenge instance is returned.");
