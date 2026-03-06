@@ -78,7 +78,7 @@ export abstract class BaseChallenge<TPrivateState = {}> implements ChallengeOper
 
   // --- Serialization / Restore ---
 
-  save(): ChallengeOperatorState {
+  serialize(): ChallengeOperatorState {
     return { ...this.state, privateState: this.serializePrivateState() };
   }
 
