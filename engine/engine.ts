@@ -5,7 +5,6 @@ import {
   ChallengeError,
   ChallengeFactory,
   ChallengeMetadata,
-  ChallengeOperator,
   ChallengeOperatorError,
   ChallengeRecord,
   Result,
@@ -32,7 +31,7 @@ export class ArenaEngine {
   private readonly challengeFactories: Map<string, ChallengeFactory>;
   private readonly challengeOptions: Map<string, Record<string, unknown>>;
   private readonly challengeMetadataMap: Map<string, ChallengeMetadata>;
-  private readonly operators: Map<string, ChallengeOperator>;
+
   readonly chat: ChatEngine;
   scoring: ScoringModule | null;
 
@@ -42,7 +41,7 @@ export class ArenaEngine {
     this.challengeFactories = new Map<string, ChallengeFactory>();
     this.challengeOptions = new Map<string, Record<string, unknown>>();
     this.challengeMetadataMap = new Map<string, ChallengeMetadata>();
-    this.operators = new Map<string, ChallengeOperator>();
+
     this.scoring = options.scoring ?? null;
     this.chat = options.chatEngine ?? createChatEngine({
       isChannelRevealed: async (channel) => {
@@ -64,7 +63,6 @@ export class ArenaEngine {
   }
 
   async clearRuntimeState(): Promise<void> {
-    this.operators.clear();
     await Promise.all([
       this.storageAdapter.clearRuntimeState(),
       this.chat.clearRuntimeState(),
@@ -98,7 +96,6 @@ export class ArenaEngine {
   }
 
   private async deleteChallengeData(challengeId: string): Promise<void> {
-    this.operators.delete(challengeId);
     await this.storageAdapter.deleteChallenge(challengeId);
     await this.chat.deleteChannel(challengeId);
     await this.chat.deleteChannel(toChallengeChannel(challengeId));
@@ -132,8 +129,6 @@ export class ArenaEngine {
 
     const options = this.challengeOptions.get(challengeType);
     const instance = factory(id, options, { messaging: this.chat });
-
-    this.operators.set(id, instance);
 
     const challenge: Challenge = {
       id,
@@ -169,8 +164,14 @@ export class ArenaEngine {
   }
 
   private attachOperator(record: ChallengeRecord): Challenge | undefined {
-    const instance = this.operators.get(record.id);
-    if (!instance) return undefined;
+    if ('instance' in record) {
+      return record as Challenge;
+    }
+    const factory = this.challengeFactories.get(record.challengeType);
+    if (!factory) return undefined;
+    const options = this.challengeOptions.get(record.challengeType);
+    const instance = factory(record.id, options, { messaging: this.chat });
+    instance.state = record.state;
     return Object.assign(record, { instance }) as Challenge;
   }
 
