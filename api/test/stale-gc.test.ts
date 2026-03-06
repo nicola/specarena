@@ -28,18 +28,17 @@ describe("Stale challenge garbage collection", () => {
 
   it("prunes stale unstarted challenges from storage and invite lookup", async () => {
     const challenge = await createPsiChallenge();
-    const record = await defaultEngine.getChallenge(challenge.id);
+    const record = await defaultEngine.storageAdapter.getChallenge(challenge.id);
     assert.ok(record);
 
-    record.createdAt = Date.now() - STALE_MS;
-    await defaultEngine.storageAdapter.setChallenge(record);
+    await defaultEngine.storageAdapter.setChallenge({ ...record, createdAt: Date.now() - STALE_MS });
     const removed = await defaultEngine.pruneStaleChallenges();
     assert.equal(removed, 1);
 
-    const typed = await defaultEngine.getChallengesByType("psi");
+    const { items: typed } = await defaultEngine.getChallengesByType("psi");
     assert.ok(!typed.some((c) => c.id === challenge.id));
 
-    const all = await defaultEngine.listChallenges();
+    const { items: all } = await defaultEngine.listChallenges();
     assert.ok(!all.some((c) => c.id === challenge.id));
 
     const invite = await defaultEngine.getChallengeFromInvite(challenge.invites[0]);
@@ -51,43 +50,43 @@ describe("Stale challenge garbage collection", () => {
     await request("POST", "/api/arena/join", { invite: challenge.invites[0] });
     await request("POST", "/api/arena/join", { invite: challenge.invites[1] });
 
-    const record = await defaultEngine.getChallenge(challenge.id);
+    const record = await defaultEngine.storageAdapter.getChallenge(challenge.id);
     assert.ok(record);
     assert.equal(record.state.gameStarted, true);
     assert.equal(record.state.gameEnded, false);
 
-    record.createdAt = Date.now() - STALE_MS;
-    await defaultEngine.storageAdapter.setChallenge(record);
+    await defaultEngine.storageAdapter.setChallenge({ ...record, createdAt: Date.now() - STALE_MS });
     const removed = await defaultEngine.pruneStaleChallenges();
     assert.equal(removed, 1);
 
-    const typed = await defaultEngine.getChallengesByType("psi");
+    const { items: typed } = await defaultEngine.getChallengesByType("psi");
     assert.ok(!typed.some((c) => c.id === challenge.id));
   });
 
   it("does not prune old challenges that have ended", async () => {
     const challenge = await createPsiChallenge();
-    const record = await defaultEngine.getChallenge(challenge.id);
+    const record = await defaultEngine.storageAdapter.getChallenge(challenge.id);
     assert.ok(record);
 
-    record.state.gameEnded = true;
-    record.createdAt = Date.now() - STALE_MS;
-    await defaultEngine.storageAdapter.setChallenge(record);
+    await defaultEngine.storageAdapter.setChallenge({
+      ...record,
+      createdAt: Date.now() - STALE_MS,
+      state: { ...record.state, gameEnded: true },
+    });
     await defaultEngine.pruneStaleChallenges();
 
-    const typed = await defaultEngine.getChallengesByType("psi");
+    const { items: typed } = await defaultEngine.getChallengesByType("psi");
     assert.ok(typed.some((c) => c.id === challenge.id));
   });
 
   it("removes chat data for stale challenge channels", async () => {
     const challenge = await createPsiChallenge();
-    const record = await defaultEngine.getChallenge(challenge.id);
+    const record = await defaultEngine.storageAdapter.getChallenge(challenge.id);
     assert.ok(record);
 
     await defaultEngine.chat.sendMessage(challenge.id, "a", "public");
     await defaultEngine.chat.sendMessage(toChallengeChannel(challenge.id), "operator", "private", "a");
-    record.createdAt = Date.now() - STALE_MS;
-    await defaultEngine.storageAdapter.setChallenge(record);
+    await defaultEngine.storageAdapter.setChallenge({ ...record, createdAt: Date.now() - STALE_MS });
     await defaultEngine.pruneStaleChallenges();
 
     const publicChannel = await defaultEngine.chat.getMessagesForChannel(challenge.id);
