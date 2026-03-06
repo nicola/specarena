@@ -192,6 +192,63 @@ describe("PSI game simulation", () => {
     assert.ok(endMsg!.content.includes("Scores are:"));
   });
 
+  it("rehydrates mid-game PSI state and continues from restored guesses", async () => {
+    const { id: challengeId, invites } = await createPsiChallenge();
+    const [invite1, invite2] = invites;
+
+    await challengeJoin(invite1);
+    await challengeJoin(invite2);
+
+    const sync1 = await challengeSync(challengeId, invite1, 0);
+    const sync2 = await challengeSync(challengeId, invite2, 0);
+    const p1SetMsg = sync1.messages.find(
+      (m) => m.to === invite1 && m.from === "operator" && m.content.includes("Your private set")
+    );
+    const p2SetMsg = sync2.messages.find(
+      (m) => m.to === invite2 && m.from === "operator" && m.content.includes("Your private set")
+    );
+    assert.ok(p1SetMsg);
+    assert.ok(p2SetMsg);
+
+    const p1Set = parseSet(p1SetMsg!.content);
+    const p2Set = parseSet(p2SetMsg!.content);
+    const intersection = [...p1Set].filter((n) => p2Set.has(n)).sort((a, b) => a - b);
+    assert.ok(intersection.length > 0);
+
+    const firstGuess = intersection.join(", ");
+    await challengeMessage(challengeId, invite1, "guess", firstGuess);
+
+    const stored = await getChallengeOrThrow(challengeId);
+    assert.equal(stored.state.gameStarted, true);
+    assert.equal(stored.state.gameEnded, false);
+    assert.deepEqual(stored.state.players, [invite1, invite2]);
+    assert.deepEqual((stored.privateState as any).guesses[0], intersection);
+    assert.deepEqual((stored.privateState as any).guesses[1], []);
+
+    const runtime = await defaultEngine.hydrateChallenge(challengeId);
+    assert.ok(runtime);
+    assert.equal(runtime.instance.state.gameStarted, true);
+    assert.equal(runtime.instance.state.gameEnded, false);
+    assert.deepEqual(runtime.instance.state.players, [invite1, invite2]);
+
+    const gameState = (runtime.instance as any).gameState as {
+      userSets: Set<number>[];
+      guesses: Set<number>[];
+    };
+    assert.ok(gameState.userSets.every((set) => set instanceof Set));
+    assert.ok(gameState.guesses.every((set) => set instanceof Set));
+    assert.deepEqual([...gameState.guesses[0]].sort((a, b) => a - b), intersection);
+    assert.deepEqual([...gameState.guesses[1]], []);
+
+    const secondGuess = intersection.join(", ");
+    await challengeMessage(challengeId, invite2, "guess", secondGuess);
+
+    const finished = await getChallengeOrThrow(challengeId);
+    assert.equal(finished.state.gameEnded, true);
+    assert.equal(finished.state.scores[0].utility, 1);
+    assert.equal(finished.state.scores[1].utility, 1);
+  });
+
   // -- Scoring edge cases --
 
   it("wrong guess: numbers not in opponent set → utility=-1", async () => {
