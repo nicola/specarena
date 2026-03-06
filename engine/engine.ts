@@ -12,7 +12,7 @@ import {
   toChallengeChannel,
 } from "./types";
 import { ChatEngine, createChatEngine } from "./chat/ChatEngine";
-import { ArenaStorageAdapter, InMemoryArenaStorageAdapter } from "./storage/InMemoryArenaStorageAdapter";
+import { ArenaStorageAdapter, InMemoryArenaStorageAdapter, PaginationOptions, PaginatedResult } from "./storage/InMemoryArenaStorageAdapter";
 import { ScoringModule } from "./scoring/index";
 import { UserStorageAdapter, InMemoryUserStorageAdapter } from "./users/index";
 
@@ -97,7 +97,7 @@ export class ArenaEngine {
   }
 
   async pruneStaleChallenges(now: number = Date.now()): Promise<number> {
-    const challenges = await this.storageAdapter.listChallenges();
+    const { items: challenges } = await this.storageAdapter.listChallenges();
     const stale = challenges.filter((c) => this.isChallengeStale(c, now));
     if (stale.length === 0) {
       return 0;
@@ -107,8 +107,8 @@ export class ArenaEngine {
     return stale.length;
   }
 
-  async listChallenges(): Promise<ChallengeRecord[]> {
-    return this.storageAdapter.listChallenges();
+  async listChallenges(options?: PaginationOptions): Promise<PaginatedResult<ChallengeRecord>> {
+    return this.storageAdapter.listChallenges(options);
   }
 
   async createChallenge(challengeType: string): Promise<Challenge> {
@@ -152,8 +152,9 @@ export class ArenaEngine {
   }
 
   private async persistChallenge(challenge: Challenge): Promise<void> {
-    challenge.state = challenge.instance.serialize();
-    await this.storageAdapter.setChallenge(challenge);
+    const state = challenge.instance.serialize();
+    await this.storageAdapter.setChallenge({ ...challenge, state });
+    challenge.state = state;
   }
 
   private isInviteFree(challenge: ChallengeRecord, invite: string): boolean {
@@ -204,13 +205,15 @@ export class ArenaEngine {
     return this.hydrate(record);
   }
 
-  async getChallengesByUserId(userId: string): Promise<ChallengeRecord[]> {
-    return this.storageAdapter.getChallengesByUserId(userId);
+  async getChallengesByUserId(userId: string, options?: PaginationOptions): Promise<PaginatedResult<ChallengeRecord>> {
+    return this.storageAdapter.getChallengesByUserId(userId, options);
   }
 
-  async getChallengesByType(challengeType: string): Promise<ChallengeRecord[]> {
-    return (await this.storageAdapter.getChallengesByType(challengeType))
-      .filter((c) => !this.isChallengeStale(c));
+  async getChallengesByType(challengeType: string, options?: PaginationOptions): Promise<PaginatedResult<ChallengeRecord>> {
+    // Stale filtering happens post-fetch; for SQL this should be a WHERE clause
+    const result = await this.storageAdapter.getChallengesByType(challengeType, options);
+    const filtered = result.items.filter((c) => !this.isChallengeStale(c));
+    return { items: filtered, total: result.total - (result.items.length - filtered.length) };
   }
 
   async challengeJoin(invite: string, userId?: string) {
@@ -293,6 +296,6 @@ export function createEngine(options: EngineOptions = {}): ArenaEngine {
 
 export const defaultEngine = createEngine();
 export { ChatEngine, createChatEngine, defaultChatEngine } from "./chat/ChatEngine";
-export { ArenaStorageAdapter, InMemoryArenaStorageAdapter } from "./storage/InMemoryArenaStorageAdapter";
+export { ArenaStorageAdapter, InMemoryArenaStorageAdapter, PaginationOptions, PaginatedResult } from "./storage/InMemoryArenaStorageAdapter";
 export { ChatStorageAdapter, InMemoryChatStorageAdapter } from "./storage/InMemoryChatStorageAdapter";
 export { UserProfile, UserStorageAdapter, InMemoryUserStorageAdapter } from "./users/index";

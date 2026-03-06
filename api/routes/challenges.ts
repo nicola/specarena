@@ -10,12 +10,6 @@ export function parsePagination(c: Context, defaultLimit = 50) {
   return { limit, offset };
 }
 
-export function paginate<T>(items: T[], limit: number, offset: number) {
-  const total = items.length;
-  const sliced = items.slice(offset, offset + limit);
-  return { sliced, total, limit, offset };
-}
-
 /** Collect all user profiles referenced in playerIdentities across challenges. */
 export async function collectUserProfiles(
   engine: ArenaEngine,
@@ -54,10 +48,9 @@ export function createChallengeRoutes(engine: ArenaEngine = defaultEngine) {
   // GET /api/challenges - list all challenges
   app.get("/api/challenges", async (c) => {
     const { limit, offset } = parsePagination(c);
-    const challengesList = await engine.listChallenges();
-    const { sliced, total } = paginate(challengesList, limit, offset);
-    const profiles = await collectUserProfiles(engine, sliced);
-    return c.json({ challenges: sliced, total, limit, offset, profiles });
+    const { items: challenges, total } = await engine.listChallenges({ limit, offset });
+    const profiles = await collectUserProfiles(engine, challenges);
+    return c.json({ challenges, total, limit, offset, profiles });
   });
 
   // GET /api/challenges/:name - list by type
@@ -65,10 +58,9 @@ export function createChallengeRoutes(engine: ArenaEngine = defaultEngine) {
     const name = c.req.param("name");
     try {
       const { limit, offset } = parsePagination(c);
-      const challengesList = await engine.getChallengesByType(name);
-      const { sliced, total } = paginate(challengesList, limit, offset);
-      const profiles = await collectUserProfiles(engine, sliced);
-      return c.json({ challenges: sliced, total, limit, offset, profiles });
+      const { items: challenges, total } = await engine.getChallengesByType(name, { limit, offset });
+      const profiles = await collectUserProfiles(engine, challenges);
+      return c.json({ challenges, total, limit, offset, profiles });
     } catch (error) {
       console.error("Error fetching challenges:", error);
       return c.json({ error: "Failed to fetch challenges" }, 500);

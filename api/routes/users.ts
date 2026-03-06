@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { ArenaEngine, defaultEngine } from "@arena/engine/engine";
 import { UserUpdateSchema } from "../schemas";
 import { getIdentity, IdentityEnv } from "./identity";
-import { collectUserProfiles, parsePagination, paginate } from "./challenges";
+import { collectUserProfiles, parsePagination } from "./challenges";
 
 export function createUserRoutes(engine: ArenaEngine = defaultEngine) {
   const app = new Hono<IdentityEnv>();
@@ -43,11 +43,13 @@ export function createUserRoutes(engine: ArenaEngine = defaultEngine) {
   app.get("/api/users/:userId/challenges", async (c) => {
     const userId = c.req.param("userId");
     const { limit, offset } = parsePagination(c);
-    const all = await engine.getChallengesByUserId(userId);
-    const challenges = all.filter((c) => c.state?.gameEnded);
-    const { sliced, total } = paginate(challenges, limit, offset);
-    const profiles = await collectUserProfiles(engine, sliced);
-    return c.json({ challenges: sliced, total, limit, offset, profiles });
+    // Fetch all, filter ended, then paginate — gameEnded filter can't be pushed to adapter yet
+    const { items } = await engine.getChallengesByUserId(userId);
+    const ended = items.filter((c) => c.state?.gameEnded);
+    const total = ended.length;
+    const challenges = ended.slice(offset, offset + limit);
+    const profiles = await collectUserProfiles(engine, challenges);
+    return c.json({ challenges, total, limit, offset, profiles });
   });
 
   // GET /api/users/:userId - Get a single user profile

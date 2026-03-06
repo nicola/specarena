@@ -1,14 +1,32 @@
 import { ChallengeRecord } from "../types";
 
+export interface PaginationOptions {
+  limit?: number;
+  offset?: number;
+}
+
+export interface PaginatedResult<T> {
+  items: T[];
+  total: number;
+}
+
 export interface ArenaStorageAdapter {
   clearRuntimeState(): Promise<void>;
-  listChallenges(): Promise<ChallengeRecord[]>;
+  listChallenges(options?: PaginationOptions): Promise<PaginatedResult<ChallengeRecord>>;
   getChallenge(challengeId: string): Promise<ChallengeRecord | undefined>;
   getChallengeFromInvite(invite: string): Promise<ChallengeRecord | undefined>;
-  getChallengesByUserId(userId: string): Promise<ChallengeRecord[]>;
-  getChallengesByType(challengeType: string): Promise<ChallengeRecord[]>;
+  getChallengesByUserId(userId: string, options?: PaginationOptions): Promise<PaginatedResult<ChallengeRecord>>;
+  getChallengesByType(challengeType: string, options?: PaginationOptions): Promise<PaginatedResult<ChallengeRecord>>;
   setChallenge(challenge: ChallengeRecord): Promise<void>;
   deleteChallenge(challengeId: string): Promise<void>;
+}
+
+function applyPagination<T>(items: T[], options?: PaginationOptions): PaginatedResult<T> {
+  const total = items.length;
+  if (!options?.limit && !options?.offset) return { items, total };
+  const offset = options.offset ?? 0;
+  const limit = options.limit ?? total;
+  return { items: items.slice(offset, offset + limit), total };
 }
 
 export class InMemoryArenaStorageAdapter implements ArenaStorageAdapter {
@@ -20,8 +38,8 @@ export class InMemoryArenaStorageAdapter implements ArenaStorageAdapter {
     this.inviteToChallengeId = {};
   }
 
-  async listChallenges(): Promise<ChallengeRecord[]> {
-    return Object.values(this.challengesById);
+  async listChallenges(options?: PaginationOptions): Promise<PaginatedResult<ChallengeRecord>> {
+    return applyPagination(Object.values(this.challengesById), options);
   }
 
   async getChallenge(challengeId: string): Promise<ChallengeRecord | undefined> {
@@ -33,19 +51,21 @@ export class InMemoryArenaStorageAdapter implements ArenaStorageAdapter {
     return challengeId ? this.challengesById[challengeId] : undefined;
   }
 
-  async getChallengesByUserId(userId: string): Promise<ChallengeRecord[]> {
-    return Object.values(this.challengesById)
+  async getChallengesByUserId(userId: string, options?: PaginationOptions): Promise<PaginatedResult<ChallengeRecord>> {
+    const filtered = Object.values(this.challengesById)
       .filter((c) => {
         const identities = c.state.playerIdentities;
         return identities && Object.values(identities).includes(userId);
       })
       .sort((a, b) => b.createdAt - a.createdAt);
+    return applyPagination(filtered, options);
   }
 
-  async getChallengesByType(challengeType: string): Promise<ChallengeRecord[]> {
-    return Object.values(this.challengesById)
+  async getChallengesByType(challengeType: string, options?: PaginationOptions): Promise<PaginatedResult<ChallengeRecord>> {
+    const filtered = Object.values(this.challengesById)
       .filter((c) => c.challengeType === challengeType)
       .sort((a, b) => b.createdAt - a.createdAt);
+    return applyPagination(filtered, options);
   }
 
   async setChallenge(challenge: ChallengeRecord): Promise<void> {
