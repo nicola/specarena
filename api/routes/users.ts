@@ -45,7 +45,7 @@ export function createUserRoutes(engine: ArenaEngine = defaultEngine) {
     const limit = Math.max(1, parseInt(c.req.query("limit") || "50", 10) || 50);
     const offset = Math.max(0, parseInt(c.req.query("offset") || "0", 10) || 0);
     const all = await engine.getChallengesByUserId(userId);
-    const challenges = all.filter((c) => c.instance?.state?.gameEnded);
+    const challenges = all.filter((c) => c.state?.gameEnded);
     const total = challenges.length;
     const sliced = challenges.slice(offset, offset + limit);
     const profiles = await collectUserProfiles(engine, sliced);

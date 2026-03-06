@@ -1,17 +1,17 @@
-import { Challenge } from "../types";
+import { ChallengeRecord } from "../types";
 
 export interface ArenaStorageAdapter {
   clearRuntimeState(): Promise<void>;
-  listChallenges(): Promise<Challenge[]>;
-  getChallenge(challengeId: string): Promise<Challenge | undefined>;
-  getChallengeFromInvite(invite: string): Promise<Challenge | undefined>;
-  getChallengesByUserId(userId: string): Promise<Challenge[]>;
-  setChallenge(challenge: Challenge): Promise<void>;
+  listChallenges(): Promise<ChallengeRecord[]>;
+  getChallenge(challengeId: string): Promise<ChallengeRecord | undefined>;
+  getChallengeFromInvite(invite: string): Promise<ChallengeRecord | undefined>;
+  getChallengesByUserId(userId: string): Promise<ChallengeRecord[]>;
+  setChallenge(challenge: ChallengeRecord): Promise<void>;
   deleteChallenge(challengeId: string): Promise<void>;
 }
 
 export class InMemoryArenaStorageAdapter implements ArenaStorageAdapter {
-  private challengesById: Record<string, Challenge> = {};
+  private challengesById: Record<string, ChallengeRecord> = {};
   private inviteToChallengeId: Record<string, string> = {};
 
   async clearRuntimeState(): Promise<void> {
@@ -19,29 +19,29 @@ export class InMemoryArenaStorageAdapter implements ArenaStorageAdapter {
     this.inviteToChallengeId = {};
   }
 
-  async listChallenges(): Promise<Challenge[]> {
+  async listChallenges(): Promise<ChallengeRecord[]> {
     return Object.values(this.challengesById);
   }
 
-  async getChallenge(challengeId: string): Promise<Challenge | undefined> {
+  async getChallenge(challengeId: string): Promise<ChallengeRecord | undefined> {
     return this.challengesById[challengeId];
   }
 
-  async getChallengeFromInvite(invite: string): Promise<Challenge | undefined> {
+  async getChallengeFromInvite(invite: string): Promise<ChallengeRecord | undefined> {
     const challengeId = this.inviteToChallengeId[invite];
     return challengeId ? this.challengesById[challengeId] : undefined;
   }
 
-  async getChallengesByUserId(userId: string): Promise<Challenge[]> {
+  async getChallengesByUserId(userId: string): Promise<ChallengeRecord[]> {
     return Object.values(this.challengesById)
       .filter((c) => {
-        const identities = c.instance?.state?.playerIdentities;
+        const identities = c.state?.playerIdentities;
         return identities && Object.values(identities).includes(userId);
       })
       .sort((a, b) => b.createdAt - a.createdAt);
   }
 
-  async setChallenge(challenge: Challenge): Promise<void> {
+  async setChallenge(challenge: ChallengeRecord): Promise<void> {
     const prev = this.challengesById[challenge.id];
     if (prev) {
       for (const invite of prev.invites) {

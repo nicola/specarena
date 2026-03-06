@@ -107,7 +107,7 @@ describe("e2e: full PSI game via CLI with auth", () => {
     // ── 6. Read game state from engine to get the intersection ──────
     const challenge = await engine.getChallenge(id);
     assert.ok(challenge, "challenge should exist");
-    const gameState = (challenge.instance as any).gameState as {
+    const gameState = (challenge.instance as any).privateState as {
       userSets: Set<number>[];
     };
     // Compute the actual intersection (may be larger than the designed one due to random overlaps)

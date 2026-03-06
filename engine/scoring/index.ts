@@ -9,7 +9,7 @@ import type {
 } from "./types";
 import type { ScoringStorageAdapter } from "./store";
 import { InMemoryScoringStore } from "./store";
-import type { Challenge } from "../types";
+import type { ChallengeRecord } from "../types";
 
 export class ScoringModule {
   private readonly config: EngineConfig;
@@ -142,9 +142,9 @@ export class ScoringModule {
     return { strategies, global };
   }
 
-  /** Convert a completed Challenge to a GameResult. Returns null if game hasn't ended. */
-  static challengeToGameResult(challenge: Challenge): GameResult | null {
-    const state = challenge.instance?.state;
+  /** Convert a completed ChallengeRecord to a GameResult. Returns null if game hasn't ended. */
+  static challengeToGameResult(challenge: ChallengeRecord): GameResult | null {
+    const state = challenge.state;
     if (!state?.gameEnded) return null;
 
     return {

@@ -183,45 +183,39 @@ describe("ScoringModule", () => {
   });
 
   it("challengeToGameResult returns null for non-ended games", () => {
+    const state = {
+      gameStarted: true,
+      gameEnded: false,
+      scores: [] as any[],
+      players: [] as string[],
+      playerIdentities: {},
+    };
     const challenge = {
       id: "c1",
       name: "psi",
       createdAt: Date.now(),
       challengeType: "psi",
       invites: ["inv_1", "inv_2"],
-      instance: {
-        state: {
-          gameStarted: true,
-          gameEnded: false,
-          scores: [],
-          players: [],
-          playerIdentities: {},
-        },
-        join: async () => {},
-        message: async () => {},
-      },
+      state,
     };
     assert.equal(ScoringModule.challengeToGameResult(challenge), null);
   });
 
   it("challengeToGameResult converts ended game", () => {
+    const state = {
+      gameStarted: true,
+      gameEnded: true,
+      scores: [{ security: 1, utility: 1 }],
+      players: ["inv_1"],
+      playerIdentities: { inv_1: "user-1" } as Record<string, string>,
+    };
     const challenge = {
       id: "c1",
       name: "psi",
       createdAt: 12345,
       challengeType: "psi",
       invites: ["inv_1", "inv_2"],
-      instance: {
-        state: {
-          gameStarted: true,
-          gameEnded: true,
-          scores: [{ security: 1, utility: 1 }],
-          players: ["inv_1"],
-          playerIdentities: { inv_1: "user-1" },
-        },
-        join: async () => {},
-        message: async () => {},
-      },
+      state,
     };
     const result = ScoringModule.challengeToGameResult(challenge);
     assert.ok(result);
@@ -369,7 +363,7 @@ describe("Scoring integration via engine", () => {
     assert.ok(challenge);
 
     // Get private sets and compute intersection
-    const gameState = (challenge.instance as any).gameState;
+    const gameState = (challenge.instance as any).privateState;
     const p1Set: Set<number> = gameState.userSets[0];
     const p2Set: Set<number> = gameState.userSets[1];
     const intersection = [...p1Set].filter((n) => p2Set.has(n));
@@ -426,7 +420,7 @@ describe("Scoring integration via engine", () => {
       const challenge = await defaultEngine.getChallenge(challengeId);
       assert.ok(challenge);
 
-      const gameState = (challenge.instance as any).gameState;
+      const gameState = (challenge.instance as any).privateState;
       const p1Set: Set<number> = gameState.userSets[0];
       const p2Set: Set<number> = gameState.userSets[1];
       const intersection = [...p1Set].filter((n) => p2Set.has(n));

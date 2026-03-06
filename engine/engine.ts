@@ -5,7 +5,9 @@ import {
   ChallengeError,
   ChallengeFactory,
   ChallengeMetadata,
+  ChallengeOperator,
   ChallengeOperatorError,
+  ChallengeRecord,
   Result,
   fromChallengeChannel,
   toChallengeChannel,
@@ -24,6 +26,7 @@ export interface EngineOptions {
 
 export class ArenaEngine {
   private readonly storageAdapter: ArenaStorageAdapter;
+  private readonly operators = new Map<string, ChallengeOperator>();
   readonly users: UserStorageAdapter;
   private readonly challengeFactories: Map<string, ChallengeFactory>;
   private readonly challengeOptions: Map<string, Record<string, unknown>>;
@@ -58,6 +61,7 @@ export class ArenaEngine {
   }
 
   async clearRuntimeState(): Promise<void> {
+    this.operators.clear();
     await Promise.all([
       this.storageAdapter.clearRuntimeState(),
       this.chat.clearRuntimeState(),
@@ -84,32 +88,59 @@ export class ArenaEngine {
     return Object.fromEntries(this.challengeMetadataMap);
   }
 
-  private isChallengeStale(challenge: Challenge, now: number = Date.now()): boolean {
-    const gameEnded = challenge.instance?.state?.gameEnded ?? false;
+  private isChallengeStale(record: ChallengeRecord, now: number = Date.now()): boolean {
+    const gameEnded = record.state?.gameEnded ?? false;
     const cutoff = now - STALE_CHALLENGE_TIMEOUT_MS;
-    return !gameEnded && challenge.createdAt < cutoff;
+    return !gameEnded && record.createdAt < cutoff;
+  }
+
+  private async deleteChallengeById(id: string): Promise<void> {
+    this.operators.delete(id);
+    await this.storageAdapter.deleteChallenge(id);
+    await this.chat.deleteChannel(id);
+    await this.chat.deleteChannel(toChallengeChannel(id));
   }
 
   async pruneStaleChallenges(now: number = Date.now()): Promise<number> {
     const challenges = await this.storageAdapter.listChallenges();
-    const stale = challenges.filter((challenge) => this.isChallengeStale(challenge, now));
+    const stale = challenges.filter((c) => this.isChallengeStale(c, now));
     if (stale.length === 0) {
       return 0;
     }
 
-    await Promise.all(
-      stale.map(async (challenge) => {
-        await this.storageAdapter.deleteChallenge(challenge.id);
-        await this.chat.deleteChannel(challenge.id);
-        await this.chat.deleteChannel(toChallengeChannel(challenge.id));
-      }),
-    );
-
+    await Promise.all(stale.map((c) => this.deleteChallengeById(c.id)));
     return stale.length;
   }
 
-  async listChallenges(): Promise<Challenge[]> {
+  async listChallenges(): Promise<ChallengeRecord[]> {
     return this.storageAdapter.listChallenges();
+  }
+
+  private getOrCreateOperator(record: ChallengeRecord): ChallengeOperator {
+    let instance = this.operators.get(record.id);
+    if (instance) return instance;
+
+    instance = this.instantiateChallenge(record);
+    this.operators.set(record.id, instance);
+    // Keep record.state in sync with operator (same reference for in-memory)
+    record.state = instance.state;
+    return instance;
+  }
+
+  private instantiateChallenge(record: ChallengeRecord): ChallengeOperator {
+    const factory = this.challengeFactories.get(record.challengeType);
+    if (!factory) throw new Error(`Unknown challenge type: ${record.challengeType}`);
+    const options = this.challengeOptions.get(record.challengeType);
+    return factory(record.id, options, {
+      messaging: this.chat,
+      snapshot: { state: record.state, privateState: record.privateState },
+    });
+  }
+
+  private toChallenge(record: ChallengeRecord, instance: ChallengeOperator): Challenge {
+    // Assign instance directly to preserve reference identity with the stored record.
+    // This ensures in-memory mutations (e.g. state changes) are reflected in storage.
+    return Object.assign(record, { state: instance.state, instance }) as Challenge;
   }
 
   async createChallenge(challengeType: string): Promise<Challenge> {
@@ -123,17 +154,27 @@ export class ArenaEngine {
     const options = this.challengeOptions.get(challengeType);
     const instance = factory(id, options, { messaging: this.chat });
 
-    const challenge: Challenge = {
+    const record: ChallengeRecord = {
       id,
       name: challengeType,
       createdAt: Date.now(),
       challengeType,
       invites: [`inv_${crypto.randomUUID()}`, `inv_${crypto.randomUUID()}`],
-      instance,
+      state: instance.state,
+      privateState: instance.serialize(),
     };
 
-    await this.storageAdapter.setChallenge(challenge);
-    return challenge;
+    this.operators.set(id, instance);
+    await this.storageAdapter.setChallenge(record);
+    return this.toChallenge(record, instance);
+  }
+
+  async restoreChallenge(record: ChallengeRecord): Promise<Challenge> {
+    const instance = this.instantiateChallenge(record);
+    this.operators.set(record.id, instance);
+    record.state = instance.state;
+    await this.storageAdapter.setChallenge(record);
+    return this.toChallenge(record, instance);
   }
 
   private isInviteFree(challenge: Challenge, invite: string): boolean {
@@ -156,9 +197,10 @@ export class ArenaEngine {
   }
 
   async getChallengeFromInvite(invite: string): Promise<Result<Challenge>> {
-    const challenge = await this.storageAdapter.getChallengeFromInvite(invite);
-    if (challenge) {
-      return { success: true, data: challenge };
+    const record = await this.storageAdapter.getChallengeFromInvite(invite);
+    if (record) {
+      const instance = this.getOrCreateOperator(record);
+      return { success: true, data: this.toChallenge(record, instance) };
     }
     return {
       success: false,
@@ -168,25 +210,24 @@ export class ArenaEngine {
   }
 
   async getChallenge(challengeId: string): Promise<Challenge | undefined> {
-    const challenge = await this.storageAdapter.getChallenge(challengeId);
-    if (!challenge) {
+    const record = await this.storageAdapter.getChallenge(challengeId);
+    if (!record) {
       return undefined;
     }
-    if (!this.isChallengeStale(challenge)) {
-      return challenge;
+    if (this.isChallengeStale(record)) {
+      await this.deleteChallengeById(record.id);
+      return undefined;
     }
 
-    await this.storageAdapter.deleteChallenge(challenge.id);
-    await this.chat.deleteChannel(challenge.id);
-    await this.chat.deleteChannel(toChallengeChannel(challenge.id));
-    return undefined;
+    const instance = this.getOrCreateOperator(record);
+    return this.toChallenge(record, instance);
   }
 
-  async getChallengesByUserId(userId: string): Promise<Challenge[]> {
+  async getChallengesByUserId(userId: string): Promise<ChallengeRecord[]> {
     return this.storageAdapter.getChallengesByUserId(userId);
   }
 
-  async getChallengesByType(challengeType: string): Promise<Challenge[]> {
+  async getChallengesByType(challengeType: string): Promise<ChallengeRecord[]> {
     return (await this.storageAdapter.listChallenges())
       .filter((c) => c.challengeType === challengeType && !this.isChallengeStale(c))
       .sort((a, b) => b.createdAt - a.createdAt);

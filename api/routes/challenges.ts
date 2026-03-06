@@ -1,17 +1,17 @@
 import { Hono } from "hono";
 import { ArenaEngine, defaultEngine } from "@arena/engine/engine";
-import type { Challenge } from "@arena/engine/types";
+import type { ChallengeRecord } from "@arena/engine/types";
 import type { UserProfile } from "@arena/engine/users";
 
 /** Collect all user profiles referenced in playerIdentities across challenges. */
 export async function collectUserProfiles(
   engine: ArenaEngine,
-  challenges: Challenge[],
+  challenges: ChallengeRecord[],
 ): Promise<Record<string, UserProfile>> {
   const userIds = new Set<string>();
   for (const c of challenges) {
-    if (c.instance?.state?.playerIdentities) {
-      for (const userId of Object.values(c.instance.state.playerIdentities)) {
+    if (c.state?.playerIdentities) {
+      for (const userId of Object.values(c.state.playerIdentities)) {
         userIds.add(userId);
       }
     }

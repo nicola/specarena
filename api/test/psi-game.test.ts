@@ -193,7 +193,7 @@ describe("PSI game simulation", () => {
     await challengeJoin(invite2);
 
     const challenge = await getChallengeOrThrow(challengeId);
-    const gameState = (challenge.instance as any).gameState;
+    const gameState = (challenge.instance as any).privateState;
     const p1Set: Set<number> = gameState.userSets[0];
     const p2Set: Set<number> = gameState.userSets[1];
 
@@ -220,7 +220,7 @@ describe("PSI game simulation", () => {
     await challengeJoin(invite2);
 
     const challenge = await getChallengeOrThrow(challengeId);
-    const gameState = (challenge.instance as any).gameState;
+    const gameState = (challenge.instance as any).privateState;
     const p1Set: Set<number> = gameState.userSets[0];
     const p2Set: Set<number> = gameState.userSets[1];
 
@@ -313,7 +313,7 @@ describe("PSI game simulation", () => {
     assert.ok(redactedDMs.length > 0, "before game ends, DMs should be redacted for null viewer");
 
     // Play to completion
-    const gameState = (challenge.instance as any).gameState;
+    const gameState = (challenge.instance as any).privateState;
     const p1Set: Set<number> = gameState.userSets[0];
     const p2Set: Set<number> = gameState.userSets[1];
     const intersection = [...p1Set].filter((n) => p2Set.has(n));

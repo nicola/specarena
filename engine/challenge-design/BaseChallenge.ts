@@ -11,29 +11,41 @@ import { defaultChatEngine } from "../chat/ChatEngine";
 // Challenge authors are expected to focus on game-specific logic by:
 // 1) overriding hooks (`onPlayerJoin`, `onGameStart`)
 // 2) registering handlers via `handle("method", handler)`
-export abstract class BaseChallenge<TGameState = {}> implements ChallengeOperator {
+export abstract class BaseChallenge<TPrivateState = {}> implements ChallengeOperator {
   protected challengeId: string;
   protected playerCount: number;
   protected messaging: ChallengeMessaging;
   state: ChallengeOperatorState;
-  gameState: TGameState;
+  privateState: TPrivateState;
   private handlers = new Map<string, (msg: ChatMessage, playerIndex: number) => void | Promise<void>>();
 
-  constructor(challengeId: string, playerCount: number, gameState: TGameState, messaging?: ChallengeMessaging) {
+  constructor(
+    challengeId: string,
+    playerCount: number,
+    privateState: TPrivateState,
+    messaging?: ChallengeMessaging,
+    initialState?: ChallengeOperatorState,
+  ) {
     this.challengeId = challengeId;
     this.playerCount = playerCount;
     this.messaging = messaging ?? defaultChatEngine;
-    this.state = {
-      gameStarted: false,
-      gameEnded: false,
-      scores: Array.from({ length: playerCount }, (): Score => ({ security: 0, utility: 0 })),
-      players: [],
-      playerIdentities: {},
-    };
-    this.gameState = gameState;
+    this.state = initialState
+      ? structuredClone(initialState)
+      : {
+          gameStarted: false,
+          gameEnded: false,
+          scores: Array.from({ length: playerCount }, (): Score => ({ security: 0, utility: 0 })),
+          players: [],
+          playerIdentities: {},
+        };
+    this.privateState = privateState;
   }
 
   // --- Public interface (ChallengeOperator) ---
+
+  serialize(): unknown {
+    return this.privateState;
+  }
 
   // Admission flow used by the engine when a player joins with an invite.
   // Once playerCount is reached, the game transitions to started.

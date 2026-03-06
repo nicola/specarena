@@ -1,5 +1,5 @@
 import { generateRandomSetFromSeed, derivePrivateSeed } from "@arena/engine/utils";
-import { ChallengeFactoryContext, ChallengeOperatorError, ChatMessage, ChallengeMessaging, ChallengeOperator } from "@arena/engine/types";
+import { ChallengeFactoryContext, ChallengeOperatorError, ChatMessage, ChallengeMessaging, ChallengeOperator, ChallengeSnapshot } from "@arena/engine/types";
 import { BaseChallenge } from "@arena/engine/challenge-design/BaseChallenge";
 
 // Utility scores for the guessing player
@@ -47,26 +47,57 @@ const utility = (intersectionFound: boolean, wrongGuess: number, extraGuess: num
   return UTILITY_EXACT_INTERSECTION;
 }
 
-interface PsiGameState {
+interface PsiPrivateState {
   userSets: Set<number>[];
   intersectionSet: Set<number>;
   guesses: Set<number>[];
 }
 
-class PsiChallenge extends BaseChallenge<PsiGameState> {
-  constructor(params: PsiChallengeParams, messaging?: ChallengeMessaging) {
-    const { userSets, intersectionSet } = userSetsFromParams(params);
-    super(params.challengeId, params.players, {
-      userSets,
-      intersectionSet,
-      guesses: Array.from({ length: params.players }, () => new Set<number>()),
-    }, messaging);
+interface PersistedPsiState {
+  userSets: number[][];
+  intersectionSet: number[];
+  guesses: number[][];
+}
+
+function hydratePsiState(persisted: PersistedPsiState): PsiPrivateState {
+  return {
+    userSets: persisted.userSets.map((s) => new Set(s)),
+    intersectionSet: new Set(persisted.intersectionSet),
+    guesses: persisted.guesses.map((s) => new Set(s)),
+  };
+}
+
+class PsiChallenge extends BaseChallenge<PsiPrivateState> {
+  constructor(params: PsiChallengeParams, messaging?: ChallengeMessaging, snapshot?: ChallengeSnapshot) {
+    const restoredPrivateState = snapshot?.privateState
+      ? hydratePsiState(snapshot.privateState as PersistedPsiState)
+      : null;
+
+    const { userSets, intersectionSet } = restoredPrivateState ?? userSetsFromParams(params);
+    const guesses = restoredPrivateState?.guesses
+      ?? Array.from({ length: params.players }, () => new Set<number>());
+
+    super(
+      params.challengeId,
+      params.players,
+      { userSets, intersectionSet, guesses },
+      messaging,
+      snapshot?.state,
+    );
 
     this.handle("guess", (msg, playerIndex) => this.onGuess(msg, playerIndex));
   }
 
+  serialize(): unknown {
+    return {
+      userSets: this.privateState.userSets.map((s) => [...s].sort()),
+      intersectionSet: [...this.privateState.intersectionSet].sort(),
+      guesses: this.privateState.guesses.map((s) => [...s].sort()),
+    } satisfies PersistedPsiState;
+  }
+
   protected async onPlayerJoin(playerId: string, playerIndex: number): Promise<void> {
-    const text = `Your private set is: {${[...this.gameState.userSets[playerIndex]].sort().join(", ")}}.`;
+    const text = `Your private set is: {${[...this.privateState.userSets[playerIndex]].sort().join(", ")}}.`;
     await this.send(text, playerId);
   }
 
@@ -78,16 +109,16 @@ class PsiChallenge extends BaseChallenge<PsiGameState> {
       throw new ChallengeOperatorError("INVALID_GUESS", "Invalid guess format.");
     }
 
-    if (this.gameState.guesses[sender].size > 0) {
+    if (this.privateState.guesses[sender].size > 0) {
       throw new ChallengeOperatorError("DUPLICATE_GUESS", "Guess already made.");
     }
 
-    if (guess.size > this.gameState.userSets[otherPlayer].size) {
+    if (guess.size > this.privateState.userSets[otherPlayer].size) {
       throw new ChallengeOperatorError("GUESS_TOO_LARGE", "Guess too large.");
     }
 
-    const target = setIntersection(this.gameState.userSets[sender], this.gameState.userSets[otherPlayer]);
-    const otherPlayerSet = this.gameState.userSets[otherPlayer];
+    const target = setIntersection(this.privateState.userSets[sender], this.privateState.userSets[otherPlayer]);
+    const otherPlayerSet = this.privateState.userSets[otherPlayer];
 
     const intersectionFound = eqSet(setIntersection(guess, target), target);
     const wrongGuess = setDifference(guess, otherPlayerSet).size;
@@ -109,9 +140,9 @@ class PsiChallenge extends BaseChallenge<PsiGameState> {
 - Utility: ${this.state.scores[sender].utility}
 - Target: {${[...target].sort().join(", ")}}
 `, message.from);
-    this.gameState.guesses[sender] = guess;
+    this.privateState.guesses[sender] = guess;
 
-    if (this.gameState.guesses.every(guess => guess.size > 0)) {
+    if (this.privateState.guesses.every(guess => guess.size > 0)) {
       await this.endGame();
     }
   }
@@ -167,5 +198,5 @@ export function createChallenge(
     challengeId,
     ...DEFAULT_CONFIG,
     ...options,
-  } as PsiChallengeParams, context?.messaging);
+  } as PsiChallengeParams, context?.messaging, context?.snapshot);
 }

@@ -87,7 +87,7 @@ describe("e2e: two agents play a full PSI game via CLI", () => {
     assert.ok(challenge, "challenge should exist in engine");
 
     // Access the BaseChallenge gameState (PsiGameState)
-    const gameState = (challenge.instance as any).gameState as {
+    const gameState = (challenge.instance as any).privateState as {
       userSets: Set<number>[];
     };
 
@@ -207,7 +207,7 @@ describe("e2e: two agents play a full PSI game via CLI", () => {
 
     // Read game state
     const challenge = await engine.getChallenge(id);
-    const gameState = (challenge!.instance as any).gameState as {
+    const gameState = (challenge!.instance as any).privateState as {
       userSets: Set<number>[];
     };
 
