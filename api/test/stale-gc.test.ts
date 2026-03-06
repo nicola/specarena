@@ -1,4 +1,4 @@
-import { beforeEach, describe, it } from "node:test";
+import { beforeEach, describe, it, mock } from "node:test";
 import assert from "node:assert/strict";
 
 import app from "../index";
@@ -79,6 +79,22 @@ describe("Stale challenge garbage collection", () => {
     assert.ok(typed.some((c) => c.id === challenge.id));
   });
 
+  it("getChallengesByType adjusts total when stale items are filtered", async () => {
+    // Create 3 challenges: 2 stale, 1 fresh
+    for (let i = 0; i < 3; i++) {
+      const ch = await createPsiChallenge();
+      if (i < 2) {
+        const record = await defaultEngine.storageAdapter.getChallenge(ch.id);
+        assert.ok(record);
+        await defaultEngine.storageAdapter.setChallenge({ ...record, createdAt: Date.now() - STALE_MS });
+      }
+    }
+
+    const { items, total } = await defaultEngine.getChallengesByType("psi");
+    assert.equal(items.length, 1);
+    assert.equal(total, 1);
+  });
+
   it("removes chat data for stale challenge channels", async () => {
     const challenge = await createPsiChallenge();
     const record = await defaultEngine.storageAdapter.getChallenge(challenge.id);
@@ -93,5 +109,47 @@ describe("Stale challenge garbage collection", () => {
     const privateChannel = await defaultEngine.chat.getMessagesForChannel(toChallengeChannel(challenge.id));
     assert.equal(publicChannel.length, 0);
     assert.equal(privateChannel.length, 0);
+  });
+});
+
+describe("persistChallenge safety", () => {
+  beforeEach(async () => {
+    await defaultEngine.clearRuntimeState();
+  });
+
+  it("propagates storage write error during join", async () => {
+    const challenge = await createPsiChallenge();
+    await request("POST", "/api/arena/join", { invite: challenge.invites[0] });
+
+    // Make setChallenge throw on next call
+    const originalSet = defaultEngine.storageAdapter.setChallenge.bind(defaultEngine.storageAdapter);
+    defaultEngine.storageAdapter.setChallenge = mock.fn(async () => { throw new Error("storage write failed"); });
+
+    const res = await request("POST", "/api/arena/join", { invite: challenge.invites[1] });
+
+    // Restore original
+    defaultEngine.storageAdapter.setChallenge = originalSet;
+
+    // Storage failure surfaces as a non-200 response
+    assert.notEqual(res.status, 200);
+  });
+
+  it("propagates storage write error during challengeMessage", async () => {
+    const challenge = await createPsiChallenge();
+    await request("POST", "/api/arena/join", { invite: challenge.invites[0] });
+    await request("POST", "/api/arena/join", { invite: challenge.invites[1] });
+
+    // Make setChallenge throw
+    const originalSet = defaultEngine.storageAdapter.setChallenge.bind(defaultEngine.storageAdapter);
+    defaultEngine.storageAdapter.setChallenge = mock.fn(async () => { throw new Error("storage write failed"); });
+
+    // Call engine directly to bypass identity/route issues
+    const result = await defaultEngine.challengeMessage(challenge.id, "player1", "", '{"action":"reveal","item":"test"}');
+
+    // Restore original
+    defaultEngine.storageAdapter.setChallenge = originalSet;
+
+    // challengeMessage catches the error and returns it
+    assert.ok("error" in result);
   });
 });
