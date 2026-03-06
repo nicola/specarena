@@ -205,9 +205,8 @@ export class ArenaEngine {
   }
 
   async getChallengesByType(challengeType: string): Promise<ChallengeRecord[]> {
-    return (await this.storageAdapter.listChallenges())
-      .filter((c) => c.challengeType === challengeType && !this.isChallengeStale(c))
-      .sort((a, b) => b.createdAt - a.createdAt);
+    return (await this.storageAdapter.getChallengesByType(challengeType))
+      .filter((c) => !this.isChallengeStale(c));
   }
 
   async challengeJoin(invite: string, userId?: string) {
