@@ -11,16 +11,11 @@ interface ChallengeInstance {
   createdAt: number;
   challengeType: string;
   invites: string[];
-  instance?: {
-    players: number;
-    state?: {
-      gameStarted?: boolean;
-      gameEnded?: boolean;
-      players: string[];
-      playerIdentities?: Record<string, string>;
-      scores?: { security: number; utility: number }[];
-    };
-  };
+  gameStarted?: boolean;
+  gameEnded?: boolean;
+  players?: string[];
+  playerIdentities?: Record<string, string>;
+  scores?: { security: number; utility: number }[];
 }
 
 interface ChallengesListProps {
@@ -43,13 +38,10 @@ const formatDate = (timestamp: number) => {
 };
 
 const getGameStatus = (challengeInstance: ChallengeInstance) => {
-  const gameStarted = challengeInstance.instance?.state?.gameStarted ?? false;
-  const gameEnded = challengeInstance.instance?.state?.gameEnded ?? false;
-  const expectedPlayers = challengeInstance.instance?.players;
-  const currentPlayers = challengeInstance.instance?.state?.players?.length;
-  const waitingForPlayers = expectedPlayers && currentPlayers
-    && currentPlayers > 0
-    && currentPlayers < expectedPlayers;
+  const gameStarted = challengeInstance.gameStarted ?? false;
+  const gameEnded = challengeInstance.gameEnded ?? false;
+  const currentPlayers = challengeInstance.players?.length;
+  const waitingForPlayers = !gameStarted && currentPlayers && currentPlayers > 0;
   
   if (gameEnded) {
     return { 
@@ -110,9 +102,9 @@ export default function ChallengesList({ challenges, challengeType, profiles = {
           </div>
           {challenges.map((challengeInstance) => {
             const status = getGameStatus(challengeInstance);
-            const players = challengeInstance.instance?.state?.gameEnded
-              && challengeInstance.instance.state.playerIdentities
-              ? Object.values(challengeInstance.instance.state.playerIdentities)
+            const players = challengeInstance.gameEnded
+              && challengeInstance.playerIdentities
+              ? Object.values(challengeInstance.playerIdentities)
               : [];
             const challengeHref = `/challenges/${challengeType || challengeInstance.challengeType}/${challengeInstance.id}`;
             return (
@@ -132,13 +124,13 @@ export default function ChallengesList({ challenges, challengeType, profiles = {
                 <span className="w-[100px] text-sm text-zinc-400 shrink-0 max-sm:hidden">
                   {formatDate(challengeInstance.createdAt)}
                 </span>
-                {players.length > 0 && challengeInstance.instance?.state?.scores ? (
+                {players.length > 0 && challengeInstance.scores ? (
                   <div className="min-w-0 flex-1">
                     {players.map((p, i) => {
                       const name = profiles[p]?.username;
                       const short = p.slice(0, 8);
-                      const score = challengeInstance.instance?.state?.scores?.[i];
-                      const scores = challengeInstance.instance?.state?.scores;
+                      const score = challengeInstance.scores?.[i];
+                      const scores = challengeInstance.scores;
                       // Player performed a breach if any OTHER player has security === -1
                       const didBreach = scores?.some((s, j) => j !== i && s.security === -1);
                       return (
