@@ -3,7 +3,6 @@ import assert from "node:assert/strict";
 
 import { generateKeyPair, generateSecret, hashPublicKey, sign } from "../auth/utils";
 import { createAuthApp } from "../auth/index";
-import { readNextSSEData } from "./helpers/sse";
 
 const secret = generateSecret();
 const { app, engine } = createAuthApp({ secret });

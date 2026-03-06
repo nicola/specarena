@@ -43,7 +43,6 @@ async function getChallengeIdFromRequest(c: Context): Promise<string | null> {
 }
 
 function getEd25519Params(c: Context): { publicKey: string; signature: string; timestamp: number } | null {
-  // Try query params first, then body (body was already parsed upstream)
   const publicKey = c.req.query("publicKey");
   const signature = c.req.query("signature");
   const timestampStr = c.req.query("timestamp");
