@@ -64,7 +64,7 @@ export function createUserRoutes(engine: ArenaEngine = defaultEngine) {
 
   // POST /api/users - Update user profile
   app.post("/api/users", async (c) => {
-    const body = await c.req.json();
+    const body = c.get("parsedBody") ?? await c.req.json();
     const parsed = UserUpdateSchema.safeParse(body);
     if (!parsed.success) {
       return c.json({ error: parsed.error.issues[0].message }, 400);

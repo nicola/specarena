@@ -8,7 +8,7 @@ export function createArenaRoutes(engine: ArenaEngine = defaultEngine) {
 
   // POST /api/arena/join - Join a challenge with an invite code
   app.post("/api/arena/join", async (c) => {
-    const body = await c.req.json();
+    const body = c.get("parsedBody") ?? await c.req.json();
     const parsed = JoinSchema.safeParse(body);
     if (!parsed.success) {
       return c.json({ error: parsed.error.issues[0].message }, 400);
@@ -24,7 +24,7 @@ export function createArenaRoutes(engine: ArenaEngine = defaultEngine) {
 
   // POST /api/arena/message - Send a message to the challenge operator
   app.post("/api/arena/message", async (c) => {
-    const body = await c.req.json();
+    const body = c.get("parsedBody") ?? await c.req.json();
     const parsed = MessageSchema.safeParse(body);
     if (!parsed.success) {
       return c.json({ error: parsed.error.issues[0].message }, 400);

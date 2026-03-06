@@ -10,43 +10,37 @@ function extractBearerToken(header: string | undefined): string | undefined {
   return header.slice(7);
 }
 
-async function getRequestContext(c: Context): Promise<{ challengeId: string | null; channel: string | null; content: string | null }> {
-  let channel: string | null = null;
-  let content: string | null = null;
+/**
+ * Parse body once and store on context for downstream use.
+ * Extracts channel (from query/body/URL param), content (from body), and challengeId (stripped prefix).
+ */
+export function createBodyParser() {
+  return async (c: Context, next: Next) => {
+    let channel: string | null = c.req.query("channel") ?? c.req.query("challengeId") ?? null;
+    let parsedBody: Record<string, unknown> | null = null;
 
-  channel = c.req.query("channel")
-    ?? c.req.query("challengeId")
-    ?? null;
-
-  if (!channel) {
-    const cloned = c.req.raw.clone();
-    try {
-      const body = await cloned.json();
-      channel = body.challengeId || body.channel || null;
-      content = body.content ?? null;
-    } catch {
-      // Expected for GET requests or non-JSON bodies
+    if (c.req.method === "POST") {
+      try {
+        parsedBody = await c.req.raw.clone().json();
+      } catch {
+        // non-JSON body
+      }
     }
-  } else if (c.req.method === "POST") {
-    const cloned = c.req.raw.clone();
-    try {
-      const body = await cloned.json();
-      content = body.content ?? null;
-    } catch {
-      // non-JSON body
+
+    if (!channel && parsedBody) {
+      channel = (parsedBody.challengeId || parsedBody.channel) as string | null;
     }
-  }
 
-  if (!channel) {
-    const uuid = c.req.param("uuid");
-    if (uuid) channel = uuid;
-  }
+    const challengeId = channel
+      ? (fromChallengeChannel(channel) ?? fromChatChannel(channel) ?? channel)
+      : null;
 
-  const challengeId = channel
-    ? (fromChallengeChannel(channel) ?? fromChatChannel(channel) ?? channel)
-    : null;
+    c.set("channel", channel);
+    c.set("challengeId", challengeId);
+    c.set("parsedBody", parsedBody);
 
-  return { challengeId, channel, content };
+    return next();
+  };
 }
 
 function getEd25519Params(c: Context): { publicKey: string; signature: string; timestamp: number } | null {
@@ -99,7 +93,9 @@ function resolveEd25519(
 export function createAuthUser(engine: ArenaEngine, auth: AuthEngine) {
   return async (c: Context, next: Next) => {
     const key = extractBearerToken(c.req.header("Authorization")) ?? c.req.query("key");
-    const { challengeId, channel, content } = await getRequestContext(c);
+    const channel: string | null = c.get("channel");
+    const parsedBody: Record<string, unknown> | null = c.get("parsedBody");
+    const challengeId: string | null = c.get("challengeId");
 
     let resolved: { identity: string } | { error: string; status: 401 };
 
@@ -108,6 +104,7 @@ export function createAuthUser(engine: ArenaEngine, auth: AuthEngine) {
     } else {
       const ed25519 = getEd25519Params(c);
       if (ed25519) {
+        const content = (parsedBody?.content as string) ?? null;
         resolved = resolveEd25519(ed25519, c.req.method, channel, content, auth);
       } else {
         resolved = { identity: "viewer" };

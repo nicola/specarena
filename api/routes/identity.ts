@@ -6,10 +6,11 @@ export function createResolveIdentity() {
   return async (c: Context, next: Next) => {
     if (c.get("identity") !== undefined) return next();
 
-    // Standalone mode — read from param
+    // Standalone mode — read from param or parsed body
     let from = c.req.query("from");
     if (!from) {
-      try { from = (await c.req.raw.clone().json()).from; } catch {}
+      const parsedBody: Record<string, unknown> | null = c.get("parsedBody");
+      from = (parsedBody?.from as string) ?? null;
     }
     if (from) c.set("identity", from);
     return next();

@@ -12,7 +12,7 @@ export function createChatRoutes(engine: ArenaEngine = defaultEngine) {
 
   // POST /api/chat/send - Send a chat message
   app.post("/api/chat/send", async (c) => {
-    const body = await c.req.json();
+    const body = c.get("parsedBody") ?? await c.req.json();
     const parsed = ChatSendSchema.safeParse(body);
     if (!parsed.success) {
       return c.json({ error: parsed.error.issues[0].message }, 400);
@@ -57,45 +57,28 @@ export function createChatRoutes(engine: ArenaEngine = defaultEngine) {
   app.get("/api/chat/ws/:uuid", (c) => {
     const uuid = c.req.param("uuid");
     const viewer = getIdentity(c);
+    const challengeId = fromChallengeChannel(uuid) ?? fromChatChannel(uuid) ?? uuid;
 
     const stream = new ReadableStream({
       async start(controller) {
-        // Send initial messages (redacted for non-visible DMs)
-        const { messages: initialMessages } = await chat.chatSync(uuid, viewer, 0);
-        const initialData = JSON.stringify({ type: "initial", messages: initialMessages });
-        controller.enqueue(new TextEncoder().encode(`data: ${initialData}\n\n`));
+        const send = (data: string) => controller.enqueue(new TextEncoder().encode(`data: ${data}\n\n`));
 
-        // If the game has already ended, send game_ended event with state + profiles
-        const challengeId = fromChallengeChannel(uuid) ?? fromChatChannel(uuid) ?? uuid;
+        // Send initial messages
+        const { messages } = await chat.chatSync(uuid, viewer, 0);
+        send(JSON.stringify({ type: "initial", messages }));
+
+        // If the game has already ended, send state + profiles
         const challenge = await engine.getChallenge(challengeId);
         if (challenge?.instance?.state?.gameEnded) {
           const identities = challenge.instance.state.playerIdentities ?? {};
           const userIds = Object.values(identities).filter(Boolean);
-          const profiles = userIds.length > 0
-            ? await engine.users.getUsers(userIds)
-            : {};
-          const endedData = JSON.stringify({
-            type: "game_ended",
-            data: { ...challenge.instance.state, profiles },
-          });
-          controller.enqueue(new TextEncoder().encode(`data: ${endedData}\n\n`));
+          const profiles = userIds.length > 0 ? await engine.users.getUsers(userIds) : {};
+          send(JSON.stringify({ type: "game_ended", data: { ...challenge.instance.state, profiles } }));
         }
 
-        // Subscribe to new messages with viewer identity
+        // Subscribe to new messages
         const unsubscribe = chat.subscribeToChannel(uuid, controller, viewer);
 
-        // Handle client disconnect
-        c.req.raw.signal.addEventListener("abort", () => {
-          unsubscribe();
-          clearInterval(keepAliveInterval);
-          try {
-            controller.close();
-          } catch {
-            // Connection already closed
-          }
-        });
-
-        // Send keepalive ping every 30 seconds
         const keepAliveInterval = setInterval(() => {
           try {
             controller.enqueue(new TextEncoder().encode(`: ping\n\n`));
@@ -104,6 +87,12 @@ export function createChatRoutes(engine: ArenaEngine = defaultEngine) {
             unsubscribe();
           }
         }, SSE_KEEPALIVE_INTERVAL_MS);
+
+        c.req.raw.signal.addEventListener("abort", () => {
+          unsubscribe();
+          clearInterval(keepAliveInterval);
+          try { controller.close(); } catch { /* already closed */ }
+        });
       },
     });
 

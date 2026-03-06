@@ -25,7 +25,7 @@ export function createInviteRoutes(engine: ArenaEngine = defaultEngine) {
 
   // POST /api/invites - claim invite
   app.post("/api/invites", async (c) => {
-    const body = await c.req.json();
+    const body = c.get("parsedBody") ?? await c.req.json();
     const { inviteId } = body;
 
     if (!inviteId) {
