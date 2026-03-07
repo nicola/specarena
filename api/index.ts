@@ -1,7 +1,7 @@
 import { readFileSync } from "fs";
 import { join } from "path";
 import { Hono } from "hono";
-import { ArenaEngine, defaultEngine } from "@arena/engine/engine";
+import { ArenaEngine, defaultEngine, createStorage } from "@arena/engine/engine";
 import { ChallengeFactory, ChallengeMetadata } from "@arena/engine/types";
 import { ScoringModule } from "@arena/engine/scoring";
 import type { EngineConfig } from "@arena/engine/scoring/types";
@@ -55,7 +55,8 @@ export function createApp(engine: ArenaEngine = defaultEngine, options?: { mcp?:
   // Load config and initialize scoring
   const config = loadConfig();
   if (!engine.scoring) {
-    engine.scoring = new ScoringModule(config, strategies, globalStrategies);
+    const scoringStorage = createStorage().scoring;
+    engine.scoring = new ScoringModule(config, strategies, globalStrategies, scoringStorage);
   }
   registerChallengesFromConfig(engine, config);
   const app = new Hono();

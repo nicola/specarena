@@ -71,8 +71,6 @@ export class SqlArenaStorageAdapter implements ArenaStorageAdapter {
           game_started: state.gameStarted,
           game_ended: state.gameEnded,
           completed_at: state.completedAt ? new Date(state.completedAt) : null,
-          scores: JSON.stringify(state.scores),
-          attributions: state.attributions ? JSON.stringify(state.attributions) : null,
           game_state: JSON.stringify(challenge.gameState),
         })
         .onConflict((oc) =>
@@ -83,8 +81,6 @@ export class SqlArenaStorageAdapter implements ArenaStorageAdapter {
             game_started: state.gameStarted,
             game_ended: state.gameEnded,
             completed_at: state.completedAt ? new Date(state.completedAt) : null,
-            scores: JSON.stringify(state.scores),
-            attributions: state.attributions ? JSON.stringify(state.attributions) : null,
             game_state: JSON.stringify(challenge.gameState),
           }),
         )
@@ -110,6 +106,45 @@ export class SqlArenaStorageAdapter implements ArenaStorageAdapter {
 
         await tx.insertInto("challenge_invites").values(inviteRows).execute();
       }
+
+      // Rebuild game_scores
+      await tx
+        .deleteFrom("game_scores")
+        .where("challenge_id", "=", challenge.id)
+        .execute();
+
+      const scoreRows = state.players
+        .map((invite, i) => {
+          const score = state.scores[i];
+          if (!score) return null;
+          return {
+            challenge_id: challenge.id,
+            player_id: invite,
+            security: score.security,
+            utility: score.utility,
+          };
+        })
+        .filter((r) => r !== null);
+
+      if (scoreRows.length > 0) {
+        await tx.insertInto("game_scores").values(scoreRows).execute();
+      }
+
+      // Rebuild scoring_attributions
+      await tx
+        .deleteFrom("scoring_attributions")
+        .where("challenge_id", "=", challenge.id)
+        .execute();
+
+      if (state.attributions && state.attributions.length > 0) {
+        const attrRows = state.attributions.map((a) => ({
+          challenge_id: challenge.id,
+          from_player_index: a.from,
+          to_player_index: a.to,
+          type: a.type,
+        }));
+        await tx.insertInto("scoring_attributions").values(attrRows).execute();
+      }
     });
   }
 
@@ -130,8 +165,6 @@ export class SqlArenaStorageAdapter implements ArenaStorageAdapter {
     game_started: boolean;
     game_ended: boolean;
     completed_at: Date | null;
-    scores: unknown;
-    attributions: unknown | null;
     game_state: unknown;
   }): Promise<Challenge> {
     const invites = await this.db
@@ -155,14 +188,42 @@ export class SqlArenaStorageAdapter implements ArenaStorageAdapter {
       }
     }
 
+    // Reconstruct scores from game_scores table
+    const scoreRows = await this.db
+      .selectFrom("game_scores")
+      .selectAll()
+      .where("challenge_id", "=", row.id)
+      .execute();
+
+    const playerCount = inviteList.length;
+    const scores: Score[] = Array.from({ length: playerCount }, () => ({ security: 0, utility: 0 }));
+    for (const sr of scoreRows) {
+      const idx = players.indexOf(sr.player_id);
+      if (idx >= 0) {
+        scores[idx] = { security: sr.security, utility: sr.utility };
+      }
+    }
+
+    // Reconstruct attributions from scoring_attributions table
+    const attrRows = await this.db
+      .selectFrom("scoring_attributions")
+      .select(["from_player_index", "to_player_index", "type"])
+      .where("challenge_id", "=", row.id)
+      .execute();
+
+    const attributions: Attribution[] | undefined =
+      attrRows.length > 0
+        ? attrRows.map((a) => ({ from: a.from_player_index, to: a.to_player_index, type: a.type }))
+        : undefined;
+
     const state: ChallengeOperatorState = {
       gameStarted: row.game_started,
       gameEnded: row.game_ended,
       completedAt: row.completed_at ? row.completed_at.getTime() : undefined,
-      scores: (row.scores ?? []) as Score[],
+      scores,
       players,
       playerIdentities,
-      attributions: (row.attributions ?? undefined) as Attribution[] | undefined,
+      attributions,
     };
 
     return {

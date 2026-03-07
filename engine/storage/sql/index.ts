@@ -4,12 +4,15 @@ import type { Database } from "./schema";
 import { SqlArenaStorageAdapter } from "./SqlArenaStorageAdapter";
 import { SqlChatStorageAdapter } from "./SqlChatStorageAdapter";
 import { SqlUserStorageAdapter } from "./SqlUserStorageAdapter";
+import { SqlScoringStorageAdapter } from "@arena/scoring/sql";
 import type { ArenaStorageAdapter, ChatStorageAdapter, UserStorageAdapter } from "../types";
+import type { ScoringStorageAdapter } from "@arena/scoring";
 
 export interface SqlStorage {
   arena: ArenaStorageAdapter;
   chat: ChatStorageAdapter;
   user: UserStorageAdapter;
+  scoring: ScoringStorageAdapter;
   db: Kysely<Database>;
 }
 
@@ -24,6 +27,7 @@ export function createSqlStorage(connectionString: string): SqlStorage {
     arena: new SqlArenaStorageAdapter(db),
     chat: new SqlChatStorageAdapter(db),
     user: new SqlUserStorageAdapter(db),
+    scoring: new SqlScoringStorageAdapter(db as unknown as Kysely<any>),
     db,
   };
 }

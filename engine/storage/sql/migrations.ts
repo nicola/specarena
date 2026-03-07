@@ -17,8 +17,6 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .addColumn("game_started", "boolean", (col) => col.notNull().defaultTo(false))
     .addColumn("game_ended", "boolean", (col) => col.notNull().defaultTo(false))
     .addColumn("completed_at", "timestamptz")
-    .addColumn("scores", "jsonb", (col) => col.notNull().defaultTo("[]"))
-    .addColumn("attributions", "jsonb")
     .addColumn("game_state", "jsonb", (col) => col.notNull().defaultTo("{}"))
     .execute();
 
@@ -93,7 +91,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .addColumn("strategy_name", "text", (col) => col.notNull())
     .addColumn("player_id", "text", (col) => col.notNull())
     .addColumn("metric_key", "text", (col) => col.notNull())
-    .addColumn("value", "integer", (col) => col.notNull().defaultTo(0))
+    .addColumn("value", "real", (col) => col.notNull().defaultTo(0))
     .addPrimaryKeyConstraint("scoring_metrics_pk", [
       "challenge_type",
       "strategy_name",

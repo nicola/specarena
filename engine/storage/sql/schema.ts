@@ -16,8 +16,6 @@ export interface ChallengesTable {
   game_started: boolean;
   game_ended: boolean;
   completed_at: ColumnType<Date | null, Date | string | null, Date | string | null>;
-  scores: ColumnType<unknown, string, string>; // jsonb — Score[] from operator state
-  attributions: ColumnType<unknown | null, string | null, string | null>; // jsonb — Attribution[] | null
   game_state: ColumnType<unknown, string, string>; // jsonb — operator-specific blob
 }
 
