@@ -161,30 +161,31 @@ export class SqlArenaStorageAdapter implements ArenaStorageAdapter {
         await tx.insertInto("challenge_invites").values(inviteRows).execute();
       }
 
-      // Only persist scores and attributions once the game has ended
+      // Persist scores whenever players have scores (needed for mid-game round-trips)
+      await tx
+        .deleteFrom("game_scores")
+        .where("challenge_id", "=", challenge.id)
+        .execute();
+
+      const scoreRows = state.players
+        .map((invite, i) => {
+          const score = state.scores[i];
+          if (!score) return null;
+          return {
+            challenge_id: challenge.id,
+            player_id: invite,
+            security: score.security,
+            utility: score.utility,
+          };
+        })
+        .filter((r) => r !== null);
+
+      if (scoreRows.length > 0) {
+        await tx.insertInto("game_scores").values(scoreRows).execute();
+      }
+
+      // Attributions are only set at game end
       if (state.gameEnded) {
-        await tx
-          .deleteFrom("game_scores")
-          .where("challenge_id", "=", challenge.id)
-          .execute();
-
-        const scoreRows = state.players
-          .map((invite, i) => {
-            const score = state.scores[i];
-            if (!score) return null;
-            return {
-              challenge_id: challenge.id,
-              player_id: invite,
-              security: score.security,
-              utility: score.utility,
-            };
-          })
-          .filter((r) => r !== null);
-
-        if (scoreRows.length > 0) {
-          await tx.insertInto("game_scores").values(scoreRows).execute();
-        }
-
         await tx
           .deleteFrom("scoring_attributions")
           .where("challenge_id", "=", challenge.id)

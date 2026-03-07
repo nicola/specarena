@@ -189,7 +189,7 @@ describe("SQL-specific behavior", () => {
       assert.equal(rows.length, 0);
     });
 
-    it("does not write game_scores before game ends", async () => {
+    it("writes game_scores during gameplay for mid-game round-trips", async () => {
       const c = mockChallenge("c1", ["inv_a", "inv_b"]);
       c.state.players = ["inv_a", "inv_b"];
       c.state.scores = [{ security: 0.5, utility: 0.5 }, { security: 0.5, utility: 0.5 }];
@@ -202,7 +202,11 @@ describe("SQL-specific behavior", () => {
         .selectAll()
         .where("challenge_id", "=", "c1")
         .execute();
-      assert.equal(rows.length, 0);
+      assert.equal(rows.length, 2);
+
+      // Verify round-trip
+      const result = await testDb.arena.getChallenge("c1");
+      assert.deepEqual(result?.state.scores, c.state.scores);
     });
 
     it("cascade-deletes game_scores when challenge is deleted", async () => {
