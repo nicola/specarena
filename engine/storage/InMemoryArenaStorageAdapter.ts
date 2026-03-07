@@ -1,14 +1,5 @@
 import { Challenge } from "../types";
-
-export interface ArenaStorageAdapter {
-  clearRuntimeState(): Promise<void>;
-  listChallenges(): Promise<Challenge[]>;
-  getChallenge(challengeId: string): Promise<Challenge | undefined>;
-  getChallengeFromInvite(invite: string): Promise<Challenge | undefined>;
-  getChallengesByUserId(userId: string): Promise<Challenge[]>;
-  setChallenge(challenge: Challenge): Promise<void>;
-  deleteChallenge(challengeId: string): Promise<void>;
-}
+import type { ArenaStorageAdapter } from "./types";
 
 export class InMemoryArenaStorageAdapter implements ArenaStorageAdapter {
   private challengesById: Record<string, Challenge> = {};
@@ -56,6 +47,12 @@ export class InMemoryArenaStorageAdapter implements ArenaStorageAdapter {
   }
 
   async deleteChallenge(challengeId: string): Promise<void> {
+    const challenge = this.challengesById[challengeId];
+    if (challenge) {
+      for (const invite of challenge.invites) {
+        delete this.inviteToChallengeId[invite];
+      }
+    }
     delete this.challengesById[challengeId];
   }
 }

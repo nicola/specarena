@@ -1,5 +1,6 @@
 import { ChallengeOperatorEvent, ChatMessage, toChallengeChannel } from "../types";
-import { ChatStorageAdapter, InMemoryChatStorageAdapter } from "../storage/InMemoryChatStorageAdapter";
+import type { ChatStorageAdapter } from "../storage/types";
+import { InMemoryChatStorageAdapter } from "../storage/InMemoryChatStorageAdapter";
 
 export interface ChatEngineOptions {
   storageAdapter?: ChatStorageAdapter;
@@ -29,10 +30,6 @@ export class ChatEngine {
   async clearRuntimeState(): Promise<void> {
     await this.storageAdapter.clearRuntimeState();
     this.channelSubscribers.clear();
-  }
-
-  async getNextIndex(channel: string): Promise<number> {
-    return this.storageAdapter.getNextIndex(channel);
   }
 
   async getMessagesForChallengeChannel(challengeId: string): Promise<ChatMessage[]> {
@@ -149,17 +146,13 @@ export class ChatEngine {
   }
 
   async sendMessage(channel: string, from: string, content: string, to?: string | null): Promise<ChatMessage> {
-    const index = await this.storageAdapter.getNextIndex(channel);
-    const message: ChatMessage = {
+    const message = await this.storageAdapter.appendMessage(channel, {
       channel,
       from,
       to,
       content: content || "",
-      index,
       timestamp: Date.now(),
-    };
-
-    await this.storageAdapter.appendMessage(channel, message);
+    });
     this.notifyChannelSubscribers(channel, message);
     return message;
   }

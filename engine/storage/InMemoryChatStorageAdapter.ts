@@ -1,12 +1,5 @@
 import { ChatMessage } from "../types";
-
-export interface ChatStorageAdapter {
-  clearRuntimeState(): Promise<void>;
-  getNextIndex(channel: string): Promise<number>;
-  getMessagesForChannel(channel: string): Promise<ChatMessage[]>;
-  appendMessage(channel: string, message: ChatMessage): Promise<void>;
-  deleteChannel(channel: string): Promise<void>;
-}
+import type { ChatStorageAdapter } from "./types";
 
 export class InMemoryChatStorageAdapter implements ChatStorageAdapter {
   private messagesByChannel: Record<string, ChatMessage[]> = {};
@@ -17,22 +10,21 @@ export class InMemoryChatStorageAdapter implements ChatStorageAdapter {
     this.indexCounters = {};
   }
 
-  async getNextIndex(channel: string): Promise<number> {
-    const current = this.indexCounters[channel] ?? 0;
-    const next = current + 1;
-    this.indexCounters[channel] = next;
-    return next;
-  }
-
   async getMessagesForChannel(channel: string): Promise<ChatMessage[]> {
     return [...(this.messagesByChannel[channel] ?? [])];
   }
 
-  async appendMessage(channel: string, message: ChatMessage): Promise<void> {
+  async appendMessage(channel: string, message: Omit<ChatMessage, "index">): Promise<ChatMessage> {
+    const current = this.indexCounters[channel] ?? 0;
+    const index = current + 1;
+    this.indexCounters[channel] = index;
+
+    const stored: ChatMessage = { ...message, index };
     if (!this.messagesByChannel[channel]) {
       this.messagesByChannel[channel] = [];
     }
-    this.messagesByChannel[channel].push(message);
+    this.messagesByChannel[channel].push(stored);
+    return stored;
   }
 
   async deleteChannel(channel: string): Promise<void> {
