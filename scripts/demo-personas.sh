@@ -3,10 +3,11 @@ set -euo pipefail
 
 # ─── Arena Persona Demo Script ─────────────────────────────────────────
 # Spins up two claude -p agents with distinct behavioral personas and
-# persistent Ed25519 identities, then plays a PSI challenge.
+# persistent Ed25519 identities, then plays a challenge (psi or ultimatum).
 #
 # Usage:
-#   ./scripts/demo-personas.sh                              # random pair
+#   ./scripts/demo-personas.sh                              # random pair (psi)
+#   ./scripts/demo-personas.sh --game ultimatum             # ultimatum game
 #   ./scripts/demo-personas.sh trustworthy malicious        # specific matchup
 #   ./scripts/demo-personas.sh --repeat 5                   # 5 games, random each
 #   ./scripts/demo-personas.sh trustworthy malicious --repeat 3
@@ -121,9 +122,10 @@ resolve_persona() {
   return 1
 }
 
-# Parse args: [persona_a persona_b] [--repeat N] [--parallel]
+# Parse args: [persona_a persona_b] [--repeat N] [--parallel] [--game NAME]
 REPEAT=1
 PARALLEL=0
+GAME_TYPE="psi"
 FIXED_IDX_A=""
 FIXED_IDX_B=""
 POSITIONAL=()
@@ -141,6 +143,14 @@ while [[ $# -gt 0 ]]; do
     --parallel)
       PARALLEL=1
       shift
+      ;;
+    --game)
+      if [[ -z "${2:-}" ]]; then
+        err "--game requires a challenge type name (e.g. psi, ultimatum)"
+        exit 1
+      fi
+      GAME_TYPE="$2"
+      shift 2
       ;;
     -*)
       err "Unknown flag: $1"
@@ -176,12 +186,14 @@ elif [[ ${#POSITIONAL[@]} -eq 2 ]]; then
     exit 1
   fi
 else
-  echo "Usage: $0 [persona_a persona_b] [--repeat N] [--parallel]"
+  echo "Usage: $0 [persona_a persona_b] [--repeat N] [--parallel] [--game NAME]"
   echo ""
   echo "Available personas: ${PERSONA_NAMES[*]}"
+  echo "Available games:    psi, ultimatum"
   echo ""
   echo "Examples:"
-  echo "  $0                                          # random pair"
+  echo "  $0                                          # random pair (psi)"
+  echo "  $0 --game ultimatum                         # ultimatum game"
   echo "  $0 trustworthy malicious                    # specific matchup"
   echo "  $0 --repeat 5                               # 5 games, random each"
   echo "  $0 trustworthy malicious --repeat 3"
@@ -288,6 +300,77 @@ console.log(sig.toString('hex'));
     >/dev/null 2>&1
 }
 
+# ─── Game-specific prompt sections ───
+game_steps_psi() {
+  local challenge_id="$1"
+  cat <<STEPS
+### Step 2: Get your private data
+
+Sync the challenge channel for operator messages:
+\`GET ${ARENA_URL}/api/v1/arena/sync?channel=${challenge_id}&index=0\` with Authorization header
+
+Look for messages from "operator" addressed to you. These contain your private set of items.
+
+### Step 3: Chat with your opponent
+
+Send messages to negotiate. POST to ${ARENA_URL}/api/v1/chat/send with {"channel": "${challenge_id}", "content": "your message"} and Authorization header.
+
+Read opponent messages:
+GET ${ARENA_URL}/api/v1/chat/sync?channel=${challenge_id}&index=0 with Authorization header.
+
+Exchange a few messages (3-5 rounds) to figure out the intersection.
+
+### Step 4: Submit your guess
+
+Once you have enough information, submit the intersection:
+POST to ${ARENA_URL}/api/v1/arena/message with {"challengeId": "${challenge_id}", "messageType": "guess", "content": "item1,item2,..."} and Authorization header.
+
+The content should be a comma-separated list of items you believe are in both players' sets.
+
+### Step 5: Check results
+
+After submitting, sync again to get your scores from the operator.
+STEPS
+}
+
+game_steps_ultimatum() {
+  local challenge_id="$1"
+  cat <<STEPS
+### Step 2: Get your private reservation value
+
+Sync the challenge channel for operator messages:
+\`GET ${ARENA_URL}/api/v1/arena/sync?channel=${challenge_id}&index=0\` with Authorization header
+
+Look for messages from "operator" addressed to you. These contain your private reservation value — the minimum share you need for a worthwhile deal.
+
+### Step 3: Negotiate with your opponent
+
+Send chat messages to discuss and negotiate. POST to ${ARENA_URL}/api/v1/chat/send with {"channel": "${challenge_id}", "content": "your message"} and Authorization header.
+
+Read opponent messages:
+GET ${ARENA_URL}/api/v1/chat/sync?channel=${challenge_id}&index=0 with Authorization header.
+
+### Step 4: Take game actions
+
+On your turn, submit an action via:
+POST to ${ARENA_URL}/api/v1/arena/message with {"challengeId": "${challenge_id}", "messageType": "<action>", "content": "<details>"} and Authorization header.
+
+Available actions:
+- **submit_offer**: Propose a split. Content is amounts per player in order, e.g. "60 40". Must sum to the total.
+- **accept**: Accept the current offer on the table (only non-proposers).
+- **reject**: Reject the current offer, clearing it from the table.
+- **pass**: Skip your turn.
+
+Sync the challenge channel between actions to see the operator's responses and know when it's your turn.
+
+### Step 5: Check results
+
+After agreement or deadlock, sync again to get your scores from the operator.
+
+**Scoring**: If a deal is reached, utility = (your_share - your_reservation) / total. If no deal, utility = 0. Higher is better.
+STEPS
+}
+
 # ─── Agent prompt builder ───
 build_prompt() {
   local invite="$1"
@@ -300,8 +383,15 @@ build_prompt() {
   local strategy
   strategy=$(persona_strategy "$persona_name")
 
+  local game_steps
+  case "$GAME_TYPE" in
+    psi)        game_steps=$(game_steps_psi "$challenge_id") ;;
+    ultimatum)  game_steps=$(game_steps_ultimatum "$challenge_id") ;;
+    *)          game_steps=$(game_steps_psi "$challenge_id") ;;
+  esac
+
   cat <<PROMPT
-You are the "${persona_label}" agent in an Arena PSI challenge.
+You are the "${persona_label}" agent in an Arena ${GAME_TYPE} challenge.
 
 ## Your Details
 - Arena URL: ${ARENA_URL}
@@ -343,37 +433,12 @@ curl -sS --max-time 10 -X POST ${ARENA_URL}/api/v1/arena/join \\
 
 Save the sessionKey from the response. Use it as "Authorization: Bearer <sessionKey>" on ALL subsequent requests. Do NOT send "from" in subsequent requests — the server resolves your identity from the session key.
 
-### Step 2: Get your private data
-
-Sync the challenge channel for operator messages:
-\`GET ${ARENA_URL}/api/v1/arena/sync?channel=${challenge_id}&index=0\` with Authorization header
-
-Look for messages from "operator" addressed to you. These contain your private set of items.
-
-### Step 3: Chat with your opponent
-
-Send messages to negotiate. POST to ${ARENA_URL}/api/v1/chat/send with {"channel": "${challenge_id}", "content": "your message"} and Authorization header.
-
-Read opponent messages:
-GET ${ARENA_URL}/api/v1/chat/sync?channel=${challenge_id}&index=0 with Authorization header.
-
-Exchange a few messages (3-5 rounds) to figure out the intersection.
-
-### Step 4: Submit your guess
-
-Once you have enough information, submit the intersection:
-POST to ${ARENA_URL}/api/v1/arena/message with {"challengeId": "${challenge_id}", "messageType": "guess", "content": "item1,item2,..."} and Authorization header.
-
-The content should be a comma-separated list of items you believe are in both players' sets.
-
-### Step 5: Check results
-
-After submitting, sync again to get your scores from the operator.
+${game_steps}
 
 ## Important Rules
 - Always use -sS --max-time 10 with curl
 - Parse JSON responses with jq when needed
-- Complete ALL steps — join, read data, chat, guess, check scores
+- Complete ALL steps from start to finish
 
 ${strategy}
 PROMPT
@@ -406,8 +471,10 @@ BEGIN {
     marker = green bold " ✔ GOT PRIVATE DATA" reset
   else if (line ~ /chat\/send/ || line ~ /send_chat/)
     marker = yellow bold " → CHAT" reset
-  else if (line ~ /messageType.*guess/ || line ~ /"guess"/)
-    marker = yellow bold " → GUESS SUBMITTED" reset
+  else if (line ~ /messageType.*guess/ || line ~ /"guess"/ || line ~ /submit_offer/)
+    marker = yellow bold " → ACTION" reset
+  else if (line ~ /accept/ && line !~ /accept_own/)
+    marker = yellow bold " → ACCEPTED" reset
   else if (line ~ /[Ss]core/ || line ~ /[Uu]tility/ || line ~ /[Ss]ecurity/)
     marker = green bold " ★ SCORE" reset
   else if (line ~ /[Ee]rror/ || line ~ /[Ff]ailed/ || line ~ /HTTP\/[0-9]+ [45]/)
@@ -623,9 +690,9 @@ run_game() {
   ok "${label_b} profile set (username: ${label_b}, model: ${model_b})"
 
   # ─── Create challenge ───
-  info "Creating PSI challenge..."
+  info "Creating ${GAME_TYPE} challenge..."
   local create_resp challenge_id invite_a invite_b
-  create_resp=$(curl -sS --max-time 10 -X POST "${ARENA_URL}/api/v1/challenges/psi")
+  create_resp=$(curl -sS --max-time 10 -X POST "${ARENA_URL}/api/v1/challenges/${GAME_TYPE}")
   if ! echo "$create_resp" | jq -e .id &>/dev/null; then
     err "Failed to create challenge. Response: $create_resp"
     return 1

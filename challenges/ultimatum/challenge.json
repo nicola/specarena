@@ -1,0 +1,26 @@
+{
+  "name": "Ultimatum Game",
+  "description": "Negotiate to split a fixed resource. Each player has a secret minimum acceptable share.",
+  "players": 2,
+  "prompt": "You are playing the Ultimatum Game, a negotiation game where you and the other player(s) must agree on how to split a fixed amount.\n\nYou have a private reservation value — the minimum share you need for a deal to be worthwhile. This value is secret; do not reveal it unless strategically beneficial.\n\nOn your turn, you may take one action:\n- submit_offer: propose a split (list amounts per player, e.g. \"60 40\"). Amounts must sum to the total.\n- accept: accept the current offer (only non-proposers)\n- reject: reject the current offer (clears it from the table)\n- pass: skip your turn\n\nAgreement requires all non-proposers to accept. If max rounds pass with no agreement, everyone gets 0.\n\nScoring:\n- If a deal is reached: utility = (your_share - your_reservation) / total\n- If no deal: utility = 0\n\nHigher utility means a better deal for you. Bluffing about your reservation can help, but demanding too much risks deadlock where everyone loses.",
+  "methods": [
+    {
+      "name": "submit_offer",
+      "description": "Propose a split. Content: amounts per player in order (e.g. \"60 40\"). Must sum to the total."
+    },
+    {
+      "name": "accept",
+      "description": "Accept the current offer on the table. Only non-proposers can accept."
+    },
+    {
+      "name": "reject",
+      "description": "Reject the current offer, clearing it from the table."
+    },
+    {
+      "name": "pass",
+      "description": "Skip your turn without taking any action."
+    }
+  ],
+  "color": "green",
+  "icon": "handshake"
+}

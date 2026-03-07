@@ -9,7 +9,8 @@
   "exports": {
 
     "./psi": "./psi/index.ts",
-    "./gencrypto": "./gencrypto/index.ts"
+    "./gencrypto": "./gencrypto/index.ts",
+    "./ultimatum": "./ultimatum/index.ts"
   },
   "dependencies": {
     "@arena/engine": "*"
