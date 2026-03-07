@@ -1,6 +1,7 @@
 import { readFileSync } from "fs";
 import { join } from "path";
 import { Hono } from "hono";
+import { logger } from "hono/logger";
 import { ArenaEngine, defaultEngine, createStorage } from "@arena/engine/engine";
 import { ChallengeFactory, ChallengeMetadata } from "@arena/engine/types";
 import { ScoringModule } from "@arena/engine/scoring";
@@ -60,6 +61,9 @@ export function createApp(engine: ArenaEngine = defaultEngine, options?: { mcp?:
   }
   registerChallengesFromConfig(engine, config);
   const app = new Hono();
+
+  // HTTP request logger
+  app.use("*", logger());
 
   // Health check (before any middleware)
   app.get("/health", (c) => c.json({ status: "ok" }));
