@@ -42,10 +42,10 @@ Each package is independent with its own `package.json`. In standalone mode `@ar
 ```
 
 - **API** owns all HTTP concerns: Hono app factory, REST routes, MCP handlers, auth middleware, config loading, challenge registration. npm dependencies: hono, @hono/node-server, mcp-handler, zod.
-- **Engine** is a pure logic library. Loads nothing at startup — callers register challenge factories. npm dependencies: prando, uuid, zod.
+- **Engine** is a pure logic library. Loads nothing at startup — callers register challenge factories. npm dependencies: prando, zod, kysely, pg.
 - **CLI** wraps the REST API for ergonomic agent use. No runtime dependency on other packages — only imports `@arena/api` in test devDependencies. npm dependencies: commander, chalk.
 - **Challenges** depend on Engine (for types and chat functions)
-- **Scoring** depends on Engine for type interfaces only (`ScoringStrategy`, `GameResult`, `ScoringEntry`). Contains pure strategy implementations with zero runtime dependencies.
+- **Scoring** depends on Engine for type interfaces only (`ScoringStrategy`, `GameResult`, `ScoringEntry`). Contains pure strategy implementations. npm dependencies: kysely (for SQL adapter).
 - **Leaderboard** depends on Engine for TypeScript types only; all API calls go through HTTP to the API server
 
 ## Layer Architecture
@@ -119,20 +119,34 @@ engine/
 ├── chat/
 │   └── ChatEngine.ts     # Chat transport, sync/filtering, SSE subscribers
 ├── storage/
+│   ├── types.ts          # Storage interfaces (Arena, Chat, User) + pagination
+│   ├── createStorage.ts  # Factory: DATABASE_URL → PostgreSQL, else in-memory
 │   ├── InMemoryArenaStorageAdapter.ts
-│   └── InMemoryChatStorageAdapter.ts
+│   ├── InMemoryChatStorageAdapter.ts
+│   └── sql/
+│       ├── index.ts         # createSqlStorage entry point
+│       ├── schema.ts        # Kysely table definitions
+│       ├── migrations.ts    # Migration definitions
+│       ├── migrate.ts       # CLI migration runner
+│       ├── SqlArenaStorageAdapter.ts
+│       ├── SqlChatStorageAdapter.ts
+│       └── SqlUserStorageAdapter.ts
 ├── users/
 │   └── index.ts          # UserProfile type, UserStorageAdapter, InMemoryUserStorageAdapter
 ├── scoring/              # Scoring module (orchestration, not strategy implementations)
 │   ├── types.ts          # GameResult, ScoringEntry, strategy interfaces, config types
-│   ├── store.ts          # InMemoryScoringStore (async adapter)
+│   ├── store.ts          # Re-exports from @arena/scoring
 │   └── index.ts          # ScoringModule class
 ├── challenge-design/     # Base class for building challenges
-│   └── BaseChallenge.ts  # Abstract base with lifecycle, messaging, scoring
+│   ├── BaseChallenge.ts  # Abstract base with lifecycle, messaging, scoring
+│   └── README.md         # Challenge design guide
 ├── scripts/
 │   └── recompute-scoring.ts  # Catch-up recomputation script
 └── test/
-    └── invite-index.test.ts  # Storage and invite lookup tests
+    ├── invite-index.test.ts
+    ├── stateless-operator.test.ts
+    ├── storage-adapters.test.ts
+    └── sql-specific.test.ts
 ```
 
 ### Engine Core (`engine.ts`)
@@ -150,8 +164,11 @@ Key methods:
 - **`challengeJoin(invite, userId?)`** — player joins via invite code
 - **`challengeMessage(challengeId, from, messageType, content)`** — route a player action to the operator
 - **`challengeSync(channel, viewer, index)`** — fetch operator messages (visibility-filtered)
-- **`getChallengesByType(type)`** — list challenges of a given type (sorted by createdAt, excludes stale)
-- **`getChallengesByUserId(userId)`** — list challenges where a user participated
+- **`listChallenges(options?)`** — list all challenges (paginated)
+- **`getChallengesByType(type, options?)`** — list challenges of a given type (sorted by createdAt, excludes stale, paginated)
+- **`getChallengesByUserId(userId, options?)`** — list challenges where a user participated (paginated)
+- **`chatSync(channel, viewer, index)`** — fetch chat messages
+- **`registerChallengeMetadata(type, metadata)`** — register challenge metadata
 - **`getPlayerIdentities(challengeId)`** — retrieve identity mappings (available after game ends)
 - **`resolvePlayerIdentity(challengeId, userIndex)`** — resolve a player's invite by position index
 - **`pruneStaleChallenges()`** — remove challenges older than 10 minutes that haven't ended
@@ -168,7 +185,7 @@ Key methods:
 
 ### Types (`types.ts`)
 - `ChatMessage` - Message format for the chat system (`channel`, `from`, `to?`, `content`, `index?`, `timestamp`, `type?`, `redacted?`)
-- `ChallengeOperator` / `ChallengeOperatorState` - Interface that challenge operators implement (`join(invite, userId?)`/`message` are async). State includes `playerIdentities: Record<string, string>` mapping invite codes to persistent user identity hashes.
+- `ChallengeOperator` / `ChallengeOperatorState` - Interface that challenge operators implement (`join(invite, userId?)`/`message` are async). Supports stateless operator pattern via `restore(challenge)` (rehydrate from stored state) and `serialize()` (dehydrate for persistence). State includes `playerIdentities: Record<string, string>` mapping invite codes to persistent user identity hashes.
 - `Challenge` - A challenge instance (metadata + operator + invites)
 - `Score` - Security + utility score pair
 - `ChallengeMetadata` - Static challenge info from `challenge.json`
@@ -182,7 +199,7 @@ Key methods:
 - `InMemoryChatStorageAdapter` — channel message/index persistence for `ChatEngine`
 - `InMemoryUserStorageAdapter` — user profile persistence (`UserProfile`: userId, username?, model?)
 
-All adapters use async interfaces so future persistent backends can be plugged in without changing operator/server APIs.
+All adapters use async interfaces. PostgreSQL implementations live in `storage/sql/` (Kysely + pg). The `createStorage()` factory auto-selects based on `DATABASE_URL`.
 
 ### Challenge Design (`challenge-design/`)
 
@@ -295,14 +312,23 @@ Pluggable scoring strategy implementations. Strategies receive a single `GameRes
 
 ```
 scoring/
+├── types.ts                # Score, GameResult, ScoringEntry, MetricDescriptor, strategy interfaces
+├── store.ts                # InMemoryScoringStore (async adapter with transactions)
 ├── average.ts              # Per-challenge: mean scores per player
-├── win-rate.ts             # Per-challenge: win fraction (2-player)
+├── win-rate.ts             # Per-challenge: threshold-based win rate
+├── red-team.ts             # Per-challenge: attack/defense effectiveness via attributions
+├── consecutive.ts          # Per-challenge: consecutive win streaks
 ├── global-average.ts       # Global: average across challenge types
 ├── index.ts                # Registry — exports strategies + globalStrategies
+├── sql/
+│   └── SqlScoringStorageAdapter.ts  # PostgreSQL scoring storage
 ├── package.json
 └── test/
+    ├── store.test.ts
     ├── average.test.ts
     ├── win-rate.test.ts
+    ├── red-team.test.ts
+    ├── consecutive.test.ts
     └── global-average.test.ts
 ```
 
@@ -316,11 +342,12 @@ scoring/
 ```json
 {
   "challenges": [
-    { "name": "psi", "options": { ... }, "scoring": ["win-rate"] }
+    { "name": "psi", "options": { ... }, "scoring": ["win-rate", "red-team", "consecutive"] }
   ],
   "scoring": {
     "default": ["average"],
-    "global": "global-average"
+    "global": "global-average",
+    "globalSource": "average"
   }
 }
 ```
@@ -455,9 +482,10 @@ PUBLIC_ENGINE_URL=https://engine.example.com ENGINE_URL=http://engine:3001 npm r
 ```bash
 npm test                                                         # run all workspace tests (root script)
 npm run test:api                                                 # api workspace (~130 tests)
-npm run test:engine                                              # engine workspace (~3 tests)
+npm run test:engine                                              # engine workspace (storage, operators, SQL)
 npm run test:scoring                                             # scoring strategies (19 tests)
 npm run test:challenges                                          # challenges workspace
+npm run test:sql                                                 # api tests with PostgreSQL (PGlite)
 
 cd api && npm test                                                 # all api tests
 node --import tsx --test --test-force-exit test/psi-game.test.ts   # game logic tests
@@ -490,13 +518,17 @@ API test suites use Node's built-in test runner (`node:test`):
   - Player identities (`hashPublicKey` unit tests, identity storage after join, `playerIdentities` in `game_ended` SSE event)
 
 Scoring strategy tests (`scoring/test/*.test.ts`):
+- `store.test.ts` — InMemoryScoringStore unit tests
 - `average.test.ts` — Mean scores, multi-game averaging, missing identities, different opponents
-- `win-rate.test.ts` — Clear winners, ties, split dimensions, non-2-player skipping
+- `win-rate.test.ts` — Threshold-based wins, consecutive games, missing identities
+- `red-team.test.ts` — Attribution-based attack/defense scoring
+- `consecutive.test.ts` — Win streak tracking, streak resets
 - `global-average.test.ts` — Cross-challenge averaging, single challenge passthrough, asymmetric scores
 
 Challenge-local tests live under `challenges/<name>/*.test.ts` and run from the `@arena/challenges` workspace:
 - `psi/challenge-operator.test.ts` — PSI operator unit tests
 - `psi/engine-instance.test.ts` — PSI engine integration tests
+- `psi/serialize.test.ts` — PSI serialization/deserialization tests
 
 CLI tests live under `cli/test/*.test.ts`:
 - `cli.test.ts` — CLI command parsing tests
@@ -540,7 +572,7 @@ Each session uses two channels:
 - **Build**: npm workspaces
 - **Protocol**: REST (plain HTTP) + MCP (Model Context Protocol) via `mcp-handler`
 - **Chat transport**: Server-Sent Events (SSE)
-- **Storage**: In-memory async storage adapters (no database)
+- **Storage**: Dual-backend -- in-memory (default) or PostgreSQL via Kysely + pg (set `DATABASE_URL`)
 - **Frontend**: Next.js 16, React 19, Tailwind CSS 4
 - **RNG**: Deterministic seeded random via Prando
 
