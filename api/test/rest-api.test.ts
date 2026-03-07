@@ -1,8 +1,9 @@
-import { describe, it, beforeEach } from "node:test";
+import { describe, it, before, beforeEach } from "node:test";
 import assert from "node:assert/strict";
+import { createTestAppFromEnv, type TestApp } from "./helpers/create-app";
 
-import app from "../index";
-import { defaultEngine } from "@arena/engine/engine";
+let app: TestApp["app"];
+let engine: TestApp["engine"];
 
 // --- Helpers ---
 
@@ -15,7 +16,7 @@ async function request(method: string, path: string, body?: object) {
 }
 
 async function clearState() {
-  await defaultEngine.clearRuntimeState();
+  await engine.clearRuntimeState();
 }
 
 async function createPsiChallenge() {
@@ -25,6 +26,9 @@ async function createPsiChallenge() {
 }
 
 // --- Tests ---
+
+describe("rest-api", () => {
+  before(async () => { ({ app, engine } = await createTestAppFromEnv()); });
 
 describe("REST API for arena", () => {
   beforeEach(async () => clearState());
@@ -113,7 +117,7 @@ describe("REST API for arena", () => {
     await request("POST", "/api/arena/join", { invite: invites[0], userId: "user_aaa" });
     await request("POST", "/api/arena/join", { invite: invites[1], userId: "user_bbb" });
 
-    const challenge = await defaultEngine.getChallenge(id);
+    const challenge = await engine.getChallenge(id);
     assert.ok(challenge);
     const identities = challenge!.state.playerIdentities;
     assert.equal(identities[invites[0]], "user_aaa");
@@ -126,7 +130,7 @@ describe("REST API for arena", () => {
     await request("POST", "/api/arena/join", { invite: invites[0] });
     await request("POST", "/api/arena/join", { invite: invites[1] });
 
-    const challenge = await defaultEngine.getChallenge(id);
+    const challenge = await engine.getChallenge(id);
     assert.ok(challenge);
     assert.deepEqual(challenge!.state.playerIdentities, {});
   });
@@ -174,7 +178,7 @@ describe("REST API for arena", () => {
     assert.ok(g2.ok);
 
     // Verify game ended with perfect scores
-    const final = await defaultEngine.getChallenge(id);
+    const final = await engine.getChallenge(id);
     assert.ok(final);
     assert.equal(final.state.gameEnded, true);
     assert.equal(final.state.scores[0].utility, 1);
@@ -259,7 +263,7 @@ describe("Pagination — GET /api/challenges/:name", () => {
     assert.equal(res.status, 200);
     const data = await res.json();
     assert.equal(data.total, 2);
-    assert.equal(data.limit, 50);
+    assert.equal(data.limit, 10);
     assert.equal(data.offset, 0);
     assert.equal(data.challenges.length, 2);
   });
@@ -482,3 +486,4 @@ describe("REST API for chat", () => {
   });
 
 });
+}); // rest-api

@@ -14,7 +14,7 @@ async function main() {
   const engine = createEngine({ scoring });
   registerChallengesFromConfig(engine, config);
 
-  const challenges = await engine.listChallenges();
+  const { items: challenges } = await engine.listChallenges();
   const results: GameResult[] = [];
 
   for (const challenge of challenges) {

@@ -8,6 +8,8 @@
     "./storage/types": "./storage/types.ts",
     "./storage/InMemoryArenaStorageAdapter": "./storage/InMemoryArenaStorageAdapter.ts",
     "./storage/InMemoryChatStorageAdapter": "./storage/InMemoryChatStorageAdapter.ts",
+    "./storage/createStorage": "./storage/createStorage.ts",
+    "./storage/sql": "./storage/sql/index.ts",
     "./types": "./types.ts",
     "./utils": "./utils.ts",
     "./challenge-design/BaseChallenge": "./challenge-design/BaseChallenge.ts",
@@ -16,16 +18,23 @@
     "./users": "./users/index.ts"
   },
   "scripts": {
+    "migrate": "node --import tsx storage/sql/migrate.ts",
+    "migrate:down": "node --import tsx storage/sql/migrate.ts down",
     "prune:stale": "node --import tsx scripts/prune-stale-challenges.ts",
     "test": "node --import tsx --test --test-force-exit test/*.test.ts"
   },
   "dependencies": {
     "@arena/scoring": "*",
+    "kysely": "^0.28.11",
+    "pg": "^8.20.0",
     "prando": "^6.0.1",
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.3.15",
     "@types/node": "^20",
+    "@types/pg": "^8.18.0",
+    "kysely-pglite-dialect": "^1.2.0",
     "tsx": "^4.19.4",
     "typescript": "^5"
   }

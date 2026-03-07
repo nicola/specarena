@@ -12,14 +12,14 @@ import {
   toChallengeChannel,
 } from "./types";
 import { ChatEngine, createChatEngine } from "./chat/ChatEngine";
-import type { ArenaStorageAdapter, UserStorageAdapter } from "./storage/types";
-import { InMemoryArenaStorageAdapter } from "./storage/InMemoryArenaStorageAdapter";
+import type { ArenaStorageAdapter, ChatStorageAdapter, UserStorageAdapter, PaginationOptions, PaginatedResult } from "./storage/types";
+import { createStorage } from "./storage/createStorage";
 import { ScoringModule } from "./scoring/index";
 import type { GameResult } from "./scoring/types";
-import { InMemoryUserStorageAdapter } from "./users/index";
 
 export interface EngineOptions {
   storageAdapter?: ArenaStorageAdapter;
+  chatStorageAdapter?: ChatStorageAdapter;
   chatEngine?: ChatEngine;
   scoring?: ScoringModule;
   userStorage?: UserStorageAdapter;
@@ -35,13 +35,18 @@ export class ArenaEngine {
   scoring: ScoringModule | null;
 
   constructor(options: EngineOptions = {}) {
-    this.storageAdapter = options.storageAdapter ?? new InMemoryArenaStorageAdapter();
-    this.users = options.userStorage ?? new InMemoryUserStorageAdapter();
+    const defaults = (!options.storageAdapter && !options.userStorage && !options.chatStorageAdapter)
+      ? createStorage()
+      : undefined;
+    this.storageAdapter = options.storageAdapter ?? defaults?.arena ?? createStorage().arena;
+    this.users = options.userStorage ?? defaults?.user ?? createStorage().user;
     this.challengeFactories = new Map<string, ChallengeFactory>();
     this.challengeOptions = new Map<string, Record<string, unknown>>();
     this.challengeMetadataMap = new Map<string, ChallengeMetadata>();
     this.scoring = options.scoring ?? null;
+    const chatStorageAdapter = options.chatStorageAdapter ?? defaults?.chat;
     this.chat = options.chatEngine ?? createChatEngine({
+      storageAdapter: chatStorageAdapter,
       isChannelRevealed: async (channel) => {
         const challengeId = fromChallengeChannel(channel);
         if (!challengeId) return false;
@@ -123,7 +128,7 @@ export class ArenaEngine {
   }
 
   async pruneStaleChallenges(now: number = Date.now()): Promise<number> {
-    const challenges = await this.storageAdapter.listChallenges();
+    const { items: challenges } = await this.storageAdapter.listChallenges();
     const stale = challenges.filter((c) => this.isChallengeStale(c, now));
     if (stale.length === 0) return 0;
 
@@ -138,8 +143,8 @@ export class ArenaEngine {
     return stale.length;
   }
 
-  async listChallenges(): Promise<Challenge[]> {
-    return this.storageAdapter.listChallenges();
+  async listChallenges(options?: PaginationOptions): Promise<PaginatedResult<Challenge>> {
+    return this.storageAdapter.listChallenges(options);
   }
 
   async createChallenge(challengeType: string): Promise<Challenge> {
@@ -217,13 +222,12 @@ export class ArenaEngine {
     return undefined;
   }
 
-  async getChallengesByUserId(userId: string): Promise<Challenge[]> {
-    return this.storageAdapter.getChallengesByUserId(userId);
+  async getChallengesByUserId(userId: string, options?: PaginationOptions): Promise<PaginatedResult<Challenge>> {
+    return this.storageAdapter.getChallengesByUserId(userId, options);
   }
 
-  async getChallengesByType(challengeType: string): Promise<Challenge[]> {
-    const challenges = await this.storageAdapter.getChallengesByType(challengeType);
-    return challenges.filter((c) => !this.isChallengeStale(c));
+  async getChallengesByType(challengeType: string, options?: PaginationOptions): Promise<PaginatedResult<Challenge>> {
+    return this.storageAdapter.getChallengesByType(challengeType, options);
   }
 
   async challengeJoin(invite: string, userId?: string) {
@@ -310,7 +314,8 @@ export function createEngine(options: EngineOptions = {}): ArenaEngine {
 
 export const defaultEngine = createEngine();
 export { ChatEngine, createChatEngine, defaultChatEngine } from "./chat/ChatEngine";
-export type { ArenaStorageAdapter, ChatStorageAdapter, UserStorageAdapter, UserProfile } from "./storage/types";
+export type { ArenaStorageAdapter, ChatStorageAdapter, UserStorageAdapter, UserProfile, PaginationOptions, PaginatedResult } from "./storage/types";
 export { InMemoryArenaStorageAdapter } from "./storage/InMemoryArenaStorageAdapter";
 export { InMemoryChatStorageAdapter } from "./storage/InMemoryChatStorageAdapter";
 export { InMemoryUserStorageAdapter } from "./users/index";
+export { createStorage } from "./storage/createStorage";
