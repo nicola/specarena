@@ -1,7 +1,5 @@
 import { describe, it, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import type { Kysely } from "kysely";
-
 import { createTestDb, resetTestDb, type TestStorage } from "./helpers/test-db";
 import type { Challenge } from "../types";
 import { ScoringModule } from "../scoring/index";
@@ -340,7 +338,7 @@ describe("SQL-specific behavior", () => {
     }
 
     it("persists scoring metrics to scoring_metrics table", async () => {
-      const scoringStore = new SqlScoringStorageAdapter(testDb.db as unknown as Kysely<any>);
+      const scoringStore = new SqlScoringStorageAdapter(testDb.db);
       const scoring = new ScoringModule(testConfig, strategies, globalStrategies, scoringStore);
 
       await scoring.recordGame(makeGameResult());
@@ -369,7 +367,7 @@ describe("SQL-specific behavior", () => {
     });
 
     it("persists strategy state to scoring_strategy_state table", async () => {
-      const scoringStore = new SqlScoringStorageAdapter(testDb.db as unknown as Kysely<any>);
+      const scoringStore = new SqlScoringStorageAdapter(testDb.db);
       const scoring = new ScoringModule(testConfig, strategies, globalStrategies, scoringStore);
 
       await scoring.recordGame(makeGameResult());
@@ -383,7 +381,7 @@ describe("SQL-specific behavior", () => {
     });
 
     it("scores survive across ScoringModule instances (persistence)", async () => {
-      const scoringStore = new SqlScoringStorageAdapter(testDb.db as unknown as Kysely<any>);
+      const scoringStore = new SqlScoringStorageAdapter(testDb.db);
 
       // First instance records a game
       const scoring1 = new ScoringModule(testConfig, strategies, globalStrategies, scoringStore);
