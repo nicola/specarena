@@ -1,4 +1,4 @@
-import { ChallengeMessaging, ChallengeOperator, ChallengeOperatorError, ChallengeOperatorState, ChatMessage, Score } from "../types";
+import { ChallengeMessaging, ChallengeOperator, ChallengeOperatorError, ChallengeOperatorState, ChatMessage, Score, Challenge } from "../types";
 import { defaultChatEngine } from "../chat/ChatEngine";
 
 // BaseChallenge provides the shared "operator runtime" used by challenge
@@ -11,7 +11,7 @@ import { defaultChatEngine } from "../chat/ChatEngine";
 // Challenge authors are expected to focus on game-specific logic by:
 // 1) overriding hooks (`onPlayerJoin`, `onGameStart`)
 // 2) registering handlers via `handle("method", handler)`
-export abstract class BaseChallenge<TGameState = {}> implements ChallengeOperator {
+export abstract class BaseChallenge<TGameState> implements ChallengeOperator<TGameState> {
   protected challengeId: string;
   protected playerCount: number;
   protected messaging: ChallengeMessaging;
@@ -125,5 +125,14 @@ export abstract class BaseChallenge<TGameState = {}> implements ChallengeOperato
       type: "game_ended",
       data: this.state,
     });
+  }
+
+  restore(challenge: Challenge<TGameState>): void {
+    this.state = {...challenge.state};
+    this.gameState = {...challenge.gameState};
+  }
+
+  serialize(): { gameState: TGameState; state: ChallengeOperatorState } {
+    return { gameState: this.gameState, state: this.state };
   }
 }

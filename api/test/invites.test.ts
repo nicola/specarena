@@ -59,7 +59,7 @@ describe("Invites REST API", () => {
     // Join with the invite (claims it)
     const challenge = await defaultEngine.getChallenge(id);
     assert.ok(challenge);
-    await challenge.instance.join(invites[0]);
+    await defaultEngine.challengeJoin(invites[0]);
 
     const res = await request("GET", `/api/invites/${invites[0]}`);
     assert.equal(res.status, 409);
@@ -74,7 +74,7 @@ describe("Invites REST API", () => {
     // Claim first invite
     const challenge = await defaultEngine.getChallenge(id);
     assert.ok(challenge);
-    await challenge.instance.join(invites[0]);
+    await defaultEngine.challengeJoin(invites[0]);
 
     // First invite → 409
     const res1 = await request("GET", `/api/invites/${invites[0]}`);
@@ -119,7 +119,7 @@ describe("Invites REST API", () => {
     // Claim the invite first
     const challenge = await defaultEngine.getChallenge(id);
     assert.ok(challenge);
-    await challenge.instance.join(invites[0]);
+    await defaultEngine.challengeJoin(invites[0]);
 
     const res = await request("POST", "/api/invites", { inviteId: invites[0] });
     assert.equal(res.status, 409);
@@ -164,7 +164,7 @@ describe("Invites REST API", () => {
     assert.equal(r2.status, 200);
 
     // Claim first
-    await challenge.instance.join(invites[0]);
+    await defaultEngine.challengeJoin(invites[0]);
 
     // First → 409, second → 200
     const r3 = await request("GET", `/api/invites/${invites[0]}`);
@@ -173,7 +173,7 @@ describe("Invites REST API", () => {
     assert.equal(r4.status, 200);
 
     // Claim second
-    await challenge.instance.join(invites[1]);
+    await defaultEngine.challengeJoin(invites[1]);
 
     // Both → 409
     const r5 = await request("GET", `/api/invites/${invites[0]}`);

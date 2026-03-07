@@ -35,7 +35,7 @@ export class InMemoryArenaStorageAdapter implements ArenaStorageAdapter {
   async getChallengesByUserId(userId: string): Promise<Challenge[]> {
     return Object.values(this.challengesById)
       .filter((c) => {
-        const identities = c.instance?.state?.playerIdentities;
+        const identities = c.state?.playerIdentities;
         return identities && Object.values(identities).includes(userId);
       })
       .sort((a, b) => b.createdAt - a.createdAt);

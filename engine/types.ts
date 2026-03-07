@@ -29,23 +29,23 @@ export interface ChallengeOperatorState {
   attributions?: Attribution[];
 }
 
-export interface ChallengeOperator {
+export interface ChallengeOperator<TGameState = {}> {
   join(invite: string, userId?: string): Promise<void>;
   message(message: ChatMessage): Promise<void>;
+  restore(challenge: Challenge<TGameState>): void;
+  serialize(): { gameState: TGameState; state: ChallengeOperatorState };
   state: ChallengeOperatorState;
+  gameState: TGameState;
 }
 
-export enum ChallengeType {
-  Psi = "psi",
-}
-
-export interface Challenge {
+export interface Challenge<TGameState = {}> {
   id: string;
   name: string;
   createdAt: number;
   challengeType: string;
   invites: string[];
-  instance: ChallengeOperator;
+  state: ChallengeOperatorState;
+  gameState: TGameState;
 }
 
 export class ChallengeOperatorError extends Error {

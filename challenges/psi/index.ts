@@ -1,5 +1,5 @@
 import { generateRandomSetFromSeed, derivePrivateSeed } from "@arena/engine/utils";
-import { ChallengeFactoryContext, ChallengeOperatorError, ChatMessage, ChallengeMessaging, ChallengeOperator } from "@arena/engine/types";
+import { Challenge, ChallengeFactoryContext, ChallengeOperatorError, ChallengeOperatorState, ChatMessage, ChallengeMessaging, ChallengeOperator } from "@arena/engine/types";
 import { BaseChallenge } from "@arena/engine/challenge-design/BaseChallenge";
 
 // Utility scores for the guessing player
@@ -51,6 +51,12 @@ interface PsiGameState {
   userSets: Set<number>[];
   intersectionSet: Set<number>;
   guesses: Set<number>[];
+}
+
+interface PsiSerializedGameState {
+  userSets: number[][];
+  intersectionSet: number[];
+  guesses: number[][];
 }
 
 class PsiChallenge extends BaseChallenge<PsiGameState> {
@@ -114,6 +120,26 @@ class PsiChallenge extends BaseChallenge<PsiGameState> {
     if (this.gameState.guesses.every(guess => guess.size > 0)) {
       await this.endGame();
     }
+  }
+
+  serialize(): { gameState: PsiSerializedGameState; state: ChallengeOperatorState } {
+    return {
+      gameState: {
+        userSets: this.gameState.userSets.map((s) => [...s]),
+        intersectionSet: [...this.gameState.intersectionSet],
+        guesses: this.gameState.guesses.map((s) => [...s]),
+      },
+      state: this.state,
+    };
+  }
+
+  restore(challenge: Challenge<PsiSerializedGameState>): void {
+    this.state = { ...challenge.state };
+    this.gameState = {
+      userSets: challenge.gameState.userSets.map((a) => new Set(a)),
+      intersectionSet: new Set(challenge.gameState.intersectionSet),
+      guesses: challenge.gameState.guesses.map((a) => new Set(a)),
+    };
   }
 
   private _extractNumbers(text: string): Set<number> | null {

@@ -115,7 +115,7 @@ describe("REST API for arena", () => {
 
     const challenge = await defaultEngine.getChallenge(id);
     assert.ok(challenge);
-    const identities = challenge.instance.state.playerIdentities;
+    const identities = challenge!.state.playerIdentities;
     assert.equal(identities[invites[0]], "user_aaa");
     assert.equal(identities[invites[1]], "user_bbb");
   });
@@ -128,7 +128,7 @@ describe("REST API for arena", () => {
 
     const challenge = await defaultEngine.getChallenge(id);
     assert.ok(challenge);
-    assert.deepEqual(challenge.instance.state.playerIdentities, {});
+    assert.deepEqual(challenge!.state.playerIdentities, {});
   });
 
   it("full game via REST API", async () => {
@@ -174,11 +174,11 @@ describe("REST API for arena", () => {
     assert.ok(g2.ok);
 
     // Verify game ended with perfect scores
-    const instance = await defaultEngine.getChallenge(id);
-    assert.ok(instance);
-    assert.equal(instance.instance.state.gameEnded, true);
-    assert.equal(instance.instance.state.scores[0].utility, 1);
-    assert.equal(instance.instance.state.scores[1].utility, 1);
+    const final = await defaultEngine.getChallenge(id);
+    assert.ok(final);
+    assert.equal(final.state.gameEnded, true);
+    assert.equal(final.state.scores[0].utility, 1);
+    assert.equal(final.state.scores[1].utility, 1);
   });
 });
 
