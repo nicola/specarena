@@ -2,43 +2,44 @@ import { describe, it, beforeEach, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { serve } from "@hono/node-server";
 import type { ServerType } from "@hono/node-server";
+import { createTestAppFromEnv, type TestApp } from "./helpers/create-app";
 
-import app from "../index";
-import { defaultEngine } from "@arena/engine/engine";
+let app: TestApp["app"];
+let engine: TestApp["engine"];
 
 // Test against a real HTTP server to catch routing issues that app.request() misses.
 // app.request() dispatches in-process and may not match wildcard routes the same way
 // a real HTTP server does.
 
-let server: ServerType;
-let baseUrl: string;
+describe("http-server", () => {
+  let server: ServerType;
+  let baseUrl: string;
 
-async function req(method: string, path: string, body?: object) {
-  return fetch(`${baseUrl}${path}`, {
-    method,
-    headers: body ? { "Content-Type": "application/json" } : {},
-    body: body ? JSON.stringify(body) : undefined,
-  });
-}
+  async function req(method: string, path: string, body?: object) {
+    return fetch(`${baseUrl}${path}`, {
+      method,
+      headers: body ? { "Content-Type": "application/json" } : {},
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  }
 
-async function clearState() {
-  await defaultEngine.clearRuntimeState();
-}
+  async function clearState() {
+    await engine.clearRuntimeState();
+  }
 
-before(async () => {
-  await new Promise<void>((resolve) => {
-    server = serve({ fetch: app.fetch, port: 0 }, (info) => {
-      baseUrl = `http://localhost:${info.port}`;
-      resolve();
+  before(async () => {
+    ({ app, engine } = await createTestAppFromEnv());
+    await new Promise<void>((resolve) => {
+      server = serve({ fetch: app.fetch, port: 0 }, (info) => {
+        baseUrl = `http://localhost:${info.port}`;
+        resolve();
+      });
     });
   });
-});
 
-after(() => {
-  server.close();
-});
+  after(() => { server.close(); });
 
-describe("HTTP server — REST routes don't collide with MCP wildcards", () => {
+  describe("HTTP server — REST routes don't collide with MCP wildcards", () => {
   beforeEach(async () => clearState());
 
   it("POST /api/chat/send returns 200, not 500", async () => {
@@ -239,4 +240,5 @@ describe("HTTP server — /api/v1 routes mirror /api", () => {
     const sync = await (await req("GET", `/api/v1/arena/sync?channel=${id}&from=${invites[0]}&index=0`)).json();
     assert.ok(sync.messages.length > 0);
   });
+});
 });
