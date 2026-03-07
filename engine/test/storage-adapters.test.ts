@@ -125,6 +125,7 @@ function arenaTests(name: string, getAdapter: () => ArenaStorageAdapter) {
     it("preserves scores and attributions through round-trip", async () => {
       const adapter = getAdapter();
       const c = mockChallenge("c1", ["inv_a", "inv_b"]);
+      c.state.players = ["inv_a", "inv_b"];
       c.state.scores = [{ security: 0.8, utility: 0.6 }, { security: 0.3, utility: 0.9 }];
       c.state.attributions = [{ from: 0, to: 1, type: "security_breach" }];
       c.state.gameEnded = true;

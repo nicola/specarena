@@ -1,4 +1,5 @@
 import type { ArenaStorageAdapter, ChatStorageAdapter, UserStorageAdapter } from "./types";
+import type { ScoringStorageAdapter } from "@arena/scoring";
 import { InMemoryArenaStorageAdapter } from "./InMemoryArenaStorageAdapter";
 import { InMemoryChatStorageAdapter } from "./InMemoryChatStorageAdapter";
 import { InMemoryUserStorageAdapter } from "../users/index";
@@ -7,6 +8,7 @@ export interface StorageAdapters {
   arena: ArenaStorageAdapter;
   chat: ChatStorageAdapter;
   user: UserStorageAdapter;
+  scoring?: ScoringStorageAdapter;
 }
 
 export function createInMemoryStorage(): StorageAdapters {
@@ -34,7 +36,7 @@ export function createStorage(): StorageAdapters {
     const { createSqlStorage } = getSqlModule();
     const sql = createSqlStorage(databaseUrl);
     console.log("[storage] Using PostgreSQL");
-    return { arena: sql.arena, chat: sql.chat, user: sql.user };
+    return { arena: sql.arena, chat: sql.chat, user: sql.user, scoring: sql.scoring };
   }
 
   console.log("[storage] Using in-memory storage");
