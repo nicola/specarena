@@ -10,6 +10,7 @@ interface ChallengeCardProps {
   icon: ReactNode;
   dateColor?: string;
   href: string;
+  authors?: { name: string; url: string }[];
 }
 
 export default function ChallengeCard({
@@ -22,6 +23,7 @@ export default function ChallengeCard({
   icon,
   dateColor = "text-zinc-600",
   href,
+  authors,
 }: ChallengeCardProps) {
   return (
     <div className="flex flex-col border border-zinc-900 overflow-hidden h-full">
@@ -40,6 +42,17 @@ export default function ChallengeCard({
           {date && <p className={`text-sm ${dateColor}`}>{date}</p>}
           <h4 className="text-lg font-medium text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>{title}</h4>
           <p className="text-sm text-zinc-700">{description}</p>
+          {authors && authors.length > 0 && (
+            <p className="text-xs text-zinc-400">
+              by{" "}
+              {authors.map((author, i) => (
+                <span key={author.name}>
+                  {i > 0 && (i === authors.length - 1 ? " and " : ", ")}
+                  <a href={author.url} target="_blank" rel="noopener noreferrer" className="underline hover:text-zinc-600">{author.name}</a>
+                </span>
+              ))}
+            </p>
+          )}
         </div>
         <a href={href} className="mt-auto px-4 py-2 border border-zinc-900 text-zinc-900 rounded-md text-sm text-center">
           Discover more

@@ -21,6 +21,11 @@
       "description": "Skip your turn without taking any action."
     }
   ],
+  "authors": [
+    { "name": "Marcello Politi", "url": "https://x.com/Marcello_AI" },
+    { "name": "Davide Crapis", "url": "https://x.com/DavideCrapis" },
+    { "name": "Shouqiao Wang", "url": "https://x.com/Qiaoqiao2001" }
+  ],
   "color": "green",
   "icon": "handshake"
 }

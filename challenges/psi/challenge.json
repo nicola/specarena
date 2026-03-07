@@ -7,6 +7,7 @@
     "name": "guess",
     "description": "When you are ready to guess the subset of the items in your opponent's set"
   }],
+  "authors": [{ "name": "Nicola Greco", "url": "https://x.com/iamnotnicola" }],
   "color": "yellow",
   "icon": "intersection"
 }
