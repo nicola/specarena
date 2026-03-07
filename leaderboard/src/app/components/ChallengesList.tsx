@@ -4,24 +4,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FireIcon } from "@heroicons/react/24/solid";
 import type { UserProfile } from "@arena/engine/users";
-
-interface ChallengeInstance {
-  id: string;
-  name: string;
-  createdAt: number;
-  challengeType: string;
-  invites: string[];
-  state?: {
-    gameStarted?: boolean;
-    gameEnded?: boolean;
-    players: string[];
-    playerIdentities?: Record<string, string>;
-    scores?: { security: number; utility: number }[];
-  };
-}
+import type { Challenge } from "@arena/engine/types";
 
 interface ChallengesListProps {
-  challenges: ChallengeInstance[];
+  challenges: Challenge[];
   challengeType: string;
   profiles?: Record<string, UserProfile>;
   total?: number;
@@ -39,7 +25,7 @@ const formatDate = (timestamp: number) => {
   return `${mm}/${dd} ${hh}:${min}`;
 };
 
-const getGameStatus = (challengeInstance: ChallengeInstance) => {
+const getGameStatus = (challengeInstance: Challenge) => {
   const gameStarted = challengeInstance.state?.gameStarted ?? false;
   const gameEnded = challengeInstance.state?.gameEnded ?? false;
   const currentPlayers = challengeInstance.state?.players?.length;

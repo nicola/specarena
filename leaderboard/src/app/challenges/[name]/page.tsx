@@ -4,7 +4,7 @@ import LeaderboardGraph from "@/app/components/LeaderboardGraph";
 import Link from "next/link";
 import { FireIcon, ShieldCheckIcon } from "@heroicons/react/24/solid";
 import { Metadata } from "next";
-import { ChallengeMetadata } from "@arena/engine/types";
+import { ChallengeMetadata, type Challenge } from "@arena/engine/types";
 import type { ScoringEntry } from "@arena/engine/scoring/types";
 import type { UserProfile } from "@arena/engine/users";
 import { ENGINE_URL } from "@/lib/config";
@@ -70,7 +70,7 @@ export default async function ChallengePage({ params, searchParams }: { params: 
   }
 
   // Fetch challenges and scoring in parallel
-  let challengesList: Array<{ id: string; name: string; createdAt: number; challengeType: string; invites: string[] }> = [];
+  let challengesList: Challenge[] = [];
   let profiles: Record<string, UserProfile> = {};
   let challengesTotal = 0;
   const [challengesResult, allScoring] = await Promise.all([
