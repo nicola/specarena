@@ -51,10 +51,10 @@ describe("Stale challenge garbage collection", () => {
     const removed = await engine.pruneStaleChallenges(futureNow());
     assert.equal(removed, 1);
 
-    const typed = await engine.getChallengesByType("psi");
+    const { items: typed } = await engine.getChallengesByType("psi");
     assert.ok(!typed.some((c) => c.id === challenge.id));
 
-    const all = await engine.listChallenges();
+    const { items: all } = await engine.listChallenges();
     assert.ok(!all.some((c) => c.id === challenge.id));
 
     const invite = await engine.getChallengeFromInvite(challenge.invites[0]);
@@ -74,7 +74,7 @@ describe("Stale challenge garbage collection", () => {
     const removed = await engine.pruneStaleChallenges(futureNow());
     assert.equal(removed, 1);
 
-    const typed = await engine.getChallengesByType("psi");
+    const { items: typed } = await engine.getChallengesByType("psi");
     assert.ok(!typed.some((c) => c.id === challenge.id));
   });
 
@@ -88,7 +88,7 @@ describe("Stale challenge garbage collection", () => {
 
     await engine.pruneStaleChallenges(futureNow());
 
-    const typed = await engine.getChallengesByType("psi");
+    const { items: typed } = await engine.getChallengesByType("psi");
     assert.ok(typed.some((c) => c.id === challenge.id));
   });
 

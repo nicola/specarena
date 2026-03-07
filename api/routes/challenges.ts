@@ -42,11 +42,9 @@ export function createChallengeRoutes(engine: ArenaEngine = defaultEngine) {
   app.get("/api/challenges", async (c) => {
     const limit = Math.max(1, parseInt(c.req.query("limit") || "50", 10) || 50);
     const offset = Math.max(0, parseInt(c.req.query("offset") || "0", 10) || 0);
-    const challengesList = await engine.listChallenges();
-    const total = challengesList.length;
-    const sliced = challengesList.slice(offset, offset + limit);
-    const profiles = await collectUserProfiles(engine, sliced);
-    return c.json({ challenges: sliced, total, limit, offset, profiles });
+    const { items, total } = await engine.listChallenges({ limit, offset });
+    const profiles = await collectUserProfiles(engine, items);
+    return c.json({ challenges: items, total, limit, offset, profiles });
   });
 
   // GET /api/challenges/:name - list by type
@@ -55,11 +53,9 @@ export function createChallengeRoutes(engine: ArenaEngine = defaultEngine) {
     try {
       const limit = Math.max(1, parseInt(c.req.query("limit") || "50", 10) || 50);
       const offset = Math.max(0, parseInt(c.req.query("offset") || "0", 10) || 0);
-      const challengesList = await engine.getChallengesByType(name);
-      const total = challengesList.length;
-      const sliced = challengesList.slice(offset, offset + limit);
-      const profiles = await collectUserProfiles(engine, sliced);
-      return c.json({ challenges: sliced, total, limit, offset, profiles });
+      const { items, total } = await engine.getChallengesByType(name, { limit, offset });
+      const profiles = await collectUserProfiles(engine, items);
+      return c.json({ challenges: items, total, limit, offset, profiles });
     } catch (error) {
       console.error("Error fetching challenges:", error);
       return c.json({ error: "Failed to fetch challenges" }, 500);

@@ -1,6 +1,6 @@
 import type { Kysely } from "kysely";
 import type { Database } from "./schema";
-import type { ArenaStorageAdapter } from "../types";
+import type { ArenaStorageAdapter, PaginationOptions, PaginatedResult } from "../types";
 import type { Challenge, ChallengeOperatorState, Score, Attribution } from "../../types";
 
 type ChallengeRow = {
@@ -40,33 +40,75 @@ export class SqlArenaStorageAdapter implements ArenaStorageAdapter {
     return this.getChallenge(inv.challenge_id);
   }
 
-  async getChallengesByUserId(userId: string): Promise<Challenge[]> {
-    const rows = await this.db
+  async getChallengesByUserId(userId: string, options?: PaginationOptions): Promise<PaginatedResult<Challenge>> {
+    const baseQuery = this.db
       .selectFrom("challenges")
       .innerJoin("challenge_invites", "challenge_invites.challenge_id", "challenges.id")
-      .where("challenge_invites.user_id", "=", userId)
-      .selectAll("challenges")
-      .distinctOn("challenges.id")
-      .orderBy("challenges.id")
-      .execute();
+      .where("challenge_invites.user_id", "=", userId);
+
+    const [countResult, rows] = await Promise.all([
+      baseQuery
+        .select(({ fn }) => fn.count<number>("challenges.id").distinct().as("count"))
+        .executeTakeFirstOrThrow(),
+      (() => {
+        let q = baseQuery
+          .selectAll("challenges")
+          .distinctOn("challenges.id")
+          .orderBy("challenges.id");
+        if (options?.limit) q = q.limit(options.limit);
+        if (options?.offset) q = q.offset(options.offset);
+        return q.execute();
+      })(),
+    ]);
 
     const challenges = await this.rowsToChallenges(rows);
-    return challenges.sort((a, b) => b.createdAt - a.createdAt);
+    return {
+      items: challenges.sort((a, b) => b.createdAt - a.createdAt),
+      total: Number(countResult.count),
+    };
   }
 
-  async getChallengesByType(challengeType: string): Promise<Challenge[]> {
-    const rows = await this.db
+  async getChallengesByType(challengeType: string, options?: PaginationOptions): Promise<PaginatedResult<Challenge>> {
+    const baseQuery = this.db
       .selectFrom("challenges")
-      .selectAll()
-      .where("challenge_type", "=", challengeType)
-      .orderBy("created_at", "desc")
-      .execute();
-    return this.rowsToChallenges(rows);
+      .where("challenge_type", "=", challengeType);
+
+    const [countResult, rows] = await Promise.all([
+      baseQuery
+        .select(({ fn }) => fn.countAll<number>().as("count"))
+        .executeTakeFirstOrThrow(),
+      (() => {
+        let q = baseQuery.selectAll().orderBy("created_at", "desc");
+        if (options?.limit) q = q.limit(options.limit);
+        if (options?.offset) q = q.offset(options.offset);
+        return q.execute();
+      })(),
+    ]);
+
+    return {
+      items: await this.rowsToChallenges(rows),
+      total: Number(countResult.count),
+    };
   }
 
-  async listChallenges(): Promise<Challenge[]> {
-    const rows = await this.db.selectFrom("challenges").selectAll().execute();
-    return this.rowsToChallenges(rows);
+  async listChallenges(options?: PaginationOptions): Promise<PaginatedResult<Challenge>> {
+    const [countResult, rows] = await Promise.all([
+      this.db
+        .selectFrom("challenges")
+        .select(({ fn }) => fn.countAll<number>().as("count"))
+        .executeTakeFirstOrThrow(),
+      (() => {
+        let q = this.db.selectFrom("challenges").selectAll();
+        if (options?.limit) q = q.limit(options.limit);
+        if (options?.offset) q = q.offset(options.offset);
+        return q.execute();
+      })(),
+    ]);
+
+    return {
+      items: await this.rowsToChallenges(rows),
+      total: Number(countResult.count),
+    };
   }
 
   async setChallenge(challenge: Challenge): Promise<void> {

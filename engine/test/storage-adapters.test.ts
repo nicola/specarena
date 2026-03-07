@@ -84,8 +84,9 @@ function arenaTests(name: string, getAdapter: () => ArenaStorageAdapter) {
       await adapter.setChallenge(mockChallenge("c1", ["inv_a"]));
       await adapter.setChallenge(mockChallenge("c2", ["inv_b"]));
 
-      const list = await adapter.listChallenges();
-      assert.equal(list.length, 2);
+      const { items, total } = await adapter.listChallenges();
+      assert.equal(items.length, 2);
+      assert.equal(total, 2);
     });
 
     it("finds challenges by userId via playerIdentities", async () => {
@@ -95,11 +96,11 @@ function arenaTests(name: string, getAdapter: () => ArenaStorageAdapter) {
       c.state.players = ["inv_a"];
       await adapter.setChallenge(c);
 
-      const results = await adapter.getChallengesByUserId("user1");
+      const { items: results } = await adapter.getChallengesByUserId("user1");
       assert.equal(results.length, 1);
       assert.equal(results[0].id, "c1");
 
-      const empty = await adapter.getChallengesByUserId("user_unknown");
+      const { items: empty } = await adapter.getChallengesByUserId("user_unknown");
       assert.equal(empty.length, 0);
     });
 
@@ -109,7 +110,8 @@ function arenaTests(name: string, getAdapter: () => ArenaStorageAdapter) {
       await adapter.clearRuntimeState();
 
       assert.equal(await adapter.getChallenge("c1"), undefined);
-      assert.deepEqual(await adapter.listChallenges(), []);
+      const { items } = await adapter.listChallenges();
+      assert.deepEqual(items, []);
     });
 
     it("preserves gameState through round-trip", async () => {
