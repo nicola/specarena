@@ -263,7 +263,7 @@ describe("Pagination — GET /api/challenges/:name", () => {
     assert.equal(res.status, 200);
     const data = await res.json();
     assert.equal(data.total, 2);
-    assert.equal(data.limit, 50);
+    assert.equal(data.limit, 10);
     assert.equal(data.offset, 0);
     assert.equal(data.challenges.length, 2);
   });
