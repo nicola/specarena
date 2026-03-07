@@ -3,70 +3,70 @@ import assert from "node:assert/strict";
 import { serve } from "@hono/node-server";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import { createTestAppFromEnv, type TestApp } from "./helpers/create-app";
 
-import app from "../index";
-import { defaultEngine } from "@arena/engine/engine";
-
-// --- Setup ---
-
-let baseUrl: string;
-let server: ReturnType<typeof serve>;
-
-async function clearState() {
-  await defaultEngine.clearRuntimeState();
-}
-
-/** Create a connected MCP client for the arena endpoint */
-async function createArenaClient(): Promise<Client> {
-  const client = new Client({ name: "test-arena", version: "1.0" });
-  const transport = new StreamableHTTPClientTransport(
-    new URL(`${baseUrl}/api/arena/mcp`)
-  );
-  await client.connect(transport);
-  return client;
-}
-
-/** Create a connected MCP client for the chat endpoint */
-async function createChatClient(): Promise<Client> {
-  const client = new Client({ name: "test-chat", version: "1.0" });
-  const transport = new StreamableHTTPClientTransport(
-    new URL(`${baseUrl}/api/chat/mcp`)
-  );
-  await client.connect(transport);
-  return client;
-}
-
-/** Call a tool and parse the JSON text result */
-async function callTool(client: Client, name: string, args: Record<string, unknown>) {
-  const result = await client.callTool({ name, arguments: args });
-  const text = (result.content as any)?.[0]?.text;
-  if (!text) return result;
-  try {
-    return JSON.parse(text);
-  } catch {
-    // Non-JSON text response (e.g. error strings)
-    return { _text: text };
-  }
-}
-
-before(async () => {
-  await new Promise<void>((resolve) => {
-    server = serve({ fetch: app.fetch, port: 0 }, (info) => {
-      baseUrl = `http://localhost:${info.port}`;
-      resolve();
-    });
-  });
-});
-
-after(() => {
-  // Force-close all open connections (SSE streams from MCP clients)
-  server?.close();
-  (server as any)?.closeAllConnections?.();
-});
+let app: TestApp["app"];
+let engine: TestApp["engine"];
 
 // --- Tests ---
 
-describe("PSI game via MCP protocol", () => {
+describe("mcp-game", () => {
+  let baseUrl: string;
+  let server: ReturnType<typeof serve>;
+
+  async function clearState() {
+    await engine.clearRuntimeState();
+  }
+
+  /** Create a connected MCP client for the arena endpoint */
+  async function createArenaClient(): Promise<Client> {
+    const client = new Client({ name: "test-arena", version: "1.0" });
+    const transport = new StreamableHTTPClientTransport(
+      new URL(`${baseUrl}/api/arena/mcp`)
+    );
+    await client.connect(transport);
+    return client;
+  }
+
+  /** Create a connected MCP client for the chat endpoint */
+  async function createChatClient(): Promise<Client> {
+    const client = new Client({ name: "test-chat", version: "1.0" });
+    const transport = new StreamableHTTPClientTransport(
+      new URL(`${baseUrl}/api/chat/mcp`)
+    );
+    await client.connect(transport);
+    return client;
+  }
+
+  /** Call a tool and parse the JSON text result */
+  async function callTool(client: Client, name: string, args: Record<string, unknown>) {
+    const result = await client.callTool({ name, arguments: args });
+    const text = (result.content as any)?.[0]?.text;
+    if (!text) return result;
+    try {
+      return JSON.parse(text);
+    } catch {
+      // Non-JSON text response (e.g. error strings)
+      return { _text: text };
+    }
+  }
+
+  before(async () => {
+    ({ app, engine } = await createTestAppFromEnv());
+    await new Promise<void>((resolve) => {
+      server = serve({ fetch: app.fetch, port: 0 }, (info) => {
+        baseUrl = `http://localhost:${info.port}`;
+        resolve();
+      });
+    });
+  });
+
+  after(() => {
+    server?.close();
+    (server as any)?.closeAllConnections?.();
+  });
+
+  describe("PSI game via MCP protocol", () => {
   beforeEach(async () => {
     await clearState();
   });
@@ -97,13 +97,14 @@ describe("PSI game via MCP protocol", () => {
     assert.equal(join1.ChallengeID, challengeId);
     assert.equal(join1.ChallengeInfo.name, "Private Set Intersection");
 
-    const instance = await defaultEngine.getChallenge(challengeId);
+    let instance = await engine.getChallenge(challengeId);
     assert.ok(instance);
     assert.equal(instance.state.gameStarted, false);
 
     // 3. Player 2 joins → game starts
     const join2 = await callTool(arena, "challenge_join", { invite: invite2 });
     assert.equal(join2.ChallengeID, challengeId);
+    instance = (await engine.getChallenge(challengeId))!;
     assert.equal(instance.state.gameStarted, true);
 
     // 4. Player 1 syncs to get private set
@@ -173,6 +174,7 @@ describe("PSI game via MCP protocol", () => {
       content: [...intersection].join(", "),
     });
     assert.equal(guess1.ok, "Message sent");
+    instance = (await engine.getChallenge(challengeId))!;
     assert.equal(instance.state.gameEnded, false);
 
     // 10. Player 2 guesses exact intersection
@@ -184,6 +186,7 @@ describe("PSI game via MCP protocol", () => {
     });
 
     // 11. Game ended with perfect scores
+    instance = (await engine.getChallenge(challengeId))!;
     assert.equal(instance.state.gameEnded, true);
     const scores = instance.state.scores;
     assert.equal(scores[0].utility, 1, "player 1 utility=1");
@@ -237,4 +240,5 @@ describe("PSI game via MCP protocol", () => {
 
     await arena.close();
   });
+});
 });

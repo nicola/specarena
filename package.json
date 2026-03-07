@@ -10,7 +10,8 @@
     "test:challenges": "npm run test --workspace @arena/challenges",
     "test:api": "npm run test --workspace @arena/api",
     "test:leaderboard": "npm run test --workspace @arena/leaderboard --if-present",
-    "test:scoring": "npm run test --workspace @arena/scoring"
+    "test:scoring": "npm run test --workspace @arena/scoring",
+    "test:sql": "npm run test:sql --workspace @arena/api"
   },
   "workspaces": ["engine", "challenges", "leaderboard", "api", "scoring", "cli"]
 }
