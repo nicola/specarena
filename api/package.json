@@ -5,7 +5,8 @@
   "scripts": {
     "start": "tsx start.ts",
     "start:auth": "tsx auth/start.ts",
-    "test": "node --import tsx --test --test-force-exit test/*.test.ts"
+    "test": "node --import tsx --test --test-force-exit test/*.test.ts",
+    "test:sql": "TEST_DB=pglite node --import tsx --test --test-force-exit test/*.test.ts"
   },
   "dependencies": {
     "@arena/engine": "*",
@@ -16,7 +17,9 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.3.15",
     "@types/node": "^20",
+    "kysely-pglite-dialect": "^1.2.0",
     "tsx": "^4.19.4",
     "typescript": "^5"
   }

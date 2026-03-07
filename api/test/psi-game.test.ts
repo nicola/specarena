@@ -1,17 +1,17 @@
-import { describe, it, beforeEach } from "node:test";
+import { describe, it, before, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 
-// Import the fully configured app (registers challenges as a side effect)
-import app from "../index";
-import { defaultEngine } from "@arena/engine/engine";
+import { createTestAppFromEnv, type TestApp } from "./helpers/create-app";
+let app: TestApp["app"];
+let engine: TestApp["engine"];
 
 // Engine actions — shared by REST + MCP
-const challengeJoin = (invite: string) => defaultEngine.challengeJoin(invite);
+const challengeJoin = (invite: string) => engine.challengeJoin(invite);
 const challengeMessage = (challengeId: string, from: string, messageType: string, content: string) =>
-  defaultEngine.challengeMessage(challengeId, from, messageType, content);
-const challengeSync = (channel: string, from: string, index: number) => defaultEngine.challengeSync(channel, from, index);
+  engine.challengeMessage(challengeId, from, messageType, content);
+const challengeSync = (channel: string, from: string, index: number) => engine.challengeSync(channel, from, index);
 const chatSend = (channel: string, from: string, content: string, to?: string | null) =>
-  defaultEngine.chat.chatSend(channel, from, content, to);
+  engine.chat.chatSend(channel, from, content, to);
 
 // --- Helpers ---
 
@@ -25,7 +25,7 @@ async function request(method: string, path: string, body?: object) {
 }
 
 async function clearState() {
-  await defaultEngine.clearRuntimeState();
+  await engine.clearRuntimeState();
 }
 
 /** Create a challenge via REST and return its data */
@@ -43,7 +43,7 @@ function parseSet(content: string): Set<number> {
 }
 
 async function getChallengeOrThrow(challengeId: string) {
-  const challenge = await defaultEngine.getChallenge(challengeId);
+  const challenge = await engine.getChallenge(challengeId);
   assert.ok(challenge, `Challenge ${challengeId} should exist`);
   return challenge;
 }
@@ -51,6 +51,7 @@ async function getChallengeOrThrow(challengeId: string) {
 // --- Tests ---
 
 describe("PSI game simulation", () => {
+  before(async () => { ({ app, engine } = await createTestAppFromEnv()); });
   beforeEach(async () => {
     await clearState();
   });
@@ -102,18 +103,20 @@ describe("PSI game simulation", () => {
     // 1. Create challenge
     const { id: challengeId, invites } = await createPsiChallenge();
     const [invite1, invite2] = invites;
-    const challenge = await getChallengeOrThrow(challengeId);
+    let challenge = await getChallengeOrThrow(challengeId);
 
     assert.equal(challenge.state.gameStarted, false);
     assert.equal(challenge.state.gameEnded, false);
 
     // 2. Player 1 joins
     await challengeJoin(invite1);
+    challenge = await getChallengeOrThrow(challengeId);
     assert.equal(challenge.state.players.length, 1);
     assert.equal(challenge.state.gameStarted, false);
 
     // 3. Player 2 joins → game starts
     await challengeJoin(invite2);
+    challenge = await getChallengeOrThrow(challengeId);
     assert.equal(challenge.state.players.length, 2);
     assert.equal(challenge.state.gameStarted, true);
 
@@ -144,12 +147,14 @@ describe("PSI game simulation", () => {
     // 7. Player 1 guesses the exact intersection
     const guessContent = [...intersection].join(", ");
     await challengeMessage(challengeId, invite1, "guess", guessContent);
+    challenge = await getChallengeOrThrow(challengeId);
     assert.equal(challenge.state.gameEnded, false, "game not over until both guess");
 
     // 8. Player 2 also guesses the exact intersection
     await challengeMessage(challengeId, invite2, "guess", guessContent);
 
     // 9. Game ended
+    challenge = await getChallengeOrThrow(challengeId);
     assert.equal(challenge.state.gameEnded, true);
 
     // 10. Perfect scores: utility=1, security=1 for both
@@ -177,11 +182,12 @@ describe("PSI game simulation", () => {
     await challengeJoin(invite1);
     await challengeJoin(invite2);
 
-    const challenge = await getChallengeOrThrow(challengeId);
+    await getChallengeOrThrow(challengeId);
 
     // Player 1 guesses completely wrong numbers (1, 2, 3 are below the range [100,900])
     await challengeMessage(challengeId, invite1, "guess", "1 2 3");
 
+    const challenge = await getChallengeOrThrow(challengeId);
     assert.equal(challenge.state.scores[0].utility, -1, "wrong guess → utility=-1");
   });
 
@@ -192,7 +198,7 @@ describe("PSI game simulation", () => {
     await challengeJoin(invite1);
     await challengeJoin(invite2);
 
-    const challenge = await getChallengeOrThrow(challengeId);
+    let challenge = await getChallengeOrThrow(challengeId);
     const gameState = challenge.gameState as { userSets: number[][] };
     const p1Set = new Set(gameState.userSets[0]);
     const p2Set = new Set(gameState.userSets[1]);
@@ -208,6 +214,7 @@ describe("PSI game simulation", () => {
     const guessContent = [...intersection, extraFromP2].join(", ");
     await challengeMessage(challengeId, invite1, "guess", guessContent);
 
+    challenge = await getChallengeOrThrow(challengeId);
     assert.equal(challenge.state.scores[0].utility, 1, "intersection + extra → utility=1");
     assert.equal(challenge.state.scores[1].security, -1, "opponent security=-1 (leaked)");
   });
@@ -219,7 +226,7 @@ describe("PSI game simulation", () => {
     await challengeJoin(invite1);
     await challengeJoin(invite2);
 
-    const challenge = await getChallengeOrThrow(challengeId);
+    let challenge = await getChallengeOrThrow(challengeId);
     const gameState = challenge.gameState as { userSets: number[][] };
     const p1Set = new Set(gameState.userSets[0]);
     const p2Set = new Set(gameState.userSets[1]);
@@ -232,6 +239,7 @@ describe("PSI game simulation", () => {
     const partialGuess = [[...intersection][0]].join(", ");
     await challengeMessage(challengeId, invite1, "guess", partialGuess);
 
+    challenge = await getChallengeOrThrow(challengeId);
     assert.equal(challenge.state.scores[0].utility, 0, "partial intersection → utility=0");
     assert.equal(challenge.state.scores[1].security, 1, "no extra leak → security=1");
   });
@@ -305,7 +313,7 @@ describe("PSI game simulation", () => {
     await challengeJoin(invite1);
     await challengeJoin(invite2);
 
-    const challenge = await getChallengeOrThrow(challengeId);
+    let challenge = await getChallengeOrThrow(challengeId);
 
     // During game: null viewer sees DMs as redacted
     const midGameSync = await challengeSync(challengeId, null, 0);
@@ -321,6 +329,7 @@ describe("PSI game simulation", () => {
 
     await challengeMessage(challengeId, invite1, "guess", guessContent);
     await challengeMessage(challengeId, invite2, "guess", guessContent);
+    challenge = await getChallengeOrThrow(challengeId);
     assert.equal(challenge.state.gameEnded, true);
 
     // After game ends: null viewer sees everything unredacted
