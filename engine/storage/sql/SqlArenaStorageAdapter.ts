@@ -3,6 +3,17 @@ import type { Database } from "./schema";
 import type { ArenaStorageAdapter } from "../types";
 import type { Challenge, ChallengeOperatorState, Score, Attribution } from "../../types";
 
+type ChallengeRow = {
+  id: string;
+  name: string;
+  challenge_type: string;
+  created_at: Date;
+  game_started: boolean;
+  game_ended: boolean;
+  completed_at: Date | null;
+  game_state: unknown;
+};
+
 export class SqlArenaStorageAdapter implements ArenaStorageAdapter {
   constructor(private readonly db: Kysely<Database>) {}
 
@@ -14,7 +25,8 @@ export class SqlArenaStorageAdapter implements ArenaStorageAdapter {
       .executeTakeFirst();
 
     if (!row) return undefined;
-    return this.rowToChallenge(row);
+    const [challenge] = await this.rowsToChallenges([row]);
+    return challenge;
   }
 
   async getChallengeFromInvite(invite: string): Promise<Challenge | undefined> {
@@ -38,7 +50,7 @@ export class SqlArenaStorageAdapter implements ArenaStorageAdapter {
       .orderBy("challenges.id")
       .execute();
 
-    const challenges = await Promise.all(rows.map((r) => this.rowToChallenge(r)));
+    const challenges = await this.rowsToChallenges(rows);
     return challenges.sort((a, b) => b.createdAt - a.createdAt);
   }
 
@@ -49,12 +61,12 @@ export class SqlArenaStorageAdapter implements ArenaStorageAdapter {
       .where("challenge_type", "=", challengeType)
       .orderBy("created_at", "desc")
       .execute();
-    return Promise.all(rows.map((r) => this.rowToChallenge(r)));
+    return this.rowsToChallenges(rows);
   }
 
   async listChallenges(): Promise<Challenge[]> {
     const rows = await this.db.selectFrom("challenges").selectAll().execute();
-    return Promise.all(rows.map((r) => this.rowToChallenge(r)));
+    return this.rowsToChallenges(rows);
   }
 
   async setChallenge(challenge: Challenge): Promise<void> {
@@ -158,23 +170,68 @@ export class SqlArenaStorageAdapter implements ArenaStorageAdapter {
     await this.db.deleteFrom("challenges").execute();
   }
 
-  private async rowToChallenge(row: {
-    id: string;
-    name: string;
-    challenge_type: string;
-    created_at: Date;
-    game_started: boolean;
-    game_ended: boolean;
-    completed_at: Date | null;
-    game_state: unknown;
-  }): Promise<Challenge> {
-    const invites = await this.db
-      .selectFrom("challenge_invites")
-      .selectAll()
-      .where("challenge_id", "=", row.id)
-      .orderBy("player_index", "asc")
-      .execute();
+  private async rowsToChallenges(rows: ChallengeRow[]): Promise<Challenge[]> {
+    if (rows.length === 0) return [];
 
+    const ids = rows.map((r) => r.id);
+
+    // Batch-fetch all related data in 3 queries (instead of N×3)
+    const [allInvites, allScores, allAttrs] = await Promise.all([
+      this.db
+        .selectFrom("challenge_invites")
+        .selectAll()
+        .where("challenge_id", "in", ids)
+        .orderBy("challenge_id")
+        .orderBy("player_index", "asc")
+        .execute(),
+      this.db
+        .selectFrom("game_scores")
+        .selectAll()
+        .where("challenge_id", "in", ids)
+        .execute(),
+      this.db
+        .selectFrom("scoring_attributions")
+        .select(["challenge_id", "from_player_index", "to_player_index", "type"])
+        .where("challenge_id", "in", ids)
+        .execute(),
+    ]);
+
+    // Group by challenge_id
+    const invitesByChallenge = new Map<string, typeof allInvites>();
+    for (const inv of allInvites) {
+      let list = invitesByChallenge.get(inv.challenge_id);
+      if (!list) { list = []; invitesByChallenge.set(inv.challenge_id, list); }
+      list.push(inv);
+    }
+
+    const scoresByChallenge = new Map<string, typeof allScores>();
+    for (const sr of allScores) {
+      let list = scoresByChallenge.get(sr.challenge_id);
+      if (!list) { list = []; scoresByChallenge.set(sr.challenge_id, list); }
+      list.push(sr);
+    }
+
+    const attrsByChallenge = new Map<string, typeof allAttrs>();
+    for (const a of allAttrs) {
+      let list = attrsByChallenge.get(a.challenge_id);
+      if (!list) { list = []; attrsByChallenge.set(a.challenge_id, list); }
+      list.push(a);
+    }
+
+    return rows.map((row) => this.assembleChallenge(
+      row,
+      invitesByChallenge.get(row.id) ?? [],
+      scoresByChallenge.get(row.id) ?? [],
+      attrsByChallenge.get(row.id) ?? [],
+    ));
+  }
+
+  private assembleChallenge(
+    row: ChallengeRow,
+    invites: { invite: string; player_index: number | null; user_id: string | null }[],
+    scoreRows: { player_id: string; security: number; utility: number }[],
+    attrRows: { from_player_index: number; to_player_index: number; type: string }[],
+  ): Challenge {
     const players: string[] = [];
     const playerIdentities: Record<string, string> = {};
     const inviteList: string[] = [];
@@ -189,13 +246,6 @@ export class SqlArenaStorageAdapter implements ArenaStorageAdapter {
       }
     }
 
-    // Reconstruct scores from game_scores table
-    const scoreRows = await this.db
-      .selectFrom("game_scores")
-      .selectAll()
-      .where("challenge_id", "=", row.id)
-      .execute();
-
     const playerCount = inviteList.length;
     const scores: Score[] = Array.from({ length: playerCount }, () => ({ security: 0, utility: 0 }));
     for (const sr of scoreRows) {
@@ -204,13 +254,6 @@ export class SqlArenaStorageAdapter implements ArenaStorageAdapter {
         scores[idx] = { security: sr.security, utility: sr.utility };
       }
     }
-
-    // Reconstruct attributions from scoring_attributions table
-    const attrRows = await this.db
-      .selectFrom("scoring_attributions")
-      .select(["from_player_index", "to_player_index", "type"])
-      .where("challenge_id", "=", row.id)
-      .execute();
 
     const attributions: Attribution[] | undefined =
       attrRows.length > 0
