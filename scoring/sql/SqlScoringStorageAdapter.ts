@@ -25,8 +25,8 @@ interface ScoringDatabase {
 const GLOBAL_CHALLENGE_TYPE = "__global__";
 const GLOBAL_STRATEGY_NAME = "__global__";
 
-export class SqlScoringStorageAdapter implements ScoringStorageAdapter {
-  constructor(private readonly db: Kysely<ScoringDatabase>) {}
+export class SqlScoringStorageAdapter<DB extends ScoringDatabase = ScoringDatabase> implements ScoringStorageAdapter {
+  constructor(private readonly db: Kysely<DB>) {}
 
   async getScores(challengeType: string): Promise<Record<string, ScoringEntry[]>> {
     const rows = await this.db
@@ -56,7 +56,7 @@ export class SqlScoringStorageAdapter implements ScoringStorageAdapter {
 
   async transaction<T>(fn: (store: ScoringStorageAdapter) => Promise<T>): Promise<T> {
     return this.db.transaction().execute(async (tx) => {
-      const txStore = new SqlScoringStorageAdapter(tx as unknown as Kysely<ScoringDatabase>);
+      const txStore = new SqlScoringStorageAdapter(tx as unknown as Kysely<DB>);
       return fn(txStore);
     });
   }

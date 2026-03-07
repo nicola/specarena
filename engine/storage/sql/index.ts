@@ -27,7 +27,7 @@ export function createSqlStorage(connectionString: string): SqlStorage {
     arena: new SqlArenaStorageAdapter(db),
     chat: new SqlChatStorageAdapter(db),
     user: new SqlUserStorageAdapter(db),
-    scoring: new SqlScoringStorageAdapter(db as unknown as Kysely<any>),
+    scoring: new SqlScoringStorageAdapter(db),
     db,
   };
 }
