@@ -1,8 +1,9 @@
-import { describe, it, beforeEach } from "node:test";
+import { describe, it, before, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 
-import app from "../index";
-import { defaultEngine } from "@arena/engine/engine";
+import { createTestAppFromEnv, type TestApp } from "./helpers/create-app";
+let app: TestApp["app"];
+let engine: TestApp["engine"];
 import { readNextSSEData } from "./helpers/sse";
 
 // --- Helpers ---
@@ -16,7 +17,7 @@ async function request(method: string, path: string, body?: object) {
 }
 
 async function clearState() {
-  await defaultEngine.clearRuntimeState();
+  await engine.clearRuntimeState();
 }
 
 async function createPsiChallenge() {
@@ -57,6 +58,7 @@ function openSSE(channel: string) {
 // --- Tests ---
 
 describe("Concurrent SSE streams — engine level (no auth)", () => {
+  before(async () => { ({ app, engine } = await createTestAppFromEnv()); });
   beforeEach(async () => clearState());
 
   it("two viewers receive all messages from agents chatting", async () => {
@@ -199,7 +201,7 @@ describe("Concurrent SSE streams — engine level (no auth)", () => {
       await sendGuess(id, invites[1], "100");
 
       // Verify game ended via engine state
-      const ch = await defaultEngine.getChallenge(id);
+      const ch = await engine.getChallenge(id);
       assert.equal(ch?.state?.gameEnded, true, "game should be ended");
     } finally {
       viewer.reader.cancel().catch(() => {});
@@ -273,7 +275,7 @@ describe("Concurrent SSE streams — engine level (no auth)", () => {
       await sendGuess(c1.id, c1.invites[1], "100");
 
       // Verify challenge 1 ended via engine state
-      const ch1 = await defaultEngine.getChallenge(c1.id);
+      const ch1 = await engine.getChallenge(c1.id);
       assert.equal(ch1?.state?.gameEnded, true, "c1 should be ended");
 
       // Challenge 2 stream should still be alive — send a message and verify
@@ -343,7 +345,7 @@ describe("Concurrent SSE streams — engine level (no auth)", () => {
     await sendGuess(id, invites[0], "100");
     await sendGuess(id, invites[1], "100");
 
-    const ch = await defaultEngine.getChallenge(id);
+    const ch = await engine.getChallenge(id);
     assert.equal(ch?.state?.gameEnded, true);
 
     // Late viewer connects
