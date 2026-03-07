@@ -69,6 +69,7 @@ export class SqlArenaStorageAdapter implements ArenaStorageAdapter {
           oc.column("id").doUpdateSet({
             name: challenge.name,
             challenge_type: challenge.challengeType,
+            created_at: new Date(challenge.createdAt),
             game_started: state.gameStarted,
             game_ended: state.gameEnded,
             completed_at: state.completedAt ? new Date(state.completedAt) : null,

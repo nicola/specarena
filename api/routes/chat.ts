@@ -65,6 +65,10 @@ export function createChatRoutes(engine: ArenaEngine = defaultEngine) {
         const initialData = JSON.stringify({ type: "initial", messages: initialMessages });
         controller.enqueue(new TextEncoder().encode(`data: ${initialData}\n\n`));
 
+        // Subscribe immediately after initial sync to avoid missing messages
+        // during async operations below (no yield points between chatSync and here)
+        const unsubscribe = chat.subscribeToChannel(uuid, controller, viewer);
+
         // If the game has already ended, send game_ended event with state + profiles
         const challengeId = fromChallengeChannel(uuid) ?? uuid;
         const challenge = await engine.getChallenge(challengeId);
@@ -80,9 +84,6 @@ export function createChatRoutes(engine: ArenaEngine = defaultEngine) {
           });
           controller.enqueue(new TextEncoder().encode(`data: ${endedData}\n\n`));
         }
-
-        // Subscribe to new messages with viewer identity
-        const unsubscribe = chat.subscribeToChannel(uuid, controller, viewer);
 
         // Handle client disconnect
         c.req.raw.signal.addEventListener("abort", () => {
