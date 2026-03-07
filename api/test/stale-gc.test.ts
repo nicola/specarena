@@ -7,7 +7,6 @@ let engine: TestApp["engine"];
 import { toChallengeChannel } from "@arena/engine/types";
 
 const STALE_MS = 11 * 60 * 1000;
-const futureNow = () => Date.now() + STALE_MS;
 
 async function request(method: string, path: string, body?: object) {
   return app.request(path, {
@@ -23,22 +22,6 @@ async function createPsiChallenge() {
   return res.json();
 }
 
-/** Play a PSI challenge to completion (both players guess correctly). */
-async function playToCompletion(challengeId: string, invites: string[]) {
-  await request("POST", "/api/arena/join", { invite: invites[0] });
-  await request("POST", "/api/arena/join", { invite: invites[1] });
-
-  const challenge = await engine.getChallenge(challengeId);
-  assert.ok(challenge);
-  const gameState = challenge.gameState as { userSets: number[][] };
-  const p1Set = new Set(gameState.userSets[0]);
-  const p2Set = new Set(gameState.userSets[1]);
-  const intersection = [...p1Set].filter((n) => p2Set.has(n)).join(", ");
-
-  await engine.challengeMessage(challengeId, invites[0], "guess", intersection);
-  await engine.challengeMessage(challengeId, invites[1], "guess", intersection);
-}
-
 describe("Stale challenge garbage collection", () => {
   before(async () => { ({ app, engine } = await createTestAppFromEnv()); });
   beforeEach(async () => {
@@ -47,8 +30,12 @@ describe("Stale challenge garbage collection", () => {
 
   it("prunes stale unstarted challenges from storage and invite lookup", async () => {
     const challenge = await createPsiChallenge();
+    const instance = await engine.getChallenge(challenge.id);
+    assert.ok(instance);
 
-    const removed = await engine.pruneStaleChallenges(futureNow());
+    instance.createdAt = Date.now() - STALE_MS;
+    await engine.updateChallenge(instance);
+    const removed = await engine.pruneStaleChallenges();
     assert.equal(removed, 1);
 
     const typed = await engine.getChallengesByType("psi");
@@ -71,7 +58,9 @@ describe("Stale challenge garbage collection", () => {
     assert.equal(instance.state.gameStarted, true);
     assert.equal(instance.state.gameEnded, false);
 
-    const removed = await engine.pruneStaleChallenges(futureNow());
+    instance.createdAt = Date.now() - STALE_MS;
+    await engine.updateChallenge(instance);
+    const removed = await engine.pruneStaleChallenges();
     assert.equal(removed, 1);
 
     const typed = await engine.getChallengesByType("psi");
@@ -80,13 +69,13 @@ describe("Stale challenge garbage collection", () => {
 
   it("does not prune old challenges that have ended", async () => {
     const challenge = await createPsiChallenge();
-    await playToCompletion(challenge.id, challenge.invites);
+    const instance = await engine.getChallenge(challenge.id);
+    assert.ok(instance);
 
-    const ended = await engine.getChallenge(challenge.id);
-    assert.ok(ended);
-    assert.equal(ended.state.gameEnded, true);
-
-    await engine.pruneStaleChallenges(futureNow());
+    instance.state.gameEnded = true;
+    instance.createdAt = Date.now() - STALE_MS;
+    await engine.updateChallenge(instance);
+    await engine.pruneStaleChallenges();
 
     const typed = await engine.getChallengesByType("psi");
     assert.ok(typed.some((c) => c.id === challenge.id));
@@ -94,10 +83,14 @@ describe("Stale challenge garbage collection", () => {
 
   it("removes chat data for stale challenge channels", async () => {
     const challenge = await createPsiChallenge();
+    const instance = await engine.getChallenge(challenge.id);
+    assert.ok(instance);
 
     await engine.chat.sendMessage(challenge.id, "a", "public");
     await engine.chat.sendMessage(toChallengeChannel(challenge.id), "operator", "private", "a");
-    await engine.pruneStaleChallenges(futureNow());
+    instance.createdAt = Date.now() - STALE_MS;
+    await engine.updateChallenge(instance);
+    await engine.pruneStaleChallenges();
 
     const publicChannel = await engine.chat.getMessagesForChannel(challenge.id);
     const privateChannel = await engine.chat.getMessagesForChannel(toChallengeChannel(challenge.id));
