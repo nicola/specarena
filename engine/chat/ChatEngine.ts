@@ -1,5 +1,6 @@
 import { ChallengeOperatorEvent, ChatMessage, toChallengeChannel } from "../types";
-import { ChatStorageAdapter, InMemoryChatStorageAdapter } from "../storage/InMemoryChatStorageAdapter";
+import type { ChatStorageAdapter } from "../storage/types";
+import { InMemoryChatStorageAdapter } from "../storage/InMemoryChatStorageAdapter";
 
 export interface ChatEngineOptions {
   storageAdapter?: ChatStorageAdapter;

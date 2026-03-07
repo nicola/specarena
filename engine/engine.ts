@@ -12,10 +12,11 @@ import {
   toChallengeChannel,
 } from "./types";
 import { ChatEngine, createChatEngine } from "./chat/ChatEngine";
-import { ArenaStorageAdapter, InMemoryArenaStorageAdapter } from "./storage/InMemoryArenaStorageAdapter";
+import type { ArenaStorageAdapter, UserStorageAdapter } from "./storage/types";
+import { InMemoryArenaStorageAdapter } from "./storage/InMemoryArenaStorageAdapter";
 import { ScoringModule } from "./scoring/index";
 import type { GameResult } from "./scoring/types";
-import { UserStorageAdapter, InMemoryUserStorageAdapter } from "./users/index";
+import { InMemoryUserStorageAdapter } from "./users/index";
 
 export interface EngineOptions {
   storageAdapter?: ArenaStorageAdapter;
@@ -123,17 +124,15 @@ export class ArenaEngine {
 
   async pruneStaleChallenges(now: number = Date.now()): Promise<number> {
     const challenges = await this.storageAdapter.listChallenges();
-    const stale = challenges.filter((challenge) => this.isChallengeStale(challenge, now));
-    if (stale.length === 0) {
-      return 0;
-    }
+    const stale = challenges.filter((c) => this.isChallengeStale(c, now));
+    if (stale.length === 0) return 0;
 
     await Promise.all(
-      stale.map(async (challenge) => {
-        await this.storageAdapter.deleteChallenge(challenge.id);
-        await this.chat.deleteChannel(challenge.id);
-        await this.chat.deleteChannel(toChallengeChannel(challenge.id));
-      }),
+      stale.flatMap((c) => [
+        this.storageAdapter.deleteChallenge(c.id),
+        this.chat.deleteChannel(c.id),
+        this.chat.deleteChannel(toChallengeChannel(c.id)),
+      ]),
     );
 
     return stale.length;
@@ -223,9 +222,8 @@ export class ArenaEngine {
   }
 
   async getChallengesByType(challengeType: string): Promise<Challenge[]> {
-    return (await this.storageAdapter.listChallenges())
-      .filter((c) => c.challengeType === challengeType && !this.isChallengeStale(c))
-      .sort((a, b) => b.createdAt - a.createdAt);
+    const challenges = await this.storageAdapter.getChallengesByType(challengeType);
+    return challenges.filter((c) => !this.isChallengeStale(c));
   }
 
   async challengeJoin(invite: string, userId?: string) {
@@ -312,6 +310,7 @@ export function createEngine(options: EngineOptions = {}): ArenaEngine {
 
 export const defaultEngine = createEngine();
 export { ChatEngine, createChatEngine, defaultChatEngine } from "./chat/ChatEngine";
-export { ArenaStorageAdapter, InMemoryArenaStorageAdapter } from "./storage/InMemoryArenaStorageAdapter";
-export { ChatStorageAdapter, InMemoryChatStorageAdapter } from "./storage/InMemoryChatStorageAdapter";
-export { UserProfile, UserStorageAdapter, InMemoryUserStorageAdapter } from "./users/index";
+export type { ArenaStorageAdapter, ChatStorageAdapter, UserStorageAdapter, UserProfile } from "./storage/types";
+export { InMemoryArenaStorageAdapter } from "./storage/InMemoryArenaStorageAdapter";
+export { InMemoryChatStorageAdapter } from "./storage/InMemoryChatStorageAdapter";
+export { InMemoryUserStorageAdapter } from "./users/index";

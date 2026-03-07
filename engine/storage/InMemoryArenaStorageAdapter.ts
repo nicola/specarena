@@ -1,14 +1,7 @@
 import { Challenge } from "../types";
+import type { ArenaStorageAdapter } from "./types";
 
-export interface ArenaStorageAdapter {
-  clearRuntimeState(): Promise<void>;
-  listChallenges(): Promise<Challenge[]>;
-  getChallenge(challengeId: string): Promise<Challenge | undefined>;
-  getChallengeFromInvite(invite: string): Promise<Challenge | undefined>;
-  getChallengesByUserId(userId: string): Promise<Challenge[]>;
-  setChallenge(challenge: Challenge): Promise<void>;
-  deleteChallenge(challengeId: string): Promise<void>;
-}
+const byCreatedAtDesc = (a: Challenge, b: Challenge) => b.createdAt - a.createdAt;
 
 export class InMemoryArenaStorageAdapter implements ArenaStorageAdapter {
   private challengesById: Record<string, Challenge> = {};
@@ -32,21 +25,25 @@ export class InMemoryArenaStorageAdapter implements ArenaStorageAdapter {
     return challengeId ? this.challengesById[challengeId] : undefined;
   }
 
+  async getChallengesByType(challengeType: string): Promise<Challenge[]> {
+    return Object.values(this.challengesById)
+      .filter((c) => c.challengeType === challengeType)
+      .sort(byCreatedAtDesc);
+  }
+
   async getChallengesByUserId(userId: string): Promise<Challenge[]> {
     return Object.values(this.challengesById)
       .filter((c) => {
         const identities = c.state?.playerIdentities;
         return identities && Object.values(identities).includes(userId);
       })
-      .sort((a, b) => b.createdAt - a.createdAt);
+      .sort(byCreatedAtDesc);
   }
 
   async setChallenge(challenge: Challenge): Promise<void> {
     const prev = this.challengesById[challenge.id];
     if (prev) {
-      for (const invite of prev.invites) {
-        delete this.inviteToChallengeId[invite];
-      }
+      this.removeInviteIndex(prev);
     }
 
     this.challengesById[challenge.id] = challenge;
@@ -56,6 +53,16 @@ export class InMemoryArenaStorageAdapter implements ArenaStorageAdapter {
   }
 
   async deleteChallenge(challengeId: string): Promise<void> {
+    const challenge = this.challengesById[challengeId];
+    if (challenge) {
+      this.removeInviteIndex(challenge);
+    }
     delete this.challengesById[challengeId];
+  }
+
+  private removeInviteIndex(challenge: Challenge): void {
+    for (const invite of challenge.invites) {
+      delete this.inviteToChallengeId[invite];
+    }
   }
 }
