@@ -244,23 +244,6 @@ describe("Ultimatum challenge — multi-round negotiation", () => {
     assert.equal(operator.state.scores[1].utility, 0.5);
   });
 
-  it("tracks action history correctly", async () => {
-    const { operator } = createUltimatumWithChat("ult-history", {
-      reservationValues: [20, 30],
-    });
-
-    await operator.join("invite_1");
-    await operator.join("invite_2");
-
-    await operator.message(msg("ult-history", "invite_1", "submit_offer", "55 45"));
-    await operator.message(msg("ult-history", "invite_2", "accept"));
-
-    const history = operator.gameState.actionHistory;
-    assert.equal(history.length, 2);
-    assert.equal(history[0].action, "submit_offer");
-    assert.deepEqual(history[0].offer, [55, 45]);
-    assert.equal(history[1].action, "accept");
-  });
 });
 
 describe("Ultimatum challenge — serialize/restore", () => {

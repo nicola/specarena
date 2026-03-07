@@ -18,13 +18,6 @@ export interface UltimatumChallengeParams {
   turnOrder: "round_robin";
 }
 
-interface ActionEntry {
-  round: number;
-  player: number;
-  action: string;
-  offer?: number[];
-}
-
 export interface UltimatumGameState {
   total: number;
   maxRounds: number;
@@ -34,7 +27,6 @@ export interface UltimatumGameState {
   lastOfferBy: number | null;
   acceptances: boolean[];
   totalTurns: number;
-  actionHistory: ActionEntry[];
 }
 
 const DEFAULT_CONFIG = {
@@ -63,7 +55,6 @@ class UltimatumChallenge extends BaseChallenge<UltimatumGameState> {
         lastOfferBy: null,
         acceptances: Array(params.players).fill(false),
         totalTurns: 0,
-        actionHistory: [],
       },
       messaging,
     );
@@ -127,15 +118,6 @@ class UltimatumChallenge extends BaseChallenge<UltimatumGameState> {
     );
   }
 
-  private recordAction(player: number, action: string, offer?: number[]): void {
-    this.gameState.actionHistory.push({
-      round: this.currentRound,
-      player,
-      action,
-      ...(offer ? { offer } : {}),
-    });
-  }
-
   // --- Action handlers ---
 
   private async onSubmitOffer(message: ChatMessage, sender: number): Promise<void> {
@@ -166,8 +148,6 @@ class UltimatumChallenge extends BaseChallenge<UltimatumGameState> {
     this.gameState.acceptances = Array(this.playerCount).fill(false);
     this.gameState.acceptances[sender] = true; // proposer implicitly accepts
 
-    this.recordAction(sender, "submit_offer", amounts);
-
     const offerStr = amounts.map((a, i) => `Player ${i + 1}: ${a}`).join(", ");
     await this.broadcast(`Player ${sender + 1} proposes: ${offerStr}`);
 
@@ -186,8 +166,6 @@ class UltimatumChallenge extends BaseChallenge<UltimatumGameState> {
     }
 
     this.gameState.acceptances[sender] = true;
-    this.recordAction(sender, "accept");
-
     await this.broadcast(`Player ${sender + 1} accepts the offer.`);
 
     // Check unanimous consent
@@ -208,8 +186,6 @@ class UltimatumChallenge extends BaseChallenge<UltimatumGameState> {
     this.gameState.currentOffer = null;
     this.gameState.lastOfferBy = null;
     this.gameState.acceptances = Array(this.playerCount).fill(false);
-    this.recordAction(sender, "reject");
-
     await this.broadcast(`Player ${sender + 1} rejects the offer. The table is cleared.`);
 
     await this.advanceTurn();
@@ -218,7 +194,6 @@ class UltimatumChallenge extends BaseChallenge<UltimatumGameState> {
   private async onPass(message: ChatMessage, sender: number): Promise<void> {
     this.assertTurn(sender);
 
-    this.recordAction(sender, "pass");
     await this.broadcast(`Player ${sender + 1} passes.`);
 
     await this.advanceTurn();
