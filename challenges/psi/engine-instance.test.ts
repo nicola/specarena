@@ -72,13 +72,13 @@ describe("PSI challenge with isolated engine instances", () => {
     const challengeA = await engineA.createChallenge("psi");
     const [inviteA] = challengeA.invites;
 
-    assert.equal((await engineB.listChallenges()).length, 0);
+    assert.equal((await engineB.listChallenges()).items.length, 0);
     assert.equal((await engineB.chat.getMessagesForChallengeChannel(challengeA.id)).length, 0);
 
     await engineA.challengeJoin(inviteA);
-    assert.equal((await engineA.listChallenges()).length, 1);
+    assert.equal((await engineA.listChallenges()).items.length, 1);
     assert.ok((await engineA.chat.getMessagesForChallengeChannel(challengeA.id)).length > 0);
-    assert.equal((await engineB.listChallenges()).length, 0);
+    assert.equal((await engineB.listChallenges()).items.length, 0);
     assert.equal((await engineB.chat.getMessagesForChallengeChannel(challengeA.id)).length, 0);
   });
 
@@ -90,7 +90,7 @@ describe("PSI challenge with isolated engine instances", () => {
     const challenge = await engine.createChallenge("psi");
     await engine.challengeJoin(challenge.invites[0]);
 
-    assert.equal((await engine.listChallenges()).length, 1);
+    assert.equal((await engine.listChallenges()).items.length, 1);
     assert.ok((await engine.chat.getMessagesForChallengeChannel(challenge.id)).length > 0);
   });
 

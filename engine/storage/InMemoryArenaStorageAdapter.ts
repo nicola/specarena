@@ -1,7 +1,15 @@
 import { Challenge } from "../types";
-import type { ArenaStorageAdapter } from "./types";
+import type { ArenaStorageAdapter, PaginationOptions, PaginatedResult } from "./types";
 
 const byCreatedAtDesc = (a: Challenge, b: Challenge) => b.createdAt - a.createdAt;
+
+function paginate(items: Challenge[], options?: PaginationOptions): PaginatedResult<Challenge> {
+  const total = items.length;
+  if (!options?.limit && !options?.offset) return { items, total };
+  const offset = options.offset ?? 0;
+  const limit = options.limit ?? total;
+  return { items: items.slice(offset, offset + limit), total };
+}
 
 export class InMemoryArenaStorageAdapter implements ArenaStorageAdapter {
   private challengesById: Record<string, Challenge> = {};
@@ -12,8 +20,8 @@ export class InMemoryArenaStorageAdapter implements ArenaStorageAdapter {
     this.inviteToChallengeId = {};
   }
 
-  async listChallenges(): Promise<Challenge[]> {
-    return Object.values(this.challengesById);
+  async listChallenges(options?: PaginationOptions): Promise<PaginatedResult<Challenge>> {
+    return paginate(Object.values(this.challengesById), options);
   }
 
   async getChallenge(challengeId: string): Promise<Challenge | undefined> {
@@ -25,19 +33,21 @@ export class InMemoryArenaStorageAdapter implements ArenaStorageAdapter {
     return challengeId ? this.challengesById[challengeId] : undefined;
   }
 
-  async getChallengesByType(challengeType: string): Promise<Challenge[]> {
-    return Object.values(this.challengesById)
+  async getChallengesByType(challengeType: string, options?: PaginationOptions): Promise<PaginatedResult<Challenge>> {
+    const all = Object.values(this.challengesById)
       .filter((c) => c.challengeType === challengeType)
       .sort(byCreatedAtDesc);
+    return paginate(all, options);
   }
 
-  async getChallengesByUserId(userId: string): Promise<Challenge[]> {
-    return Object.values(this.challengesById)
+  async getChallengesByUserId(userId: string, options?: PaginationOptions): Promise<PaginatedResult<Challenge>> {
+    const all = Object.values(this.challengesById)
       .filter((c) => {
         const identities = c.state?.playerIdentities;
         return identities && Object.values(identities).includes(userId);
       })
       .sort(byCreatedAtDesc);
+    return paginate(all, options);
   }
 
   async setChallenge(challenge: Challenge): Promise<void> {

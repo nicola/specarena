@@ -134,7 +134,7 @@ describe("SQL-specific behavior", () => {
       await testDb.arena.setChallenge(c1);
       await testDb.arena.setChallenge(c2);
 
-      const results = await testDb.arena.getChallengesByUserId("user1");
+      const { items: results } = await testDb.arena.getChallengesByUserId("user1");
       assert.equal(results.length, 1);
       assert.equal(results[0].id, "c1");
     });
