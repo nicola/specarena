@@ -184,22 +184,20 @@ export class SqlArenaStorageAdapter implements ArenaStorageAdapter {
         await tx.insertInto("game_scores").values(scoreRows).execute();
       }
 
-      // Attributions are only set at game end
-      if (state.gameEnded) {
-        await tx
-          .deleteFrom("scoring_attributions")
-          .where("challenge_id", "=", challenge.id)
-          .execute();
+      // Persist attributions (always, for crash recovery)
+      await tx
+        .deleteFrom("scoring_attributions")
+        .where("challenge_id", "=", challenge.id)
+        .execute();
 
-        if (state.attributions && state.attributions.length > 0) {
-          const attrRows = state.attributions.map((a) => ({
-            challenge_id: challenge.id,
-            from_player_index: a.from,
-            to_player_index: a.to,
-            type: a.type,
-          }));
-          await tx.insertInto("scoring_attributions").values(attrRows).execute();
-        }
+      if (state.attributions && state.attributions.length > 0) {
+        const attrRows = state.attributions.map((a) => ({
+          challenge_id: challenge.id,
+          from_player_index: a.from,
+          to_player_index: a.to,
+          type: a.type,
+        }));
+        await tx.insertInto("scoring_attributions").values(attrRows).execute();
       }
     });
   }

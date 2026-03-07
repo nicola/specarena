@@ -102,3 +102,16 @@ export type ChallengeFactory = (
 export type Result<T, E = ChallengeError> =
   | { success: true; data: T }
   | { success: false; error: E; message: string };
+
+/** Strip scores and attributions from challenges that haven't ended yet. */
+export function sanitizeChallenge<T extends Challenge>(challenge: T): T {
+  if (challenge.state.gameEnded) return challenge;
+  return {
+    ...challenge,
+    state: {
+      ...challenge.state,
+      scores: [],
+      attributions: undefined,
+    },
+  };
+}

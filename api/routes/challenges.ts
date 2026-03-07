@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { ArenaEngine, defaultEngine } from "@arena/engine/engine";
-import type { Challenge } from "@arena/engine/types";
+import { sanitizeChallenge, type Challenge } from "@arena/engine/types";
 import type { UserProfile } from "@arena/engine/users";
 
 /** Collect all user profiles referenced in playerIdentities across challenges. */
@@ -44,7 +44,7 @@ export function createChallengeRoutes(engine: ArenaEngine = defaultEngine) {
     const offset = Math.max(0, parseInt(c.req.query("offset") || "0", 10) || 0);
     const { items, total } = await engine.listChallenges({ limit, offset });
     const profiles = await collectUserProfiles(engine, items);
-    return c.json({ challenges: items, total, limit, offset, profiles });
+    return c.json({ challenges: items.map(sanitizeChallenge), total, limit, offset, profiles });
   });
 
   // GET /api/challenges/:name - list by type
@@ -55,7 +55,7 @@ export function createChallengeRoutes(engine: ArenaEngine = defaultEngine) {
       const offset = Math.max(0, parseInt(c.req.query("offset") || "0", 10) || 0);
       const { items, total } = await engine.getChallengesByType(name, { limit, offset });
       const profiles = await collectUserProfiles(engine, items);
-      return c.json({ challenges: items, total, limit, offset, profiles });
+      return c.json({ challenges: items.map(sanitizeChallenge), total, limit, offset, profiles });
     } catch (error) {
       console.error("Error fetching challenges:", error);
       return c.json({ error: "Failed to fetch challenges" }, 500);
