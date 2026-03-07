@@ -16,9 +16,9 @@ export interface ArenaStorageAdapter {
 // ── Chat storage ────────────────────────────────────────────────────
 
 export interface ChatStorageAdapter {
-  getNextIndex(channel: string): Promise<number>;
   getMessagesForChannel(channel: string): Promise<ChatMessage[]>;
-  appendMessage(channel: string, message: ChatMessage): Promise<void>;
+  /** Assign the next index atomically and store the message. Returns the message with index set. */
+  appendMessage(channel: string, message: Omit<ChatMessage, "index">): Promise<ChatMessage>;
   deleteChannel(channel: string): Promise<void>;
   clearRuntimeState(): Promise<void>;
 }
