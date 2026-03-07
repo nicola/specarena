@@ -92,19 +92,7 @@ describe("Ultimatum challenge — turn enforcement", () => {
     );
   });
 
-  it("allows message_only from any player without consuming a turn", async () => {
-    const { operator } = createUltimatumWithChat("ult-msg", {
-      reservationValues: [20, 30],
-    });
 
-    await operator.join("invite_1");
-    await operator.join("invite_2");
-
-    // Player 2 sends message_only (not their turn) — should succeed
-    await operator.message(msg("ult-msg", "invite_2", "message_only", "hello"));
-    // Turn should not have advanced — still Player 1's turn
-    assert.equal(operator.gameState.totalTurns, 0);
-  });
 });
 
 describe("Ultimatum challenge — offer validation", () => {

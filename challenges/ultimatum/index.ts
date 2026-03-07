@@ -63,7 +63,6 @@ class UltimatumChallenge extends BaseChallenge<UltimatumGameState> {
     this.handle("accept", (msg, idx) => this.onAccept(msg, idx));
     this.handle("reject", (msg, idx) => this.onReject(msg, idx));
     this.handle("pass", (msg, idx) => this.onPass(msg, idx));
-    this.handle("message_only", () => {});
   }
 
   protected async onPlayerJoin(playerId: string, playerIndex: number): Promise<void> {
