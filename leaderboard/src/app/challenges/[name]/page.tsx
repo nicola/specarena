@@ -61,7 +61,7 @@ export default async function ChallengePage({ params, searchParams }: { params: 
   const { name } = await params;
   const { page: pageParam } = await searchParams;
   const page = Math.max(1, parseInt(pageParam || "1", 10) || 1);
-  const pageSize = 50;
+  const pageSize = 10;
   const offset = (page - 1) * pageSize;
 
   const challenge = await fetchMetadata(name);
