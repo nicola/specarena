@@ -206,6 +206,10 @@ export class ArenaEngine {
     };
   }
 
+  async updateChallenge(challenge: Challenge): Promise<void> {
+    await this.storageAdapter.setChallenge(challenge);
+  }
+
   async getChallenge(challengeId: string): Promise<Challenge | undefined> {
     const challenge = await this.storageAdapter.getChallenge(challengeId);
     if (!challenge) {
