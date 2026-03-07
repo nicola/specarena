@@ -51,7 +51,7 @@ export function createChallengeRoutes(engine: ArenaEngine = defaultEngine) {
   app.get("/api/challenges/:name", async (c) => {
     const name = c.req.param("name");
     try {
-      const limit = Math.max(1, parseInt(c.req.query("limit") || "50", 10) || 50);
+      const limit = Math.min(Math.max(1, parseInt(c.req.query("limit") || "10", 10) || 10), 50);
       const offset = Math.max(0, parseInt(c.req.query("offset") || "0", 10) || 0);
       const { items, total } = await engine.getChallengesByType(name, { limit, offset });
       const profiles = await collectUserProfiles(engine, items);
