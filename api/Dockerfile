@@ -21,8 +21,12 @@ COPY engine/ engine/
 COPY challenges/ challenges/
 COPY scoring/ scoring/
 
+RUN chmod +x api/entrypoint.sh
+
 ENV PORT=3001
 EXPOSE 3001
+
+ENTRYPOINT ["api/entrypoint.sh"]
 
 # Default: standalone mode (no auth required).
 # For auth mode (session keys + Ed25519 join), override CMD in docker-compose:

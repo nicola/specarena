@@ -21,7 +21,10 @@ COPY engine/ engine/
 COPY challenges/ challenges/
 COPY scoring/ scoring/
 
+RUN chmod +x api/entrypoint.sh
+
 ENV PORT=3001
 EXPOSE 3001
 
+ENTRYPOINT ["api/entrypoint.sh"]
 CMD ["node", "--import", "tsx", "api/auth/start.ts"]

@@ -2,14 +2,14 @@ import { type Kysely, sql } from "kysely";
 
 export async function up(db: Kysely<unknown>): Promise<void> {
   await db.schema
-    .createTable("users")
+    .createTable("users").ifNotExists()
     .addColumn("user_id", "text", (col) => col.primaryKey())
     .addColumn("username", "text")
     .addColumn("model", "text")
     .execute();
 
   await db.schema
-    .createTable("challenges")
+    .createTable("challenges").ifNotExists()
     .addColumn("id", "text", (col) => col.primaryKey())
     .addColumn("name", "text", (col) => col.notNull())
     .addColumn("challenge_type", "text", (col) => col.notNull())
@@ -23,7 +23,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .execute();
 
   await db.schema
-    .createTable("challenge_invites")
+    .createTable("challenge_invites").ifNotExists()
     .addColumn("challenge_id", "text", (col) =>
       col.notNull().references("challenges.id").onDelete("cascade"),
     )
@@ -34,20 +34,20 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .execute();
 
   await db.schema
-    .createIndex("challenge_invites_invite_unique")
+    .createIndex("challenge_invites_invite_unique").ifNotExists()
     .on("challenge_invites")
     .column("invite")
     .unique()
     .execute();
 
   await db.schema
-    .createIndex("challenge_invites_user_id_idx")
+    .createIndex("challenge_invites_user_id_idx").ifNotExists()
     .on("challenge_invites")
     .column("user_id")
     .execute();
 
   await db.schema
-    .createTable("chat_messages")
+    .createTable("chat_messages").ifNotExists()
     .addColumn("id", "serial", (col) => col.primaryKey())
     .addColumn("channel", "text", (col) => col.notNull())
     .addColumn("index", "integer", (col) => col.notNull())
@@ -60,13 +60,13 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .execute();
 
   await db.schema
-    .createIndex("chat_messages_channel_idx")
+    .createIndex("chat_messages_channel_idx").ifNotExists()
     .on("chat_messages")
     .column("channel")
     .execute();
 
   await db.schema
-    .createTable("game_scores")
+    .createTable("game_scores").ifNotExists()
     .addColumn("challenge_id", "text", (col) =>
       col.notNull().references("challenges.id").onDelete("cascade"),
     )
@@ -77,7 +77,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .execute();
 
   await db.schema
-    .createTable("scoring_attributions")
+    .createTable("scoring_attributions").ifNotExists()
     .addColumn("id", "serial", (col) => col.primaryKey())
     .addColumn("challenge_id", "text", (col) =>
       col.notNull().references("challenges.id").onDelete("cascade"),
@@ -88,7 +88,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .execute();
 
   await db.schema
-    .createTable("scoring_metrics")
+    .createTable("scoring_metrics").ifNotExists()
     .addColumn("challenge_type", "text", (col) => col.notNull())
     .addColumn("strategy_name", "text", (col) => col.notNull())
     .addColumn("player_id", "text", (col) => col.notNull())
@@ -103,7 +103,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .execute();
 
   await db.schema
-    .createTable("scoring_strategy_state")
+    .createTable("scoring_strategy_state").ifNotExists()
     .addColumn("challenge_type", "text", (col) => col.notNull())
     .addColumn("strategy_name", "text", (col) => col.notNull())
     .addColumn("player_id", "text", (col) => col.notNull())
