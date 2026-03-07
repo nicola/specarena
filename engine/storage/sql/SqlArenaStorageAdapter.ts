@@ -107,43 +107,44 @@ export class SqlArenaStorageAdapter implements ArenaStorageAdapter {
         await tx.insertInto("challenge_invites").values(inviteRows).execute();
       }
 
-      // Rebuild game_scores
-      await tx
-        .deleteFrom("game_scores")
-        .where("challenge_id", "=", challenge.id)
-        .execute();
+      // Only persist scores and attributions once the game has ended
+      if (state.gameEnded) {
+        await tx
+          .deleteFrom("game_scores")
+          .where("challenge_id", "=", challenge.id)
+          .execute();
 
-      const scoreRows = state.players
-        .map((invite, i) => {
-          const score = state.scores[i];
-          if (!score) return null;
-          return {
+        const scoreRows = state.players
+          .map((invite, i) => {
+            const score = state.scores[i];
+            if (!score) return null;
+            return {
+              challenge_id: challenge.id,
+              player_id: invite,
+              security: score.security,
+              utility: score.utility,
+            };
+          })
+          .filter((r) => r !== null);
+
+        if (scoreRows.length > 0) {
+          await tx.insertInto("game_scores").values(scoreRows).execute();
+        }
+
+        await tx
+          .deleteFrom("scoring_attributions")
+          .where("challenge_id", "=", challenge.id)
+          .execute();
+
+        if (state.attributions && state.attributions.length > 0) {
+          const attrRows = state.attributions.map((a) => ({
             challenge_id: challenge.id,
-            player_id: invite,
-            security: score.security,
-            utility: score.utility,
-          };
-        })
-        .filter((r) => r !== null);
-
-      if (scoreRows.length > 0) {
-        await tx.insertInto("game_scores").values(scoreRows).execute();
-      }
-
-      // Rebuild scoring_attributions
-      await tx
-        .deleteFrom("scoring_attributions")
-        .where("challenge_id", "=", challenge.id)
-        .execute();
-
-      if (state.attributions && state.attributions.length > 0) {
-        const attrRows = state.attributions.map((a) => ({
-          challenge_id: challenge.id,
-          from_player_index: a.from,
-          to_player_index: a.to,
-          type: a.type,
-        }));
-        await tx.insertInto("scoring_attributions").values(attrRows).execute();
+            from_player_index: a.from,
+            to_player_index: a.to,
+            type: a.type,
+          }));
+          await tx.insertInto("scoring_attributions").values(attrRows).execute();
+        }
       }
     });
   }

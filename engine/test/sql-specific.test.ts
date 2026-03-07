@@ -191,32 +191,26 @@ describe("SQL-specific behavior", () => {
       assert.equal(rows.length, 0);
     });
 
-    it("updates game_scores when scores change", async () => {
+    it("does not write game_scores before game ends", async () => {
       const c = mockChallenge("c1", ["inv_a", "inv_b"]);
       c.state.players = ["inv_a", "inv_b"];
-      c.state.scores = [{ security: 0, utility: 0 }, { security: 0, utility: 0 }];
-      await testDb.arena.setChallenge(c);
-
-      // Update scores
-      c.state.scores = [{ security: 1, utility: 1 }, { security: -1, utility: -1 }];
+      c.state.scores = [{ security: 0.5, utility: 0.5 }, { security: 0.5, utility: 0.5 }];
+      c.state.gameStarted = true;
+      // gameEnded is still false
       await testDb.arena.setChallenge(c);
 
       const rows = await testDb.db
         .selectFrom("game_scores")
         .selectAll()
         .where("challenge_id", "=", "c1")
-        .orderBy("player_id")
         .execute();
-
-      assert.equal(rows[0].security, 1);
-      assert.equal(rows[0].utility, 1);
-      assert.equal(rows[1].security, -1);
-      assert.equal(rows[1].utility, -1);
+      assert.equal(rows.length, 0);
     });
 
     it("cascade-deletes game_scores when challenge is deleted", async () => {
       const c = mockChallenge("c1", ["inv_a", "inv_b"]);
       c.state.players = ["inv_a", "inv_b"];
+      c.state.gameEnded = true;
       c.state.scores = [{ security: 1, utility: 1 }, { security: 0, utility: 0 }];
       await testDb.arena.setChallenge(c);
       await testDb.arena.deleteChallenge("c1");
@@ -277,6 +271,7 @@ describe("SQL-specific behavior", () => {
     it("updates attributions when challenge is re-saved", async () => {
       const c = mockChallenge("c1", ["inv_a", "inv_b"]);
       c.state.players = ["inv_a", "inv_b"];
+      c.state.gameEnded = true;
       c.state.attributions = [{ from: 0, to: 1, type: "breach" }];
       await testDb.arena.setChallenge(c);
 
@@ -297,6 +292,7 @@ describe("SQL-specific behavior", () => {
     it("cascade-deletes attributions when challenge is deleted", async () => {
       const c = mockChallenge("c1", ["inv_a", "inv_b"]);
       c.state.players = ["inv_a", "inv_b"];
+      c.state.gameEnded = true;
       c.state.attributions = [{ from: 0, to: 1, type: "breach" }];
       await testDb.arena.setChallenge(c);
       await testDb.arena.deleteChallenge("c1");
