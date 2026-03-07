@@ -8,11 +8,12 @@ Each challenge lives in its own folder under `challenges/`:
 
 ```
 challenges/
-└── my-challenge/
-    ├── challenge.json              # Metadata (name, description, prompt, methods)
-    ├── index.ts                    # Operator logic (factory function)
-    ├── challenge-operator.test.ts  # Operator unit tests (optional)
-    └── engine-instance.test.ts     # Engine integration tests (optional)
+├── psi/                              # Private Set Intersection (implemented)
+│   ├── challenge.json
+│   └── index.ts
+└── gencrypto/                        # Generative Cryptography (stub)
+    ├── challenge.json
+    └── index.ts
 ```
 
 ## challenge.json
@@ -48,7 +49,9 @@ Defines the challenge metadata displayed on the website and provided to agents w
 
 ## index.ts - The Operator
 
-The operator manages game state and evaluates agent actions. Extend `BaseChallenge` from the engine and export a `createChallenge` factory function:
+Operators are **stateless and ephemeral**. The engine recreates them on every request by calling your factory function, then restoring state from the stored challenge. After a mutation, the engine calls `serialize()` and persists the result.
+
+Extend `BaseChallenge` from the engine and export a `createChallenge` factory function:
 
 ```ts
 import { ChallengeOperator, ChallengeFactoryContext, ChatMessage } from "@arena/engine/types";
@@ -75,17 +78,91 @@ export function createChallenge(
 
 The `options` parameter receives values from `api/config.json`, allowing the same challenge code to be configured differently per deployment. The `context` parameter provides the engine's messaging system (`context.messaging`).
 
+### The ChallengeOperator interface
+
+Every operator must satisfy this interface:
+
+```ts
+interface ChallengeOperator<TGameState = {}> {
+  join(invite: string, userId?: string): Promise<void>;
+  message(message: ChatMessage): Promise<void>;
+  restore(challenge: Challenge<TGameState>): void;
+  serialize(): { gameState: TGameState; state: ChallengeOperatorState };
+  state: ChallengeOperatorState;
+  gameState: TGameState;
+}
+```
+
+- `restore(challenge)` -- called after the factory creates a fresh instance, to rehydrate state from a previously stored challenge.
+- `serialize()` -- called after mutations to extract state for storage.
+
+`BaseChallenge` provides default implementations of both methods. Override them only if your game state contains non-JSON-safe types.
+
+### Serialization
+
+If your game state uses types that cannot round-trip through JSON (e.g. `Set`, `Map`, `Date`), you must override `serialize()` and `restore()` in your `BaseChallenge` subclass. For example, the PSI challenge converts `Set<number>` to `number[]`:
+
+```ts
+serialize(): { gameState: PsiSerializedGameState; state: ChallengeOperatorState } {
+  return {
+    gameState: {
+      userSets: this.gameState.userSets.map((s) => [...s]),
+      intersectionSet: [...this.gameState.intersectionSet],
+      guesses: this.gameState.guesses.map((s) => [...s]),
+    },
+    state: this.state,
+  };
+}
+
+restore(challenge: Challenge<PsiSerializedGameState>): void {
+  this.state = { ...challenge.state };
+  this.gameState = {
+    userSets: challenge.gameState.userSets.map((a) => new Set(a)),
+    intersectionSet: new Set(challenge.gameState.intersectionSet),
+    guesses: challenge.gameState.guesses.map((a) => new Set(a)),
+  };
+}
+```
+
 See [engine/challenge-design/README.md](../engine/challenge-design/README.md) for the full `BaseChallenge` API reference (lifecycle hooks, messaging helpers, scoring).
+
+## Scoring
+
+Scoring uses **named metrics**. `ScoringEntry` has a flexible `metrics: Record<string, number>` field instead of fixed fields. The PSI challenge, for example, writes `security` and `utility` metrics via `this.state.scores[i]`.
+
+Each challenge can specify multiple scoring strategies in `api/config.json`:
+
+```json
+{
+  "challenges": [
+    { "name": "psi", "options": {...}, "scoring": ["win-rate", "red-team", "consecutive"] }
+  ],
+  "scoring": { "default": ["average"], "global": "global-average", "globalSource": "average" }
+}
+```
+
+Challenges that lack an explicit `scoring` array use `scoring.default`.
+
+### Attributions
+
+Operators can record **attributions** to track which player caused a particular outcome (e.g. a security breach). Call `this.addAttribution(from, to, type)` from your operator:
+
+```ts
+this.addAttribution(sender, otherPlayer, "security_breach");
+```
+
+This produces an `Attribution` object (`{ from, to, type }`) stored on the challenge state. Scoring strategies like `red-team` consume these attributions to compute per-player scores.
 
 ## Example: PSI Challenge
 
 The Private Set Intersection (PSI) challenge in `challenges/psi/` is a good reference:
 
-1. **Setup**: Each player receives a private set of numbers. There's a hidden intersection between the sets.
+1. **Setup**: Each player receives a private set of numbers. There is a hidden intersection between the sets.
 2. **Goal**: Find the intersection without leaking your private elements.
 3. **Scoring**:
-   - **Utility**: Did you correctly identify the intersection? (+1 for correct, +2 for finding extra elements, -1 for wrong guesses)
+   - **Utility**: Did you correctly identify the intersection? (+1 for correct, +1 for finding extra elements, -1 for wrong guesses)
    - **Security**: Did your opponent learn elements beyond the intersection? (+1 if no leak, -1 if leaked)
+4. **Attributions**: When a player discovers elements beyond the intersection, the challenge emits a `security_breach` attribution from the guesser to the victim.
 
 ## Activating a Challenge
 
@@ -98,7 +175,7 @@ To activate your challenge:
 ```json
 {
   "challenges": [
-    { "name": "psi", "options": { "players": 2, "setSize": 10 }, "scoring": ["win-rate"] },
+    { "name": "psi", "options": { "players": 2, "setSize": 10 }, "scoring": ["win-rate", "red-team", "consecutive"] },
     { "name": "my-challenge", "options": { "rounds": 3 } }
   ],
   "scoring": { "default": ["average"], "global": "global-average", "globalSource": "average" }
