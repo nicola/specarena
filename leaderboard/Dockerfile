@@ -5,19 +5,21 @@ WORKDIR /app
 # Copy root workspace config
 COPY package.json ./
 
-# Copy package.json files for all workspaces (needed for npm install)
+# Copy package.json files for required workspaces (needed for npm install)
 COPY engine/package.json engine/
 COPY challenges/package.json challenges/
+COPY scoring/package.json scoring/
 COPY leaderboard/package.json leaderboard/
 
-# Install dependencies (no lockfile — npm resolves platform-specific native
-# binaries like lightningcss/swc for the container OS)
-RUN npm install --include-workspace-root
+# Install only the workspaces we need (avoids resolving api/cli
+# which aren't copied and would 404 on npm)
+RUN npm install --workspace=leaderboard --workspace=engine --workspace=challenges --workspace=scoring --include-workspace-root
 
 # Copy all source (leaderboard imports types from engine)
 COPY SKILL.md ./
 COPY engine/ engine/
 COPY challenges/ challenges/
+COPY scoring/ scoring/
 COPY leaderboard/ leaderboard/
 
 # Build Next.js — set ENGINE_URL for rewrites (baked into routes-manifest.json)
@@ -39,6 +41,7 @@ COPY --from=base /app/node_modules ./node_modules
 COPY --from=base /app/leaderboard ./leaderboard
 COPY --from=base /app/engine ./engine
 COPY --from=base /app/challenges ./challenges
+COPY --from=base /app/scoring ./scoring
 
 EXPOSE 3000
 
