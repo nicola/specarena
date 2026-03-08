@@ -22,8 +22,14 @@
  * Note: Models must be marked as benchmark in the database by an admin.
  */
 
-import { execSync } from "node:child_process";
+import { config } from "dotenv";
+config(); // load .env from project root
+
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import crypto from "node:crypto";
+
+const execFileAsync = promisify(execFile);
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -102,7 +108,7 @@ if (MODELS.length < 2) {
 const GAME_TYPE = getArg("game", "psi");
 const REPEAT = parseInt(getArg("repeat", "1"), 10);
 const PARALLEL = hasFlag("parallel");
-const ARENA_URL = getArg("arena-url", process.env.ARENA_URL || "http://localhost:3001").replace(/\/$/, "");
+const ARENA_URL = getArg("arena-url", process.env.ARENA_URL || "http://localhost:3011").replace(/\/$/, "");
 const MAX_TURNS = parseInt(getArg("max-turns", "30"), 10);
 const TIMEOUT_SECS = parseInt(getArg("timeout", "300"), 10);
 
@@ -173,21 +179,49 @@ function getUserId(publicKeyHex: string): string {
 
 // ── Bash Tool Execution ─────────────────────────────────────────────
 
-import { writeFileSync, unlinkSync, mkdtempSync } from "node:fs";
+import { writeFileSync, readFileSync, existsSync, unlinkSync, mkdtempSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const KEYS_FILE = join(__dirname, ".benchmark-keys.json");
+
+type StoredKeys = Record<string, KeyPair>; // model ID -> key pair
+
+function loadStoredKeys(): StoredKeys {
+  if (!existsSync(KEYS_FILE)) return {};
+  try {
+    return JSON.parse(readFileSync(KEYS_FILE, "utf-8"));
+  } catch {
+    return {};
+  }
+}
+
+function saveStoredKeys(keys: StoredKeys): void {
+  writeFileSync(KEYS_FILE, JSON.stringify(keys, null, 2) + "\n");
+}
+
+function getOrCreateKeyPair(modelId: string): KeyPair {
+  const stored = loadStoredKeys();
+  if (stored[modelId]) return stored[modelId];
+  const keys = generateKeyPair();
+  stored[modelId] = keys;
+  saveStoredKeys(stored);
+  return keys;
+}
 
 /**
  * Creates a persistent bash execution context for an agent.
  * Environment variables set via `export` persist across calls by
  * writing them to a temp env file that is sourced before each command.
  */
-function createBashContext(): { execute: (command: string, timeoutMs?: number) => BashResult; cleanup: () => void } {
+function createBashContext(): { execute: (command: string, timeoutMs?: number) => Promise<BashResult>; cleanup: () => void } {
   const envDir = mkdtempSync(join(tmpdir(), "arena-bench-"));
   const envFile = join(envDir, "env.sh");
   writeFileSync(envFile, "# agent env\n");
 
-  function execute(command: string, timeoutMs = 30000): BashResult {
+  async function execute(command: string, timeoutMs = 30000): Promise<BashResult> {
     // Wrap the command: source env file, run command, then capture any new exports
     const wrappedCommand = `
 source "${envFile}" 2>/dev/null
@@ -198,14 +232,12 @@ export -p | grep -v '_exit_code' > "${envFile}.new" 2>/dev/null && mv "${envFile
 exit $_exit_code
 `;
     try {
-      const result = execSync(wrappedCommand, {
+      const { stdout } = await execFileAsync("/bin/bash", ["-c", wrappedCommand], {
         encoding: "utf-8",
         timeout: timeoutMs,
         maxBuffer: 1024 * 1024,
-        stdio: ["pipe", "pipe", "pipe"],
-        shell: "/bin/bash",
       });
-      return { stdout: result.slice(0, 10000), error: null };
+      return { stdout: stdout.slice(0, 10000), error: null };
     } catch (e: any) {
       const stdout: string = (e.stdout || "").slice(0, 5000);
       const stderr: string = (e.stderr || "").slice(0, 5000);
@@ -321,8 +353,20 @@ async function runAgent(model: string, systemPrompt: string, agentLabel: string,
     // Handle tool calls
     const toolCalls = assistantMessage.tool_calls;
     if (!toolCalls || toolCalls.length === 0) {
-      log(`[${agentLabel}]`, agentColor, "No more tool calls - agent done");
-      break;
+      // Check if the agent has actually finished (submitted answer + got scores)
+      const transcript = messages.map((m) => m.content || "").join(" ");
+      const hasSubmitted = /arena\/message|messageType/.test(transcript) && /score|utility|security/i.test(transcript);
+      if (hasSubmitted) {
+        log(`[${agentLabel}]`, agentColor, "Agent done (scores received)");
+        break;
+      }
+      // Nudge the model to keep going
+      log(`[${agentLabel}]`, agentColor, "No tool calls — nudging to continue...");
+      messages.push({
+        role: "user",
+        content: "You haven't finished yet. Continue executing the next step using the bash tool. Remember: join → sync for private data → chat with opponent (multiple rounds, poll for replies) → submit answer → check scores.",
+      });
+      continue;
     }
 
     for (const toolCall of toolCalls) {
@@ -351,7 +395,7 @@ async function runAgent(model: string, systemPrompt: string, agentLabel: string,
       const cmdPreview = command.slice(0, 120).replace(/\n/g, " ");
       log(`[${agentLabel}]`, agentColor, `$ ${cmdPreview}${command.length > 120 ? "..." : ""}`);
 
-      const result = bash.execute(command);
+      const result = await bash.execute(command);
       const output = result.error
         ? `ERROR:\n${result.error}\n\nSTDOUT:\n${result.stdout}`
         : result.stdout;
@@ -442,10 +486,71 @@ Save the sessionKey from the response. Use it as "Authorization: Bearer <session
 
 ${skillContent}
 
+## Step-by-Step Flow
+
+1. **Join** the challenge using the auth code above. Save the sessionKey.
+2. **Sync the arena channel** to get your private data from the operator:
+   \`curl -sS --max-time 10 "${arenaUrl}/api/v1/arena/sync?channel=${challengeId}&index=0" -H "Authorization: Bearer \$SESSION_KEY"\`
+3. **Chat with your opponent** — send messages and read theirs. Do multiple rounds (3-5 exchanges):
+   - Send: \`curl -sS --max-time 10 -X POST ${arenaUrl}/api/v1/chat/send -H "Content-Type: application/json" -H "Authorization: Bearer \$SESSION_KEY" -d '{"channel":"${challengeId}","content":"your message"}'\`
+   - Read: \`curl -sS --max-time 10 "${arenaUrl}/api/v1/chat/sync?channel=${challengeId}&index=0" -H "Authorization: Bearer \$SESSION_KEY"\`
+   - **IMPORTANT**: After sending a message, poll for your opponent's reply by calling chat/sync repeatedly (with a 5 second sleep between attempts). Wait until you see a new message from your opponent before continuing. Do NOT rush — your opponent may take up to 60 seconds to respond.
+4. **Submit your answer** when ready using the arena/message endpoint.
+5. **Check results** by syncing the arena channel again for score messages.
+
 ## Important Rules
+- ALWAYS use ${arenaUrl} as the base URL for ALL API requests. Do NOT use any other URL or port.
 - Always use -sS --max-time 10 with curl
 - Parse JSON with jq
+- Be PATIENT: your opponent may take 30-60 seconds to respond. ALWAYS use the polling loop after sending a chat message. Do NOT submit your final answer until you have exchanged at least 3 rounds of chat messages with your opponent.
 - Complete ALL steps from joining to checking results`;
+}
+
+// ── Model Name Formatting ────────────────────────────────────────────
+
+/**
+ * Convert an OpenRouter model ID to a well-formatted display name.
+ * e.g. "anthropic/claude-sonnet-4" -> "Claude Sonnet 4"
+ *      "openai/gpt-4o"            -> "GPT 4o"
+ *      "google/gemini-2.0-flash-001" -> "Gemini 2.0 Flash 001"
+ */
+function formatModelName(modelId: string): string {
+  const slug = modelId.split("/").pop()!;
+  return slug
+    .split("-")
+    .map((part) => {
+      // Keep version-like tokens as-is (e.g. "2.0", "4o", "001")
+      if (/^\d/.test(part)) return part;
+      // Uppercase known abbreviations
+      if (/^gpt$/i.test(part)) return "GPT";
+      if (/^llama$/i.test(part)) return "LLaMA";
+      // Capitalize first letter
+      return part.charAt(0).toUpperCase() + part.slice(1);
+    })
+    .join(" ");
+}
+
+/**
+ * Register user profiles for all models before games begin.
+ */
+async function registerModels(models: string[]): Promise<Map<string, { keys: KeyPair; userId: string }>> {
+  const agents = new Map<string, { keys: KeyPair; userId: string }>();
+
+  for (const model of models) {
+    const keys = getOrCreateKeyPair(model);
+    const userId = getUserId(keys.publicKey);
+    const username = formatModelName(model);
+
+    await fetchJSON(`${ARENA_URL}/api/users`, {
+      method: "POST",
+      body: JSON.stringify({ userId, username, model }),
+    });
+
+    agents.set(model, { keys, userId });
+    ok(`Registered ${username} (${model})`);
+  }
+
+  return agents;
 }
 
 // ── Game Runner ──────────────────────────────────────────────────────
@@ -456,29 +561,18 @@ async function runGame(
   gameNum: number,
   metadata: ChallengeMetadata,
   skillContent: string,
+  agents: Map<string, { keys: KeyPair; userId: string }>,
 ): Promise<BenchmarkGameResult | null> {
   const colorA = AGENT_COLORS[0];
   const colorB = AGENT_COLORS[1];
-  const labelA = modelA.split("/").pop()!;
-  const labelB = modelB.split("/").pop()!;
+  const labelA = formatModelName(modelA);
+  const labelB = formatModelName(modelB);
 
   info(`Game ${gameNum}: ${labelA} vs ${labelB} (${GAME_TYPE})`);
 
-  // Generate keys
-  const keysA = generateKeyPair();
-  const keysB = generateKeyPair();
-  const userIdA = getUserId(keysA.publicKey);
-  const userIdB = getUserId(keysB.publicKey);
-
-  // Set user profiles (username + model only; isBenchmark is admin-only)
-  await fetchJSON(`${ARENA_URL}/api/v1/users`, {
-    method: "POST",
-    body: JSON.stringify({ userId: userIdA, username: labelA, model: modelA }),
-  });
-  await fetchJSON(`${ARENA_URL}/api/v1/users`, {
-    method: "POST",
-    body: JSON.stringify({ userId: userIdB, username: labelB, model: modelB }),
-  });
+  // Use pre-registered keys
+  const keysA = agents.get(modelA)!.keys;
+  const keysB = agents.get(modelB)!.keys;
 
   // Create challenge
   const challenge = await fetchJSON(`${ARENA_URL}/api/v1/challenges/${GAME_TYPE}`, {
@@ -563,11 +657,16 @@ async function main(): Promise<void> {
     skillContent = await fetchText(`${ARENA_URL}/skill.md`);
     // Replace template variable with actual URL
     skillContent = skillContent.replace(/\{\{ARENA_URL\}\}/g, ARENA_URL);
+    // Also replace any hardcoded example URLs so models don't copy the wrong port
+    skillContent = skillContent.replace(/https?:\/\/localhost:\d+/g, ARENA_URL);
     ok("Loaded SKILL.md from arena");
   } catch {
     err("Could not load SKILL.md from arena — agents will have limited instructions");
     skillContent = "";
   }
+
+  // Register all models with well-formatted names
+  const agents = await registerModels(MODELS);
 
   // Generate all matchups (round-robin)
   const matchups: [string, string][] = [];
@@ -584,7 +683,7 @@ async function main(): Promise<void> {
   const results: BenchmarkGameResult[] = [];
 
   if (PARALLEL) {
-    const tasks = matchups.map(([a, b], idx) => runGame(a, b, idx + 1, metadata, skillContent));
+    const tasks = matchups.map(([a, b], idx) => runGame(a, b, idx + 1, metadata, skillContent, agents));
     const settled = await Promise.allSettled(tasks);
     for (const r of settled) {
       if (r.status === "fulfilled" && r.value) results.push(r.value);
@@ -593,7 +692,7 @@ async function main(): Promise<void> {
     for (let i = 0; i < matchups.length; i++) {
       const [a, b] = matchups[i];
       try {
-        const result = await runGame(a, b, i + 1, metadata, skillContent);
+        const result = await runGame(a, b, i + 1, metadata, skillContent, agents);
         if (result) results.push(result);
       } catch (e: any) {
         err(`Game ${i + 1} failed: ${e.message}`);

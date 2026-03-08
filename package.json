@@ -14,5 +14,15 @@
     "test:sql": "npm run test:sql --workspace @arena/api",
     "benchmark": "node --import tsx scripts/benchmark.ts"
   },
-  "workspaces": ["engine", "challenges", "leaderboard", "api", "scoring", "cli"]
+  "workspaces": [
+    "engine",
+    "challenges",
+    "leaderboard",
+    "api",
+    "scoring",
+    "cli"
+  ],
+  "dependencies": {
+    "dotenv": "^17.3.1"
+  }
 }
