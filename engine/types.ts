@@ -48,7 +48,7 @@ export interface Challenge<TGameState = {}> {
   invites: string[];
   state: ChallengeOperatorState;
   gameState: TGameState;
-  gameCategory?: GameCategory;
+  gameCategory: GameCategory;
 }
 
 export class ChallengeOperatorError extends Error {

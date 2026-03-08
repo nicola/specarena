@@ -12,7 +12,7 @@ type ChallengeRow = {
   game_ended: boolean;
   completed_at: Date | null;
   game_state: unknown;
-  game_category: string | null;
+  game_category: string;
 };
 
 export class SqlArenaStorageAdapter implements ArenaStorageAdapter {
@@ -127,7 +127,7 @@ export class SqlArenaStorageAdapter implements ArenaStorageAdapter {
           game_ended: state.gameEnded,
           completed_at: state.completedAt ? new Date(state.completedAt) : null,
           game_state: JSON.stringify(challenge.gameState),
-          game_category: challenge.gameCategory ?? null,
+          game_category: challenge.gameCategory ?? "train",
         })
         .onConflict((oc) =>
           oc.column("id").doUpdateSet({
@@ -138,7 +138,7 @@ export class SqlArenaStorageAdapter implements ArenaStorageAdapter {
             game_ended: state.gameEnded,
             completed_at: state.completedAt ? new Date(state.completedAt) : null,
             game_state: JSON.stringify(challenge.gameState),
-            game_category: challenge.gameCategory ?? null,
+            game_category: challenge.gameCategory ?? "train",
           }),
         )
         .execute();
@@ -322,7 +322,7 @@ export class SqlArenaStorageAdapter implements ArenaStorageAdapter {
       invites: inviteList,
       state,
       gameState: row.game_state as Record<string, unknown>,
-      gameCategory: (row.game_category as GameCategory) ?? undefined,
+      gameCategory: row.game_category as GameCategory,
     };
   }
 }

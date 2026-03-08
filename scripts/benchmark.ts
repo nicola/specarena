@@ -5,6 +5,7 @@
  *
  * Runs benchmark models (via OpenRouter) with tool access against arena challenges.
  * Each model gets a bash tool and a conversation loop, similar to Claude Code.
+ * Challenge instructions are loaded dynamically from /api/metadata and SKILL.md.
  *
  * Usage:
  *   OPENROUTER_API_KEY=... node --import tsx scripts/benchmark.ts [options]
@@ -15,9 +16,10 @@
  *   --repeat    Number of games per matchup (default: 1)
  *   --parallel  Run matchups in parallel
  *   --arena-url Arena server URL (default: $ARENA_URL or http://localhost:3001)
- *   --mark      Mark models as benchmark in the arena (default: true)
  *   --max-turns Max conversation turns per agent (default: 30)
  *   --timeout   Max seconds per agent (default: 300)
+ *
+ * Note: Models must be marked as benchmark in the database by an admin.
  */
 
 import { execSync } from "node:child_process";
@@ -46,7 +48,7 @@ interface ChatCompletionResponse {
   error?: { message: string };
 }
 
-interface GameResult {
+interface BenchmarkGameResult {
   challengeId: string;
   modelA: string;
   modelB: string;
@@ -60,6 +62,14 @@ interface KeyPair {
 interface BashResult {
   stdout: string;
   error: string | null;
+}
+
+interface ChallengeMetadata {
+  name: string;
+  description: string;
+  players: number;
+  prompt: string;
+  methods: { name: string; description: string }[];
 }
 
 // ── CLI Parsing ──────────────────────────────────────────────────────
@@ -93,7 +103,6 @@ const GAME_TYPE = getArg("game", "psi");
 const REPEAT = parseInt(getArg("repeat", "1"), 10);
 const PARALLEL = hasFlag("parallel");
 const ARENA_URL = getArg("arena-url", process.env.ARENA_URL || "http://localhost:3001").replace(/\/$/, "");
-const MARK_BENCHMARK = getArg("mark", "true") !== "false";
 const MAX_TURNS = parseInt(getArg("max-turns", "30"), 10);
 const TIMEOUT_SECS = parseInt(getArg("timeout", "300"), 10);
 
@@ -140,6 +149,12 @@ async function fetchJSON(url: string, options: RequestInit = {}): Promise<any> {
   } catch {
     throw new Error(`Invalid JSON from ${url}: ${text.slice(0, 200)}`);
   }
+}
+
+async function fetchText(url: string): Promise<string> {
+  const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+  if (!res.ok) throw new Error(`HTTP ${res.status} from ${url}`);
+  return res.text();
 }
 
 // ── Key Management ───────────────────────────────────────────────────
@@ -328,30 +343,47 @@ async function runAgent(model: string, systemPrompt: string, agentLabel: string,
   return messages;
 }
 
-// ── Game Prompt Builders ─────────────────────────────────────────────
+// ── Prompt Builder ───────────────────────────────────────────────────
 
-function buildPsiPrompt(arenaUrl: string, challengeId: string, invite: string, pubKey: string, privKey: string): string {
-  return `You are playing a Private Set Intersection (PSI) challenge in the Arena.
+function buildAgentPrompt(
+  arenaUrl: string,
+  challengeId: string,
+  invite: string,
+  pubKey: string,
+  privKey: string,
+  metadata: ChallengeMetadata,
+  skillContent: string,
+): string {
+  const methodsSection = metadata.methods
+    .map((m) => `- **${m.name}**: ${m.description}`)
+    .join("\n");
+
+  return `You are playing the "${metadata.name}" challenge in the Arena.
+
+## Challenge Description
+${metadata.description}
+
+## Challenge Prompt
+${metadata.prompt}
+
+## Available Actions
+${methodsSection}
 
 ## Your Details
 - Arena URL: ${arenaUrl}
 - Challenge ID: ${challengeId}
 - Your invite code: ${invite}
 
-## Instructions
+## Auth Keys (Ed25519)
+- Public key (SPKI DER hex): ${pubKey}
+- Private key (PKCS8 DER hex): ${privKey}
 
-Complete these steps using bash/curl commands:
+## How to Join
 
-### Step 1: Join the challenge
-
-Join using Ed25519 auth:
+Sign and join using these keys:
 
 \`\`\`bash
-PUB_KEY="${pubKey}"
-PRIV_KEY="${privKey}"
-INVITE="${invite}"
 TIMESTAMP=$(date +%s000)
-
 MESSAGE="arena:v1:join:${invite}:\${TIMESTAMP}"
 SIGNATURE=$(node -e "
 const crypto = require('crypto');
@@ -369,116 +401,27 @@ curl -sS --max-time 10 -X POST ${arenaUrl}/api/v1/arena/join \\
   -d "{\\"invite\\": \\"${invite}\\", \\"publicKey\\": \\"${pubKey}\\", \\"signature\\": \\"\${SIGNATURE}\\", \\"timestamp\\": \${TIMESTAMP}}"
 \`\`\`
 
-Save the sessionKey from the response. Use it as "Authorization: Bearer <sessionKey>" on ALL subsequent requests.
+Save the sessionKey from the response. Use it as "Authorization: Bearer <sessionKey>" on ALL subsequent requests. Do NOT send "from" — the server resolves your identity from the session key.
 
-### Step 2: Get your private data
+## Arena Skill Reference
 
-Sync the challenge channel for operator messages:
-\`GET ${arenaUrl}/api/v1/arena/sync?channel=${challengeId}&index=0\` with Authorization header.
-
-Look for messages from "operator" addressed to you containing your private set.
-
-### Step 3: Chat with your opponent
-
-Send messages: POST to ${arenaUrl}/api/v1/chat/send with {"channel": "${challengeId}", "content": "your message"} and Authorization header.
-Read messages: GET ${arenaUrl}/api/v1/chat/sync?channel=${challengeId}&index=0 with Authorization header.
-
-Exchange 3-5 messages to figure out the intersection. Use a tit-for-tat strategy: reveal items one at a time in exchange for your opponent doing the same.
-
-### Step 4: Submit your guess
-
-POST to ${arenaUrl}/api/v1/arena/message with {"challengeId": "${challengeId}", "messageType": "guess", "content": "item1,item2,..."} and Authorization header.
-
-### Step 5: Check results
-
-Sync again to get your scores from the operator.
+${skillContent}
 
 ## Important Rules
 - Always use -sS --max-time 10 with curl
 - Parse JSON with jq
-- Complete ALL steps`;
-}
-
-function buildUltimatumPrompt(arenaUrl: string, challengeId: string, invite: string, pubKey: string, privKey: string): string {
-  return `You are playing an Ultimatum Game challenge in the Arena.
-
-## Your Details
-- Arena URL: ${arenaUrl}
-- Challenge ID: ${challengeId}
-- Your invite code: ${invite}
-
-## Instructions
-
-Complete these steps using bash/curl commands:
-
-### Step 1: Join the challenge
-
-Join using Ed25519 auth:
-
-\`\`\`bash
-TIMESTAMP=$(date +%s000)
-MESSAGE="arena:v1:join:${invite}:\${TIMESTAMP}"
-SIGNATURE=$(node -e "
-const crypto = require('crypto');
-const privKey = crypto.createPrivateKey({
-  key: Buffer.from('${privKey}', 'hex'),
-  format: 'der',
-  type: 'pkcs8'
-});
-const sig = crypto.sign(null, Buffer.from('\${MESSAGE}'), privKey);
-console.log(sig.toString('hex'));
-")
-
-curl -sS --max-time 10 -X POST ${arenaUrl}/api/v1/arena/join \\
-  -H "Content-Type: application/json" \\
-  -d "{\\"invite\\": \\"${invite}\\", \\"publicKey\\": \\"${pubKey}\\", \\"signature\\": \\"\${SIGNATURE}\\", \\"timestamp\\": \${TIMESTAMP}}"
-\`\`\`
-
-Save the sessionKey. Use "Authorization: Bearer <sessionKey>" on ALL subsequent requests.
-
-### Step 2: Get your private reservation value
-
-Sync: GET ${arenaUrl}/api/v1/arena/sync?channel=${challengeId}&index=0 with Authorization header.
-Look for operator messages with your reservation value.
-
-### Step 3: Negotiate with opponent
-
-Chat via POST ${arenaUrl}/api/v1/chat/send and GET ${arenaUrl}/api/v1/chat/sync.
-
-### Step 4: Take game actions
-
-POST to ${arenaUrl}/api/v1/arena/message with {"challengeId": "${challengeId}", "messageType": "<action>", "content": "<details>"} and Authorization header.
-
-Actions: submit_offer (e.g. content "60 40"), accept, reject, pass.
-Sync the challenge channel between actions.
-
-### Step 5: Check results
-
-Sync again after the game ends.
-
-## Strategy
-- Try to maximize your utility while respecting your reservation value
-- Be willing to negotiate but don't accept below your reservation
-
-## Rules
-- Always use -sS --max-time 10 with curl
-- Parse JSON with jq
-- Complete ALL steps`;
-}
-
-function buildPrompt(gameType: string, arenaUrl: string, challengeId: string, invite: string, pubKey: string, privKey: string): string {
-  switch (gameType) {
-    case "ultimatum":
-      return buildUltimatumPrompt(arenaUrl, challengeId, invite, pubKey, privKey);
-    case "psi":
-    default:
-      return buildPsiPrompt(arenaUrl, challengeId, invite, pubKey, privKey);
-  }
+- Complete ALL steps from joining to checking results`;
 }
 
 // ── Game Runner ──────────────────────────────────────────────────────
 
-async function runGame(modelA: string, modelB: string, gameNum: number): Promise<GameResult | null> {
+async function runGame(
+  modelA: string,
+  modelB: string,
+  gameNum: number,
+  metadata: ChallengeMetadata,
+  skillContent: string,
+): Promise<BenchmarkGameResult | null> {
   const colorA = AGENT_COLORS[0];
   const colorB = AGENT_COLORS[1];
   const labelA = modelA.split("/").pop()!;
@@ -492,18 +435,15 @@ async function runGame(modelA: string, modelB: string, gameNum: number): Promise
   const userIdA = getUserId(keysA.publicKey);
   const userIdB = getUserId(keysB.publicKey);
 
-  // Update user profiles & mark as benchmark
-  if (MARK_BENCHMARK) {
-    await fetchJSON(`${ARENA_URL}/api/v1/users`, {
-      method: "POST",
-      body: JSON.stringify({ userId: userIdA, username: labelA, model: modelA, isBenchmark: true }),
-    });
-    await fetchJSON(`${ARENA_URL}/api/v1/users`, {
-      method: "POST",
-      body: JSON.stringify({ userId: userIdB, username: labelB, model: modelB, isBenchmark: true }),
-    });
-    ok(`Marked ${labelA} and ${labelB} as benchmark models`);
-  }
+  // Set user profiles (username + model only; isBenchmark is admin-only)
+  await fetchJSON(`${ARENA_URL}/api/v1/users`, {
+    method: "POST",
+    body: JSON.stringify({ userId: userIdA, username: labelA, model: modelA }),
+  });
+  await fetchJSON(`${ARENA_URL}/api/v1/users`, {
+    method: "POST",
+    body: JSON.stringify({ userId: userIdB, username: labelB, model: modelB }),
+  });
 
   // Create challenge
   const challenge = await fetchJSON(`${ARENA_URL}/api/v1/challenges/${GAME_TYPE}`, {
@@ -521,9 +461,9 @@ async function runGame(modelA: string, modelB: string, gameNum: number): Promise
 
   ok(`Challenge created: ${challengeId}`);
 
-  // Build prompts
-  const promptA = buildPrompt(GAME_TYPE, ARENA_URL, challengeId, inviteA, keysA.publicKey, keysA.privateKey);
-  const promptB = buildPrompt(GAME_TYPE, ARENA_URL, challengeId, inviteB, keysB.publicKey, keysB.privateKey);
+  // Build prompts from metadata + skill
+  const promptA = buildAgentPrompt(ARENA_URL, challengeId, inviteA, keysA.publicKey, keysA.privateKey, metadata, skillContent);
+  const promptB = buildAgentPrompt(ARENA_URL, challengeId, inviteB, keysB.publicKey, keysB.privateKey, metadata, skillContent);
 
   // Run both agents concurrently
   await Promise.all([
@@ -573,13 +513,25 @@ async function main(): Promise<void> {
   info(`Models: ${MODELS.join(", ")}`);
   info(`Game: ${GAME_TYPE}, Repeat: ${REPEAT}, Arena: ${ARENA_URL}`);
 
-  // Preflight check
-  try {
-    await fetchJSON(`${ARENA_URL}/api/v1/metadata`);
-    ok("Arena is reachable");
-  } catch (e: any) {
-    err(`Cannot reach arena at ${ARENA_URL}: ${e.message}`);
+  // Fetch challenge metadata
+  const allMetadata = await fetchJSON(`${ARENA_URL}/api/v1/metadata`);
+  const metadata: ChallengeMetadata | undefined = allMetadata[GAME_TYPE];
+  if (!metadata) {
+    err(`Unknown challenge type "${GAME_TYPE}". Available: ${Object.keys(allMetadata).join(", ")}`);
     process.exit(1);
+  }
+  ok(`Loaded metadata for "${GAME_TYPE}": ${metadata.description.slice(0, 80)}`);
+
+  // Fetch SKILL.md
+  let skillContent: string;
+  try {
+    skillContent = await fetchText(`${ARENA_URL}/skill.md`);
+    // Replace template variable with actual URL
+    skillContent = skillContent.replace(/\{\{ARENA_URL\}\}/g, ARENA_URL);
+    ok("Loaded SKILL.md from arena");
+  } catch {
+    err("Could not load SKILL.md from arena — agents will have limited instructions");
+    skillContent = "";
   }
 
   // Generate all matchups (round-robin)
@@ -594,10 +546,10 @@ async function main(): Promise<void> {
 
   info(`Total matchups: ${matchups.length}`);
 
-  const results: GameResult[] = [];
+  const results: BenchmarkGameResult[] = [];
 
   if (PARALLEL) {
-    const tasks = matchups.map(([a, b], idx) => runGame(a, b, idx + 1));
+    const tasks = matchups.map(([a, b], idx) => runGame(a, b, idx + 1, metadata, skillContent));
     const settled = await Promise.allSettled(tasks);
     for (const r of settled) {
       if (r.status === "fulfilled" && r.value) results.push(r.value);
@@ -606,7 +558,7 @@ async function main(): Promise<void> {
     for (let i = 0; i < matchups.length; i++) {
       const [a, b] = matchups[i];
       try {
-        const result = await runGame(a, b, i + 1);
+        const result = await runGame(a, b, i + 1, metadata, skillContent);
         if (result) results.push(result);
       } catch (e: any) {
         err(`Game ${i + 1} failed: ${e.message}`);

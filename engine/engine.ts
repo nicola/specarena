@@ -7,6 +7,7 @@ import {
   ChallengeMetadata,
   ChallengeOperator,
   ChallengeOperatorError,
+  ChallengeOperatorState,
   GameCategory,
   Result,
   fromChallengeChannel,
@@ -32,6 +33,7 @@ export class ArenaEngine {
   private readonly challengeFactories: Map<string, ChallengeFactory>;
   private readonly challengeOptions: Map<string, Record<string, unknown>>;
   private readonly challengeMetadataMap: Map<string, ChallengeMetadata>;
+  private readonly pendingCategories: Map<string, GameCategory> = new Map();
   readonly chat: ChatEngine;
   scoring: ScoringModule | null;
 
@@ -55,12 +57,19 @@ export class ArenaEngine {
         return challenge?.state?.gameEnded ?? false;
       },
       onChallengeEvent: async (challengeId, event) => {
-        if (event.type !== "game_ended" || !this.scoring) return;
+        if (event.type !== "game_ended") return;
+        const state = event.data;
+
+        // Classify game category based on benchmark status of players.
+        // Store as pending — applied in persistOperator which runs next.
+        const category = await this.computeGameCategory(state);
+        this.pendingCategories.set(challengeId, category);
+
+        if (!this.scoring) return;
         // Use the state from the event payload directly rather than reading
         // from storage, since the operator may not have been persisted yet.
         const challenge = await this.getChallenge(challengeId);
         if (!challenge) return;
-        const state = event.data;
         const result: GameResult = {
           gameId: challenge.id,
           challengeType: challenge.challengeType,
@@ -119,6 +128,14 @@ export class ArenaEngine {
     const { gameState, state } = operator.serialize();
     challenge.gameState = gameState;
     challenge.state = state;
+
+    // Apply pending game category from onChallengeEvent
+    const pendingCategory = this.pendingCategories.get(challenge.id);
+    if (pendingCategory) {
+      challenge.gameCategory = pendingCategory;
+      this.pendingCategories.delete(challenge.id);
+    }
+
     await this.storageAdapter.setChallenge(challenge);
   }
 
@@ -168,6 +185,7 @@ export class ArenaEngine {
       invites: [`inv_${crypto.randomUUID()}`, `inv_${crypto.randomUUID()}`],
       gameState,
       state,
+      gameCategory: "train",
     };
 
     await this.storageAdapter.setChallenge(challenge);
@@ -286,34 +304,19 @@ export class ArenaEngine {
     }
 
     await this.persistOperator(challenge, operator);
-
-    // Classify game category after game ends
-    if (challenge.state.gameEnded && !challenge.gameCategory) {
-      this.classifyGameCategory(challenge)
-        .catch((err) => console.error("Game classification failed:", err));
-    }
-
     return { ok: "Message sent" };
   }
 
-  private async classifyGameCategory(challenge: Challenge): Promise<void> {
-    const userIds = Object.values(challenge.state.playerIdentities).filter(Boolean);
-    if (userIds.length === 0) return;
+  private async computeGameCategory(state: ChallengeOperatorState): Promise<GameCategory> {
+    const userIds = Object.values(state.playerIdentities).filter(Boolean);
+    if (userIds.length === 0) return "train";
 
     const profiles = await this.users.getUsers(userIds);
     const nonBenchmarkCount = userIds.filter((id) => !profiles[id]?.isBenchmark).length;
 
-    let category: GameCategory;
-    if (nonBenchmarkCount === 0) {
-      category = "benchmark";
-    } else if (nonBenchmarkCount === 1) {
-      category = "test";
-    } else {
-      category = "train";
-    }
-
-    challenge.gameCategory = category;
-    await this.storageAdapter.setChallenge(challenge);
+    if (nonBenchmarkCount === 0) return "benchmark";
+    if (nonBenchmarkCount === 1) return "test";
+    return "train";
   }
 
   async getPlayerIdentities(challengeId: string): Promise<Record<string, string> | null> {

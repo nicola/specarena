@@ -19,7 +19,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .addColumn("game_ended", "boolean", (col) => col.notNull().defaultTo(false))
     .addColumn("completed_at", "timestamptz")
     .addColumn("game_state", "jsonb", (col) => col.notNull().defaultTo("{}"))
-    .addColumn("game_category", "text")
+    .addColumn("game_category", "text", (col) => col.notNull().defaultTo("train"))
     .execute();
 
   await db.schema

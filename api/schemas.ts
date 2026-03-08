@@ -33,5 +33,4 @@ export const UserUpdateSchema = z.object({
   userId: z.string().optional(),
   username: z.string().optional(),
   model: z.string().optional(),
-  isBenchmark: z.boolean().optional(),
 });
