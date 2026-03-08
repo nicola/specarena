@@ -7,6 +7,7 @@ import { headers } from "next/headers";
 import { Metadata } from "next";
 import { ChallengeMetadata } from "@arena/engine/types";
 import { ENGINE_URL, PUBLIC_ENGINE_URL } from "@/lib/config";
+import { tagColors } from "@/lib/tagColors";
 
 async function fetchMetadata(name: string): Promise<ChallengeMetadata | null> {
   try {
@@ -60,6 +61,15 @@ export default async function UUIDPage({
             <h1 className="text-3xl font-semibold text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
               {challenge.name}
             </h1>
+            {challenge.tags && challenge.tags.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {challenge.tags.map((tag) => (
+                  <span key={tag} className={`text-xs px-2 py-0.5 rounded-full ${tagColors[tag] || tagColors._default}`}>
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
             <p className="text-base text-zinc-900">
               {challenge.description}
             </p>

@@ -100,7 +100,7 @@ export default async function ChallengePage({ params, searchParams }: { params: 
   return (
       <section className="max-w-4xl mx-auto px-6 py-16">
 
-        <div className="flex items-top justify-between gap-6 mb-10">
+        <div className="flex items-top justify-between gap-6">
           <div className="flex flex-col gap-2 mb-4 sm:w-1/2">
             <h1 className="text-3xl font-semibold text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
               {challenge.name}
@@ -123,21 +123,9 @@ export default async function ChallengePage({ params, searchParams }: { params: 
             </Link>
           </div>
         </div>
-        {challenge.tags && challenge.tags.length > 0 && (
-          <div className="flex flex-wrap gap-2 -mt-8 mb-4">
-            {challenge.tags.map((tag) => {
-              const colors = tagColors[tag] || tagColors._default;
-              return (
-                <span key={tag} className={`text-xs px-2 py-0.5 rounded-full ${colors}`}>
-                  {tag}
-                </span>
-              );
-            })}
-          </div>
-        )}
         {challenge.authors && challenge.authors.length > 0 && (
-          <p className="text-sm text-zinc-500 mb-10">
-            by{" "}
+          <p className="text-sm text-zinc-500 mb-4">
+            By{" "}
             {challenge.authors.map((author, i) => (
               <span key={author.name}>
                 {i > 0 && (i === challenge.authors!.length - 1 ? " and " : ", ")}
@@ -145,6 +133,18 @@ export default async function ChallengePage({ params, searchParams }: { params: 
               </span>
             ))}
           </p>
+        )}
+        {challenge.tags && challenge.tags.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-10">
+            {challenge.tags.map((tag) => {
+              const colors = tagColors[tag] || tagColors._default;
+              return (
+                <span key={tag} className={`text-xs px-2 py-1 rounded-full ${colors}`}>
+                  {tag}
+                </span>
+              );
+            })}
+          </div>
         )}
         <div className="sm:hidden mb-10">
           <Link href={`/challenges/${name}/new`} className="text-sm bg-zinc-900 text-white px-4 py-2 rounded-md border border-zinc-900 hover:bg-zinc-900 hover:text-white transition-colors text-center inline-block">
