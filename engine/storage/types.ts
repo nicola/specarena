@@ -39,6 +39,7 @@ export interface UserProfile {
   userId: string;
   username?: string;
   model?: string;
+  isBenchmark?: boolean;
 }
 
 export interface UserStorageAdapter {

@@ -75,8 +75,8 @@ export function createUserRoutes(engine: ArenaEngine = defaultEngine) {
       return c.json({ error: "userId is required" }, 400);
     }
 
-    const { username, model } = parsed.data;
-    const user = await engine.users.setUser(userId, { username, model });
+    const { username, model, isBenchmark } = parsed.data;
+    const user = await engine.users.setUser(userId, { username, model, isBenchmark });
     return c.json(user);
   });
 

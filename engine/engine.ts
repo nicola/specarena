@@ -7,6 +7,7 @@ import {
   ChallengeMetadata,
   ChallengeOperator,
   ChallengeOperatorError,
+  GameCategory,
   Result,
   fromChallengeChannel,
   toChallengeChannel,
@@ -285,7 +286,34 @@ export class ArenaEngine {
     }
 
     await this.persistOperator(challenge, operator);
+
+    // Classify game category after game ends
+    if (challenge.state.gameEnded && !challenge.gameCategory) {
+      this.classifyGameCategory(challenge)
+        .catch((err) => console.error("Game classification failed:", err));
+    }
+
     return { ok: "Message sent" };
+  }
+
+  private async classifyGameCategory(challenge: Challenge): Promise<void> {
+    const userIds = Object.values(challenge.state.playerIdentities).filter(Boolean);
+    if (userIds.length === 0) return;
+
+    const profiles = await this.users.getUsers(userIds);
+    const nonBenchmarkCount = userIds.filter((id) => !profiles[id]?.isBenchmark).length;
+
+    let category: GameCategory;
+    if (nonBenchmarkCount === 0) {
+      category = "benchmark";
+    } else if (nonBenchmarkCount === 1) {
+      category = "test";
+    } else {
+      category = "train";
+    }
+
+    challenge.gameCategory = category;
+    await this.storageAdapter.setChallenge(challenge);
   }
 
   async getPlayerIdentities(challengeId: string): Promise<Record<string, string> | null> {

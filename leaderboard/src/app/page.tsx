@@ -11,6 +11,7 @@ interface ScoringEntry {
   metrics: Record<string, number>;
   username?: string;
   model?: string;
+  isBenchmark?: boolean;
 }
 
 async function fetchGlobalScoring() {
@@ -23,6 +24,7 @@ async function fetchGlobalScoring() {
       securityPolicy: entry.metrics["global-average:security"] ?? 0,
       utility: entry.metrics["global-average:utility"] ?? 0,
       model: entry.model,
+      isBenchmark: entry.isBenchmark,
     }));
   } catch {
     return [];

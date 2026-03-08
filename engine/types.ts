@@ -38,6 +38,8 @@ export interface ChallengeOperator<TGameState = {}> {
   gameState: TGameState;
 }
 
+export type GameCategory = 'benchmark' | 'test' | 'train';
+
 export interface Challenge<TGameState = {}> {
   id: string;
   name: string;
@@ -46,6 +48,7 @@ export interface Challenge<TGameState = {}> {
   invites: string[];
   state: ChallengeOperatorState;
   gameState: TGameState;
+  gameCategory?: GameCategory;
 }
 
 export class ChallengeOperatorError extends Error {

@@ -11,7 +11,8 @@
     "test:api": "npm run test --workspace @arena/api",
     "test:leaderboard": "npm run test --workspace @arena/leaderboard --if-present",
     "test:scoring": "npm run test --workspace @arena/scoring",
-    "test:sql": "npm run test:sql --workspace @arena/api"
+    "test:sql": "npm run test:sql --workspace @arena/api",
+    "benchmark": "node --import tsx scripts/benchmark.ts"
   },
   "workspaces": ["engine", "challenges", "leaderboard", "api", "scoring", "cli"]
 }

@@ -38,11 +38,13 @@ export class SqlUserStorageAdapter implements UserStorageAdapter {
         user_id: userId,
         username: updates.username ?? null,
         model: updates.model ?? null,
+        is_benchmark: updates.isBenchmark ?? false,
       })
       .onConflict((oc) =>
         oc.column("user_id").doUpdateSet({
           ...(updates.username !== undefined ? { username: updates.username ?? null } : {}),
           ...(updates.model !== undefined ? { model: updates.model ?? null } : {}),
+          ...(updates.isBenchmark !== undefined ? { is_benchmark: updates.isBenchmark } : {}),
         }),
       )
       .returningAll()
@@ -60,11 +62,12 @@ export class SqlUserStorageAdapter implements UserStorageAdapter {
     await this.db.deleteFrom("users").execute();
   }
 
-  private rowToProfile(row: { user_id: string; username: string | null; model: string | null }): UserProfile {
+  private rowToProfile(row: { user_id: string; username: string | null; model: string | null; is_benchmark: boolean }): UserProfile {
     return {
       userId: row.user_id,
       username: row.username ?? undefined,
       model: row.model ?? undefined,
+      isBenchmark: row.is_benchmark || undefined,
     };
   }
 }
