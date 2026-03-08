@@ -125,11 +125,11 @@ export default async function ChallengePage({ params, searchParams }: { params: 
         </div>
         {challenge.authors && challenge.authors.length > 0 && (
           <p className="text-sm text-zinc-500 mb-4">
-            By{" "}
+            {challenge.authors!.length === 1 ? "Author" : "Authors"}:{" "}
             {challenge.authors.map((author, i) => (
               <span key={author.name}>
                 {i > 0 && (i === challenge.authors!.length - 1 ? " and " : ", ")}
-                <a href={author.url} target="_blank" rel="noopener noreferrer" className="underline hover:text-zinc-700">{author.name}</a>
+                <a href={author.url} target="_blank" rel="noopener noreferrer" className="font-semibold text-zinc-500 hover:text-zinc-600">{author.name}</a>
               </span>
             ))}
           </p>
