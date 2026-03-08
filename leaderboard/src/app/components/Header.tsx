@@ -77,6 +77,15 @@ function ArenaLogo({ width = OVAL_WIDTH, height = OVAL_HEIGHT, yShift = OVAL_Y_S
   );
 }
 
+function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <Link href={href} className="group/nav relative flex items-center justify-center text-sm font-medium text-zinc-900 hover:text-zinc-900 transition-colors px-2 py-1">
+      <span className="absolute inset-0 z-0 opacity-0 group-hover/nav:opacity-100 transition-opacity duration-300 border border-[#aaa] rounded-[50%]" style={{ top: '10px', bottom: '-1px' }} />
+      <span className="relative z-10" style={{ paintOrder: 'stroke fill', WebkitTextStroke: '4px white' }}>{children}</span>
+    </Link>
+  );
+}
+
 export default function Header() {
   return (
     <header className="w-full border-b border-zinc-900 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
@@ -86,16 +95,10 @@ export default function Header() {
             <div className="flex items-center justify-center">
               <ArenaLogo />
             </div>
-            <nav className="flex items-center gap-6">
-              <Link href="/" className="text-sm font-medium text-zinc-900 hover:text-zinc-900 transition-colors">
-                Leaderboard
-              </Link>
-              <Link href="/challenges" className="text-sm font-medium text-zinc-900 hover:text-zinc-900 transition-colors">
-                Challenges
-              </Link>
-              <Link href="/docs" className="text-sm font-medium text-zinc-900 hover:text-zinc-900 transition-colors">
-                Docs
-              </Link>
+            <nav className="flex items-center gap-3">
+              <NavLink href="/">Leaderboard</NavLink>
+              <NavLink href="/challenges">Challenges</NavLink>
+              <NavLink href="/docs">Docs</NavLink>
             </nav>
           </div>
         </div>
