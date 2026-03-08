@@ -8,6 +8,7 @@ interface LeaderboardData {
   securityPolicy: number;
   utility: number;
   model?: string;
+  isBenchmark?: boolean;
 }
 
 interface LeaderboardGraphProps {
@@ -160,6 +161,7 @@ export default function LeaderboardGraph({ data = mockData, height = 400, highli
         anchor,
         isPareto: paretoSet.has(rep.name),
         isHighlight: highlightSet.has(rep.name),
+        isBenchmark: rep.isBenchmark,
       };
     });
 
@@ -224,10 +226,10 @@ export default function LeaderboardGraph({ data = mockData, height = 400, highli
         Plot.dot(data, {
           x: "securityPolicy",
           y: "utility",
-          fill: (d) => highlightSet.has(d.name) ? "#6366f1" : paretoSet.has(d.name) ? "#000" : "#a1a1aa",
-          r: (d) => highlightSet.has(d.name) ? 7 : paretoSet.has(d.name) ? 5 : 3,
-          stroke: (d) => highlightSet.has(d.name) ? "#4f46e5" : "none",
-          strokeWidth: (d) => highlightSet.has(d.name) ? 2 : 0,
+          fill: (d) => highlightSet.has(d.name) ? "#6366f1" : d.isBenchmark ? "#f59e0b" : paretoSet.has(d.name) ? "#000" : "#a1a1aa",
+          r: (d) => highlightSet.has(d.name) ? 7 : paretoSet.has(d.name) ? 5 : d.isBenchmark ? 4 : 3,
+          stroke: (d) => highlightSet.has(d.name) ? "#4f46e5" : d.isBenchmark ? "#d97706" : "none",
+          strokeWidth: (d) => highlightSet.has(d.name) ? 2 : d.isBenchmark ? 1.5 : 0,
           channels: {
             name: { value: "name", label: "Name" },
             model: { value: (d) => d.model ?? "—", label: "Model" },
@@ -252,7 +254,7 @@ export default function LeaderboardGraph({ data = mockData, height = 400, highli
             dx: d.dx,
             dy: d.dy,
             fontSize: 11,
-            fill: d.isHighlight ? "#6366f1" : d.isPareto ? "#000" : "#a1a1aa",
+            fill: d.isHighlight ? "#6366f1" : d.isBenchmark ? "#f59e0b" : d.isPareto ? "#000" : "#a1a1aa",
             fontWeight: "600",
             textAnchor: d.anchor,
           });

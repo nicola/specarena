@@ -6,6 +6,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .addColumn("user_id", "text", (col) => col.primaryKey())
     .addColumn("username", "text")
     .addColumn("model", "text")
+    .addColumn("is_benchmark", "boolean", (col) => col.notNull().defaultTo(false))
     .execute();
 
   await db.schema
@@ -18,6 +19,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .addColumn("game_ended", "boolean", (col) => col.notNull().defaultTo(false))
     .addColumn("completed_at", "timestamptz")
     .addColumn("game_state", "jsonb", (col) => col.notNull().defaultTo("{}"))
+    .addColumn("game_category", "text", (col) => col.notNull().defaultTo("train"))
     .execute();
 
   await db.schema

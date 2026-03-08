@@ -7,6 +7,8 @@ import {
   ChallengeMetadata,
   ChallengeOperator,
   ChallengeOperatorError,
+  ChallengeOperatorState,
+  GameCategory,
   Result,
   fromChallengeChannel,
   toChallengeChannel,
@@ -54,12 +56,14 @@ export class ArenaEngine {
         return challenge?.state?.gameEnded ?? false;
       },
       onChallengeEvent: async (challengeId, event) => {
-        if (event.type !== "game_ended" || !this.scoring) return;
+        if (event.type !== "game_ended") return;
+        const state = event.data;
+
+        if (!this.scoring) return;
         // Use the state from the event payload directly rather than reading
         // from storage, since the operator may not have been persisted yet.
         const challenge = await this.getChallenge(challengeId);
         if (!challenge) return;
-        const state = event.data;
         const result: GameResult = {
           gameId: challenge.id,
           challengeType: challenge.challengeType,
@@ -118,6 +122,12 @@ export class ArenaEngine {
     const { gameState, state } = operator.serialize();
     challenge.gameState = gameState;
     challenge.state = state;
+
+    // Classify game category when the game just ended
+    if (state.gameEnded && challenge.gameCategory === "train") {
+      challenge.gameCategory = await this.computeGameCategory(state);
+    }
+
     await this.storageAdapter.setChallenge(challenge);
   }
 
@@ -167,6 +177,7 @@ export class ArenaEngine {
       invites: [`inv_${crypto.randomUUID()}`, `inv_${crypto.randomUUID()}`],
       gameState,
       state,
+      gameCategory: "train",
     };
 
     await this.storageAdapter.setChallenge(challenge);
@@ -286,6 +297,18 @@ export class ArenaEngine {
 
     await this.persistOperator(challenge, operator);
     return { ok: "Message sent" };
+  }
+
+  private async computeGameCategory(state: ChallengeOperatorState): Promise<GameCategory> {
+    const userIds = Object.values(state.playerIdentities).filter(Boolean);
+    if (userIds.length === 0) return "train";
+
+    const profiles = await this.users.getUsers(userIds);
+    const nonBenchmarkCount = userIds.filter((id) => !profiles[id]?.isBenchmark).length;
+
+    if (nonBenchmarkCount === 0) return "benchmark";
+    if (nonBenchmarkCount === 1) return "test";
+    return "train";
   }
 
   async getPlayerIdentities(challengeId: string): Promise<Record<string, string> | null> {

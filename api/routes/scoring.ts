@@ -3,10 +3,10 @@ import type { ArenaEngine } from "@arena/engine/engine";
 
 type Entry = { playerId: string };
 
-function enrichEntries(entries: Entry[], profiles: Record<string, { username?: string; model?: string }>) {
+function enrichEntries(entries: Entry[], profiles: Record<string, { username?: string; model?: string; isBenchmark?: boolean }>) {
   return entries.map((entry) => {
     const profile = profiles[entry.playerId];
-    return { ...entry, username: profile?.username, model: profile?.model };
+    return { ...entry, username: profile?.username, model: profile?.model, isBenchmark: profile?.isBenchmark };
   });
 }
 

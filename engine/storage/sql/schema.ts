@@ -6,6 +6,7 @@ export interface UsersTable {
   user_id: string;
   username: string | null;
   model: string | null;
+  is_benchmark: boolean;
 }
 
 export interface ChallengesTable {
@@ -17,6 +18,7 @@ export interface ChallengesTable {
   game_ended: boolean;
   completed_at: ColumnType<Date | null, Date | string | null, Date | string | null>;
   game_state: ColumnType<unknown, string, string>; // jsonb — operator-specific blob
+  game_category: string;
 }
 
 export interface ChallengeInvitesTable {
