@@ -6,7 +6,7 @@ let app: TestApp["app"];
 let engine: TestApp["engine"];
 
 // Engine actions — shared by REST + MCP
-const challengeJoin = (invite: string) => engine.challengeJoin(invite);
+const challengeJoin = (invite: string, userId?: string) => engine.challengeJoin(invite, userId);
 const challengeMessage = (challengeId: string, from: string, messageType: string, content: string) =>
   engine.challengeMessage(challengeId, from, messageType, content);
 const challengeSync = (channel: string, from: string, index: number) => engine.challengeSync(channel, from, index);
@@ -346,5 +346,69 @@ describe("PSI game simulation", () => {
     );
     assert.ok(p1SetMsg, "player 1's private set should be visible to everyone");
     assert.ok(p2SetMsg, "player 2's private set should be visible to everyone");
+  });
+
+  // -- Game category classification --
+
+  async function playFullGame(challengeId: string, invites: string[], userIds?: [string, string]) {
+    const [invite1, invite2] = invites;
+    await challengeJoin(invite1, userIds?.[0]);
+    await challengeJoin(invite2, userIds?.[1]);
+
+    const challenge = await getChallengeOrThrow(challengeId);
+    const gameState = challenge.gameState as { userSets: number[][] };
+    const intersection = gameState.userSets[0].filter((n) => gameState.userSets[1].includes(n));
+    const guessContent = intersection.join(", ");
+
+    await challengeMessage(challengeId, invite1, "guess", guessContent);
+    await challengeMessage(challengeId, invite2, "guess", guessContent);
+
+    return getChallengeOrThrow(challengeId);
+  }
+
+  it("gameCategory defaults to 'train' for regular players", async () => {
+    const { id, invites } = await createPsiChallenge();
+    const challenge = await playFullGame(id, invites);
+    assert.equal(challenge.gameCategory, "train");
+  });
+
+  it("gameCategory is 'benchmark' when all players are benchmark", async () => {
+    const userA = "bench-user-a";
+    const userB = "bench-user-b";
+    await engine.users.setUser(userA, { username: "BenchA", isBenchmark: true });
+    await engine.users.setUser(userB, { username: "BenchB", isBenchmark: true });
+
+    const { id, invites } = await createPsiChallenge();
+    const challenge = await playFullGame(id, invites, [userA, userB]);
+    assert.equal(challenge.gameCategory, "benchmark");
+  });
+
+  it("gameCategory is 'test' when all but one player are benchmark", async () => {
+    const benchUser = "bench-user-test";
+    const humanUser = "human-user-test";
+    await engine.users.setUser(benchUser, { username: "BenchModel", isBenchmark: true });
+    await engine.users.setUser(humanUser, { username: "Human" });
+
+    const { id, invites } = await createPsiChallenge();
+    const challenge = await playFullGame(id, invites, [benchUser, humanUser]);
+    assert.equal(challenge.gameCategory, "test");
+  });
+
+  it("gameCategory is 'train' when multiple non-benchmark players", async () => {
+    const userA = "regular-a";
+    const userB = "regular-b";
+    await engine.users.setUser(userA, { username: "RegularA" });
+    await engine.users.setUser(userB, { username: "RegularB" });
+
+    const { id, invites } = await createPsiChallenge();
+    const challenge = await playFullGame(id, invites, [userA, userB]);
+    assert.equal(challenge.gameCategory, "train");
+  });
+
+  it("gameCategory is 'train' when players have no user profiles", async () => {
+    const { id, invites } = await createPsiChallenge();
+    // Join without userIds — no profiles exist
+    const challenge = await playFullGame(id, invites);
+    assert.equal(challenge.gameCategory, "train");
   });
 });
