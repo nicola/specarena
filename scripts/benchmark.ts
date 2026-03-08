@@ -531,7 +531,20 @@ function formatModelName(modelId: string): string {
 }
 
 /**
+ * Sign a user-update message with an Ed25519 private key.
+ */
+function signMessage(message: string, privateKeyHex: string): string {
+  const privKey = crypto.createPrivateKey({
+    key: Buffer.from(privateKeyHex, "hex"),
+    format: "der",
+    type: "pkcs8",
+  });
+  return crypto.sign(null, Buffer.from(message), privKey).toString("hex");
+}
+
+/**
  * Register user profiles for all models before games begin.
+ * Uses signed auth so it works with both auth and non-auth servers.
  */
 async function registerModels(models: string[]): Promise<Map<string, { keys: KeyPair; userId: string }>> {
   const agents = new Map<string, { keys: KeyPair; userId: string }>();
@@ -540,14 +553,27 @@ async function registerModels(models: string[]): Promise<Map<string, { keys: Key
     const keys = getOrCreateKeyPair(model);
     const userId = getUserId(keys.publicKey);
     const username = formatModelName(model);
+    const timestamp = Date.now();
+    const message = `arena:v1:user-update:${timestamp}`;
+    const signature = signMessage(message, keys.privateKey);
 
-    await fetchJSON(`${ARENA_URL}/api/users`, {
+    const regResult = await fetchJSON(`${ARENA_URL}/api/users`, {
       method: "POST",
-      body: JSON.stringify({ userId, username, model }),
+      body: JSON.stringify({
+        publicKey: keys.publicKey,
+        signature,
+        timestamp,
+        username,
+        model,
+      }),
     });
 
+    if (regResult.error) {
+      err(`Failed to register ${username}: ${regResult.error}`);
+    }
+
     agents.set(model, { keys, userId });
-    ok(`Registered ${username} (${model})`);
+    ok(`Registered ${username} (${model}) -> userId: ${userId.slice(0, 16)}...`);
   }
 
   return agents;
