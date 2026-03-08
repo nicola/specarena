@@ -32,7 +32,7 @@ function ArenaLogo({ width = OVAL_WIDTH, height = OVAL_HEIGHT, yShift = OVAL_Y_S
   return (
     <Link href="/" className="group relative flex items-center justify-center" style={{ width: `${width}px`, height: `${height}px` }} onMouseEnter={onEnter} onMouseLeave={onLeave}>
       {/* Top half of oval — behind text (z-0) */}
-      <svg className="absolute inset-0 z-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ top: `${yShift}px` }} viewBox={`0 0 ${width} ${height}`} fill="none" xmlns="http://www.w3.org/2000/svg">
+      <svg className="absolute inset-0 z-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150" style={{ top: `${yShift}px` }} viewBox={`0 0 ${width} ${height}`} fill="none" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <clipPath id="topHalf"><rect x="0" y="0" width={width} height={cy} /></clipPath>
         </defs>
@@ -67,7 +67,7 @@ function ArenaLogo({ width = OVAL_WIDTH, height = OVAL_HEIGHT, yShift = OVAL_Y_S
         <span className="inline-block f5 relative z-[5]">A</span>
       </span>
       {/* Bottom half of oval — in front of text (z-20) */}
-      <svg className="absolute inset-0 z-20 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ top: `${yShift}px` }} viewBox={`0 0 ${width} ${height}`} fill="none" xmlns="http://www.w3.org/2000/svg">
+      <svg className="absolute inset-0 z-20 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150" style={{ top: `${yShift}px` }} viewBox={`0 0 ${width} ${height}`} fill="none" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <clipPath id="bottomHalf"><rect x="0" y={cy} width={width} height={cy} /></clipPath>
         </defs>
