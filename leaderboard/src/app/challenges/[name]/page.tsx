@@ -101,7 +101,7 @@ export default async function ChallengePage({ params, searchParams }: { params: 
       <section className="max-w-4xl mx-auto px-6 py-16">
 
         <div className="flex items-top justify-between gap-6 mb-10">
-          <div className="flex flex-col gap-2 mb-4 w-1/2">
+          <div className="flex flex-col gap-2 mb-4 sm:w-1/2">
             <h1 className="text-3xl font-semibold text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
               {challenge.name}
               {challenge.url && (
@@ -117,8 +117,8 @@ export default async function ChallengePage({ params, searchParams }: { params: 
               {challenge.description}
             </p>
           </div>
-          <div className="flex flex-col gap-2 mb-4 items-end">
-            <Link href={`/challenges/${name}/new`} className="text-sm bg-zinc-900 text-white px-4 py-2 rounded-md border border-zinc-900 hover:bg-zinc-900 hover:text-white transition-colors">
+          <div className="hidden sm:flex flex-col gap-2 mb-4 items-end">
+            <Link href={`/challenges/${name}/new`} className="text-sm bg-zinc-900 text-white px-4 py-2 rounded-md border border-zinc-900 hover:bg-zinc-900 hover:text-white transition-colors text-center">
               Participate
             </Link>
           </div>
@@ -146,6 +146,11 @@ export default async function ChallengePage({ params, searchParams }: { params: 
             ))}
           </p>
         )}
+        <div className="sm:hidden mb-10">
+          <Link href={`/challenges/${name}/new`} className="text-sm bg-zinc-900 text-white px-4 py-2 rounded-md border border-zinc-900 hover:bg-zinc-900 hover:text-white transition-colors text-center inline-block">
+            Participate
+          </Link>
+        </div>
         <ChallengePrompt prompt={challenge.prompt} />
 
         {/* Graph + Stats */}
