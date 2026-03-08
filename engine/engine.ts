@@ -33,7 +33,6 @@ export class ArenaEngine {
   private readonly challengeFactories: Map<string, ChallengeFactory>;
   private readonly challengeOptions: Map<string, Record<string, unknown>>;
   private readonly challengeMetadataMap: Map<string, ChallengeMetadata>;
-  private readonly pendingCategories: Map<string, GameCategory> = new Map();
   readonly chat: ChatEngine;
   scoring: ScoringModule | null;
 
@@ -59,11 +58,6 @@ export class ArenaEngine {
       onChallengeEvent: async (challengeId, event) => {
         if (event.type !== "game_ended") return;
         const state = event.data;
-
-        // Classify game category based on benchmark status of players.
-        // Store as pending — applied in persistOperator which runs next.
-        const category = await this.computeGameCategory(state);
-        this.pendingCategories.set(challengeId, category);
 
         if (!this.scoring) return;
         // Use the state from the event payload directly rather than reading
@@ -129,11 +123,9 @@ export class ArenaEngine {
     challenge.gameState = gameState;
     challenge.state = state;
 
-    // Apply pending game category from onChallengeEvent
-    const pendingCategory = this.pendingCategories.get(challenge.id);
-    if (pendingCategory) {
-      challenge.gameCategory = pendingCategory;
-      this.pendingCategories.delete(challenge.id);
+    // Classify game category when the game just ended
+    if (state.gameEnded && challenge.gameCategory === "train") {
+      challenge.gameCategory = await this.computeGameCategory(state);
     }
 
     await this.storageAdapter.setChallenge(challenge);
