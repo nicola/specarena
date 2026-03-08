@@ -173,23 +173,56 @@ function getUserId(publicKeyHex: string): string {
 
 // ── Bash Tool Execution ─────────────────────────────────────────────
 
-function executeBash(command: string, timeoutMs = 30000): BashResult {
-  try {
-    const result = execSync(command, {
-      encoding: "utf-8",
-      timeout: timeoutMs,
-      maxBuffer: 1024 * 1024,
-      stdio: ["pipe", "pipe", "pipe"],
-    });
-    return { stdout: result.slice(0, 10000), error: null };
-  } catch (e: any) {
-    const stdout: string = (e.stdout || "").slice(0, 5000);
-    const stderr: string = (e.stderr || "").slice(0, 5000);
-    return {
-      stdout,
-      error: `Exit code: ${e.status ?? "unknown"}\n${stderr}`,
-    };
+import { writeFileSync, unlinkSync, mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+/**
+ * Creates a persistent bash execution context for an agent.
+ * Environment variables set via `export` persist across calls by
+ * writing them to a temp env file that is sourced before each command.
+ */
+function createBashContext(): { execute: (command: string, timeoutMs?: number) => BashResult; cleanup: () => void } {
+  const envDir = mkdtempSync(join(tmpdir(), "arena-bench-"));
+  const envFile = join(envDir, "env.sh");
+  writeFileSync(envFile, "# agent env\n");
+
+  function execute(command: string, timeoutMs = 30000): BashResult {
+    // Wrap the command: source env file, run command, then capture any new exports
+    const wrappedCommand = `
+source "${envFile}" 2>/dev/null
+${command}
+_exit_code=$?
+# Capture exported vars back to env file
+export -p | grep -v '_exit_code' > "${envFile}.new" 2>/dev/null && mv "${envFile}.new" "${envFile}"
+exit $_exit_code
+`;
+    try {
+      const result = execSync(wrappedCommand, {
+        encoding: "utf-8",
+        timeout: timeoutMs,
+        maxBuffer: 1024 * 1024,
+        stdio: ["pipe", "pipe", "pipe"],
+        shell: "/bin/bash",
+      });
+      return { stdout: result.slice(0, 10000), error: null };
+    } catch (e: any) {
+      const stdout: string = (e.stdout || "").slice(0, 5000);
+      const stderr: string = (e.stderr || "").slice(0, 5000);
+      return {
+        stdout,
+        error: `Exit code: ${e.status ?? "unknown"}\n${stderr}`,
+      };
+    }
   }
+
+  function cleanup(): void {
+    try { unlinkSync(envFile); } catch {}
+    try { unlinkSync(envFile + ".new"); } catch {}
+    try { unlinkSync(envDir); } catch {}
+  }
+
+  return { execute, cleanup };
 }
 
 // ── OpenRouter Tool Use Agent ────────────────────────────────────────
@@ -199,7 +232,7 @@ const TOOLS = [
     type: "function" as const,
     function: {
       name: "bash",
-      description: "Execute a bash command and return stdout/stderr. Use this for curl commands to interact with the Arena API, jq for JSON parsing, and any other shell commands needed.",
+      description: "Execute a bash command and return stdout/stderr. Environment variables set via `export` persist across calls. Use this for curl commands to interact with the Arena API, jq for JSON parsing, and any other shell commands needed.",
       parameters: {
         type: "object",
         properties: {
@@ -242,6 +275,7 @@ async function chatCompletion(model: string, messages: Message[]): Promise<ChatC
 }
 
 async function runAgent(model: string, systemPrompt: string, agentLabel: string, agentColor: string): Promise<Message[]> {
+  const bash = createBashContext();
   const messages: Message[] = [
     { role: "system", content: systemPrompt },
     { role: "user", content: "Please complete the challenge now. Follow all the steps from joining to submitting your answer. Execute each step using the bash tool." },
@@ -317,7 +351,7 @@ async function runAgent(model: string, systemPrompt: string, agentLabel: string,
       const cmdPreview = command.slice(0, 120).replace(/\n/g, " ");
       log(`[${agentLabel}]`, agentColor, `$ ${cmdPreview}${command.length > 120 ? "..." : ""}`);
 
-      const result = executeBash(command);
+      const result = bash.execute(command);
       const output = result.error
         ? `ERROR:\n${result.error}\n\nSTDOUT:\n${result.stdout}`
         : result.stdout;
@@ -338,6 +372,7 @@ async function runAgent(model: string, systemPrompt: string, agentLabel: string,
     }
   }
 
+  bash.cleanup();
   const duration = Math.round((Date.now() - agentStart) / 1000);
   log(`[${agentLabel}]`, agentColor, `Finished in ${duration}s (${messages.length} messages)`);
   return messages;
