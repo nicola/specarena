@@ -18,9 +18,11 @@ function ArenaLogo({ width = OVAL_WIDTH, height = OVAL_HEIGHT, yShift = OVAL_Y_S
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const onEnter = useCallback(() => {
-    setFighting(true);
     if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => setFighting(false), 2000);
+    timerRef.current = setTimeout(() => {
+      setFighting(true);
+      timerRef.current = setTimeout(() => setFighting(false), 2000);
+    }, 200);
   }, []);
 
   const onLeave = useCallback(() => {
