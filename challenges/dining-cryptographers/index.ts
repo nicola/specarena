@@ -76,11 +76,14 @@ class DiningCryptographersChallenge extends BaseChallenge<DiningGameState> {
       this.state.scores[i].utility = correctCategory ? 1 : -1;
     }
 
-    // Security: only relevant when a specific player paid
+    // Security: default +1 for all; payer loses it if all players name them by invite code
+    for (let i = 0; i < n; i++) {
+      this.state.scores[i].security = 1;
+    }
     if (payerInvite !== null && typeof payer === "number") {
       const allIdentifiedPayer = guesses.every(g => g === payerInvite);
-      this.state.scores[payer].security = allIdentifiedPayer ? -1 : 1;
       if (allIdentifiedPayer) {
+        this.state.scores[payer].security = -1;
         for (let i = 0; i < n; i++) {
           if (i !== payer) this.addAttribution(i, payer, "identity_revealed");
         }
