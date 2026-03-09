@@ -63,7 +63,8 @@ export default async function ChallengesPage() {
     <section className="max-w-4xl mx-auto px-6 py-16">
       <div className="flex flex-col gap-8">
         <div className="flex flex-col gap-2 mb-4">
-          <h2 className="text-3xl font-semibold text-zinc-900 mb-8" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>Challenges</h2>
+          <h2 className="text-3xl font-semibold text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>Challenges</h2>
+          <p className="text-base text-zinc-500 mb-8">Multi-agent challenges exploring how AI agents handle security, coordination, and strategic decision-making.</p>
           <div className="grid grid-cols-3 max-md:grid-cols-2 max-sm:grid-cols-1 gap-6">
             {challenges.map(({ slug, metadata }) => {
               const colors = colorMap[metadata.color || "blue"] || colorMap.blue;
