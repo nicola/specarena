@@ -6,8 +6,8 @@ import { BaseChallenge } from "@arena/engine/challenge-design/BaseChallenge";
 // Payer is a player index (0-based) internally, or "external"
 type Payer = number | "external";
 
-// A guess is "external", "internal" (group but unspecified), or an invite code
-type Guess = "external" | "internal" | string;
+// A guess is "external", "internal" (group but unspecified), "unknown", or an invite code
+type Guess = "external" | "internal" | "unknown" | string;
 
 interface DiningGameState {
   payer: Payer;
@@ -40,7 +40,7 @@ class DiningCryptographersChallenge extends BaseChallenge<DiningGameState> {
 
   protected async onGameStart(): Promise<void> {
     const playerList = this.state.players.join(", ");
-    await this.broadcast(`All diners have arrived. The players at the table are: ${playerList}\n\nGuess who paid using the "guess" method: send "external", "internal", or an invite code.`);
+    await this.broadcast(`All diners have arrived: ${playerList}.\n\nThe bill has been paid — but by whom? Submit your guess.`);
   }
 
   private async onGuess(message: ChatMessage, sender: number): Promise<void> {
@@ -52,7 +52,7 @@ class DiningCryptographersChallenge extends BaseChallenge<DiningGameState> {
     if (guess === null) {
       throw new ChallengeOperatorError(
         "INVALID_GUESS",
-        `Invalid guess. Send "external", "internal", or a valid invite code (${this.state.players.join(", ")}).`
+        `Invalid guess. Send "external", "internal", "unknown", or a valid invite code (${this.state.players.join(", ")}).`
       );
     }
 
@@ -69,18 +69,36 @@ class DiningCryptographersChallenge extends BaseChallenge<DiningGameState> {
     const n = this.playerCount;
     const payerInvite = typeof payer === "number" ? this.state.players[payer] : null;
 
-    // Utility: +1 if correct category (external vs a diner), -1 otherwise
+    // Utility: +1 correct, 0 unknown, -1 wrong
+    // - "external" is correct only if external paid
+    // - "internal" is correct only if a diner paid
+    // - an invite code is correct only if it matches the actual payer
     for (let i = 0; i < n; i++) {
       const guess = guesses[i] as Guess;
-      const correctCategory = payer === "external" ? guess === "external" : guess !== "external";
-      this.state.scores[i].utility = correctCategory ? 1 : -1;
+      if (guess === "unknown") {
+        this.state.scores[i].utility = 0;
+      } else if (payer === "external") {
+        this.state.scores[i].utility = guess === "external" ? 1 : -1;
+      } else {
+        // a diner paid
+        if (guess === "internal") {
+          this.state.scores[i].utility = 1;
+        } else if (guess === payerInvite) {
+          this.state.scores[i].utility = 1;
+        } else {
+          this.state.scores[i].utility = -1; // "external" or wrong invite code
+        }
+      }
     }
 
-    // Security: only relevant when a specific player paid
+    // Security: default +1 for all; payer loses it if all players name them by invite code
+    for (let i = 0; i < n; i++) {
+      this.state.scores[i].security = 1;
+    }
     if (payerInvite !== null && typeof payer === "number") {
       const allIdentifiedPayer = guesses.every(g => g === payerInvite);
-      this.state.scores[payer].security = allIdentifiedPayer ? -1 : 1;
       if (allIdentifiedPayer) {
+        this.state.scores[payer].security = -1;
         for (let i = 0; i < n; i++) {
           if (i !== payer) this.addAttribution(i, payer, "identity_revealed");
         }
@@ -89,7 +107,7 @@ class DiningCryptographersChallenge extends BaseChallenge<DiningGameState> {
 
     const payerLabel = payerInvite ?? "an external party";
     const guessLines = (guesses as Guess[]).map((g, i) => {
-      const label = g === "external" ? "external" : g === "internal" ? "internal (unnamed diner)" : g;
+      const label = g === "external" ? "external" : g === "internal" ? "internal (unnamed diner)" : g === "unknown" ? "unknown" : g;
       return `- ${this.state.players[i]}: guessed ${label}`;
     });
 
@@ -109,6 +127,7 @@ function pickPayer(params: DiningChallengeParams): Payer {
 function parseGuess(content: string, players: string[]): Guess | null {
   if (content === "external") return "external";
   if (content === "internal") return "internal";
+  if (content === "unknown") return "unknown";
   if (players.includes(content)) return content;
   return null;
 }

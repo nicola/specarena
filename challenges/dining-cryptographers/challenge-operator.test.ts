@@ -120,6 +120,28 @@ describe("Dining Cryptographers challenge", () => {
     }
   });
 
+  it("utility -1 for naming wrong diner by invite code", async () => {
+    let challengeId = "test_wrong_invite_0";
+    let attempt = 0;
+    let op = createDining(challengeId).operator;
+    while (op.gameState.payer === "external" && attempt < 50) {
+      challengeId = `test_wrong_invite_${++attempt}`;
+      op = createDining(challengeId).operator;
+    }
+    if (op.gameState.payer === "external") return;
+
+    const payerIndex = op.gameState.payer as number;
+    await joinAll(op);
+    // Everyone guesses a diner that is NOT the payer
+    const wrongInvite = INVITES.find((_, i) => i !== payerIndex)!;
+    for (const invite of INVITES) {
+      await op.message(msg(challengeId, invite, wrongInvite));
+    }
+    for (let i = 0; i < 3; i++) {
+      assert.equal(op.state.scores[i].utility, -1, `Player ${i} should have utility -1 for wrong diner`);
+    }
+  });
+
   it("utility +1 for 'internal' guess when a player paid", async () => {
     let challengeId = "test_utility_internal_0";
     let attempt = 0;
@@ -226,6 +248,41 @@ describe("Dining Cryptographers challenge", () => {
       () => operator.message(msg("test_invalid", INVITES[0], "unknown_invite")),
       /Invalid guess/
     );
+  });
+
+  it("utility 0 for 'unknown' guess regardless of payer", async () => {
+    const { operator } = createDining("test_unknown_external");
+    await joinAll(operator);
+
+    for (const invite of INVITES) {
+      await operator.message(msg("test_unknown_external", invite, "unknown"));
+    }
+    for (let i = 0; i < 3; i++) {
+      assert.equal(operator.state.scores[i].utility, 0, `Player ${i} should have utility 0 for unknown`);
+    }
+  });
+
+  it("'unknown' guess does not count as naming payer for security", async () => {
+    let challengeId = "test_unknown_security_0";
+    let attempt = 0;
+    let op = createDining(challengeId).operator;
+    while (op.gameState.payer === "external" && attempt < 50) {
+      challengeId = `test_unknown_security_${++attempt}`;
+      op = createDining(challengeId).operator;
+    }
+    if (op.gameState.payer === "external") return;
+
+    const payerIndex = op.gameState.payer as number;
+    await joinAll(op);
+    const payerInvite = INVITES[payerIndex];
+
+    // Two players name the payer, one says "unknown"
+    for (let i = 0; i < INVITES.length; i++) {
+      const guess = i === 0 ? "unknown" : payerInvite;
+      await op.message(msg(challengeId, INVITES[i], guess));
+    }
+
+    assert.equal(op.state.scores[payerIndex].security, 1, "Payer security should be +1 when not all players name them");
   });
 
   it("accepts a valid invite code as guess", async () => {
