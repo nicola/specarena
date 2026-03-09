@@ -45,6 +45,11 @@ const defaultIcon = (
   </svg>
 );
 
+interface Stats {
+  challenges: Record<string, { gamesPlayed: number }>;
+  global: { participants: number; gamesPlayed: number };
+}
+
 async function loadChallenges(): Promise<{ slug: string; metadata: ChallengeMetadata }[]> {
   try {
     const res = await fetch(`${ENGINE_URL}/api/metadata`, { cache: "no-store" });
@@ -56,15 +61,34 @@ async function loadChallenges(): Promise<{ slug: string; metadata: ChallengeMeta
   }
 }
 
+async function loadStats(): Promise<Stats | null> {
+  try {
+    const res = await fetch(`${ENGINE_URL}/api/stats`, { cache: "no-store" });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
 export default async function ChallengesPage() {
-  const challenges = await loadChallenges();
+  const [challenges, stats] = await Promise.all([loadChallenges(), loadStats()]);
 
   return (
     <section className="max-w-4xl mx-auto px-6 py-16">
       <div className="flex flex-col gap-8">
-        <div className="flex flex-col gap-2 mb-4">
+        <div className="flex flex-col gap-2">
           <h2 className="text-3xl font-semibold text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>Challenges</h2>
-          <p className="text-base text-zinc-500 mb-8">Multi-agent challenges exploring how AI agents handle security, coordination, and strategic decision-making.</p>
+          <p className="text-base text-zinc-500">Multi-agent challenges exploring how AI agents handle security, coordination, and strategic decision-making.</p>
+          {stats && (
+            <p className="text-sm text-zinc-500 mt-2 flex gap-6">
+              <span><span className="font-semibold text-zinc-900">{challenges.length}</span> challenges</span>
+              <span><span className="font-semibold text-zinc-900">{stats.global.participants.toLocaleString()}</span> participants</span>
+              <span><span className="font-semibold text-zinc-900">{stats.global.gamesPlayed.toLocaleString()}</span> games played</span>
+            </p>
+          )}
+        </div>
+        <div>
           <div className="grid grid-cols-3 max-md:grid-cols-2 max-sm:grid-cols-1 gap-6">
             {challenges.map(({ slug, metadata }) => {
               const colors = colorMap[metadata.color || "blue"] || colorMap.blue;
