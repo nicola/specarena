@@ -11,7 +11,9 @@
  *   OPENROUTER_API_KEY=... node --import tsx scripts/benchmark.ts [options]
  *
  * Options:
- *   --models    Comma-separated OpenRouter model IDs (required)
+ *   --models    Comma-separated OpenRouter model IDs (required unless --research)
+ *   --research  Load models from scripts/benchmark-models.json and run full round-robin
+ *   --sandbox   Run each agent inside an isolated Docker container (requires Docker)
  *   --game      Challenge type to play (default: psi)
  *   --repeat    Number of games per matchup (default: 1)
  *   --parallel  Run matchups in parallel
@@ -25,9 +27,14 @@
 import { config } from "dotenv";
 config(); // load .env from project root
 
-import { execFile } from "node:child_process";
+import { execFile, execFileSync } from "node:child_process";
 import { promisify } from "node:util";
 import crypto from "node:crypto";
+import { writeFileSync, readFileSync, existsSync, unlinkSync, mkdtempSync, mkdirSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const execFileAsync = promisify(execFile);
 
@@ -98,11 +105,29 @@ if (!OPENROUTER_API_KEY) {
   process.exit(1);
 }
 
-const MODELS = (getArg("models", "")).split(",").filter(Boolean);
-if (MODELS.length < 2) {
-  console.error("Error: --models requires at least 2 comma-separated model IDs");
-  console.error("Example: --models anthropic/claude-sonnet-4,openai/gpt-4o,google/gemini-2.0-flash-001");
-  process.exit(1);
+const RESEARCH_MODE = hasFlag("research");
+const SANDBOX = hasFlag("sandbox");
+
+let MODELS: string[];
+if (RESEARCH_MODE) {
+  const modelsFile = join(__dirname, "benchmark-models.json");
+  if (!existsSync(modelsFile)) {
+    console.error("Error: benchmark-models.json not found. Create scripts/benchmark-models.json with a \"models\" array.");
+    process.exit(1);
+  }
+  const parsed = JSON.parse(readFileSync(modelsFile, "utf-8"));
+  MODELS = parsed.models ?? [];
+  if (MODELS.length < 2) {
+    console.error("Error: benchmark-models.json must contain at least 2 models");
+    process.exit(1);
+  }
+} else {
+  MODELS = (getArg("models", "")).split(",").filter(Boolean);
+  if (MODELS.length < 2) {
+    console.error("Error: --models requires at least 2 comma-separated model IDs, or use --research to load from scripts/benchmark-models.json");
+    console.error("Example: --models anthropic/claude-sonnet-4,openai/gpt-4o,google/gemini-2.0-flash-001");
+    process.exit(1);
+  }
 }
 
 const GAME_TYPE = getArg("game", "psi");
@@ -179,12 +204,8 @@ function getUserId(publicKeyHex: string): string {
 
 // ── Bash Tool Execution ─────────────────────────────────────────────
 
-import { writeFileSync, readFileSync, existsSync, unlinkSync, mkdtempSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
 const KEYS_FILE = join(__dirname, ".benchmark-keys.json");
 
 type StoredKeys = Record<string, KeyPair>; // model ID -> key pair
@@ -215,11 +236,36 @@ function getOrCreateKeyPair(modelId: string): KeyPair {
  * Creates a persistent bash execution context for an agent.
  * Environment variables set via `export` persist across calls by
  * writing them to a temp env file that is sourced before each command.
+ *
+ * When `sandboxed` is true, commands run inside an isolated Docker container
+ * (arena-benchmark-sandbox image) with memory/CPU limits and no host access.
+ * The env dir is bind-mounted into the container so env persistence still works.
+ * On macOS, `localhost` in the arena URL must be replaced with
+ * `host.docker.internal` so the container can reach the host — the benchmark
+ * runner does this automatically when building agent prompts.
  */
-function createBashContext(): { execute: (command: string, timeoutMs?: number) => Promise<BashResult>; cleanup: () => void } {
+function createBashContext(sandboxed = false): { execute: (command: string, timeoutMs?: number) => Promise<BashResult>; cleanup: () => void } {
   const envDir = mkdtempSync(join(tmpdir(), "arena-bench-"));
   const envFile = join(envDir, "env.sh");
   writeFileSync(envFile, "# agent env\n");
+
+  // Start a long-lived container for this agent (detached, removed on stop)
+  let containerId: string | null = null;
+  if (sandboxed) {
+    const output = execFileSync("docker", [
+      "run", "-d", "--rm",
+      "--network", "bridge",
+      "--add-host", "host.docker.internal:host-gateway", // reach host on Linux + macOS
+      "--memory", "512m",
+      "--cpus", "1",
+      "--security-opt", "no-new-privileges",
+      "--cap-drop", "ALL",
+      "--cap-add", "NET_RAW",   // needed for curl/DNS
+      "-v", `${envDir}:${envDir}`, // mount env dir so env persistence works
+      "arena-benchmark-sandbox",
+    ], { encoding: "utf-8" });
+    containerId = output.trim();
+  }
 
   async function execute(command: string, timeoutMs = 30000): Promise<BashResult> {
     // Wrap the command: source env file, run command, then capture any new exports
@@ -231,8 +277,12 @@ _exit_code=$?
 export -p | grep -v '_exit_code' > "${envFile}.new" 2>/dev/null && mv "${envFile}.new" "${envFile}"
 exit $_exit_code
 `;
+    const runArgs: [string, string[]] = sandboxed && containerId
+      ? ["docker", ["exec", containerId, "/bin/bash", "-c", wrappedCommand]]
+      : ["/bin/bash", ["-c", wrappedCommand]];
+
     try {
-      const { stdout } = await execFileAsync("/bin/bash", ["-c", wrappedCommand], {
+      const { stdout } = await execFileAsync(runArgs[0], runArgs[1], {
         encoding: "utf-8",
         timeout: timeoutMs,
         maxBuffer: 1024 * 1024,
@@ -249,6 +299,9 @@ exit $_exit_code
   }
 
   function cleanup(): void {
+    if (sandboxed && containerId) {
+      try { execFileSync("docker", ["stop", containerId]); } catch {}
+    }
     try { unlinkSync(envFile); } catch {}
     try { unlinkSync(envFile + ".new"); } catch {}
     try { unlinkSync(envDir); } catch {}
@@ -306,8 +359,8 @@ async function chatCompletion(model: string, messages: Message[]): Promise<ChatC
   return res.json();
 }
 
-async function runAgent(model: string, systemPrompt: string, agentLabel: string, agentColor: string): Promise<Message[]> {
-  const bash = createBashContext();
+async function runAgent(model: string, systemPrompt: string, agentLabel: string, agentColor: string, sandboxed = false): Promise<Message[]> {
+  const bash = createBashContext(sandboxed);
   const messages: Message[] = [
     { role: "system", content: systemPrompt },
     { role: "user", content: "Please complete the challenge now. Follow all the steps from joining to submitting your answer. Execute each step using the bash tool." },
@@ -616,14 +669,19 @@ async function runGame(
 
   ok(`Challenge created: ${challengeId}`);
 
+  // When sandboxed, agents run inside Docker and need host.docker.internal instead of localhost
+  const agentArenaUrl = SANDBOX
+    ? ARENA_URL.replace(/\b(localhost|127\.0\.0\.1)\b/, "host.docker.internal")
+    : ARENA_URL;
+
   // Build prompts from metadata + skill
-  const promptA = buildAgentPrompt(ARENA_URL, challengeId, inviteA, keysA.publicKey, keysA.privateKey, metadata, skillContent);
-  const promptB = buildAgentPrompt(ARENA_URL, challengeId, inviteB, keysB.publicKey, keysB.privateKey, metadata, skillContent);
+  const promptA = buildAgentPrompt(agentArenaUrl, challengeId, inviteA, keysA.publicKey, keysA.privateKey, metadata, skillContent);
+  const promptB = buildAgentPrompt(agentArenaUrl, challengeId, inviteB, keysB.publicKey, keysB.privateKey, metadata, skillContent);
 
   // Run both agents concurrently
   await Promise.all([
-    runAgent(modelA, promptA, labelA, colorA),
-    runAgent(modelB, promptB, labelB, colorB),
+    runAgent(modelA, promptA, labelA, colorA, SANDBOX),
+    runAgent(modelB, promptB, labelB, colorB, SANDBOX),
   ]);
 
   // Fetch final state
@@ -665,6 +723,8 @@ async function runGame(
 
 async function main(): Promise<void> {
   info("Arena Benchmark Runner");
+  if (RESEARCH_MODE) info("Mode: research (loaded from benchmark-models.json)");
+  if (SANDBOX) info("Sandbox: enabled — each agent runs in an isolated Docker container");
   info(`Models: ${MODELS.join(", ")}`);
   info(`Game: ${GAME_TYPE}, Repeat: ${REPEAT}, Arena: ${ARENA_URL}`);
 
@@ -697,7 +757,7 @@ async function main(): Promise<void> {
   // Generate all matchups (round-robin)
   const matchups: [string, string][] = [];
   for (let i = 0; i < MODELS.length; i++) {
-    for (let j = i + 1; j < MODELS.length; j++) {
+    for (let j = i; j < MODELS.length; j++) {  // j = i includes self-play on the diagonal
       for (let r = 0; r < REPEAT; r++) {
         matchups.push([MODELS[i], MODELS[j]]);
       }
@@ -713,6 +773,7 @@ async function main(): Promise<void> {
     const settled = await Promise.allSettled(tasks);
     for (const r of settled) {
       if (r.status === "fulfilled" && r.value) results.push(r.value);
+      else if (r.status === "rejected") err(`Game failed: ${r.reason?.message ?? r.reason}`);
     }
   } else {
     for (let i = 0; i < matchups.length; i++) {
