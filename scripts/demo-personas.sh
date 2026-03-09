@@ -713,7 +713,9 @@ run_game() {
           dup=1; break
         fi
       done
-      [[ $dup -eq 0 ]] && indices+=("$candidate")
+      if [[ $dup -eq 0 ]]; then
+        indices+=("$candidate")
+      fi
     done
   fi
 
