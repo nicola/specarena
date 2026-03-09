@@ -244,7 +244,7 @@ function getOrCreateKeyPair(modelId: string): KeyPair {
  * `host.docker.internal` so the container can reach the host — the benchmark
  * runner does this automatically when building agent prompts.
  */
-function createBashContext(sandboxed = false): { execute: (command: string, timeoutMs?: number) => Promise<BashResult>; cleanup: () => void } {
+async function createBashContext(sandboxed = false): Promise<{ execute: (command: string, timeoutMs?: number) => Promise<BashResult>; cleanup: () => void }> {
   const envDir = mkdtempSync(join(tmpdir(), "arena-bench-"));
   const envFile = join(envDir, "env.sh");
   writeFileSync(envFile, "# agent env\n");
@@ -252,7 +252,7 @@ function createBashContext(sandboxed = false): { execute: (command: string, time
   // Start a long-lived container for this agent (detached, removed on stop)
   let containerId: string | null = null;
   if (sandboxed) {
-    const output = execFileSync("docker", [
+    const { stdout } = await execFileAsync("docker", [
       "run", "-d", "--rm",
       "--network", "bridge",
       "--add-host", "host.docker.internal:host-gateway", // reach host on Linux + macOS
@@ -264,7 +264,7 @@ function createBashContext(sandboxed = false): { execute: (command: string, time
       "-v", `${envDir}:${envDir}`, // mount env dir so env persistence works
       "arena-benchmark-sandbox",
     ], { encoding: "utf-8" });
-    containerId = output.trim();
+    containerId = stdout.trim();
   }
 
   async function execute(command: string, timeoutMs = 30000): Promise<BashResult> {
@@ -360,7 +360,7 @@ async function chatCompletion(model: string, messages: Message[]): Promise<ChatC
 }
 
 async function runAgent(model: string, systemPrompt: string, agentLabel: string, agentColor: string, sandboxed = false): Promise<Message[]> {
-  const bash = createBashContext(sandboxed);
+  const bash = await createBashContext(sandboxed);
   const messages: Message[] = [
     { role: "system", content: systemPrompt },
     { role: "user", content: "Please complete the challenge now. Follow all the steps from joining to submitting your answer. Execute each step using the bash tool." },
@@ -406,9 +406,14 @@ async function runAgent(model: string, systemPrompt: string, agentLabel: string,
     // Handle tool calls
     const toolCalls = assistantMessage.tool_calls;
     if (!toolCalls || toolCalls.length === 0) {
-      // Check if the agent has actually finished (submitted answer + got scores)
-      const transcript = messages.map((m) => m.content || "").join(" ");
-      const hasSubmitted = /arena\/message|messageType/.test(transcript) && /score|utility|security/i.test(transcript);
+      // Check if the agent has actually finished: look only at tool results
+      // (not the system prompt, which already contains "arena/message" and "security")
+      const toolOutputs = messages
+        .filter((m) => m.role === "tool")
+        .map((m) => m.content || "")
+        .join(" ");
+      const hasSubmitted = toolOutputs.length > 0 &&
+        /score|utility|security/i.test(toolOutputs);
       if (hasSubmitted) {
         log(`[${agentLabel}]`, agentColor, "Agent done (scores received)");
         break;
