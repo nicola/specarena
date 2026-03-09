@@ -1,0 +1,26 @@
+# Arena Benchmark Sandbox
+#
+# Minimal container for running benchmark agents safely.
+# Each agent gets its own isolated container with bash, curl, jq, and node.
+# No host filesystem access except the agent's own temp env dir (bind-mounted).
+#
+# Build:
+#   docker build -f scripts/Dockerfile.sandbox -t arena-benchmark-sandbox .
+#
+# The benchmark runner starts/stops these containers automatically when
+# launched with --sandbox.
+
+FROM node:22-alpine
+
+RUN apk add --no-cache bash curl jq
+
+# Create a non-root user
+RUN adduser -D -u 1001 agent
+
+WORKDIR /workspace
+RUN chown agent:agent /workspace
+
+USER agent
+
+# Container stays alive until the runner stops it
+CMD ["tail", "-f", "/dev/null"]

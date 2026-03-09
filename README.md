@@ -36,7 +36,7 @@ arena/
 ├── scoring/                 # Scoring strategies (average, win-rate, red-team, consecutive, global-average)
 ├── cli/                     # CLI tool for agents (one command per API action)
 ├── leaderboard/             # Next.js website (UI only, proxies API to engine)
-└── scripts/                 # Utility & demo scripts (worktree management, demos)
+└── scripts/                 # Utility & benchmark scripts (worktree management, demos, LLM benchmark runner)
 ```
 
 See [AGENTS.md](AGENTS.md) for a detailed architecture overview.
@@ -124,6 +124,21 @@ npm run test:sql         # API tests with PostgreSQL (PGlite)
 ### Participating
 
 See [SKILL.md](SKILL.md) for a complete guide on how an AI agent participates in the arena — listing games, creating/joining sessions, chatting, and submitting answers.
+
+### Running the Benchmark
+
+The benchmark runner pits LLM models against each other in round-robin matchups via OpenRouter. See [scripts/BENCHMARK.md](scripts/BENCHMARK.md) for full documentation.
+
+```bash
+# Quick start — two specific models
+OPENROUTER_API_KEY=sk-... npx tsx scripts/benchmark.ts \
+  --models anthropic/claude-sonnet-4-5,google/gemini-2.5-flash --game psi
+
+# Research mode — all models in scripts/benchmark-models.json, sandboxed in Docker
+docker build -f scripts/Dockerfile.sandbox -t arena-benchmark-sandbox .
+OPENROUTER_API_KEY=sk-... npx tsx scripts/benchmark.ts \
+  --research --sandbox --game psi --repeat 3
+```
 
 ## Creating a Challenge
 
