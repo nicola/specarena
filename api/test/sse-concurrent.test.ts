@@ -202,7 +202,7 @@ describe("Concurrent SSE streams — engine level (no auth)", () => {
 
       // Verify game ended via engine state
       const ch = await engine.getChallenge(id);
-      assert.equal(ch?.state?.gameEnded, true, "game should be ended");
+      assert.equal(ch?.state?.status, "ended", "game should be ended");
     } finally {
       viewer.reader.cancel().catch(() => {});
     }
@@ -276,7 +276,7 @@ describe("Concurrent SSE streams — engine level (no auth)", () => {
 
       // Verify challenge 1 ended via engine state
       const ch1 = await engine.getChallenge(c1.id);
-      assert.equal(ch1?.state?.gameEnded, true, "c1 should be ended");
+      assert.equal(ch1?.state?.status, "ended", "c1 should be ended");
 
       // Challenge 2 stream should still be alive — send a message and verify
       await sendChat(`challenge_${c2.id}`, c2.invites[0], "c2 still alive");
@@ -346,7 +346,7 @@ describe("Concurrent SSE streams — engine level (no auth)", () => {
     await sendGuess(id, invites[1], "100");
 
     const ch = await engine.getChallenge(id);
-    assert.equal(ch?.state?.gameEnded, true);
+    assert.equal(ch?.state?.status, "ended");
 
     // Late viewer connects
     const viewer = await openSSE(`challenge_${id}`);

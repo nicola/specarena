@@ -1,4 +1,4 @@
-import { ChallengeMessaging, ChallengeOperator, ChallengeOperatorError, ChallengeOperatorState, ChatMessage, Score, Challenge } from "../types";
+import { ChallengeMessaging, ChallengeOperator, ChallengeOperatorError, ChallengeOperatorState, ChallengeStatus, ChatMessage, Score, Challenge } from "../types";
 import { defaultChatEngine } from "../chat/ChatEngine";
 
 // BaseChallenge provides the shared "operator runtime" used by challenge
@@ -24,8 +24,7 @@ export abstract class BaseChallenge<TGameState> implements ChallengeOperator<TGa
     this.playerCount = playerCount;
     this.messaging = messaging ?? defaultChatEngine;
     this.state = {
-      gameStarted: false,
-      gameEnded: false,
+      status: ChallengeStatus.Open,
       scores: Array.from({ length: playerCount }, (): Score => ({ security: 0, utility: 0 })),
       players: [],
       playerIdentities: {},
@@ -50,7 +49,7 @@ export abstract class BaseChallenge<TGameState> implements ChallengeOperator<TGa
     await this.onPlayerJoin(invite, playerIndex);
 
     if (this.state.players.length === this.playerCount) {
-      this.state.gameStarted = true;
+      this.state.status = ChallengeStatus.Active;
       await this.onGameStart();
     }
   }
@@ -58,7 +57,7 @@ export abstract class BaseChallenge<TGameState> implements ChallengeOperator<TGa
   // Single entrypoint for challenge actions. Routes by message.type to the
   // handler registered with `handle(...)`.
   async message(message: ChatMessage): Promise<void> {
-    if (this.state.gameEnded || !this.state.gameStarted) {
+    if (this.state.status !== ChallengeStatus.Active) {
       await this.send("ERR_GAME_NOT_RUNNING: Game not running.", message.from);
       return;
     }
@@ -115,7 +114,7 @@ export abstract class BaseChallenge<TGameState> implements ChallengeOperator<TGa
   // Standard game-finalization helper used by challenges after scoring.
   // It marks the game ended and emits a canonical score summary.
   protected async endGame(): Promise<void> {
-    this.state.gameEnded = true;
+    this.state.status = ChallengeStatus.Ended;
     this.state.completedAt = Date.now();
     const lines = this.state.scores.map(
       (s, i) => `- Player ${i + 1}: ${JSON.stringify(s)}`

@@ -19,9 +19,14 @@ export interface ChatMessage {
 import type { Score, Attribution } from "@arena/scoring";
 export type { Score, Attribution };
 
+export enum ChallengeStatus {
+  Open = "open",
+  Active = "active",
+  Ended = "ended",
+}
+
 export interface ChallengeOperatorState {
-  gameStarted: boolean;
-  gameEnded: boolean;
+  status: ChallengeStatus;
   completedAt?: number;
   scores: Score[];
   players: string[];
@@ -111,7 +116,7 @@ export type Result<T, E = ChallengeError> =
 
 /** Strip scores and attributions from challenges that haven't ended yet. */
 export function sanitizeChallenge<T extends Challenge>(challenge: T): T {
-  if (challenge.state.gameEnded) return challenge;
+  if (challenge.state.status === "ended") return challenge;
   return {
     ...challenge,
     state: {

@@ -72,7 +72,7 @@ export function createChatRoutes(engine: ArenaEngine = defaultEngine) {
         // If the game has already ended, send game_ended event with state + profiles
         const challengeId = fromChallengeChannel(uuid) ?? uuid;
         const challenge = await engine.getChallenge(challengeId);
-        if (challenge?.state?.gameEnded) {
+        if (challenge?.state?.status === "ended") {
           const identities = challenge.state.playerIdentities ?? {};
           const userIds = Object.values(identities).filter(Boolean);
           const profiles = userIds.length > 0

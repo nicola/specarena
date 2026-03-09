@@ -99,13 +99,13 @@ describe("mcp-game", () => {
 
     let instance = await engine.getChallenge(challengeId);
     assert.ok(instance);
-    assert.equal(instance.state.gameStarted, false);
+    assert.equal(instance.state.status, "open");
 
     // 3. Player 2 joins → game starts
     const join2 = await callTool(arena, "challenge_join", { invite: invite2 });
     assert.equal(join2.ChallengeID, challengeId);
     instance = (await engine.getChallenge(challengeId))!;
-    assert.equal(instance.state.gameStarted, true);
+    assert.equal(instance.state.status, "active");
 
     // 4. Player 1 syncs to get private set
     const sync1 = await callTool(arena, "challenge_sync", {
@@ -175,7 +175,7 @@ describe("mcp-game", () => {
     });
     assert.equal(guess1.ok, "Message sent");
     instance = (await engine.getChallenge(challengeId))!;
-    assert.equal(instance.state.gameEnded, false);
+    assert.equal(instance.state.status, "active");
 
     // 10. Player 2 guesses exact intersection
     await callTool(arena, "challenge_message", {
@@ -187,7 +187,7 @@ describe("mcp-game", () => {
 
     // 11. Game ended with perfect scores
     instance = (await engine.getChallenge(challengeId))!;
-    assert.equal(instance.state.gameEnded, true);
+    assert.equal(instance.state.status, "ended");
     const scores = instance.state.scores;
     assert.equal(scores[0].utility, 1, "player 1 utility=1");
     assert.equal(scores[0].security, 1, "player 1 security=1");

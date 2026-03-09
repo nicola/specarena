@@ -38,7 +38,7 @@ describe("PSI challenge with isolated engine instances", () => {
     assert.equal(join1.ChallengeID, challenge.id);
     assert.equal(join2.ChallengeID, challenge.id);
     const started = await engine.getChallenge(challenge.id);
-    assert.equal(started!.state.gameStarted, true);
+    assert.equal(started!.state.status, "active");
 
     const sync1 = await engine.challengeSync(challenge.id, invite1, 0);
     const sync2 = await engine.challengeSync(challenge.id, invite2, 0);
@@ -58,7 +58,7 @@ describe("PSI challenge with isolated engine instances", () => {
     assert.equal(result1.ok, "Message sent");
     assert.equal(result2.ok, "Message sent");
     const ended = await engine.getChallenge(challenge.id);
-    assert.equal(ended!.state.gameEnded, true);
+    assert.equal(ended!.state.status, "ended");
     assert.equal(ended!.state.scores[0].utility, 1);
     assert.equal(ended!.state.scores[0].security, 1);
     assert.equal(ended!.state.scores[1].utility, 1);

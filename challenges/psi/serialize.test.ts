@@ -102,7 +102,7 @@ describe("PsiChallenge serialize/restore round-trip", () => {
     const operator = createOperator();
 
     // Simulate a mid-game state
-    operator.state.gameStarted = true;
+    operator.state.status = "active";
     operator.state.players = ["inv_a", "inv_b"];
     operator.state.playerIdentities = { inv_a: "user-1", inv_b: "user-2" };
     operator.state.scores[0] = { security: 1, utility: 0.5 };
@@ -119,7 +119,7 @@ describe("PsiChallenge serialize/restore round-trip", () => {
       ...serialized,
     } as Challenge);
 
-    assert.equal(restored.state.gameStarted, true);
+    assert.equal(restored.state.status, "active");
     assert.deepEqual(restored.state.players, ["inv_a", "inv_b"]);
     assert.deepEqual(restored.state.playerIdentities, { inv_a: "user-1", inv_b: "user-2" });
     assert.equal(restored.state.scores[0].security, 1);
@@ -130,7 +130,7 @@ describe("PsiChallenge serialize/restore round-trip", () => {
     const operator = createOperator();
 
     // Simulate joining
-    operator.state.gameStarted = true;
+    operator.state.status = "active";
     operator.state.players = ["inv_a", "inv_b"];
 
     // Simulate a guess by directly setting it

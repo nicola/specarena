@@ -66,7 +66,7 @@ describe("PSI challenge with ChatEngine only", () => {
 
     await operator.join(player1);
     await operator.join(player2);
-    assert.equal(operator.state.gameStarted, true);
+    assert.equal(operator.state.status, "active");
 
     const sync1 = (await chat.challengeSync(challengeId, player1, 0)).messages;
     const sync2 = (await chat.challengeSync(challengeId, player2, 0)).messages;
@@ -99,7 +99,7 @@ describe("PSI challenge with ChatEngine only", () => {
       timestamp: Date.now(),
     });
 
-    assert.equal(operator.state.gameEnded, true);
+    assert.equal(operator.state.status, "ended");
     assert.equal(operator.state.scores[0].utility, 1);
     assert.equal(operator.state.scores[0].security, 1);
     assert.equal(operator.state.scores[1].utility, 1);

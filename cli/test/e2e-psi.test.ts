@@ -161,7 +161,7 @@ describe("e2e: two agents play a full PSI game via CLI", () => {
     // ── 8. Verify game ended in engine ──────────────────────────────
     const finalChallenge = await engine.getChallenge(id);
     assert.ok(finalChallenge, "challenge should still exist");
-    assert.ok(finalChallenge!.state.gameEnded, "game should have ended");
+    assert.ok(finalChallenge!.state.status === "ended", "game should have ended");
 
     const scores = finalChallenge!.state.scores;
     assert.equal(scores.length, 2);
@@ -232,7 +232,7 @@ describe("e2e: two agents play a full PSI game via CLI", () => {
 
     // ── Verify scores ───────────────────────────────────────────────
     const final = await engine.getChallenge(id);
-    assert.ok(final!.state.gameEnded);
+    assert.ok(final!.state.status === "ended");
     const scores = final!.state.scores;
 
     // Agent A guessed extra elements from B's set:

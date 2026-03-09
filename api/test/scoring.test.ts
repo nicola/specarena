@@ -1,6 +1,7 @@
 import { describe, it, before, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { ScoringModule } from "@arena/engine/scoring";
+import { ChallengeStatus } from "@arena/engine/types";
 import type { GameResult, EngineConfig, ScoringEntry } from "@arena/engine/scoring/types";
 import { strategies, globalStrategies } from "@arena/scoring";
 import { createTestAppFromEnv, type TestApp } from "./helpers/create-app";
@@ -198,8 +199,7 @@ describe("scoring", () => {
         invites: ["inv_1", "inv_2"],
         gameState: {},
         state: {
-          gameStarted: true,
-          gameEnded: false,
+          status: ChallengeStatus.Active,
           scores: [],
           players: [],
           playerIdentities: {},
@@ -217,8 +217,7 @@ describe("scoring", () => {
         invites: ["inv_1", "inv_2"],
         gameState: {},
         state: {
-          gameStarted: true,
-          gameEnded: true,
+          status: ChallengeStatus.Ended,
           scores: [{ security: 1, utility: 1 }],
           players: ["inv_1"],
           playerIdentities: { inv_1: "user-1" },
@@ -381,7 +380,7 @@ describe("scoring", () => {
       await engine.challengeMessage(challengeId, invites[1], "guess", guessContent);
 
       const updated = await engine.getChallenge(challengeId);
-      assert.equal(updated!.state.gameEnded, true);
+      assert.equal(updated!.state.status, "ended");
 
       await engine.scoring!.waitForIdle();
 
@@ -436,7 +435,7 @@ describe("scoring", () => {
         await engine.challengeMessage(challengeId, invites[0], "guess", intersection.join(", "));
         await engine.challengeMessage(challengeId, invites[1], "guess", intersection.join(", "));
         const updated = await engine.getChallenge(challengeId);
-        assert.equal(updated!.state.gameEnded, true);
+        assert.equal(updated!.state.status, "ended");
       }
 
       await engine.scoring!.waitForIdle();

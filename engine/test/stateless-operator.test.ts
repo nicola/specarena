@@ -77,7 +77,7 @@ describe("Stateless operator pattern", () => {
 
     const afterBothJoined = await engine.getChallenge(challenge.id);
     assert.equal(afterBothJoined!.state.players.length, 2);
-    assert.equal(afterBothJoined!.state.gameStarted, true);
+    assert.equal(afterBothJoined!.state.status, "active");
     // Verify both invites are present (second join didn't lose the first)
     assert.ok(afterBothJoined!.state.players.includes(invite1));
     assert.ok(afterBothJoined!.state.players.includes(invite2));
@@ -111,7 +111,7 @@ describe("Stateless operator pattern", () => {
 
     // Verify mid-game state persisted correctly
     const midGame = await engine.getChallenge(challenge.id);
-    assert.equal(midGame!.state.gameEnded, false);
+    assert.equal(midGame!.state.status, "active");
     assert.equal(midGame!.state.scores[0].utility, 1);
     const midGs = midGame!.gameState as { guesses: number[][] };
     assert.ok(midGs.guesses[0].length > 0, "player 0 guess should be stored");
@@ -121,7 +121,7 @@ describe("Stateless operator pattern", () => {
     await engine.challengeMessage(challenge.id, invite2, "guess", guess);
 
     const endGame = await engine.getChallenge(challenge.id);
-    assert.equal(endGame!.state.gameEnded, true);
+    assert.equal(endGame!.state.status, "ended");
     assert.equal(endGame!.state.scores[0].utility, 1);
     assert.equal(endGame!.state.scores[1].utility, 1);
   });

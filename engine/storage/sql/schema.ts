@@ -14,8 +14,7 @@ export interface ChallengesTable {
   name: string;
   challenge_type: string;
   created_at: ColumnType<Date, Date | string, Date | string>;
-  game_started: boolean;
-  game_ended: boolean;
+  status: string;
   completed_at: ColumnType<Date | null, Date | string | null, Date | string | null>;
   game_state: ColumnType<unknown, string, string>; // jsonb — operator-specific blob
   game_category: string;

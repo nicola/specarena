@@ -68,8 +68,7 @@ describe("Stale challenge garbage collection", () => {
 
     const instance = await engine.getChallenge(challenge.id);
     assert.ok(instance);
-    assert.equal(instance.state.gameStarted, true);
-    assert.equal(instance.state.gameEnded, false);
+    assert.equal(instance.state.status, "active");
 
     const removed = await engine.pruneStaleChallenges(futureNow());
     assert.equal(removed, 1);
@@ -84,7 +83,7 @@ describe("Stale challenge garbage collection", () => {
 
     const ended = await engine.getChallenge(challenge.id);
     assert.ok(ended);
-    assert.equal(ended.state.gameEnded, true);
+    assert.equal(ended.state.status, "ended");
 
     await engine.pruneStaleChallenges(futureNow());
 

@@ -2,6 +2,7 @@ import { describe, it, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { createTestDb, resetTestDb, type TestStorage } from "./helpers/test-db";
 import type { Challenge } from "../types";
+import { ChallengeStatus } from "../types";
 import { ScoringModule } from "../scoring/index";
 import type { GameResult, EngineConfig, ScoringEntry } from "../scoring/types";
 import { SqlScoringStorageAdapter } from "@arena/scoring/sql";
@@ -16,8 +17,7 @@ function mockChallenge(id: string, invites: string[]): Challenge {
     invites,
     gameState: {},
     state: {
-      gameStarted: false,
-      gameEnded: false,
+      status: ChallengeStatus.Open,
       scores: [],
       players: [],
       playerIdentities: {},
@@ -145,7 +145,7 @@ describe("SQL-specific behavior", () => {
       const c = mockChallenge("c1", ["inv_a", "inv_b"]);
       c.state.players = ["inv_a", "inv_b"];
       c.state.scores = [{ security: 0.8, utility: 0.6 }, { security: 0.3, utility: 0.9 }];
-      c.state.gameEnded = true;
+      c.state.status = "ended";
       await testDb.arena.setChallenge(c);
 
       // Verify raw game_scores rows
@@ -193,7 +193,7 @@ describe("SQL-specific behavior", () => {
       const c = mockChallenge("c1", ["inv_a", "inv_b"]);
       c.state.players = ["inv_a", "inv_b"];
       c.state.scores = [{ security: 0.5, utility: 0.5 }, { security: 0.5, utility: 0.5 }];
-      c.state.gameStarted = true;
+      c.state.status = "active";
       // gameEnded is still false
       await testDb.arena.setChallenge(c);
 
@@ -212,7 +212,7 @@ describe("SQL-specific behavior", () => {
     it("cascade-deletes game_scores when challenge is deleted", async () => {
       const c = mockChallenge("c1", ["inv_a", "inv_b"]);
       c.state.players = ["inv_a", "inv_b"];
-      c.state.gameEnded = true;
+      c.state.status = "ended";
       c.state.scores = [{ security: 1, utility: 1 }, { security: 0, utility: 0 }];
       await testDb.arena.setChallenge(c);
       await testDb.arena.deleteChallenge("c1");
@@ -234,7 +234,7 @@ describe("SQL-specific behavior", () => {
         { from: 0, to: 1, type: "security_breach" },
         { from: 1, to: 0, type: "data_leak" },
       ];
-      c.state.gameEnded = true;
+      c.state.status = "ended";
       await testDb.arena.setChallenge(c);
 
       // Verify raw scoring_attributions rows
@@ -273,7 +273,7 @@ describe("SQL-specific behavior", () => {
     it("updates attributions when challenge is re-saved", async () => {
       const c = mockChallenge("c1", ["inv_a", "inv_b"]);
       c.state.players = ["inv_a", "inv_b"];
-      c.state.gameEnded = true;
+      c.state.status = "ended";
       c.state.attributions = [{ from: 0, to: 1, type: "breach" }];
       await testDb.arena.setChallenge(c);
 
@@ -294,7 +294,7 @@ describe("SQL-specific behavior", () => {
     it("cascade-deletes attributions when challenge is deleted", async () => {
       const c = mockChallenge("c1", ["inv_a", "inv_b"]);
       c.state.players = ["inv_a", "inv_b"];
-      c.state.gameEnded = true;
+      c.state.status = "ended";
       c.state.attributions = [{ from: 0, to: 1, type: "breach" }];
       await testDb.arena.setChallenge(c);
       await testDb.arena.deleteChallenge("c1");
