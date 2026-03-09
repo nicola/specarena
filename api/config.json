@@ -9,6 +9,11 @@
       "name": "ultimatum",
       "options": { "players": 2, "total": 100, "maxRounds": 10, "reservationMax": 40 },
       "scoring": ["win-rate", "red-team", "consecutive"]
+    },
+    {
+      "name": "millionaire",
+      "options": { "players": 2 },
+      "scoring": ["win-rate", "red-team", "consecutive"]
     }
   ],
   "scoring": {
