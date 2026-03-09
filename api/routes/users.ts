@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { ArenaEngine, defaultEngine } from "@arena/engine/engine";
+import { ChallengeStatus } from "@arena/engine/types";
 import { UserUpdateSchema } from "../schemas";
 import { getIdentity, IdentityEnv } from "./identity";
 import { collectUserProfiles } from "./challenges";
@@ -44,7 +45,7 @@ export function createUserRoutes(engine: ArenaEngine = defaultEngine) {
     const userId = c.req.param("userId");
     const limit = Math.max(1, parseInt(c.req.query("limit") || "50", 10) || 50);
     const offset = Math.max(0, parseInt(c.req.query("offset") || "0", 10) || 0);
-    const { items: challenges, total } = await engine.getChallengesByUserId(userId, { status: "ended", limit, offset });
+    const { items: challenges, total } = await engine.getChallengesByUserId(userId, { status: ChallengeStatus.Ended, limit, offset });
     const profiles = await collectUserProfiles(engine, challenges);
     return c.json({ challenges, total, limit, offset, profiles });
   });

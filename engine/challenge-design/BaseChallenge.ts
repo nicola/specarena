@@ -57,7 +57,7 @@ export abstract class BaseChallenge<TGameState> implements ChallengeOperator<TGa
   // Single entrypoint for challenge actions. Routes by message.type to the
   // handler registered with `handle(...)`.
   async message(message: ChatMessage): Promise<void> {
-    if (this.state.status !== "active") {
+    if (this.state.status !== ChallengeStatus.Active) {
       await this.send("ERR_GAME_NOT_RUNNING: Game not running.", message.from);
       return;
     }

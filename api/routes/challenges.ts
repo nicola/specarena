@@ -58,8 +58,8 @@ export function createChallengeRoutes(engine: ArenaEngine = defaultEngine) {
       const limit = Math.min(Math.max(1, parseInt(c.req.query("limit") || "10", 10) || 10), 50);
       const offset = Math.max(0, parseInt(c.req.query("offset") || "0", 10) || 0);
       const statusParam = c.req.query("status");
-      const status = (["open", "active", "ended"] as const).includes(statusParam as any)
-        ? (statusParam as "open" | "active" | "ended")
+      const status = (Object.values(ChallengeStatus) as string[]).includes(statusParam ?? "")
+        ? (statusParam as ChallengeStatus)
         : undefined;
       const { items, total } = await engine.getChallengesByType(name, { limit, offset, status });
       const profiles = await collectUserProfiles(engine, items);

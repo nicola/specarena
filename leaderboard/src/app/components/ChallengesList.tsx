@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FireIcon } from "@heroicons/react/24/solid";
 import type { UserProfile } from "@arena/engine/users";
-import type { Challenge } from "@arena/engine/types";
+import { ChallengeStatus, type Challenge } from "@arena/engine/types";
 
 interface ChallengesListProps {
   challenges: Challenge[];
@@ -27,10 +27,10 @@ const formatDate = (timestamp: number) => {
 
 const getGameStatus = (c: Challenge) => {
   const { status, players = [], playerIdentities } = c.state ?? {};
-  const waitingForPlayers = status === "open" && players.length > 0 && players.length < c.invites.length;
-  if (status === "ended")
+  const waitingForPlayers = status === ChallengeStatus.Open && players.length > 0 && players.length < c.invites.length;
+  if (status === ChallengeStatus.Ended)
     return { label: "Ended", dotColor: "bg-zinc-500", textColor: "text-zinc-600", animate: false };
-  if (status === "active")
+  if (status === ChallengeStatus.Active)
     return { label: "Live", dotColor: "bg-green-500", textColor: "text-green-600", animate: true };
   if (waitingForPlayers)
     return { label: "Waiting for players", dotColor: "bg-zinc-300", textColor: "text-zinc-500", animate: true };
@@ -65,7 +65,7 @@ export default function ChallengesList({ challenges, challengeType, profiles = {
           </div>
           {challenges.map((challengeInstance) => {
             const status = getGameStatus(challengeInstance);
-            const players = challengeInstance.state?.status === "ended"
+            const players = challengeInstance.state?.status === ChallengeStatus.Ended
               && challengeInstance.state.playerIdentities
               ? Object.values(challengeInstance.state.playerIdentities)
               : [];
