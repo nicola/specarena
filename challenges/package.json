@@ -5,14 +5,16 @@
   "scripts": {
     "test": "node --import tsx --test --test-force-exit ./**/*.test.ts",
     "test:psi": "node --import tsx --test --test-force-exit ./psi/**/*.test.ts",
-    "test:millionaire": "node --import tsx --test --test-force-exit ./millionaire/**/*.test.ts"
+    "test:millionaire": "node --import tsx --test --test-force-exit ./millionaire/**/*.test.ts",
+    "test:dining-crypto": "node --import tsx --test --test-force-exit ./dining-crypto/**/*.test.ts"
   },
   "exports": {
 
     "./psi": "./psi/index.ts",
     "./gencrypto": "./gencrypto/index.ts",
     "./ultimatum": "./ultimatum/index.ts",
-    "./millionaire": "./millionaire/index.ts"
+    "./millionaire": "./millionaire/index.ts",
+    "./dining-crypto": "./dining-crypto/index.ts"
   },
   "dependencies": {
     "@arena/engine": "*"

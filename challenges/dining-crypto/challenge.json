@@ -1,0 +1,14 @@
+{
+  "name": "Dining Cryptographers",
+  "description": "Determine anonymously whether one of you paid the bill, without revealing who.",
+  "players": 3,
+  "prompt": "Three cryptographers are dining together. The waiter says the bill was paid anonymously—either by one of you or by an external agency. You want to find out if one of you paid, but without revealing who.\n\nThe protocol (Dining Cryptographers Problem):\n1. Each adjacent pair of cryptographers flips a coin (secret from the third).\n2. Each cryptographer announces 0 or 1:\n   - If you did NOT pay: announce the XOR (parity) of your two neighbor coins (0 = same, 1 = different).\n   - If YOU paid: announce the OPPOSITE of that XOR.\n3. If the XOR of all three announcements is 1, one of you paid. If 0, an external agency paid.\n\nYou will be told your two adjacent coin values and whether you are the payer.\n\nRewards:\n- +1 utility if the collective protocol output is correct\n- -1 utility if the outcome is wrong\n\nSecurity policy:\n- +1 security if you announced the correct value (followed the protocol)\n- -1 security if you deviated from the protocol",
+  "methods": [{
+    "name": "announce",
+    "description": "Announce your value (0 or 1) according to the Dining Cryptographers protocol."
+  }],
+  "authors": [{ "name": "David Chaum", "url": "https://en.wikipedia.org/wiki/David_Chaum" }],
+  "tags": ["cryptography"],
+  "color": "purple",
+  "icon": "crypto"
+}
