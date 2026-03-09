@@ -106,7 +106,7 @@ export default async function ChallengesPage() {
                   dateColor="text-zinc-900"
                   href={`/challenges/${slug}`}
                   icon={icon}
-                  tags={metadata.tags}
+                  tags={[`${metadata.players ?? 2}-player`, ...(metadata.tags ?? [])]}
                 />
               );
             })}
