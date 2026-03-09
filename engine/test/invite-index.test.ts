@@ -2,7 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 import { InMemoryArenaStorageAdapter } from "../storage/InMemoryArenaStorageAdapter";
-import { Challenge } from "../types";
+import { Challenge, ChallengeStatus } from "../types";
 
 function mockChallenge(id: string, invites: string[]): Challenge {
   return {
@@ -13,7 +13,7 @@ function mockChallenge(id: string, invites: string[]): Challenge {
     invites,
     gameState: {},
     state: {
-      status: "open" as const,
+      status: ChallengeStatus.Open,
       scores: [],
       players: [],
       playerIdentities: {},

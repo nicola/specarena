@@ -7,6 +7,7 @@ import { InMemoryUserStorageAdapter } from "../users/index";
 import { createTestDb, resetTestDb, type TestStorage } from "./helpers/test-db";
 import type { ArenaStorageAdapter, ChatStorageAdapter, UserStorageAdapter } from "../storage/types";
 import type { Challenge } from "../types";
+import { ChallengeStatus } from "../types";
 
 function mockChallenge(id: string, invites: string[], overrides?: Partial<Challenge>): Challenge {
   return {
@@ -17,7 +18,7 @@ function mockChallenge(id: string, invites: string[], overrides?: Partial<Challe
     invites,
     gameState: {},
     state: {
-      status: "open" as const,
+      status: ChallengeStatus.Open,
       scores: [],
       players: [],
       playerIdentities: {},

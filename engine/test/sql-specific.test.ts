@@ -2,6 +2,7 @@ import { describe, it, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { createTestDb, resetTestDb, type TestStorage } from "./helpers/test-db";
 import type { Challenge } from "../types";
+import { ChallengeStatus } from "../types";
 import { ScoringModule } from "../scoring/index";
 import type { GameResult, EngineConfig, ScoringEntry } from "../scoring/types";
 import { SqlScoringStorageAdapter } from "@arena/scoring/sql";
@@ -16,7 +17,7 @@ function mockChallenge(id: string, invites: string[]): Challenge {
     invites,
     gameState: {},
     state: {
-      status: "open" as const,
+      status: ChallengeStatus.Open,
       scores: [],
       players: [],
       playerIdentities: {},

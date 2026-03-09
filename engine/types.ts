@@ -19,7 +19,11 @@ export interface ChatMessage {
 import type { Score, Attribution } from "@arena/scoring";
 export type { Score, Attribution };
 
-export type ChallengeStatus = "open" | "active" | "ended";
+export enum ChallengeStatus {
+  Open = "open",
+  Active = "active",
+  Ended = "ended",
+}
 
 export interface ChallengeOperatorState {
   status: ChallengeStatus;

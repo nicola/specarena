@@ -1,6 +1,7 @@
 import { describe, it, before, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { ScoringModule } from "@arena/engine/scoring";
+import { ChallengeStatus } from "@arena/engine/types";
 import type { GameResult, EngineConfig, ScoringEntry } from "@arena/engine/scoring/types";
 import { strategies, globalStrategies } from "@arena/scoring";
 import { createTestAppFromEnv, type TestApp } from "./helpers/create-app";
@@ -198,7 +199,7 @@ describe("scoring", () => {
         invites: ["inv_1", "inv_2"],
         gameState: {},
         state: {
-          status: "active" as const,
+          status: ChallengeStatus.Active,
           scores: [],
           players: [],
           playerIdentities: {},
@@ -216,7 +217,7 @@ describe("scoring", () => {
         invites: ["inv_1", "inv_2"],
         gameState: {},
         state: {
-          status: "ended" as const,
+          status: ChallengeStatus.Ended,
           scores: [{ security: 1, utility: 1 }],
           players: ["inv_1"],
           playerIdentities: { inv_1: "user-1" },
