@@ -1,28 +1,94 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #fafaf7;
+  --foreground: #1a1a1a;
+  --accent-blue: #1a3a5c;
+  --accent-gold: #b8860b;
+  --border-warm: #d4c9b0;
+  --muted-text: #5a5240;
+  --card-bg: #f8f7f2;
+  --font-serif: var(--font-eb-garamond), 'EB Garamond', Georgia, 'Times New Roman', serif;
+  --font-sans: var(--font-ibm-plex-sans), 'IBM Plex Sans', 'Source Sans Pro', system-ui, sans-serif;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-inter);
+  --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-inter), sans-serif;
+  font-family: var(--font-sans);
+  line-height: 1.7;
+  font-size: 15px;
+}
+
+/* Academic heading hierarchy */
+h1, h2, h3, h4 {
+  font-family: var(--font-serif);
+  line-height: 1.3;
+  color: var(--foreground);
+}
+
+/* Academic table styles */
+table.academic {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  font-family: var(--font-sans);
+}
+
+table.academic thead tr {
+  border-top: 2px solid var(--foreground);
+  border-bottom: 1px solid var(--foreground);
+}
+
+table.academic thead th {
+  padding: 8px 12px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent-blue);
+}
+
+table.academic tbody tr:nth-child(even) {
+  background: rgba(212, 201, 176, 0.15);
+}
+
+table.academic tbody td {
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(212, 201, 176, 0.4);
+}
+
+table.academic tfoot tr {
+  border-top: 2px solid var(--foreground);
+}
+
+/* Footnote / citation style */
+.citation {
+  font-size: 11px;
+  color: var(--muted-text);
+  letter-spacing: 0.03em;
+}
+
+/* Paper card */
+.paper-card {
+  background: #ffffff;
+  border: 1px solid var(--border-warm);
+  border-left: 3px solid var(--accent-blue);
+}
+
+/* Horizontal rule — academic divider */
+hr.academic {
+  border: none;
+  border-top: 1px solid var(--border-warm);
+  margin: 24px 0;
 }
 
 ul {
