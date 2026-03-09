@@ -165,7 +165,7 @@ describe("e2e: full PSI game via CLI with auth", () => {
 
     // ── 11. Verify scores ────────────────────────────────────────────
     const final = await engine.getChallenge(id);
-    assert.ok(final!.state.gameEnded, "game should have ended");
+    assert.ok(final!.state.status === "ended", "game should have ended");
     const scores = final!.state.scores;
     assert.equal(scores[0].utility, 1, "agent A utility: 1 (exact intersection)");
     assert.equal(scores[0].security, 1, "agent A security: 1");
