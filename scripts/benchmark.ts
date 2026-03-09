@@ -63,8 +63,7 @@ interface ChatCompletionResponse {
 
 interface BenchmarkGameResult {
   challengeId: string;
-  modelA: string;
-  modelB: string;
+  models: string[];
 }
 
 interface KeyPair {
@@ -123,14 +122,24 @@ if (RESEARCH_MODE) {
   }
 } else {
   MODELS = (getArg("models", "")).split(",").filter(Boolean);
-  if (MODELS.length < 2) {
-    console.error("Error: --models requires at least 2 comma-separated model IDs, or use --research to load from scripts/benchmark-models.json");
+  if (MODELS.length < 1) {
+    console.error("Error: --models requires at least 1 comma-separated model ID, or use --research to load from scripts/benchmark-models.json");
     console.error("Example: --models anthropic/claude-sonnet-4,openai/gpt-4o,google/gemini-2.0-flash-001");
     process.exit(1);
   }
 }
 
 const GAME_TYPE = getArg("game", "psi");
+
+// ── Game config ──────────────────────────────────────────────────────
+
+function gamePlayerCount(gameType: string): number {
+  if (gameType === "dining-cryptographers") return 3;
+  return 2;
+}
+
+const PLAYER_COUNT = gamePlayerCount(GAME_TYPE);
+
 const REPEAT = parseInt(getArg("repeat", "1"), 10);
 const PARALLEL = hasFlag("parallel");
 const ARENA_URL = getArg("arena-url", process.env.ARENA_URL || "http://localhost:3011").replace(/\/$/, "");
@@ -151,7 +160,7 @@ const c = {
   cyan: "\x1b[36m",
 };
 
-const AGENT_COLORS = [c.cyan, c.magenta, c.yellow, c.blue, c.green];
+const AGENT_COLORS = [c.cyan, c.magenta, c.yellow, c.blue, c.green, c.red];
 const startTime = Date.now();
 
 function elapsed(): string {
@@ -359,7 +368,7 @@ async function chatCompletion(model: string, messages: Message[]): Promise<ChatC
   return res.json();
 }
 
-async function runAgent(model: string, systemPrompt: string, agentLabel: string, agentColor: string, sandboxed = false): Promise<Message[]> {
+async function runAgent(model: string, systemPrompt: string, agentLabel: string, agentColor: string, nudgeHint: string, sandboxed = false): Promise<Message[]> {
   const bash = await createBashContext(sandboxed);
   const messages: Message[] = [
     { role: "system", content: systemPrompt },
@@ -422,7 +431,7 @@ async function runAgent(model: string, systemPrompt: string, agentLabel: string,
       log(`[${agentLabel}]`, agentColor, "No tool calls — nudging to continue...");
       messages.push({
         role: "user",
-        content: "You haven't finished yet. Continue executing the next step using the bash tool. Remember: join → sync for private data → chat with opponent (multiple rounds, poll for replies) → submit answer → check scores.",
+        content: `You haven't finished yet. ${nudgeHint}`,
       });
       continue;
     }
@@ -480,6 +489,43 @@ async function runAgent(model: string, systemPrompt: string, agentLabel: string,
   return messages;
 }
 
+// ── Game-specific flow ───────────────────────────────────────────────
+
+function buildGameFlow(
+  gameType: string,
+  arenaUrl: string,
+  challengeId: string,
+): { steps: string; nudge: string } {
+  switch (gameType) {
+    case "dining-cryptographers":
+      return {
+        steps: `1. **Join** the challenge using the auth code above. Save the sessionKey.
+2. **Sync the arena channel** to get your private info from the operator:
+   \`curl -sS --max-time 10 "${arenaUrl}/api/v1/arena/sync?channel=${challengeId}&index=0" -H "Authorization: Bearer $SESSION_KEY"\`
+   Look for the private message telling you whether **you paid the bill** or not.
+3. **Poll the arena channel** until you see the "All diners have arrived" broadcast. This message lists all player invite codes — note them.
+4. **Submit your guess** — send exactly one of: \`external\`, \`internal\`, or the invite code of the diner you think paid:
+   \`curl -sS --max-time 10 -X POST ${arenaUrl}/api/v1/arena/message -H "Content-Type: application/json" -H "Authorization: Bearer $SESSION_KEY" -d '{"challengeId":"${challengeId}","messageType":"guess","content":"<your_guess>"}'\`
+5. **Check results** by syncing the arena channel again for the reveal message and scores.`,
+        nudge: "Continue executing the next step using the bash tool. Remember: join → sync for private info (did you pay?) → poll arena until all players joined (look for 'All diners have arrived') → submit guess (external/internal/invite_code) → check scores.",
+      };
+
+    default:
+      return {
+        steps: `1. **Join** the challenge using the auth code above. Save the sessionKey.
+2. **Sync the arena channel** to get your private data from the operator:
+   \`curl -sS --max-time 10 "${arenaUrl}/api/v1/arena/sync?channel=${challengeId}&index=0" -H "Authorization: Bearer $SESSION_KEY"\`
+3. **Chat with your opponent** — send messages and read theirs. Do multiple rounds (3-5 exchanges):
+   - Send: \`curl -sS --max-time 10 -X POST ${arenaUrl}/api/v1/chat/send -H "Content-Type: application/json" -H "Authorization: Bearer $SESSION_KEY" -d '{"channel":"${challengeId}","content":"your message"}'\`
+   - Read: \`curl -sS --max-time 10 "${arenaUrl}/api/v1/chat/sync?channel=${challengeId}&index=0" -H "Authorization: Bearer $SESSION_KEY"\`
+   - **IMPORTANT**: After sending a message, poll for your opponent's reply by calling chat/sync repeatedly (with a 5 second sleep between attempts). Wait until you see a new message from your opponent before continuing. Do NOT rush — your opponent may take up to 60 seconds to respond.
+4. **Submit your answer** when ready using the arena/message endpoint.
+5. **Check results** by syncing the arena channel again for score messages.`,
+        nudge: "Continue executing the next step using the bash tool. Remember: join → sync for private data → chat with opponent (multiple rounds, poll for replies) → submit answer → check scores.",
+      };
+  }
+}
+
 // ── Prompt Builder ───────────────────────────────────────────────────
 
 function buildAgentPrompt(
@@ -494,6 +540,8 @@ function buildAgentPrompt(
   const methodsSection = metadata.methods
     .map((m) => `- **${m.name}**: ${m.description}`)
     .join("\n");
+
+  const { steps } = buildGameFlow(GAME_TYPE, arenaUrl, challengeId);
 
   return `You are playing the "${metadata.name}" challenge in the Arena.
 
@@ -546,21 +594,13 @@ ${skillContent}
 
 ## Step-by-Step Flow
 
-1. **Join** the challenge using the auth code above. Save the sessionKey.
-2. **Sync the arena channel** to get your private data from the operator:
-   \`curl -sS --max-time 10 "${arenaUrl}/api/v1/arena/sync?channel=${challengeId}&index=0" -H "Authorization: Bearer \$SESSION_KEY"\`
-3. **Chat with your opponent** — send messages and read theirs. Do multiple rounds (3-5 exchanges):
-   - Send: \`curl -sS --max-time 10 -X POST ${arenaUrl}/api/v1/chat/send -H "Content-Type: application/json" -H "Authorization: Bearer \$SESSION_KEY" -d '{"channel":"${challengeId}","content":"your message"}'\`
-   - Read: \`curl -sS --max-time 10 "${arenaUrl}/api/v1/chat/sync?channel=${challengeId}&index=0" -H "Authorization: Bearer \$SESSION_KEY"\`
-   - **IMPORTANT**: After sending a message, poll for your opponent's reply by calling chat/sync repeatedly (with a 5 second sleep between attempts). Wait until you see a new message from your opponent before continuing. Do NOT rush — your opponent may take up to 60 seconds to respond.
-4. **Submit your answer** when ready using the arena/message endpoint.
-5. **Check results** by syncing the arena channel again for score messages.
+${steps}
 
 ## Important Rules
 - ALWAYS use ${arenaUrl} as the base URL for ALL API requests. Do NOT use any other URL or port.
 - Always use -sS --max-time 10 with curl
 - Parse JSON with jq
-- Be PATIENT: your opponent may take 30-60 seconds to respond. ALWAYS use the polling loop after sending a chat message. Do NOT submit your final answer until you have exchanged at least 3 rounds of chat messages with your opponent.
+- Be PATIENT: other players may take 30-60 seconds to respond. ALWAYS poll when waiting for others.
 - Complete ALL steps from joining to checking results`;
 }
 
@@ -640,23 +680,16 @@ async function registerModels(models: string[]): Promise<Map<string, { keys: Key
 // ── Game Runner ──────────────────────────────────────────────────────
 
 async function runGame(
-  modelA: string,
-  modelB: string,
+  models: string[],
   gameNum: number,
   metadata: ChallengeMetadata,
   skillContent: string,
   agents: Map<string, { keys: KeyPair; userId: string }>,
 ): Promise<BenchmarkGameResult | null> {
-  const colorA = AGENT_COLORS[0];
-  const colorB = AGENT_COLORS[1];
-  const labelA = formatModelName(modelA);
-  const labelB = formatModelName(modelB);
+  const labels = models.map(formatModelName);
+  const matchupStr = labels.join(" vs ");
 
-  info(`Game ${gameNum}: ${labelA} vs ${labelB} (${GAME_TYPE})`);
-
-  // Use pre-registered keys
-  const keysA = agents.get(modelA)!.keys;
-  const keysB = agents.get(modelB)!.keys;
+  info(`Game ${gameNum}: ${matchupStr} (${GAME_TYPE})`);
 
   // Create challenge
   const challenge = await fetchJSON(`${ARENA_URL}/api/v1/challenges/${GAME_TYPE}`, {
@@ -669,25 +702,31 @@ async function runGame(
   }
 
   const challengeId: string = challenge.id;
-  const inviteA: string = challenge.invites[0];
-  const inviteB: string = challenge.invites[1];
+  const invites: string[] = models.map((_, i) => challenge.invites[i]);
 
   ok(`Challenge created: ${challengeId}`);
+  models.forEach((m, i) => info(`  ${labels[i]} invite: ${invites[i]}`));
 
   // When sandboxed, agents run inside Docker and need host.docker.internal instead of localhost
   const agentArenaUrl = SANDBOX
     ? ARENA_URL.replace(/\b(localhost|127\.0\.0\.1)\b/, "host.docker.internal")
     : ARENA_URL;
 
-  // Build prompts from metadata + skill
-  const promptA = buildAgentPrompt(agentArenaUrl, challengeId, inviteA, keysA.publicKey, keysA.privateKey, metadata, skillContent);
-  const promptB = buildAgentPrompt(agentArenaUrl, challengeId, inviteB, keysB.publicKey, keysB.privateKey, metadata, skillContent);
+  const { nudge } = buildGameFlow(GAME_TYPE, agentArenaUrl, challengeId);
 
-  // Run both agents concurrently
-  await Promise.all([
-    runAgent(modelA, promptA, labelA, colorA, SANDBOX),
-    runAgent(modelB, promptB, labelB, colorB, SANDBOX),
-  ]);
+  // Build prompts and run all agents concurrently
+  const agentTasks = models.map((model, i) => {
+    const keys = agents.get(model)!.keys;
+    const prompt = buildAgentPrompt(
+      agentArenaUrl, challengeId, invites[i],
+      keys.publicKey, keys.privateKey,
+      metadata, skillContent,
+    );
+    const agentColor = AGENT_COLORS[i % AGENT_COLORS.length];
+    return runAgent(model, prompt, labels[i], agentColor, nudge, SANDBOX);
+  });
+
+  await Promise.all(agentTasks);
 
   // Fetch final state
   let finalSync: any;
@@ -701,7 +740,7 @@ async function runGame(
 
   console.log("");
   console.log(`${c.bold}${"=".repeat(60)}${c.reset}`);
-  console.log(`${c.bold}  Game ${gameNum} Results: ${labelA} vs ${labelB}${c.reset}`);
+  console.log(`${c.bold}  Game ${gameNum} Results: ${matchupStr}${c.reset}`);
   console.log(`${c.bold}${"=".repeat(60)}${c.reset}`);
 
   if (finalSync?.messages) {
@@ -721,7 +760,33 @@ async function runGame(
   console.log(`${c.bold}${"=".repeat(60)}${c.reset}`);
   console.log("");
 
-  return { challengeId, modelA, modelB };
+  return { challengeId, models };
+}
+
+// ── Matchup Generation ───────────────────────────────────────────────
+
+/**
+ * Generate all N-tuples with non-decreasing indices (combinations with repetition).
+ * For k=2: all pairs [i,j] where i<=j (includes self-play).
+ * For k=3: all triples [i,j,k] where i<=j<=k.
+ */
+function generateMatchups(models: string[], playerCount: number, repeat: number): string[][] {
+  const matchups: string[][] = [];
+
+  function generate(start: number, current: string[]): void {
+    if (current.length === playerCount) {
+      for (let r = 0; r < repeat; r++) {
+        matchups.push([...current]);
+      }
+      return;
+    }
+    for (let i = start; i < models.length; i++) {
+      generate(i, [...current, models[i]]);
+    }
+  }
+
+  generate(0, []);
+  return matchups;
 }
 
 // ── Main ─────────────────────────────────────────────────────────────
@@ -731,7 +796,7 @@ async function main(): Promise<void> {
   if (RESEARCH_MODE) info("Mode: research (loaded from benchmark-models.json)");
   if (SANDBOX) info("Sandbox: enabled — each agent runs in an isolated Docker container");
   info(`Models: ${MODELS.join(", ")}`);
-  info(`Game: ${GAME_TYPE}, Repeat: ${REPEAT}, Arena: ${ARENA_URL}`);
+  info(`Game: ${GAME_TYPE} (${PLAYER_COUNT}-player), Repeat: ${REPEAT}, Arena: ${ARENA_URL}`);
 
   // Fetch challenge metadata
   const allMetadata = await fetchJSON(`${ARENA_URL}/api/v1/metadata`);
@@ -759,22 +824,15 @@ async function main(): Promise<void> {
   // Register all models with well-formatted names
   const agents = await registerModels(MODELS);
 
-  // Generate all matchups (round-robin)
-  const matchups: [string, string][] = [];
-  for (let i = 0; i < MODELS.length; i++) {
-    for (let j = i; j < MODELS.length; j++) {  // j = i includes self-play on the diagonal
-      for (let r = 0; r < REPEAT; r++) {
-        matchups.push([MODELS[i], MODELS[j]]);
-      }
-    }
-  }
+  // Generate all matchups (combinations with repetition for round-robin)
+  const matchups = generateMatchups(MODELS, PLAYER_COUNT, REPEAT);
 
-  info(`Total matchups: ${matchups.length}`);
+  info(`Total matchups: ${matchups.length} (${PLAYER_COUNT}-player combinations)`);
 
   const results: BenchmarkGameResult[] = [];
 
   if (PARALLEL) {
-    const tasks = matchups.map(([a, b], idx) => runGame(a, b, idx + 1, metadata, skillContent, agents));
+    const tasks = matchups.map((models, idx) => runGame(models, idx + 1, metadata, skillContent, agents));
     const settled = await Promise.allSettled(tasks);
     for (const r of settled) {
       if (r.status === "fulfilled" && r.value) results.push(r.value);
@@ -782,9 +840,8 @@ async function main(): Promise<void> {
     }
   } else {
     for (let i = 0; i < matchups.length; i++) {
-      const [a, b] = matchups[i];
       try {
-        const result = await runGame(a, b, i + 1, metadata, skillContent, agents);
+        const result = await runGame(matchups[i], i + 1, metadata, skillContent, agents);
         if (result) results.push(result);
       } catch (e: any) {
         err(`Game ${i + 1} failed: ${e.message}`);

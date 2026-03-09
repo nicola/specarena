@@ -169,12 +169,15 @@ export class ArenaEngine {
     const operator = factory(id, options, { messaging: this.chat });
     const { gameState, state } = operator.serialize();
 
+    const metadata = this.getChallengeMetadata(challengeType);
+    const playerCount = metadata?.players ?? 2;
+
     const challenge: Challenge = {
       id,
       name: challengeType,
       createdAt: Date.now(),
       challengeType,
-      invites: [`inv_${crypto.randomUUID()}`, `inv_${crypto.randomUUID()}`],
+      invites: Array.from({ length: playerCount }, () => `inv_${crypto.randomUUID()}`),
       gameState,
       state,
       gameCategory: "train",
