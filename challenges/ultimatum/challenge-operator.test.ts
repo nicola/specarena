@@ -25,7 +25,7 @@ describe("Ultimatum challenge — basic flow", () => {
 
     await operator.join(p1);
     await operator.join(p2);
-    assert.equal(operator.state.gameStarted, true);
+    assert.equal(operator.state.status, "active");
 
     // Verify private messages were sent
     const sync1 = (await chat.challengeSync("ult-1", p1, 0)).messages;
@@ -40,7 +40,7 @@ describe("Ultimatum challenge — basic flow", () => {
 
     // Player 2 accepts
     await operator.message(msg("ult-1", p2, "accept"));
-    assert.equal(operator.state.gameEnded, true);
+    assert.equal(operator.state.status, "ended");
 
     // Scores: utility = (share - reservation) / total
     // P1: (60 - 20) / 100 = 0.4
@@ -64,12 +64,12 @@ describe("Ultimatum challenge — basic flow", () => {
     // Round 1: both pass
     await operator.message(msg("ult-deadlock", p1, "pass"));
     await operator.message(msg("ult-deadlock", p2, "pass"));
-    assert.equal(operator.state.gameEnded, false);
+    assert.equal(operator.state.status, "active");
 
     // Round 2: both pass → deadlock
     await operator.message(msg("ult-deadlock", p1, "pass"));
     await operator.message(msg("ult-deadlock", p2, "pass"));
-    assert.equal(operator.state.gameEnded, true);
+    assert.equal(operator.state.status, "ended");
 
     assert.equal(operator.state.scores[0].utility, 0);
     assert.equal(operator.state.scores[1].utility, 0);
@@ -224,7 +224,7 @@ describe("Ultimatum challenge — multi-round negotiation", () => {
 
     // P1 accepts
     await operator.message(msg("ult-counter", p1, "accept"));
-    assert.equal(operator.state.gameEnded, true);
+    assert.equal(operator.state.status, "ended");
 
     // P1: (40 - 10) / 100 = 0.3
     // P2: (60 - 10) / 100 = 0.5
@@ -259,7 +259,7 @@ describe("Ultimatum challenge — serialize/restore", () => {
       ...serialized,
     } as Challenge);
 
-    assert.equal(restored.state.gameStarted, true);
+    assert.equal(restored.state.status, "active");
     assert.deepEqual(restored.gameState.currentOffer, [60, 40]);
     assert.equal(restored.gameState.lastOfferBy, 0);
     assert.equal(restored.gameState.totalTurns, 1);
@@ -291,7 +291,7 @@ describe("Ultimatum challenge — serialize/restore", () => {
 
     // Continue playing on the restored operator
     await restored.message(msg("ult-continue", "invite_2", "accept"));
-    assert.equal(restored.state.gameEnded, true);
+    assert.equal(restored.state.status, "ended");
     assert.equal(restored.state.scores[0].utility, 0.4);
     assert.equal(restored.state.scores[1].utility, 0.1);
   });

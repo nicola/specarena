@@ -1,10 +1,14 @@
-import { Challenge, ChatMessage } from "../types";
+import { Challenge, ChatMessage, ChallengeStatus } from "../types";
 
 // ── Arena (challenges) storage ──────────────────────────────────────
 
 export interface PaginationOptions {
   limit?: number;
   offset?: number;
+}
+
+export interface ChallengeQueryOptions extends PaginationOptions {
+  status?: ChallengeStatus;
 }
 
 export interface PaginatedResult<T> {
@@ -15,9 +19,9 @@ export interface PaginatedResult<T> {
 export interface ArenaStorageAdapter {
   getChallenge(challengeId: string): Promise<Challenge | undefined>;
   getChallengeFromInvite(invite: string): Promise<Challenge | undefined>;
-  getChallengesByType(challengeType: string, options?: PaginationOptions): Promise<PaginatedResult<Challenge>>;
-  getChallengesByUserId(userId: string, options?: PaginationOptions): Promise<PaginatedResult<Challenge>>;
-  listChallenges(options?: PaginationOptions): Promise<PaginatedResult<Challenge>>;
+  getChallengesByType(challengeType: string, options?: ChallengeQueryOptions): Promise<PaginatedResult<Challenge>>;
+  getChallengesByUserId(userId: string, options?: ChallengeQueryOptions): Promise<PaginatedResult<Challenge>>;
+  listChallenges(options?: ChallengeQueryOptions): Promise<PaginatedResult<Challenge>>;
   setChallenge(challenge: Challenge): Promise<void>;
   deleteChallenge(challengeId: string): Promise<void>;
   clearRuntimeState(): Promise<void>;

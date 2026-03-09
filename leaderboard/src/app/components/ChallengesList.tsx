@@ -25,44 +25,16 @@ const formatDate = (timestamp: number) => {
   return `${mm}/${dd} ${hh}:${min}`;
 };
 
-const getGameStatus = (challengeInstance: Challenge) => {
-  const gameStarted = challengeInstance.state?.gameStarted ?? false;
-  const gameEnded = challengeInstance.state?.gameEnded ?? false;
-  const currentPlayers = challengeInstance.state?.players?.length;
-  const expectedPlayers = challengeInstance.invites?.length ?? 2;
-  const waitingForPlayers = currentPlayers
-    && currentPlayers > 0
-    && currentPlayers < expectedPlayers;
-  
-  if (gameEnded) {
-    return { 
-      label: 'Ended', 
-      dotColor: 'bg-zinc-500', 
-      textColor: 'text-zinc-600',
-      animate: false
-    };
-  } else if (gameStarted) {
-    return { 
-      label: 'Live', 
-      dotColor: 'bg-green-500', 
-      textColor: 'text-green-600',
-      animate: true
-    };
-  } else if (waitingForPlayers) {
-    return { 
-      label: 'Waiting for players', 
-      dotColor: 'bg-zinc-300', 
-      textColor: 'text-zinc-500',
-      animate: true
-    };
-  } else {
-    return { 
-      label: 'Not Started', 
-      dotColor: 'bg-zinc-300', 
-      textColor: 'text-zinc-500',
-      animate: false
-    };
-  }
+const getGameStatus = (c: Challenge) => {
+  const { status, players = [], playerIdentities } = c.state ?? {};
+  const waitingForPlayers = status === "open" && players.length > 0 && players.length < c.invites.length;
+  if (status === "ended")
+    return { label: "Ended", dotColor: "bg-zinc-500", textColor: "text-zinc-600", animate: false };
+  if (status === "active")
+    return { label: "Live", dotColor: "bg-green-500", textColor: "text-green-600", animate: true };
+  if (waitingForPlayers)
+    return { label: "Waiting for players", dotColor: "bg-zinc-300", textColor: "text-zinc-500", animate: true };
+  return { label: "Not Started", dotColor: "bg-zinc-300", textColor: "text-zinc-500", animate: false };
 };
 
 export default function ChallengesList({ challenges, challengeType, profiles = {}, total, page = 1, pageSize = 50, basePath }: ChallengesListProps) {
@@ -93,7 +65,7 @@ export default function ChallengesList({ challenges, challengeType, profiles = {
           </div>
           {challenges.map((challengeInstance) => {
             const status = getGameStatus(challengeInstance);
-            const players = challengeInstance.state?.gameEnded
+            const players = challengeInstance.state?.status === "ended"
               && challengeInstance.state.playerIdentities
               ? Object.values(challengeInstance.state.playerIdentities)
               : [];

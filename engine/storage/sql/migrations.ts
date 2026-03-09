@@ -1,4 +1,4 @@
-import { type Kysely, type Migration, Migrator } from "kysely";
+import { type Kysely, type Migration, Migrator, sql } from "kysely";
 
 // ── Migration 001: Initial schema ────────────────────────────────────
 
@@ -167,11 +167,33 @@ const migration002: Migration = {
   },
 };
 
+// ── Migration 003: Replace game_started/game_ended with status ───────
+
+const migration003: Migration = {
+  up: async (db) => {
+    await sql`ALTER TABLE challenges ADD COLUMN status TEXT NOT NULL DEFAULT 'open'`.execute(db);
+    await sql`UPDATE challenges SET status = 'ended' WHERE game_ended = TRUE`.execute(db);
+    await sql`UPDATE challenges SET status = 'active' WHERE game_ended = FALSE AND game_started = TRUE`.execute(db);
+    await sql`ALTER TABLE challenges DROP COLUMN game_started`.execute(db);
+    await sql`ALTER TABLE challenges DROP COLUMN game_ended`.execute(db);
+    await sql`CREATE INDEX challenges_status_idx ON challenges (status)`.execute(db);
+  },
+  down: async (db) => {
+    await sql`DROP INDEX challenges_status_idx`.execute(db);
+    await sql`ALTER TABLE challenges ADD COLUMN game_started BOOLEAN NOT NULL DEFAULT FALSE`.execute(db);
+    await sql`ALTER TABLE challenges ADD COLUMN game_ended BOOLEAN NOT NULL DEFAULT FALSE`.execute(db);
+    await sql`UPDATE challenges SET game_started = TRUE WHERE status IN ('active', 'ended')`.execute(db);
+    await sql`UPDATE challenges SET game_ended = TRUE WHERE status = 'ended'`.execute(db);
+    await sql`ALTER TABLE challenges DROP COLUMN status`.execute(db);
+  },
+};
+
 // ── Migration registry ───────────────────────────────────────────────
 
 const migrations: Record<string, Migration> = {
   "001_initial_schema": migration001,
   "002_benchmark_columns": migration002,
+  "003_challenge_status": migration003,
 };
 
 /**

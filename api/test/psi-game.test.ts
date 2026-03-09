@@ -105,20 +105,19 @@ describe("PSI game simulation", () => {
     const [invite1, invite2] = invites;
     let challenge = await getChallengeOrThrow(challengeId);
 
-    assert.equal(challenge.state.gameStarted, false);
-    assert.equal(challenge.state.gameEnded, false);
+    assert.equal(challenge.state.status, "open");
 
     // 2. Player 1 joins
     await challengeJoin(invite1);
     challenge = await getChallengeOrThrow(challengeId);
     assert.equal(challenge.state.players.length, 1);
-    assert.equal(challenge.state.gameStarted, false);
+    assert.equal(challenge.state.status, "open");
 
     // 3. Player 2 joins → game starts
     await challengeJoin(invite2);
     challenge = await getChallengeOrThrow(challengeId);
     assert.equal(challenge.state.players.length, 2);
-    assert.equal(challenge.state.gameStarted, true);
+    assert.equal(challenge.state.status, "active");
 
     // 4. Sync to get private sets
     const sync1 = await challengeSync(challengeId, invite1, 0);
@@ -148,14 +147,14 @@ describe("PSI game simulation", () => {
     const guessContent = [...intersection].join(", ");
     await challengeMessage(challengeId, invite1, "guess", guessContent);
     challenge = await getChallengeOrThrow(challengeId);
-    assert.equal(challenge.state.gameEnded, false, "game not over until both guess");
+    assert.equal(challenge.state.status, "active", "game not over until both guess");
 
     // 8. Player 2 also guesses the exact intersection
     await challengeMessage(challengeId, invite2, "guess", guessContent);
 
     // 9. Game ended
     challenge = await getChallengeOrThrow(challengeId);
-    assert.equal(challenge.state.gameEnded, true);
+    assert.equal(challenge.state.status, "ended");
 
     // 10. Perfect scores: utility=1, security=1 for both
     const scores = challenge.state.scores;
@@ -276,7 +275,7 @@ describe("PSI game simulation", () => {
     // Only player 1 joins (game not started)
     await challengeJoin(invites[0]);
     const challenge = await getChallengeOrThrow(challengeId);
-    assert.equal(challenge.state.gameStarted, false);
+    assert.equal(challenge.state.status, "open");
 
     // Guess — game not running, operator sends error via challenge channel
     await challengeMessage(challengeId, invites[0], "guess", "100 200 300");
@@ -330,7 +329,7 @@ describe("PSI game simulation", () => {
     await challengeMessage(challengeId, invite1, "guess", guessContent);
     await challengeMessage(challengeId, invite2, "guess", guessContent);
     challenge = await getChallengeOrThrow(challengeId);
-    assert.equal(challenge.state.gameEnded, true);
+    assert.equal(challenge.state.status, "ended");
 
     // After game ends: null viewer sees everything unredacted
     const postGameSync = await challengeSync(challengeId, null, 0);

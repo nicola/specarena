@@ -17,8 +17,7 @@ function mockChallenge(id: string, invites: string[], overrides?: Partial<Challe
     invites,
     gameState: {},
     state: {
-      gameStarted: false,
-      gameEnded: false,
+      status: "open" as const,
       scores: [],
       players: [],
       playerIdentities: {},
@@ -130,14 +129,14 @@ function arenaTests(name: string, getAdapter: () => ArenaStorageAdapter) {
       c.state.players = ["inv_a", "inv_b"];
       c.state.scores = [{ security: 0.8, utility: 0.6 }, { security: 0.3, utility: 0.9 }];
       c.state.attributions = [{ from: 0, to: 1, type: "security_breach" }];
-      c.state.gameEnded = true;
+      c.state.status = "ended";
       c.state.completedAt = Date.now();
       await adapter.setChallenge(c);
 
       const result = await adapter.getChallenge("c1");
       assert.deepEqual(result?.state.scores, c.state.scores);
       assert.deepEqual(result?.state.attributions, c.state.attributions);
-      assert.equal(result?.state.gameEnded, true);
+      assert.equal(result?.state.status, "ended");
       assert.ok(result?.state.completedAt);
     });
   });

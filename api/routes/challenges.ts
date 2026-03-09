@@ -42,7 +42,11 @@ export function createChallengeRoutes(engine: ArenaEngine = defaultEngine) {
   app.get("/api/challenges", async (c) => {
     const limit = Math.max(1, parseInt(c.req.query("limit") || "50", 10) || 50);
     const offset = Math.max(0, parseInt(c.req.query("offset") || "0", 10) || 0);
-    const { items, total } = await engine.listChallenges({ limit, offset });
+    const statusParam = c.req.query("status");
+    const status = (["open", "active", "ended"] as const).includes(statusParam as any)
+      ? (statusParam as "open" | "active" | "ended")
+      : undefined;
+    const { items, total } = await engine.listChallenges({ limit, offset, status });
     const profiles = await collectUserProfiles(engine, items);
     return c.json({ challenges: items.map(sanitizeChallenge), total, limit, offset, profiles });
   });
@@ -53,7 +57,11 @@ export function createChallengeRoutes(engine: ArenaEngine = defaultEngine) {
     try {
       const limit = Math.min(Math.max(1, parseInt(c.req.query("limit") || "10", 10) || 10), 50);
       const offset = Math.max(0, parseInt(c.req.query("offset") || "0", 10) || 0);
-      const { items, total } = await engine.getChallengesByType(name, { limit, offset });
+      const statusParam = c.req.query("status");
+      const status = (["open", "active", "ended"] as const).includes(statusParam as any)
+        ? (statusParam as "open" | "active" | "ended")
+        : undefined;
+      const { items, total } = await engine.getChallengesByType(name, { limit, offset, status });
       const profiles = await collectUserProfiles(engine, items);
       return c.json({ challenges: items.map(sanitizeChallenge), total, limit, offset, profiles });
     } catch (error) {

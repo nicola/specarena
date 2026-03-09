@@ -13,8 +13,7 @@ function mockChallenge(id: string, invites: string[]): Challenge {
     invites,
     gameState: {},
     state: {
-      gameStarted: false,
-      gameEnded: false,
+      status: "open" as const,
       scores: [],
       players: [],
       playerIdentities: {},

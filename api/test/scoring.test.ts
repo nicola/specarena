@@ -198,8 +198,7 @@ describe("scoring", () => {
         invites: ["inv_1", "inv_2"],
         gameState: {},
         state: {
-          gameStarted: true,
-          gameEnded: false,
+          status: "active" as const,
           scores: [],
           players: [],
           playerIdentities: {},
@@ -217,8 +216,7 @@ describe("scoring", () => {
         invites: ["inv_1", "inv_2"],
         gameState: {},
         state: {
-          gameStarted: true,
-          gameEnded: true,
+          status: "ended" as const,
           scores: [{ security: 1, utility: 1 }],
           players: ["inv_1"],
           playerIdentities: { inv_1: "user-1" },
@@ -381,7 +379,7 @@ describe("scoring", () => {
       await engine.challengeMessage(challengeId, invites[1], "guess", guessContent);
 
       const updated = await engine.getChallenge(challengeId);
-      assert.equal(updated!.state.gameEnded, true);
+      assert.equal(updated!.state.status, "ended");
 
       await engine.scoring!.waitForIdle();
 
@@ -436,7 +434,7 @@ describe("scoring", () => {
         await engine.challengeMessage(challengeId, invites[0], "guess", intersection.join(", "));
         await engine.challengeMessage(challengeId, invites[1], "guess", intersection.join(", "));
         const updated = await engine.getChallenge(challengeId);
-        assert.equal(updated!.state.gameEnded, true);
+        assert.equal(updated!.state.status, "ended");
       }
 
       await engine.scoring!.waitForIdle();

@@ -14,7 +14,7 @@ import {
   toChallengeChannel,
 } from "./types";
 import { ChatEngine, createChatEngine } from "./chat/ChatEngine";
-import type { ArenaStorageAdapter, ChatStorageAdapter, UserStorageAdapter, PaginationOptions, PaginatedResult } from "./storage/types";
+import type { ArenaStorageAdapter, ChatStorageAdapter, UserStorageAdapter, PaginationOptions, ChallengeQueryOptions, PaginatedResult } from "./storage/types";
 import { createStorage } from "./storage/createStorage";
 import { ScoringModule } from "./scoring/index";
 import type { GameResult } from "./scoring/types";
@@ -53,7 +53,7 @@ export class ArenaEngine {
         const challengeId = fromChallengeChannel(channel);
         if (!challengeId) return false;
         const challenge = await this.getChallenge(challengeId);
-        return challenge?.state?.gameEnded ?? false;
+        return challenge?.state?.status === "ended";
       },
       onChallengeEvent: async (challengeId, event) => {
         if (event.type !== "game_ended") return;
@@ -124,7 +124,7 @@ export class ArenaEngine {
     challenge.state = state;
 
     // Classify game category when the game just ended
-    if (state.gameEnded && challenge.gameCategory === "train") {
+    if (state.status === "ended" && challenge.gameCategory === "train") {
       challenge.gameCategory = await this.computeGameCategory(state);
     }
 
@@ -132,7 +132,7 @@ export class ArenaEngine {
   }
 
   private isChallengeStale(challenge: Challenge, now: number = Date.now()): boolean {
-    const gameEnded = challenge.state?.gameEnded ?? false;
+    const gameEnded = challenge.state?.status === "ended";
     const cutoff = now - STALE_CHALLENGE_TIMEOUT_MS;
     return !gameEnded && challenge.createdAt < cutoff;
   }
@@ -153,7 +153,7 @@ export class ArenaEngine {
     return stale.length;
   }
 
-  async listChallenges(options?: PaginationOptions): Promise<PaginatedResult<Challenge>> {
+  async listChallenges(options?: ChallengeQueryOptions): Promise<PaginatedResult<Challenge>> {
     return this.storageAdapter.listChallenges(options);
   }
 
@@ -233,11 +233,11 @@ export class ArenaEngine {
     return undefined;
   }
 
-  async getChallengesByUserId(userId: string, options?: PaginationOptions): Promise<PaginatedResult<Challenge>> {
+  async getChallengesByUserId(userId: string, options?: ChallengeQueryOptions): Promise<PaginatedResult<Challenge>> {
     return this.storageAdapter.getChallengesByUserId(userId, options);
   }
 
-  async getChallengesByType(challengeType: string, options?: PaginationOptions): Promise<PaginatedResult<Challenge>> {
+  async getChallengesByType(challengeType: string, options?: ChallengeQueryOptions): Promise<PaginatedResult<Challenge>> {
     return this.storageAdapter.getChallengesByType(challengeType, options);
   }
 
@@ -313,7 +313,7 @@ export class ArenaEngine {
 
   async getPlayerIdentities(challengeId: string): Promise<Record<string, string> | null> {
     const challenge = await this.getChallenge(challengeId);
-    if (!challenge?.state?.gameEnded) return null;
+    if (!challenge?.state || challenge.state.status !== "ended") return null;
     return challenge.state.playerIdentities;
   }
 
@@ -337,7 +337,7 @@ export function createEngine(options: EngineOptions = {}): ArenaEngine {
 
 export const defaultEngine = createEngine();
 export { ChatEngine, createChatEngine, defaultChatEngine } from "./chat/ChatEngine";
-export type { ArenaStorageAdapter, ChatStorageAdapter, UserStorageAdapter, UserProfile, PaginationOptions, PaginatedResult } from "./storage/types";
+export type { ArenaStorageAdapter, ChatStorageAdapter, UserStorageAdapter, UserProfile, PaginationOptions, ChallengeQueryOptions, PaginatedResult } from "./storage/types";
 export { InMemoryArenaStorageAdapter } from "./storage/InMemoryArenaStorageAdapter";
 export { InMemoryChatStorageAdapter } from "./storage/InMemoryChatStorageAdapter";
 export { InMemoryUserStorageAdapter } from "./users/index";

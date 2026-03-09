@@ -44,12 +44,9 @@ export function createUserRoutes(engine: ArenaEngine = defaultEngine) {
     const userId = c.req.param("userId");
     const limit = Math.max(1, parseInt(c.req.query("limit") || "50", 10) || 50);
     const offset = Math.max(0, parseInt(c.req.query("offset") || "0", 10) || 0);
-    const { items: all } = await engine.getChallengesByUserId(userId);
-    const challenges = all.filter((c) => c.state?.gameEnded);
-    const total = challenges.length;
-    const sliced = challenges.slice(offset, offset + limit);
-    const profiles = await collectUserProfiles(engine, sliced);
-    return c.json({ challenges: sliced, total, limit, offset, profiles });
+    const { items: challenges, total } = await engine.getChallengesByUserId(userId, { status: "ended", limit, offset });
+    const profiles = await collectUserProfiles(engine, challenges);
+    return c.json({ challenges, total, limit, offset, profiles });
   });
 
   // GET /api/users/:userId - Get a single user profile

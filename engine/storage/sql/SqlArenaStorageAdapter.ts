@@ -1,15 +1,14 @@
 import type { Kysely } from "kysely";
 import type { Database } from "./schema";
-import type { ArenaStorageAdapter, PaginationOptions, PaginatedResult } from "../types";
-import type { Challenge, ChallengeOperatorState, GameCategory, Score, Attribution } from "../../types";
+import type { ArenaStorageAdapter, ChallengeQueryOptions, PaginatedResult } from "../types";
+import type { Challenge, ChallengeOperatorState, ChallengeStatus, GameCategory, Score, Attribution } from "../../types";
 
 type ChallengeRow = {
   id: string;
   name: string;
   challenge_type: string;
   created_at: Date;
-  game_started: boolean;
-  game_ended: boolean;
+  status: string;
   completed_at: Date | null;
   game_state: unknown;
   game_category: string;
@@ -41,11 +40,15 @@ export class SqlArenaStorageAdapter implements ArenaStorageAdapter {
     return this.getChallenge(inv.challenge_id);
   }
 
-  async getChallengesByUserId(userId: string, options?: PaginationOptions): Promise<PaginatedResult<Challenge>> {
-    const baseQuery = this.db
+  async getChallengesByUserId(userId: string, options?: ChallengeQueryOptions): Promise<PaginatedResult<Challenge>> {
+    let baseQuery = this.db
       .selectFrom("challenges")
       .innerJoin("challenge_invites", "challenge_invites.challenge_id", "challenges.id")
       .where("challenge_invites.user_id", "=", userId);
+
+    if (options?.status) {
+      baseQuery = baseQuery.where("challenges.status", "=", options.status);
+    }
 
     const [countResult, rows] = await Promise.all([
       baseQuery
@@ -69,10 +72,14 @@ export class SqlArenaStorageAdapter implements ArenaStorageAdapter {
     };
   }
 
-  async getChallengesByType(challengeType: string, options?: PaginationOptions): Promise<PaginatedResult<Challenge>> {
-    const baseQuery = this.db
+  async getChallengesByType(challengeType: string, options?: ChallengeQueryOptions): Promise<PaginatedResult<Challenge>> {
+    let baseQuery = this.db
       .selectFrom("challenges")
       .where("challenge_type", "=", challengeType);
+
+    if (options?.status) {
+      baseQuery = baseQuery.where("status", "=", options.status);
+    }
 
     const [countResult, rows] = await Promise.all([
       baseQuery
@@ -92,14 +99,18 @@ export class SqlArenaStorageAdapter implements ArenaStorageAdapter {
     };
   }
 
-  async listChallenges(options?: PaginationOptions): Promise<PaginatedResult<Challenge>> {
+  async listChallenges(options?: ChallengeQueryOptions): Promise<PaginatedResult<Challenge>> {
+    let baseQuery = this.db.selectFrom("challenges");
+    if (options?.status) {
+      baseQuery = baseQuery.where("status", "=", options.status);
+    }
+
     const [countResult, rows] = await Promise.all([
-      this.db
-        .selectFrom("challenges")
+      baseQuery
         .select(({ fn }) => fn.countAll<number>().as("count"))
         .executeTakeFirstOrThrow(),
       (() => {
-        let q = this.db.selectFrom("challenges").selectAll();
+        let q = baseQuery.selectAll();
         if (options?.limit) q = q.limit(options.limit);
         if (options?.offset) q = q.offset(options.offset);
         return q.execute();
@@ -123,8 +134,7 @@ export class SqlArenaStorageAdapter implements ArenaStorageAdapter {
           name: challenge.name,
           challenge_type: challenge.challengeType,
           created_at: new Date(challenge.createdAt),
-          game_started: state.gameStarted,
-          game_ended: state.gameEnded,
+          status: state.status,
           completed_at: state.completedAt ? new Date(state.completedAt) : null,
           game_state: JSON.stringify(challenge.gameState),
           game_category: challenge.gameCategory ?? "train",
@@ -134,8 +144,7 @@ export class SqlArenaStorageAdapter implements ArenaStorageAdapter {
             name: challenge.name,
             challenge_type: challenge.challengeType,
             created_at: new Date(challenge.createdAt),
-            game_started: state.gameStarted,
-            game_ended: state.gameEnded,
+            status: state.status,
             completed_at: state.completedAt ? new Date(state.completedAt) : null,
             game_state: JSON.stringify(challenge.gameState),
             game_category: challenge.gameCategory ?? "train",
@@ -305,8 +314,7 @@ export class SqlArenaStorageAdapter implements ArenaStorageAdapter {
         : undefined;
 
     const state: ChallengeOperatorState = {
-      gameStarted: row.game_started,
-      gameEnded: row.game_ended,
+      status: row.status as ChallengeStatus,
       completedAt: row.completed_at ? row.completed_at.getTime() : undefined,
       scores,
       players,
