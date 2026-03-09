@@ -728,6 +728,8 @@ run_game() {
     models+=("${PERSONA_MODELS[$idx]}")
   done
 
+  info "Picked ${#indices[@]} persona(s) for ${player_count}-player game: ${names[*]}"
+
   local matchup_str="${labels[0]}"
   for (( i=1; i<player_count; i++ )); do matchup_str+=" vs ${labels[$i]}"; done
 
@@ -773,9 +775,16 @@ run_game() {
     invites+=("$(echo "$create_resp" | jq -r ".invites[$p]")")
   done
 
-  ok "Challenge created: $challenge_id"
+  ok "Challenge created: $challenge_id (${player_count}-player, ${GAME_TYPE})"
+  local actual_invite_count
+  actual_invite_count=$(echo "$create_resp" | jq '.invites | length')
+  info "  Server returned ${actual_invite_count} invite(s) (expected ${player_count})"
+  if [[ "$actual_invite_count" -lt "$player_count" ]]; then
+    err "Server only created ${actual_invite_count} invite(s) but game needs ${player_count}. Restart the server to pick up the engine.ts fix."
+    return 1
+  fi
   for (( p=0; p<player_count; p++ )); do
-    info "  ${labels[$p]} invite: ${invites[$p]}"
+    info "  Player $((p+1))/${player_count}: ${labels[$p]} → invite ${invites[$p]}"
   done
 
   # ─── Prepare logs ───
