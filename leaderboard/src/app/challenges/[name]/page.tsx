@@ -155,7 +155,7 @@ export default async function ChallengePage({ params, searchParams }: { params: 
 
         {/* Graph + Stats */}
         {(() => {
-          const unbeaten = scoringData.filter((d) => d.securityPolicy === 1);
+          const unbeaten = scoringData.filter((d) => d.securityPolicy === 1).sort((a, b) => b.utility - a.utility);
           const hasGraph = scoringData.length > 0;
           const hasTables = unbeaten.length > 0 || redTeamData.length > 0;
           if (!hasGraph && !hasTables) return null;
