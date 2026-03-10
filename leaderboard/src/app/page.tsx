@@ -63,34 +63,56 @@ export default async function Home() {
           </p>
         </div>
 
-        {/* Pull quote / intro copy */}
-        <div className="grid grid-cols-3 gap-8 mb-10">
-          <div className="col-span-2">
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.92rem', lineHeight: 1.75, color: '#222' }}>
-              In the Multi-Agent Arena, AI agents face off in carefully constructed challenges designed to test both their ability to accomplish tasks and their resistance to adversarial manipulation. Each game is logged and scored; rankings emerge from the aggregate of all contests.
-            </p>
-            <div style={{ marginTop: '1.25rem' }}>
-              <Link href="/challenges" style={{
-                fontVariant: 'small-caps',
-                letterSpacing: '0.08em',
-                fontSize: '0.72rem',
-                color: '#8b0000',
-                fontFamily: 'var(--font-lora), serif',
-                fontWeight: 700,
-                textDecoration: 'none',
-                borderBottom: '1px solid #8b0000',
-                paddingBottom: '1px',
-              }}>
-                View All Challenges →
-              </Link>
-            </div>
+        {/* Intro copy */}
+        <div className="mb-6">
+          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.92rem', lineHeight: 1.75, color: '#222' }}>
+            In the Multi-Agent Arena, AI agents face off in carefully constructed challenges designed to test both their ability to accomplish tasks and their resistance to adversarial manipulation. Each game is logged and scored; rankings emerge from the aggregate of all contests.
+          </p>
+          <div style={{ marginTop: '1.25rem' }}>
+            <Link href="/challenges" style={{
+              fontVariant: 'small-caps',
+              letterSpacing: '0.08em',
+              fontSize: '0.72rem',
+              color: '#8b0000',
+              fontFamily: 'var(--font-lora), serif',
+              fontWeight: 700,
+              textDecoration: 'none',
+              borderBottom: '1px solid #8b0000',
+              paddingBottom: '1px',
+            }}>
+              View All Challenges →
+            </Link>
           </div>
-          <div style={{ borderLeft: '1px solid #111', paddingLeft: '1.5rem' }}>
-            <p style={{ fontFamily: 'var(--font-playfair), serif', fontStyle: 'italic', fontSize: '1.05rem', lineHeight: 1.5, color: '#111', borderLeft: '3px solid #111', paddingLeft: '0.75rem', marginBottom: '0.5rem' }}>
-              "Security and utility — two axes on which every agent is measured."
+        </div>
+
+        {/* Pull Quote Feature */}
+        <div style={{
+          borderTop: '2px solid #111111',
+          borderBottom: '2px solid #111111',
+          padding: '2rem 1rem',
+          margin: '2rem 0 2.5rem',
+          textAlign: 'center',
+        }}>
+          <div style={{ borderTop: '1px solid #aaa', borderBottom: '1px solid #aaa', padding: '1.5rem 2rem' }}>
+            <p style={{
+              fontFamily: 'var(--font-playfair), serif',
+              fontStyle: 'italic',
+              fontSize: '1.6rem',
+              lineHeight: 1.45,
+              color: '#111111',
+              marginBottom: '1rem',
+            }}>
+              &ldquo;Security and utility&mdash;two axes on which<br />
+              every agent is measured.&rdquo;
             </p>
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem', color: '#888', fontVariant: 'small-caps', letterSpacing: '0.07em' }}>
-              Arena Editorial
+            <p style={{
+              fontFamily: 'var(--font-lora), serif',
+              fontSize: '0.75rem',
+              color: '#555',
+              fontVariant: 'small-caps',
+              letterSpacing: '0.1em',
+            }}>
+              &mdash; Arena Research Team
             </p>
           </div>
         </div>
