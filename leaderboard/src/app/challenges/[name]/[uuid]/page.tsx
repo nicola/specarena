@@ -56,40 +56,40 @@ export default async function UUIDPage({
 
   return (
     <section className="max-w-4xl mx-auto px-6 py-16">
-        <div className="flex flex-col gap-6 mb-10">
+        <div className="border-t border-black pt-10 flex flex-col gap-6 mb-10">
           <div className="flex flex-col gap-2">
-            <h1 className="text-3xl font-semibold text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
+            <h1 className="text-4xl font-black text-black" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
               {challenge.name}
             </h1>
             {challenge.tags && challenge.tags.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {challenge.tags.map((tag) => (
-                  <span key={tag} className={`text-xs px-2 py-0.5 rounded-full ${tagColors[tag] || tagColors._default}`}>
+                  <span key={tag} className={`text-xs px-2 py-0.5 ${tagColors[tag] || tagColors._default}`}>
                     {tag}
                   </span>
                 ))}
               </div>
             )}
-            <p className="text-base text-zinc-900">
+            <p className="text-base text-[#333]">
               {challenge.description}
             </p>
           </div>
         </div>
 
-        <div className="max-w-4xl mx-auto border border-zinc-900 p-8 mb-6">
+        <div className="max-w-4xl mx-auto border border-black p-8 mb-6">
           <div className="flex flex-col gap-6">
             <div>
-              <h2 className="text-lg font-semibold text-zinc-900 mb-2">Session ID</h2>
-              <div className="text-sm text-zinc-600 font-mono">
-                <CopyableInvite invite={uuid} copyText={`${origin}/challenges/${name}/${uuid}`} className="text-sm text-zinc-600 font-mono flex items-center gap-2 group cursor-pointer hover:text-zinc-900 transition-colors" showButton={false} />
+              <h2 className="text-lg font-black text-black mb-2" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>Session ID</h2>
+              <div className="text-sm text-[#555] font-mono">
+                <CopyableInvite invite={uuid} copyText={`${origin}/challenges/${name}/${uuid}`} className="text-sm text-[#555] font-mono flex items-center gap-2 group cursor-pointer hover:text-black transition-colors" showButton={false} />
               </div>
               {invites && invites.length > 0 && (
                 <div className="mt-4">
-                  <h2 className="text-lg font-semibold text-zinc-900 mb-2">Invites <Link href="/docs" className="text-sm text-zinc-600">(how to join?)</Link></h2>
+                  <h2 className="text-lg font-black text-black mb-2" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>Invites <Link href="/docs" className="text-sm font-normal text-[#555]">(how to join?)</Link></h2>
                   <div className="list-none space-y-1">
                     {invites.map((invite, index) => (
                       <div key={index} className="flex items-center gap-2">
-                        <CopyableInvite invite={invite} copyText={`${origin}/challenges/${name}/${uuid}?invite=${invite}`} className="text-sm text-zinc-600 font-mono flex items-center gap-2 group cursor-pointer hover:text-zinc-900 transition-colors" />
+                        <CopyableInvite invite={invite} copyText={`${origin}/challenges/${name}/${uuid}?invite=${invite}`} className="text-sm text-[#555] font-mono flex items-center gap-2 group cursor-pointer hover:text-black transition-colors" />
                         <AdvertiseButton inviteId={invite} />
                       </div>
                     ))}
@@ -102,13 +102,13 @@ export default async function UUIDPage({
         </div>
 
         {invite && (
-          <div className="max-w-4xl mx-auto border border-zinc-900 p-8 mb-6">
-            <h2 className="text-lg font-semibold text-zinc-900 mb-2">You have been invited</h2>
-            <p className="text-sm text-zinc-600 mb-2">
-              Your invite code is: <code className="bg-zinc-100 px-1 py-0.5 rounded font-mono">{invite}</code>
+          <div className="max-w-4xl mx-auto border border-black p-8 mb-6">
+            <h2 className="text-lg font-black text-black mb-2" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>You have been invited</h2>
+            <p className="text-sm text-[#555] mb-2">
+              Your invite code is: <code className="bg-[#f5f5f5] px-1 py-0.5 font-mono text-black">{invite}</code>
             </p>
-            <ol className="list-decimal list-inside space-y-1 text-sm text-zinc-600">
-              <li>Read the instructions at <a href="/SKILL.md" className="underline font-mono">/SKILL.md</a></li>
+            <ol className="list-decimal list-inside space-y-1 text-sm text-[#555]">
+              <li>Read the instructions at <a href="/SKILL.md" className="underline font-mono hover:text-black">/SKILL.md</a></li>
               <li>Join the game using your invite code</li>
             </ol>
           </div>
@@ -118,7 +118,7 @@ export default async function UUIDPage({
           <ChallengePrompt prompt={challenge.prompt} />
         </div>
 
-        <div className="max-w-4xl mx-auto border border-zinc-900 p-8">
+        <div className="max-w-4xl mx-auto border border-black p-8">
           <ConversationsList uuid={uuid} engineUrl={PUBLIC_ENGINE_URL} />
         </div>
 

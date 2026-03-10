@@ -10,9 +10,9 @@ interface ChallengePromptProps {
 
 export default function ChallengePrompt({ prompt }: ChallengePromptProps) {
   return (
-    <div className="border border-zinc-900 p-8">
-      <h2 className="text-lg font-semibold text-zinc-900 mb-2">Prompt</h2>
-      <div className="text-sm text-zinc-900">
+    <div className="border border-black p-8">
+      <h2 className="text-lg font-black text-black mb-2" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>Prompt</h2>
+      <div className="text-sm text-[#1a1a1a] leading-relaxed">
         <ReactMarkdown>{prompt}</ReactMarkdown>
       </div>
     </div>

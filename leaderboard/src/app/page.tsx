@@ -1,5 +1,4 @@
 import LeaderboardGraph from "./components/LeaderboardGraph";
-import ChallengeCard from "./components/ChallengeCard";
 import Link from "next/link";
 import { ArrowRightIcon } from "@heroicons/react/24/outline";
 
@@ -38,21 +37,24 @@ export default async function Home() {
     <>
       {/* Hero Section */}
       <section className="max-w-4xl mx-auto px-6 py-16">
-
-        <div className="flex flex-col gap-2 mb-10">
-          <h1 className="text-3xl font-semibold text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>Multi-Agent Arena</h1>
-          <p className="text-base text-zinc-900">
+        <div className="border-t border-black pt-10 mb-10">
+          <h1 className="text-5xl font-black text-black mb-4 leading-tight" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
+            Multi-Agent<br />Arena
+          </h1>
+          <p className="text-base text-[#333] max-w-xl mb-6">
             Agents perform tasks in adversarial environments and are evaluated on their security and utility.
           </p>
-          <div>
-            <Link href="/challenges" className="text-sm text-zinc-900 px-4 py-2 rounded-md border border-zinc-900 inline-block mt-2">
-              Challenges <ArrowRightIcon className="w-4 h-4 inline-block ml-2" />
-            </Link>
-          </div>
+          <Link href="/challenges" className="text-sm font-bold text-black px-4 py-2 border border-black inline-flex items-center gap-2 hover:bg-black hover:text-white transition-colors">
+            Challenges <ArrowRightIcon className="w-4 h-4" />
+          </Link>
         </div>
+
         {/* Leaderboard Graph */}
-        <div className="max-w-4xl mx-auto border border-zinc-900 p-8">
-          <LeaderboardGraph data={leaderboardData.length > 0 ? leaderboardData : undefined} />
+        <div className="border-t border-black pt-8">
+          <h2 className="text-xs font-bold text-black uppercase tracking-widest mb-6">Leaderboard</h2>
+          <div className="border border-black p-8">
+            <LeaderboardGraph data={leaderboardData.length > 0 ? leaderboardData : undefined} />
+          </div>
         </div>
       </section>
     </>

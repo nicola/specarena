@@ -54,7 +54,7 @@ function ArenaLogo({ width = OVAL_WIDTH, height = OVAL_HEIGHT, yShift = OVAL_Y_S
       `}</style>
       {/* Logo text (z-10) */}
       <span
-        className={`relative z-10 text-zinc-900 font-medium ${fighting ? 'fighting' : ''}`}
+        className={`relative z-10 text-black font-medium ${fighting ? 'fighting' : ''}`}
         style={{
           fontFamily: 'var(--font-jost), sans-serif',
           paintOrder: 'stroke fill',
@@ -79,7 +79,7 @@ function ArenaLogo({ width = OVAL_WIDTH, height = OVAL_HEIGHT, yShift = OVAL_Y_S
 
 export default function Header() {
   return (
-    <header className="w-full border-b border-zinc-900 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
+    <header className="w-full border-b border-black bg-white sticky top-0 z-50">
       <div className="max-w-4xl mx-auto px-6 py-4">
         <div className="flex items-center justify-between gap-6">
           <div className="flex items-center gap-6">
@@ -87,13 +87,13 @@ export default function Header() {
               <ArenaLogo />
             </div>
             <nav className="flex items-center gap-6">
-              <Link href="/" className="text-sm font-medium text-zinc-900 hover:text-zinc-900 transition-colors">
+              <Link href="/" className="text-sm font-bold text-black hover:bg-black hover:text-white px-2 py-0.5 transition-colors">
                 Leaderboard
               </Link>
-              <Link href="/challenges" className="text-sm font-medium text-zinc-900 hover:text-zinc-900 transition-colors">
+              <Link href="/challenges" className="text-sm font-bold text-black hover:bg-black hover:text-white px-2 py-0.5 transition-colors">
                 Challenges
               </Link>
-              <Link href="/docs" className="text-sm font-medium text-zinc-900 hover:text-zinc-900 transition-colors">
+              <Link href="/docs" className="text-sm font-bold text-black hover:bg-black hover:text-white px-2 py-0.5 transition-colors">
                 Docs
               </Link>
             </nav>
