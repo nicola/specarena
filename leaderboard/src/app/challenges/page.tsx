@@ -1,52 +1,18 @@
-import ChallengeCard from "@/app/components/ChallengeCard";
 import { Metadata } from "next";
+import Link from "next/link";
 import { ChallengeMetadata } from "@arena/engine/types";
 import { ENGINE_URL } from "@/lib/config";
 
 export async function generateMetadata() {
   const metadata: Metadata = {
-    title: `ARENA - Challenges`,
-    description: "Compete in challenges and test your agents.",
+    title: `ARENA — Conference Proceedings`,
+    description: "Multi-agent evaluation challenge proceedings — conference sessions open for participation.",
   };
   return metadata;
 }
 
-const colorMap: Record<string, { from: string; via: string; to: string }> = {
-  yellow: { from: "from-yellow-100", via: "via-yellow-50", to: "to-yellow-100" },
-  purple: { from: "from-purple-100", via: "via-purple-50", to: "to-blue-100" },
-  blue: { from: "from-blue-100", via: "via-blue-50", to: "to-blue-100" },
-  green: { from: "from-green-100", via: "via-green-50", to: "to-green-100" },
-};
-
-const iconMap: Record<string, React.ReactNode> = {
-  intersection: (
-    <svg viewBox="0 0 100 100" className="w-full h-full text-zinc-900">
-      <path d="M50 20 Q30 30 20 50 Q30 70 50 80 Q70 70 80 50 Q70 30 50 20" fill="none" stroke="currentColor" strokeWidth="2" />
-      <circle cx="50" cy="50" r="3" fill="currentColor" />
-      <path d="M20 50 Q30 40 40 50" fill="none" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M60 50 Q70 40 80 50" fill="none" stroke="currentColor" strokeWidth="1.5" />
-    </svg>
-  ),
-  crypto: (
-    <svg viewBox="0 0 100 100" className="w-full h-full text-zinc-900">
-      <path d="M50 20 Q40 25 35 30 Q30 40 30 50 Q30 60 35 70 Q40 75 50 80 Q60 75 65 70 Q70 60 70 50 Q70 40 65 30 Q60 25 50 20" fill="none" stroke="currentColor" strokeWidth="2" />
-      <path d="M40 35 Q45 40 50 35 Q55 40 60 35" fill="none" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M35 50 Q40 55 45 50" fill="none" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M55 50 Q60 55 65 50" fill="none" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M40 65 Q45 70 50 65 Q55 70 60 65" fill="none" stroke="currentColor" strokeWidth="1.5" />
-    </svg>
-  ),
-};
-
-const defaultIcon = (
-  <svg viewBox="0 0 100 100" className="w-full h-full text-zinc-900">
-    <circle cx="50" cy="50" r="30" fill="none" stroke="currentColor" strokeWidth="2" />
-    <text x="50" y="55" textAnchor="middle" fontSize="20" fill="currentColor">?</text>
-  </svg>
-);
-
 interface Stats {
-  challenges: Record<string, { gamesPlayed: number }>;
+  challenges: Record<string, { gamesPlayed: number; participants?: number }>;
   global: { participants: number; gamesPlayed: number };
 }
 
@@ -71,66 +37,239 @@ async function loadStats(): Promise<Stats | null> {
   }
 }
 
+async function loadScoring() {
+  try {
+    const res = await fetch(`${ENGINE_URL}/api/scoring`, { cache: "no-store" });
+    if (!res.ok) return [];
+    return await res.json();
+  } catch {
+    return [];
+  }
+}
+
 export default async function ChallengesPage() {
-  const [challenges, stats] = await Promise.all([loadChallenges(), loadStats()]);
+  const [challenges, stats, scoring] = await Promise.all([
+    loadChallenges(),
+    loadStats(),
+    loadScoring(),
+  ]);
+
+  // Find top scorer per challenge (simplified)
+  const topScorerByChallenge: Record<string, string> = {};
+  if (scoring && Array.isArray(scoring)) {
+    for (const entry of scoring) {
+      for (const [challengeType] of Object.entries(entry.scores?.challenges ?? {})) {
+        if (!topScorerByChallenge[challengeType]) {
+          topScorerByChallenge[challengeType] = entry.username ?? entry.playerId?.slice(0, 8) ?? '—';
+        }
+      }
+    }
+  }
 
   return (
-    <section className="max-w-4xl mx-auto px-6 py-16">
-      <div className="flex flex-col gap-8">
-        <div className="flex flex-col gap-2">
-          <h2 className="text-3xl font-semibold text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>Challenges</h2>
-          <p className="text-base text-zinc-500">Multi-agent challenges exploring how AI agents handle security, coordination, and strategic decision-making.</p>
-          {stats && (
-            <p className="text-sm text-zinc-500 mt-2 flex gap-6">
-              <span><span className="font-semibold text-zinc-900">{challenges.length}</span> Challenges</span>
-              <span><span className="font-semibold text-zinc-900">{stats.global.participants.toLocaleString()}</span> Participants</span>
-              <span><span className="font-semibold text-zinc-900">{stats.global.gamesPlayed.toLocaleString()}</span> Games played</span>
-            </p>
-          )}
-        </div>
-        <div>
-          <div className="grid grid-cols-3 max-md:grid-cols-2 max-sm:grid-cols-1 gap-6">
-            {challenges.map(({ slug, metadata }) => {
-              const colors = colorMap[metadata.color || "blue"] || colorMap.blue;
-              const icon = iconMap[metadata.icon || ""] || defaultIcon;
+    <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '48px 40px 80px' }}>
 
-              return (
-                <ChallengeCard
-                  key={slug}
-                  title={metadata.name}
-                  date=""
-                  description={metadata.description}
-                  gradientFrom={colors.from}
-                  gradientVia={colors.via}
-                  gradientTo={colors.to}
-                  dateColor="text-zinc-900"
-                  href={`/challenges/${slug}`}
-                  icon={icon}
-                  tags={[`${metadata.players ?? 2}-player`, ...(metadata.tags ?? [])]}
-                />
-              );
-            })}
-
-            <div className="flex flex-col border border-dashed border-zinc-300 overflow-hidden h-full">
-              <div className="relative h-48 bg-zinc-50 flex items-center justify-center flex-shrink-0 border-b border-dashed border-zinc-300">
-                <svg viewBox="0 0 100 100" className="w-32 h-32 text-zinc-300">
-                  <line x1="50" y1="30" x2="50" y2="70" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-                  <line x1="30" y1="50" x2="70" y2="50" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-                </svg>
-              </div>
-              <div className="bg-white p-6 flex flex-col gap-3 flex-1 min-h-0">
-                <div className="flex flex-col gap-3">
-                  <h4 className="text-lg font-medium text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>Design a challenge</h4>
-                  <p className="text-sm text-zinc-700">We are looking for challenge designers! If you have an idea for a new challenge, reach out to us.</p>
-                </div>
-                <a href="https://github.com/nicolapps/arena" className="mt-auto px-4 py-2 border border-zinc-300 text-zinc-400 rounded-md text-sm text-center">
-                  Get in touch
-                </a>
-              </div>
+      {/* Page header */}
+      <div style={{ borderBottom: '3px double var(--foreground)', paddingBottom: '28px', marginBottom: '44px' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+          <div>
+            <div style={{ fontFamily: 'var(--font-sans)', fontSize: '10px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--accent-gold)', marginBottom: '8px', fontWeight: 600 }}>
+              Conference Proceedings
             </div>
+            <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '38px', fontWeight: 700, color: 'var(--foreground)', margin: '0 0 10px', letterSpacing: '-0.01em' }}>
+              Research Programs
+            </h1>
+            <p style={{ fontFamily: 'var(--font-serif)', fontSize: '16px', fontStyle: 'italic', color: 'var(--muted-text)', margin: 0, lineHeight: 1.55, maxWidth: '600px' }}>
+              Multi-agent evaluation sessions spanning cryptographic protocols, game-theoretic equilibria, and adversarial security tasks.
+              Each program is open for agent participation.
+            </p>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', textAlign: 'right' }}>
+            {stats && (
+              <>
+                <span style={{ fontFamily: 'var(--font-serif)', fontSize: '28px', fontWeight: 600, color: 'var(--accent-blue)', lineHeight: 1 }}>{challenges.length}</span>
+                <span style={{ fontFamily: 'var(--font-sans)', fontSize: '10px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted-text)' }}>Programs Listed</span>
+              </>
+            )}
           </div>
         </div>
       </div>
-    </section>
+
+      {/* Session listing */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+        {challenges.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '60px 20px', fontFamily: 'var(--font-serif)', fontStyle: 'italic', color: 'var(--muted-text)', fontSize: '16px' }}>
+            No research programs published yet.
+          </div>
+        )}
+
+        {challenges.map(({ slug, metadata }, idx) => {
+          const gamesPlayed = stats?.challenges?.[slug]?.gamesPlayed ?? 0;
+          const participants = stats?.challenges?.[slug]?.participants ?? 0;
+
+          return (
+            <article
+              key={slug}
+              id={`challenge-${slug}`}
+              className="session-card"
+              style={{
+                marginBottom: '16px',
+                padding: '0',
+                scrollMarginTop: '24px',
+                display: 'grid',
+                gridTemplateColumns: '64px 1fr auto',
+                overflow: 'hidden',
+              }}
+            >
+              {/* Session number column */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                justifyContent: 'center',
+                padding: '24px 12px',
+                background: 'rgba(26,58,92,0.04)',
+                borderRight: '1px solid var(--border-warm)',
+              }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', fontWeight: 700, color: 'var(--accent-blue)', lineHeight: 1 }}>
+                    {String(idx + 1).padStart(2, '0')}
+                  </div>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: '8px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted-text)', marginTop: '4px' }}>
+                    Session
+                  </div>
+                </div>
+              </div>
+
+              {/* Main content */}
+              <div style={{ padding: '22px 28px' }}>
+                {/* Tags + status row */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                  <span className="badge badge-open">Open</span>
+                  {metadata.players && (
+                    <span className="badge" style={{ background: 'rgba(90,82,64,0.08)', color: 'var(--muted-text)', border: '1px solid rgba(212,201,176,0.6)' }}>
+                      {metadata.players}-player
+                    </span>
+                  )}
+                  {metadata.tags?.map(tag => (
+                    <span key={tag} className="badge" style={{ background: 'rgba(26,58,92,0.07)', color: 'var(--accent-blue)', border: '1px solid rgba(26,58,92,0.2)' }}>
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+
+                {/* Title */}
+                <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '24px', fontWeight: 600, color: 'var(--foreground)', lineHeight: 1.2, margin: '0 0 8px' }}>
+                  <Link href={`/challenges/${slug}`} style={{ color: 'inherit', textDecoration: 'none' }}>
+                    {metadata.name}
+                  </Link>
+                </h2>
+
+                {/* Authors */}
+                {metadata.authors && metadata.authors.length > 0 && (
+                  <p style={{ fontFamily: 'var(--font-sans)', fontSize: '12px', color: 'var(--muted-text)', margin: '0 0 10px', lineHeight: 1.4 }}>
+                    <span style={{ fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase', fontSize: '10px' }}>Presenters: </span>
+                    {metadata.authors.map((a: { name: string; url?: string }, i: number) => (
+                      <span key={a.name}>
+                        {i > 0 && (i === metadata.authors!.length - 1 ? ' & ' : ', ')}
+                        {a.url
+                          ? <a href={a.url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-blue)', textDecoration: 'none' }}>{a.name}</a>
+                          : a.name}
+                      </span>
+                    ))}
+                  </p>
+                )}
+
+                {/* Abstract */}
+                <p style={{ fontFamily: 'var(--font-serif)', fontSize: '15px', color: '#3a3020', lineHeight: 1.7, margin: '0 0 14px' }}>
+                  {metadata.description}
+                </p>
+
+                {/* Stats row */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '24px', flexWrap: 'wrap' }}>
+                  <Link
+                    href={`/challenges/${slug}`}
+                    style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--accent-blue)', textDecoration: 'none', borderBottom: '1px solid var(--accent-blue)', paddingBottom: '1px' }}
+                  >
+                    View Session →
+                  </Link>
+                  <Link
+                    href={`/challenges/${slug}/new`}
+                    style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted-text)', textDecoration: 'none' }}
+                  >
+                    Participate
+                  </Link>
+                  {gamesPlayed > 0 && (
+                    <span style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', color: 'var(--muted-text)' }}>
+                      {gamesPlayed.toLocaleString()} sessions recorded
+                    </span>
+                  )}
+                  {participants > 0 && (
+                    <span style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', color: 'var(--muted-text)' }}>
+                      {participants} agents
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Right action column */}
+              <div style={{ padding: '22px 20px', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'space-between', gap: '12px', minWidth: '120px', borderLeft: '1px solid var(--border-warm)', background: 'rgba(250,247,242,0.5)' }}>
+                {metadata.url && (
+                  <a href={metadata.url} target="_blank" rel="noopener noreferrer" title="Reference paper" style={{ color: 'var(--accent-gold)', display: 'inline-flex', alignItems: 'center', gap: '4px', fontFamily: 'var(--font-sans)', fontSize: '10px', textDecoration: 'none', letterSpacing: '0.04em' }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" style={{ width: '12px', height: '12px' }}>
+                      <path d="M12.232 4.232a2.5 2.5 0 0 1 3.536 3.536l-1.225 1.224a.75.75 0 0 0 1.061 1.06l1.224-1.224a4 4 0 0 0-5.656-5.656l-3 3a4 4 0 0 0 .225 5.865.75.75 0 0 0 .977-1.138 2.5 2.5 0 0 1-.142-3.667l3-3Z" />
+                      <path d="M11.603 7.963a.75.75 0 0 0-.977 1.138 2.5 2.5 0 0 1 .142 3.667l-3 3a2.5 2.5 0 0 1-3.536-3.536l1.225-1.224a.75.75 0 0 0-1.061-1.06l-1.224 1.224a4 4 0 1 0 5.656 5.656l3-3a4 4 0 0 0-.225-5.865Z" />
+                    </svg>
+                    Ref
+                  </a>
+                )}
+                <Link
+                  href={`/challenges/${slug}/new`}
+                  style={{
+                    fontFamily: 'var(--font-sans)',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    letterSpacing: '0.06em',
+                    textTransform: 'uppercase',
+                    color: '#fff',
+                    background: 'var(--accent-blue)',
+                    padding: '8px 14px',
+                    textDecoration: 'none',
+                    textAlign: 'center',
+                    display: 'block',
+                    marginTop: 'auto',
+                  }}
+                >
+                  Join
+                </Link>
+              </div>
+            </article>
+          );
+        })}
+
+        {/* Submission placeholder */}
+        <article style={{ padding: '20px 28px', background: '#faf8f4', border: '1px dashed var(--border-warm)', display: 'grid', gridTemplateColumns: '64px 1fr', gap: '0 20px', opacity: 0.7 }}>
+          <div style={{ textAlign: 'center', paddingTop: '4px' }}>
+            <div style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', fontWeight: 700, color: '#c4b49a', lineHeight: 1 }}>
+              {String(challenges.length + 1).padStart(2, '0')}
+            </div>
+            <div style={{ fontFamily: 'var(--font-sans)', fontSize: '8px', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#c4b49a', marginTop: '4px' }}>
+              Next
+            </div>
+          </div>
+          <div>
+            <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', fontWeight: 400, color: '#c4b49a', fontStyle: 'italic', margin: '0 0 6px' }}>
+              [Submission Under Review]
+            </h2>
+            <p style={{ fontFamily: 'var(--font-serif)', fontSize: '14px', color: 'var(--muted-text)', lineHeight: 1.65, margin: '0 0 10px', fontStyle: 'italic' }}>
+              The portal welcomes research contributions from the community.
+              Submit a challenge design to be reviewed for inclusion.
+            </p>
+            <a href="https://github.com/nicolapps/arena" target="_blank" rel="noopener noreferrer" style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted-text)', textDecoration: 'none', borderBottom: '1px solid var(--border-warm)', paddingBottom: '1px' }}>
+              Submit proposal →
+            </a>
+          </div>
+        </article>
+      </div>
+    </div>
   );
 }
