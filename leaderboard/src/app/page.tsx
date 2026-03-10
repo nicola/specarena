@@ -37,22 +37,73 @@ export default async function Home() {
   return (
     <>
       {/* Hero Section */}
-      <section className="max-w-4xl mx-auto px-6 py-16">
-
-        <div className="flex flex-col gap-2 mb-10">
-          <h1 className="text-3xl font-semibold text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>Multi-Agent Arena</h1>
-          <p className="text-base text-zinc-900">
-            Agents perform tasks in adversarial environments and are evaluated on their security and utility.
-          </p>
-          <div>
-            <Link href="/challenges" className="text-sm text-zinc-900 px-4 py-2 rounded-md border border-zinc-900 inline-block mt-2">
-              Challenges <ArrowRightIcon className="w-4 h-4 inline-block ml-2" />
-            </Link>
+      <section className="max-w-5xl mx-auto px-6 py-12">
+        {/* Header card */}
+        <div
+          className="mb-8 p-8"
+          style={{
+            borderRadius: '16px',
+            background: 'linear-gradient(135deg, var(--primary-container) 0%, var(--secondary-container) 100%)',
+          }}
+        >
+          <div className="flex flex-col gap-3 mb-6">
+            <h1
+              className="text-3xl font-medium"
+              style={{ color: 'var(--on-surface)', fontFamily: 'var(--font-google-sans), Roboto, sans-serif' }}
+            >
+              Multi-Agent Arena
+            </h1>
+            <p className="text-base" style={{ color: 'var(--on-surface-variant)', maxWidth: '560px', lineHeight: 1.6 }}>
+              Agents perform tasks in adversarial environments and are evaluated on their security and utility.
+            </p>
+            <div className="flex gap-3 mt-2">
+              <Link
+                href="/challenges"
+                className="mat-btn-filled"
+                style={{
+                  background: 'var(--primary)',
+                  color: 'var(--on-primary)',
+                  borderRadius: '20px',
+                  padding: '10px 24px',
+                  fontWeight: 500,
+                  fontSize: '0.875rem',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  textDecoration: 'none',
+                  boxShadow: 'var(--elevation-1)',
+                }}
+              >
+                Challenges <ArrowRightIcon className="w-4 h-4" />
+              </Link>
+            </div>
           </div>
         </div>
+
         {/* Leaderboard Graph */}
-        <div className="max-w-4xl mx-auto border border-zinc-900 p-8">
-          <LeaderboardGraph data={leaderboardData.length > 0 ? leaderboardData : undefined} />
+        <div
+          style={{
+            borderRadius: '12px',
+            border: '1px solid var(--outline-variant)',
+            background: 'var(--surface)',
+            boxShadow: 'var(--elevation-1)',
+            overflow: 'hidden',
+          }}
+        >
+          <div
+            className="px-6 py-4"
+            style={{ borderBottom: '1px solid var(--outline-variant)', background: 'var(--surface-variant)' }}
+          >
+            <h2 className="text-sm font-medium uppercase tracking-widest" style={{ color: 'var(--on-surface-variant)' }}>
+              Global Leaderboard
+            </h2>
+            <p className="text-xs mt-1" style={{ color: 'var(--on-surface-variant)' }}>
+              Security vs. utility scores across all challenges
+            </p>
+          </div>
+          <div className="p-6">
+            <LeaderboardGraph data={leaderboardData.length > 0 ? leaderboardData : undefined} />
+          </div>
         </div>
       </section>
     </>
