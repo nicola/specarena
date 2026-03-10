@@ -62,7 +62,6 @@ async function fetchAllChallengesMeta(): Promise<Record<string, ChallengeMetadat
 export async function generateMetadata({ params }: { params: Promise<{ name: string }> }) {
   const { name } = await params;
   const challenge = await fetchMetadata(name);
-
   const metadata: Metadata = {
     title: challenge ? `ARENA — ${challenge.name}` : "ARENA — Challenge Not Found",
     description: challenge?.description || "",
@@ -120,7 +119,6 @@ export default async function ChallengePage({ params, searchParams }: { params: 
 
   const unbeaten = scoringData.filter((d) => d.securityPolicy === 1).sort((a, b) => b.utility - a.utility);
 
-  // Find position of this challenge in the catalog
   const allSlugs = Object.keys(allMeta);
   const paperNumber = allSlugs.indexOf(name) + 1;
 
@@ -128,30 +126,31 @@ export default async function ChallengePage({ params, searchParams }: { params: 
     <>
       {/* ── Running header ── */}
       <div style={{ borderBottom: '1px solid var(--border-warm)', background: 'var(--background)' }}>
-        <div style={{ maxWidth: '960px', margin: '0 auto', padding: '6px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '6px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ fontFamily: 'var(--font-sans)', fontSize: '10px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted-text)' }}>
             <Link href="/challenges" style={{ color: 'var(--muted-text)', textDecoration: 'none' }}>Challenge Catalog</Link>
             <span style={{ margin: '0 6px' }}>›</span>
             {challenge.name}
           </span>
           <span style={{ fontFamily: 'var(--font-sans)', fontSize: '10px', color: 'var(--muted-text)', letterSpacing: '0.04em' }}>
-            {paperNumber > 0 && `Paper ${String(paperNumber).padStart(2, '0')} · `}Multi-Agent Arena
+            {paperNumber > 0 && `Paper No. ${String(paperNumber).padStart(2, '0')} · `}J. Multi-Agent Eval. Res.
           </span>
         </div>
       </div>
 
-      {/* ── Main content: paper layout ── */}
-      <div style={{ maxWidth: '960px', margin: '0 auto', padding: '0 32px 80px', display: 'grid', gridTemplateColumns: '1fr 280px', gap: '0 48px', alignItems: 'start' }}>
+      {/* ── Page layout: main content + right margin ── */}
+      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 40px 80px', display: 'grid', gridTemplateColumns: '1fr 260px', gap: '0 52px', alignItems: 'start' }}>
 
-        {/* ─── LEFT: Paper content ─── */}
+        {/* ═══════════════════════════════════════════════════════
+            LEFT: Full academic paper
+        ═══════════════════════════════════════════════════════ */}
         <article>
 
-          {/* Paper header block */}
-          <div style={{ paddingTop: '40px', paddingBottom: '28px', borderBottom: '2px solid var(--foreground)', marginBottom: '32px' }}>
-
+          {/* Paper title block */}
+          <div style={{ paddingTop: '44px', paddingBottom: '32px', borderBottom: '3px double var(--foreground)', marginBottom: '0' }}>
             {/* Classification tags */}
             {challenge.tags && challenge.tags.length > 0 && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '14px' }}>
                 {challenge.tags.map((tag) => {
                   const colors = tagColors[tag] || tagColors._default;
                   return (
@@ -161,7 +160,7 @@ export default async function ChallengePage({ params, searchParams }: { params: 
                   );
                 })}
                 {challenge.players && (
-                  <span style={{ fontFamily: 'var(--font-sans)', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted-text)', border: '1px solid var(--border-warm)', padding: '1px 6px', borderRadius: '0' }}>
+                  <span style={{ fontFamily: 'var(--font-sans)', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted-text)', border: '1px solid var(--border-warm)', padding: '1px 6px' }}>
                     {challenge.players}-player
                   </span>
                 )}
@@ -169,7 +168,7 @@ export default async function ChallengePage({ params, searchParams }: { params: 
             )}
 
             {/* Title */}
-            <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '40px', fontWeight: 700, color: 'var(--foreground)', lineHeight: 1.15, letterSpacing: '-0.01em', margin: '0 0 12px' }}>
+            <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '44px', fontWeight: 700, color: 'var(--foreground)', lineHeight: 1.1, letterSpacing: '-0.02em', margin: '0 0 14px' }}>
               {challenge.name}
               {challenge.url && (
                 <a href={challenge.url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-gold)', marginLeft: '10px', display: 'inline-block', verticalAlign: 'middle' }}>
@@ -183,58 +182,184 @@ export default async function ChallengePage({ params, searchParams }: { params: 
 
             {/* Authors */}
             {challenge.authors && challenge.authors.length > 0 && (
-              <p style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', color: 'var(--muted-text)', margin: '0 0 16px', lineHeight: 1.5 }}>
-                <span style={{ fontVariant: 'small-caps', marginRight: '4px' }}>By</span>
+              <p style={{ fontFamily: 'var(--font-sans)', fontSize: '14px', color: 'var(--muted-text)', margin: '0 0 18px', lineHeight: 1.5 }}>
+                <span style={{ fontVariant: 'small-caps', marginRight: '6px', letterSpacing: '0.04em' }}>Authors:</span>
                 {challenge.authors.map((author, i) => (
                   <span key={author.name}>
                     {i > 0 && (i === challenge.authors!.length - 1 ? ' and ' : ', ')}
-                    <a href={author.url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-blue)', textDecoration: 'none' }}>{author.name}</a>
+                    <a href={author.url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-blue)', textDecoration: 'none', fontWeight: 500 }}>{author.name}</a>
                   </span>
                 ))}
               </p>
             )}
 
-            {/* Abstract — the challenge description */}
-            <div style={{ background: '#faf7f0', border: '1px solid var(--border-warm)', borderLeft: '3px solid var(--accent-blue)', padding: '18px 22px' }}>
-              <h2 style={{ fontFamily: 'var(--font-sans)', fontSize: '10px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--accent-blue)', margin: '0 0 8px' }}>
+            {/* Abstract box */}
+            <div style={{
+              background: '#faf7f0',
+              border: '1px solid var(--border-warm)',
+              borderLeft: '3px solid var(--accent-blue)',
+              padding: '20px 24px',
+              marginBottom: '0',
+            }}>
+              <h2 style={{ fontFamily: 'var(--font-sans)', fontSize: '10px', fontWeight: 600, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--accent-blue)', margin: '0 0 10px' }}>
                 Abstract
               </h2>
-              <p style={{ fontFamily: 'var(--font-serif)', fontSize: '16px', color: '#2c2c2c', lineHeight: 1.75, margin: 0 }}>
+              <p style={{ fontFamily: 'var(--font-serif)', fontSize: '16px', color: '#2c2c2c', lineHeight: 1.8, margin: 0 }}>
                 {challenge.description}
               </p>
             </div>
           </div>
 
-          {/* Challenge specification — the main paper body */}
-          <ChallengePrompt prompt={challenge.prompt} />
+          {/* ── § 1. Introduction ── */}
+          <section style={{ paddingTop: '32px', marginBottom: '28px' }}>
+            <h2 className="paper-section-heading">1. Introduction</h2>
+            <p style={{ fontFamily: 'var(--font-serif)', fontSize: '16px', color: '#2c2c2c', lineHeight: 1.8, margin: '0 0 12px' }}>
+              This challenge presents a structured evaluation scenario for multi-agent systems operating under
+              adversarial and cooperative pressures. Participating agents are assessed along two orthogonal axes:
+              <em> security policy adherence</em> and <em>task utility</em>, reflecting real-world deployment requirements
+              where an agent must simultaneously resist manipulation and achieve its assigned objective.
+            </p>
+            <p style={{ fontFamily: 'var(--font-serif)', fontSize: '16px', color: '#2c2c2c', lineHeight: 1.8, margin: 0 }}>
+              The scenario is drawn from established game-theoretic and cryptographic literature, adapted for
+              evaluation in a live multi-agent setting. All sessions are logged and contribute to the aggregate
+              performance dataset reported in §&thinsp;4.
+            </p>
+          </section>
 
-          {/* Performance data section */}
-          {(scoringData.length > 0 || unbeaten.length > 0) && (
-            <div style={{ marginTop: '40px' }}>
-              <div style={{ paddingBottom: '8px', borderBottom: '2px solid var(--foreground)', marginBottom: '20px' }}>
-                <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', fontWeight: 600, color: 'var(--foreground)', margin: 0 }}>
-                  Empirical Results
-                </h2>
-              </div>
-              {scoringData.length > 0 && (
-                <div style={{ border: '1px solid var(--border-warm)', background: '#ffffff', marginBottom: '24px' }}>
-                  <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border-warm)', background: '#faf7f0' }}>
-                    <h3 style={{ fontFamily: 'var(--font-sans)', fontSize: '10px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--accent-blue)', margin: 0 }}>
-                      Figure 1 — Performance Landscape
-                    </h3>
-                    <p style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', color: 'var(--muted-text)', margin: '3px 0 0' }}>
-                      Agent performance on security (x) and utility (y) dimensions for this challenge.
-                    </p>
-                  </div>
-                  <div style={{ padding: '20px' }}>
-                    <LeaderboardGraph data={scoringData} height={300} />
-                  </div>
+          {/* ── § 2. Methods — the actual challenge prompt ── */}
+          <section style={{ marginBottom: '28px' }}>
+            <h2 className="paper-section-heading">2. Methods — Challenge Specification</h2>
+            <p style={{ fontFamily: 'var(--font-serif)', fontSize: '14px', fontStyle: 'italic', color: 'var(--muted-text)', margin: '0 0 16px', lineHeight: 1.6 }}>
+              The following specification is provided verbatim to each participating agent at session start.
+            </p>
+            <ChallengePrompt prompt={challenge.prompt} />
+          </section>
+
+          {/* ── § 3. Scoring rules ── */}
+          <section style={{ marginBottom: '28px', background: '#faf7f0', border: '1px solid var(--border-warm)', padding: '20px 24px' }}>
+            <h2 style={{ fontFamily: 'var(--font-sans)', fontSize: '10px', fontWeight: 600, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--accent-blue)', margin: '0 0 12px' }}>
+              3. Evaluation Criteria
+            </h2>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+              <div>
+                <div style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent-blue)', marginBottom: '6px' }}>
+                  Security Score
                 </div>
-              )}
+                <p style={{ fontFamily: 'var(--font-serif)', fontSize: '14px', color: '#2c2c2c', lineHeight: 1.7, margin: 0 }}>
+                  Measures whether the agent adheres to its security policy under adversarial pressure.
+                  A score of <strong>+1</strong> indicates full compliance; <strong>−1</strong> indicates a policy breach.
+                </p>
+              </div>
+              <div>
+                <div style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted-text)', marginBottom: '6px' }}>
+                  Utility Score
+                </div>
+                <p style={{ fontFamily: 'var(--font-serif)', fontSize: '14px', color: '#2c2c2c', lineHeight: 1.7, margin: 0 }}>
+                  Measures task completion quality. Ranges from <strong>−1</strong> (complete failure) to <strong>+1</strong> (optimal performance),
+                  with intermediate values for partial results.
+                </p>
+              </div>
             </div>
-          )}
+          </section>
 
-          {/* Session Records */}
+          {/* ── § 4. Results ── */}
+          <section style={{ marginBottom: '28px' }}>
+            <h2 className="paper-section-heading">4. Results</h2>
+
+            {scoringData.length > 0 && (
+              <div style={{ border: '1px solid var(--border-warm)', background: '#ffffff', marginBottom: '24px' }}>
+                <div style={{ padding: '12px 18px', borderBottom: '1px solid var(--border-warm)', background: '#faf7f0', display: 'flex', alignItems: 'baseline', gap: '10px' }}>
+                  <span style={{ fontFamily: 'var(--font-sans)', fontSize: '10px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--accent-blue)' }}>
+                    Figure 1
+                  </span>
+                  <span style={{ fontFamily: 'var(--font-serif)', fontSize: '13px', fontStyle: 'italic', color: 'var(--muted-text)' }}>
+                    Performance landscape: security × utility for {scoringData.length} participating agents
+                  </span>
+                </div>
+                <div style={{ padding: '16px' }}>
+                  <LeaderboardGraph data={scoringData} height={300} />
+                </div>
+                <div style={{ padding: '8px 18px 12px', borderTop: '1px solid var(--border-warm)' }}>
+                  <p style={{ fontFamily: 'var(--font-sans)', fontSize: '10px', color: 'var(--muted-text)', margin: 0, lineHeight: 1.6 }}>
+                    * Pareto-frontier agents shown in Oxford blue. Benchmark references in gold. Hover a point for agent details.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Leaderboard data table */}
+            {scoringData.length > 0 && (
+              <div style={{ marginBottom: '20px' }}>
+                <div style={{ fontFamily: 'var(--font-sans)', fontSize: '10px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--accent-blue)', marginBottom: '10px' }}>
+                  Table 1 — Agent Rankings
+                </div>
+                <table className="academic">
+                  <thead>
+                    <tr>
+                      <th style={{ width: '32px' }}>#</th>
+                      <th>Agent</th>
+                      <th>Model</th>
+                      <th style={{ textAlign: 'right' }}>Security</th>
+                      <th style={{ textAlign: 'right' }}>Utility</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {scoringData
+                      .slice()
+                      .sort((a, b) => (b.securityPolicy + b.utility) - (a.securityPolicy + a.utility))
+                      .slice(0, 15)
+                      .map((agent, i) => (
+                        <tr key={agent.name}>
+                          <td style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--muted-text)' }}>{i + 1}</td>
+                          <td>
+                            <Link href={`/users/${agent.playerId}`} style={{ color: 'var(--accent-blue)', textDecoration: 'none', fontFamily: 'var(--font-sans)', fontSize: '13px' }}>
+                              {agent.name}
+                            </Link>
+                          </td>
+                          <td style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', color: 'var(--muted-text)' }}>{agent.model ?? '—'}</td>
+                          <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '12px', color: agent.securityPolicy === 1 ? 'var(--accent-blue)' : agent.securityPolicy === -1 ? '#c0392b' : 'var(--foreground)' }}>
+                            {agent.securityPolicy.toFixed(2)}
+                          </td>
+                          <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: '12px', color: agent.utility === -1 ? '#7c3aed' : 'var(--foreground)' }}>
+                            {agent.utility.toFixed(2)}
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+                {scoringData.length > 15 && (
+                  <p style={{ fontFamily: 'var(--font-sans)', fontSize: '10px', color: 'var(--muted-text)', marginTop: '6px' }}>
+                    Showing top 15 of {scoringData.length} agents. Participate to appear in the rankings.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {scoringData.length === 0 && (
+              <p style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', color: 'var(--muted-text)', fontSize: '15px' }}>
+                No performance data recorded yet. Be the first to participate and contribute to this dataset.
+              </p>
+            )}
+          </section>
+
+          {/* ── § 5. Conclusion ── */}
+          <section style={{ marginBottom: '40px' }}>
+            <h2 className="paper-section-heading">5. Conclusion</h2>
+            <p style={{ fontFamily: 'var(--font-serif)', fontSize: '16px', color: '#2c2c2c', lineHeight: 1.8, margin: '0 0 12px' }}>
+              This challenge contributes a well-defined evaluation harness for studying agent behaviour at the
+              intersection of security compliance and task utility. Results from participating agents populate the
+              living dataset above, enabling longitudinal analysis of capability trends.
+            </p>
+            <p style={{ fontFamily: 'var(--font-serif)', fontSize: '16px', color: '#2c2c2c', lineHeight: 1.8, margin: '0 0 20px' }}>
+              Researchers wishing to contribute a new challenge scenario are invited to submit a proposal via the
+              project repository.
+            </p>
+            <a href="https://github.com/nicolapps/arena" target="_blank" rel="noopener noreferrer" style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted-text)', textDecoration: 'none', borderBottom: '1px solid var(--border-warm)', paddingBottom: '1px' }}>
+              Submit challenge proposal →
+            </a>
+          </section>
+
+          {/* ── Session Records ── */}
           <ChallengesList
             challenges={challengesList}
             challengeType={name}
@@ -253,25 +378,25 @@ export default async function ChallengePage({ params, searchParams }: { params: 
           />
         </article>
 
-        {/* ─── RIGHT: Sticky Sidebar ─── */}
-        <aside style={{ position: 'sticky', top: '120px', paddingTop: '40px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        {/* ═══════════════════════════════════════════════════════
+            RIGHT: Margin notes sidebar
+        ═══════════════════════════════════════════════════════ */}
+        <aside style={{ position: 'sticky', top: '100px', paddingTop: '44px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
           {/* Participate CTA */}
           <Link
             href={`/challenges/${name}/new`}
-            style={{ display: 'block', fontFamily: 'var(--font-sans)', fontSize: '13px', fontWeight: 500, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#ffffff', background: 'var(--accent-blue)', padding: '12px 20px', textDecoration: 'none', textAlign: 'center' }}
+            style={{ display: 'block', fontFamily: 'var(--font-sans)', fontSize: '12px', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#ffffff', background: 'var(--accent-blue)', padding: '13px 20px', textDecoration: 'none', textAlign: 'center' }}
           >
             Participate in this challenge
           </Link>
 
-          {/* Challenge metadata card */}
-          <div style={{ border: '1px solid var(--border-warm)', background: '#ffffff' }}>
-            <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-warm)', background: '#faf7f0' }}>
-              <h3 style={{ fontFamily: 'var(--font-sans)', fontSize: '10px', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--muted-text)', margin: 0 }}>
-                Paper Details
-              </h3>
+          {/* Paper details — margin note style */}
+          <div style={{ borderTop: '2px solid var(--foreground)', paddingTop: '14px' }}>
+            <div style={{ fontFamily: 'var(--font-sans)', fontSize: '9px', fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--muted-text)', marginBottom: '12px' }}>
+              Paper Details
             </div>
-            <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {[
                 { label: 'Challenge type', value: name },
                 { label: 'Players', value: `${challenge.players ?? 2} agents` },
@@ -280,62 +405,69 @@ export default async function ChallengePage({ params, searchParams }: { params: 
                 scoringData.length > 0 ? { label: 'Participants', value: scoringData.length.toString() } : null,
                 stats?.challenges?.[name]?.gamesPlayed > 0 ? { label: 'Completed', value: stats.challenges[name].gamesPlayed.toLocaleString() } : null,
               ].filter(Boolean).map(({ label, value }: { label: string; value: string }) => (
-                <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
-                  <span style={{ fontFamily: 'var(--font-sans)', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted-text)' }}>{label}</span>
-                  <span style={{ fontFamily: 'var(--font-serif)', fontSize: '14px', color: 'var(--foreground)' }}>{value}</span>
+                <div key={label}>
+                  <div className="margin-note" style={{ fontWeight: 600, color: 'var(--foreground)', marginBottom: '1px' }}>{label}</div>
+                  <div className="margin-note">{value}</div>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Unbeaten agents */}
+          {/* Key finding — margin note */}
           {unbeaten.length > 0 && (
-            <div style={{ border: '1px solid var(--border-warm)', borderLeft: '3px solid var(--accent-blue)', background: '#ffffff' }}>
-              <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-warm)', background: '#faf7f0', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <ShieldCheckIcon style={{ width: '12px', height: '12px', color: 'var(--accent-blue)' }} />
-                <h3 style={{ fontFamily: 'var(--font-sans)', fontSize: '10px', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--accent-blue)', margin: 0 }}>
-                  Unbeaten Agents
-                </h3>
+            <div style={{ borderTop: '1px solid var(--border-warm)', paddingTop: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+                <ShieldCheckIcon style={{ width: '11px', height: '11px', color: 'var(--accent-blue)', flexShrink: 0 }} />
+                <div style={{ fontFamily: 'var(--font-sans)', fontSize: '9px', fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--accent-blue)' }}>
+                  Undefeated Agents
+                </div>
               </div>
-              <div>
-                {unbeaten.map((player, i) => (
-                  <div key={player.name} style={{ display: 'flex', alignItems: 'center', padding: '7px 16px', borderBottom: '1px solid #ede8de' }}>
-                    <span style={{ width: '18px', fontFamily: 'var(--font-sans)', fontSize: '10px', color: 'var(--muted-text)', flexShrink: 0 }}>{i + 1}</span>
-                    <span style={{ fontFamily: 'var(--font-sans)', fontSize: '12px', color: '#2c2c2c', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      <Link href={`/users/${player.playerId}`} style={{ color: 'inherit', textDecoration: 'none' }}>{player.name}</Link>
-                      {player.model && <span style={{ color: 'var(--muted-text)', fontSize: '10px', marginLeft: '4px' }}>({player.model})</span>}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
+                {unbeaten.slice(0, 5).map((player, i) => (
+                  <div key={player.name} style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+                    <span className="margin-note" style={{ width: '14px', flexShrink: 0, color: 'var(--accent-blue)', fontWeight: 600 }}>{i + 1}.</span>
+                    <span className="margin-note" style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <Link href={`/users/${player.playerId}`} style={{ color: 'var(--foreground)', textDecoration: 'none' }}>{player.name}</Link>
                     </span>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--muted-text)', flexShrink: 0, paddingLeft: '8px' }}>{player.utility.toFixed(2)}</span>
+                    <span className="margin-note" style={{ flexShrink: 0 }}>{player.utility.toFixed(2)}</span>
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Top attackers */}
+          {/* Top attackers — margin note */}
           {redTeamData.length > 0 && (
-            <div style={{ border: '1px solid var(--border-warm)', borderLeft: '3px solid var(--accent-gold)', background: '#ffffff' }}>
-              <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-warm)', background: '#faf7f0', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <FireIcon style={{ width: '12px', height: '12px', color: '#b8860b' }} />
-                <h3 style={{ fontFamily: 'var(--font-sans)', fontSize: '10px', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#b8860b', margin: 0 }}>
+            <div style={{ borderTop: '1px solid var(--border-warm)', paddingTop: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+                <FireIcon style={{ width: '11px', height: '11px', color: '#b8860b', flexShrink: 0 }} />
+                <div style={{ fontFamily: 'var(--font-sans)', fontSize: '9px', fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#b8860b' }}>
                   Top Attackers
-                </h3>
+                </div>
               </div>
-              <div>
-                {redTeamData.map((player, i) => (
-                  <div key={player.name} style={{ display: 'flex', alignItems: 'center', padding: '7px 16px', borderBottom: '1px solid #ede8de' }}>
-                    <span style={{ width: '18px', fontFamily: 'var(--font-sans)', fontSize: '10px', color: 'var(--muted-text)', flexShrink: 0 }}>{i + 1}</span>
-                    <span style={{ fontFamily: 'var(--font-sans)', fontSize: '12px', color: '#2c2c2c', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      <Link href={`/users/${player.playerId}`} style={{ color: 'inherit', textDecoration: 'none' }}>{player.name}</Link>
-                      {player.model && <span style={{ color: 'var(--muted-text)', fontSize: '10px', marginLeft: '4px' }}>({player.model})</span>}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
+                {redTeamData.slice(0, 5).map((player, i) => (
+                  <div key={player.name} style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+                    <span className="margin-note" style={{ width: '14px', flexShrink: 0, color: '#b8860b', fontWeight: 600 }}>{i + 1}.</span>
+                    <span className="margin-note" style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <Link href={`/users/${player.playerId}`} style={{ color: 'var(--foreground)', textDecoration: 'none' }}>{player.name}</Link>
                     </span>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--muted-text)', flexShrink: 0, paddingLeft: '8px' }}>{(player.attack * 100).toFixed(0)}%</span>
+                    <span className="margin-note" style={{ flexShrink: 0 }}>{(player.attack * 100).toFixed(0)}%</span>
                   </div>
                 ))}
               </div>
             </div>
           )}
 
+          {/* Cite this paper */}
+          <div style={{ borderTop: '1px solid var(--border-warm)', paddingTop: '14px' }}>
+            <div style={{ fontFamily: 'var(--font-sans)', fontSize: '9px', fontWeight: 600, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--muted-text)', marginBottom: '8px' }}>
+              Cite
+            </div>
+            <p className="margin-note" style={{ fontStyle: 'italic', lineHeight: 1.6, userSelect: 'all' }}>
+              Multi-Agent Arena. &ldquo;{challenge.name}.&rdquo; <em>J. Multi-Agent Eval. Res.</em>, Vol. 1, {new Date().getFullYear()}.
+            </p>
+          </div>
         </aside>
       </div>
     </>

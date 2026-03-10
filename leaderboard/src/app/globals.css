@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 
 :root {
@@ -119,4 +120,98 @@ li {
   margin-right: -12px;
   padding-left: 12px !important;
   padding-right: 12px !important;
+}
+
+/* Journal article card hover */
+.article-card {
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+.article-card:hover {
+  box-shadow: 0 4px 20px rgba(26, 58, 92, 0.08);
+  border-color: var(--accent-blue) !important;
+}
+
+/* Masthead full-bleed border rule */
+.masthead-rule {
+  border-top: 3px solid var(--foreground);
+  border-bottom: 1px solid var(--foreground);
+}
+
+/* Margin note — sidebar annotations */
+.margin-note {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  color: var(--muted-text);
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+}
+
+/* Paper section headings */
+.paper-section-heading {
+  font-family: var(--font-serif);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--foreground);
+  letter-spacing: -0.01em;
+  margin: 0 0 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-warm);
+}
+
+/* Author bio style */
+.author-byline {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--muted-text);
+  letter-spacing: 0.03em;
+}
+
+/* h-index metric display */
+.metric-value {
+  font-family: var(--font-serif);
+  font-size: 36px;
+  font-weight: 600;
+  color: var(--accent-blue);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.metric-label {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted-text);
+  margin-top: 4px;
+}
+
+/* Bibliography entry */
+.bib-entry {
+  border-bottom: 1px solid var(--border-warm);
+  padding: 14px 0;
+}
+.bib-entry:last-child {
+  border-bottom: none;
+}
+
+/* Browse subject dropdown */
+select.subject-filter {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--foreground);
+  background: var(--background);
+  border: 1px solid var(--border-warm);
+  padding: 6px 28px 6px 10px;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%235a5240'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  cursor: pointer;
+  letter-spacing: 0.03em;
+}
+
+select.subject-filter:focus {
+  outline: 1px solid var(--accent-blue);
+  border-color: var(--accent-blue);
 }
