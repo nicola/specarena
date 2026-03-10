@@ -5,6 +5,11 @@ import type { UserProfile } from "@arena/engine/users";
 import type { ScoringEntry, PlayerScores } from "@arena/engine/scoring";
 import { ENGINE_URL } from "@/lib/config";
 
+const amber = '#ffb000';
+const amberDim = '#cc8800';
+const amberBright = '#ffcc44';
+const bg = '#0d0a00';
+
 async function fetchUserProfile(userId: string): Promise<UserProfile | null> {
   try {
     const res = await fetch(`${ENGINE_URL}/api/users/${userId}`, { cache: "no-store" });
@@ -65,7 +70,6 @@ function metricLabel(key: string): string {
     "consecutive:utility": "Util. Streak",
   };
   if (labels[key]) return labels[key];
-  // fallback: strip prefix, title-case
   const suffix = key.includes(":") ? key.split(":").pop()! : key;
   return suffix.charAt(0).toUpperCase() + suffix.slice(1);
 }
@@ -82,11 +86,29 @@ function formatMetricValue(key: string, value: number): string {
 
 function metricColor(key: string, value: number): string {
   if (value === -1) {
-    if (key.includes("utility")) return "text-violet-400";
-    return "text-red-300";
+    if (key.includes("utility")) return amberDim;
+    return '#ff4400';
   }
-  return "text-zinc-900";
+  return amber;
 }
+
+const boxStyle = {
+  border: `1px solid ${amber}`,
+  padding: '2rem',
+  background: bg,
+  marginBottom: '1.5rem',
+};
+
+const sectionLabelStyle = {
+  fontFamily: '"Courier New", monospace',
+  fontSize: '0.78rem',
+  fontWeight: 'bold' as const,
+  color: amberBright,
+  textShadow: `0 0 6px ${amberBright}`,
+  marginBottom: '0.5rem',
+  letterSpacing: '0.1em',
+  textTransform: 'uppercase' as const,
+};
 
 export default async function UserProfilePage({ params, searchParams }: { params: Promise<{ userId: string }>; searchParams: Promise<{ page?: string }> }) {
   const { userId } = await params;
@@ -103,7 +125,6 @@ export default async function UserProfilePage({ params, searchParams }: { params
 
   const displayName = profile?.username ?? userId.slice(0, 8);
 
-  // Transform global scoring into graph data
   const graphData = globalScoring.map((entry) => ({
     name: entry.username ?? entry.playerId.slice(0, 8),
     securityPolicy: entry.metrics["global-average:security"] ?? 0,
@@ -118,25 +139,40 @@ export default async function UserProfilePage({ params, searchParams }: { params
   const hasScores = scores && (scores.global || Object.keys(scores.challenges).length > 0);
 
   return (
-    <section className="max-w-4xl mx-auto px-6 py-16">
+    <section style={{ maxWidth: '56rem', margin: '0 auto', padding: '4rem 1.5rem' }}>
       {/* Title */}
-      <div className="flex flex-col gap-2 mb-10">
-        <h1 className="text-3xl font-semibold text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
-          Agent {displayName}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '2.5rem' }}>
+        <h1 style={{
+          fontFamily: '"Courier New", monospace',
+          fontSize: '1.6rem',
+          fontWeight: 'bold',
+          color: amberBright,
+          textShadow: `0 0 12px ${amberBright}, 0 0 20px ${amber}`,
+          letterSpacing: '0.05em',
+          margin: 0,
+        }}>
+          AGENT: {displayName}
         </h1>
       </div>
 
       {/* Info Box */}
-      <div className="max-w-4xl mx-auto border border-zinc-900 p-8 mb-6">
-        <div className="flex flex-col gap-4">
+      <div style={boxStyle}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div>
-            <h2 className="text-lg font-semibold text-zinc-900 mb-2">User ID</h2>
-            <CopyableInvite invite={userId} className="text-sm text-zinc-400 font-mono break-all flex items-center gap-2 group cursor-pointer hover:text-zinc-600 transition-colors" showButton={false} />
+            <h2 style={sectionLabelStyle}>User ID</h2>
+            <CopyableInvite
+              invite={userId}
+              className="text-sm font-mono break-all flex items-center gap-2 group cursor-pointer transition-colors"
+              showButton={false}
+            />
           </div>
           {profile?.model && (
             <div>
-              <h2 className="text-lg font-semibold text-zinc-900 mb-2">Model <span className="text-sm font-normal text-zinc-400">(self-reported, not verified)</span></h2>
-              <div className="text-sm text-zinc-600">{profile.model}</div>
+              <h2 style={sectionLabelStyle}>
+                Model{' '}
+                <span style={{ fontSize: '0.65rem', fontWeight: 'normal', color: amberDim, textTransform: 'none' }}>(self-reported, not verified)</span>
+              </h2>
+              <div style={{ fontFamily: '"Courier New", monospace', fontSize: '0.82rem', color: amberDim }}>{profile.model}</div>
             </div>
           )}
         </div>
@@ -144,31 +180,30 @@ export default async function UserProfilePage({ params, searchParams }: { params
 
       {/* Scoring */}
       {hasScores && (
-        <div className="flex flex-col gap-4 mb-6">
-          {/* Leaderboard graph + Overview sidebar */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
           {scores!.global && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div style={{ display: 'grid', gridTemplateColumns: graphData.length > 0 ? '2fr 1fr' : '1fr', gap: '1rem' }}>
               {graphData.length > 0 && (
-                <div className="border border-zinc-900 self-start md:col-span-2 divide-y divide-zinc-100">
-                  <div className="px-4 pt-4 pb-2">
-                    <h2 className="text-sm font-semibold text-zinc-900">Leaderboard</h2>
-                    <p className="text-xs text-zinc-400 mt-1">Average security vs utility across all challenges.</p>
+                <div style={{ border: `1px solid ${amber}`, background: bg }}>
+                  <div style={{ padding: '1rem 1rem 0.5rem', borderBottom: `1px solid ${amberDim}` }}>
+                    <h2 style={sectionLabelStyle}>Leaderboard</h2>
+                    <p style={{ fontFamily: '"Courier New", monospace', fontSize: '0.7rem', color: amberDim, margin: 0 }}>Average security vs utility across all challenges.</p>
                   </div>
-                  <div className="p-4">
+                  <div style={{ padding: '1rem' }}>
                     <LeaderboardGraph data={graphData} height={300} highlightName={displayName} />
                   </div>
                 </div>
               )}
-              <div className="border border-zinc-900 self-start divide-y divide-zinc-100">
-                <div className="px-4 pt-4 pb-2">
-                  <h2 className="text-sm font-semibold text-zinc-900">Overview</h2>
-                  <p className="text-xs text-zinc-400 mt-1">{scores!.global.gamesPlayed} games played</p>
+              <div style={{ border: `1px solid ${amber}`, background: bg }}>
+                <div style={{ padding: '1rem 1rem 0.5rem', borderBottom: `1px solid ${amberDim}` }}>
+                  <h2 style={sectionLabelStyle}>Overview</h2>
+                  <p style={{ fontFamily: '"Courier New", monospace', fontSize: '0.7rem', color: amberDim, margin: 0 }}>{scores!.global.gamesPlayed} games played</p>
                 </div>
-                <div className="px-4 py-4 flex flex-col gap-4">
+                <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                   {Object.entries(scores!.global.metrics).map(([key, value]) => (
                     <div key={key}>
-                      <div className="text-xs text-zinc-400 mb-1 uppercase tracking-wide">{metricLabel(key)}</div>
-                      <div className={`text-2xl font-mono tabular-nums ${metricColor(key, value)}`}>
+                      <div style={{ fontFamily: '"Courier New", monospace', fontSize: '0.65rem', color: amberDim, marginBottom: '0.25rem', letterSpacing: '0.1em', textTransform: 'uppercase' }}>{metricLabel(key)}</div>
+                      <div style={{ fontFamily: '"Courier New", monospace', fontSize: '1.5rem', color: metricColor(key, value), textShadow: `0 0 8px ${metricColor(key, value)}` }}>
                         {formatMetricValue(key, value)}
                       </div>
                     </div>
@@ -179,9 +214,8 @@ export default async function UserProfilePage({ params, searchParams }: { params
           )}
 
           {/* Per-challenge cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
             {Object.entries(scores!.challenges).map(([challengeType, strategies]) => {
-              // Merge all strategy metrics + sum games played
               const mergedMetrics: Record<string, number> = {};
               let totalGames = 0;
               Object.values(strategies).forEach((entry) => {
@@ -193,16 +227,16 @@ export default async function UserProfilePage({ params, searchParams }: { params
               const metricEntries = Object.entries(mergedMetrics);
 
               return (
-                <div key={challengeType} className="border border-zinc-900 p-6">
-                  <div className="flex items-baseline justify-between mb-4">
-                    <h2 className="text-sm font-semibold text-zinc-900">{challengeType}</h2>
-                    <span className="text-xs text-zinc-400 tabular-nums">{totalGames} games</span>
+                <div key={challengeType} style={{ border: `1px solid ${amber}`, padding: '1.5rem', background: bg }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                    <h2 style={{ fontFamily: '"Courier New", monospace', fontSize: '0.78rem', fontWeight: 'bold', color: amberBright, textShadow: `0 0 6px ${amberBright}`, margin: 0 }}>{challengeType}</h2>
+                    <span style={{ fontFamily: '"Courier New", monospace', fontSize: '0.65rem', color: amberDim }}>{totalGames} games</span>
                   </div>
-                  <div className="flex flex-col gap-2">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                     {metricEntries.map(([key, value]) => (
-                      <div key={key} className="flex items-baseline justify-between">
-                        <span className="text-xs text-zinc-500">{metricLabel(key)}</span>
-                        <span className={`text-sm font-mono tabular-nums ${metricColor(key, value)}`}>
+                      <div key={key} style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+                        <span style={{ fontFamily: '"Courier New", monospace', fontSize: '0.7rem', color: amberDim }}>{metricLabel(key)}</span>
+                        <span style={{ fontFamily: '"Courier New", monospace', fontSize: '0.82rem', color: metricColor(key, value), textShadow: `0 0 4px ${metricColor(key, value)}` }}>
                           {formatMetricValue(key, value)}
                         </span>
                       </div>
@@ -227,8 +261,8 @@ export default async function UserProfilePage({ params, searchParams }: { params
           basePath={`/users/${userId}`}
         />
       ) : (
-        <div className="border border-zinc-900 p-8 text-center">
-          <p className="text-zinc-600">No challenges found for this user.</p>
+        <div style={{ border: `1px solid ${amber}`, padding: '2rem', textAlign: 'center', background: bg }}>
+          <p style={{ fontFamily: '"Courier New", monospace', fontSize: '0.85rem', color: amberDim }}>No challenges found for this user.</p>
         </div>
       )}
     </section>
