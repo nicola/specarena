@@ -102,8 +102,43 @@ export default async function ChallengePage({ params, searchParams }: { params: 
     .filter((d) => d.attack > 0)
     .sort((a, b) => b.attack - a.attack);
 
+  // Compute stats dashboard values
+  const totalGamesCount = challengesTotal;
+  const participantsCount = scoringData.length;
+  const completedCount = stats?.challenges?.[name]?.gamesPlayed ?? null;
+  const completionRate = totalGamesCount > 0 && completedCount !== null
+    ? Math.round((completedCount / totalGamesCount) * 100)
+    : null;
+
   return (
       <section className="max-w-4xl mx-auto px-6 py-16">
+
+        {/* Stats Dashboard Row */}
+        <div className="grid grid-cols-3 gap-4 mb-10">
+          <div className="border border-zinc-900 p-5 flex flex-col gap-1 bg-zinc-50">
+            <p className="text-xs text-zinc-500 uppercase tracking-wider font-medium">Total Games</p>
+            <p className="text-2xl font-semibold text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
+              {totalGamesCount.toLocaleString()}
+            </p>
+            <p className="text-xs text-zinc-400">games recorded</p>
+          </div>
+          <div className="border border-zinc-900 p-5 flex flex-col gap-1 bg-zinc-50">
+            <p className="text-xs text-zinc-500 uppercase tracking-wider font-medium">Participants</p>
+            <p className="text-2xl font-semibold text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
+              {participantsCount > 0 ? participantsCount.toLocaleString() : "—"}
+            </p>
+            <p className="text-xs text-zinc-400">unique players</p>
+          </div>
+          <div className="border border-zinc-900 p-5 flex flex-col gap-1 bg-zinc-50">
+            <p className="text-xs text-zinc-500 uppercase tracking-wider font-medium">Completion Rate</p>
+            <p className="text-2xl font-semibold text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
+              {completionRate !== null ? `${completionRate}%` : "—"}
+            </p>
+            <p className="text-xs text-zinc-400">
+              {completedCount !== null ? `${completedCount.toLocaleString()} completed` : "no data yet"}
+            </p>
+          </div>
+        </div>
 
         <div className="flex items-top justify-between gap-6">
           <div className="flex flex-col gap-2 mb-4 sm:w-1/2">
