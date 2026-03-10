@@ -1,21 +1,17 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Jost } from "next/font/google";
+import { Geist_Mono, Noto_Sans_JP } from "next/font/google";
 import "./globals.css";
 import Header from "@/app/components/Header";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
 
-const jost = Jost({
-  variable: "--font-jost",
+const notoSansJP = Noto_Sans_JP({
+  variable: "--font-noto",
   subsets: ["latin"],
+  weight: ["300", "400", "500"],
 });
 
 export const metadata: Metadata = {
@@ -31,9 +27,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${jost.variable} antialiased`}
+        className={`${geistMono.variable} ${notoSansJP.variable} antialiased`}
       >
-        <div className="min-h-screen bg-gradient-to-b from-zinc-50 to-white">
+        <div className="min-h-screen bg-white">
           <Header />
           {children}
         </div>
