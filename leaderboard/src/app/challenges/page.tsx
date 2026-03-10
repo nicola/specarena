@@ -1,5 +1,5 @@
-import ChallengeCard from "@/app/components/ChallengeCard";
 import { Metadata } from "next";
+import Link from "next/link";
 import { ChallengeMetadata } from "@arena/engine/types";
 import { ENGINE_URL } from "@/lib/config";
 
@@ -10,40 +10,6 @@ export async function generateMetadata() {
   };
   return metadata;
 }
-
-const colorMap: Record<string, { from: string; via: string; to: string }> = {
-  yellow: { from: "from-yellow-100", via: "via-yellow-50", to: "to-yellow-100" },
-  purple: { from: "from-purple-100", via: "via-purple-50", to: "to-blue-100" },
-  blue: { from: "from-blue-100", via: "via-blue-50", to: "to-blue-100" },
-  green: { from: "from-green-100", via: "via-green-50", to: "to-green-100" },
-};
-
-const iconMap: Record<string, React.ReactNode> = {
-  intersection: (
-    <svg viewBox="0 0 100 100" className="w-full h-full">
-      <path d="M50 20 Q30 30 20 50 Q30 70 50 80 Q70 70 80 50 Q70 30 50 20" fill="none" stroke="currentColor" strokeWidth="2" />
-      <circle cx="50" cy="50" r="3" fill="currentColor" />
-      <path d="M20 50 Q30 40 40 50" fill="none" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M60 50 Q70 40 80 50" fill="none" stroke="currentColor" strokeWidth="1.5" />
-    </svg>
-  ),
-  crypto: (
-    <svg viewBox="0 0 100 100" className="w-full h-full">
-      <path d="M50 20 Q40 25 35 30 Q30 40 30 50 Q30 60 35 70 Q40 75 50 80 Q60 75 65 70 Q70 60 70 50 Q70 40 65 30 Q60 25 50 20" fill="none" stroke="currentColor" strokeWidth="2" />
-      <path d="M40 35 Q45 40 50 35 Q55 40 60 35" fill="none" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M35 50 Q40 55 45 50" fill="none" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M55 50 Q60 55 65 50" fill="none" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M40 65 Q45 70 50 65 Q55 70 60 65" fill="none" stroke="currentColor" strokeWidth="1.5" />
-    </svg>
-  ),
-};
-
-const defaultIcon = (
-  <svg viewBox="0 0 100 100" className="w-full h-full">
-    <circle cx="50" cy="50" r="30" fill="none" stroke="currentColor" strokeWidth="2" />
-    <text x="50" y="55" textAnchor="middle" fontSize="20" fill="currentColor">?</text>
-  </svg>
-);
 
 interface Stats {
   challenges: Record<string, { gamesPlayed: number }>;
@@ -75,141 +41,158 @@ export default async function ChallengesPage() {
   const [challenges, stats] = await Promise.all([loadChallenges(), loadStats()]);
 
   return (
-    <main className="max-w-5xl mx-auto px-8 py-12">
+    <main style={{ maxWidth: '860px', margin: '0 auto', padding: '48px 32px 80px' }}>
 
-      {/* Page header — journal section style */}
-      <div style={{ borderBottom: '2px solid var(--foreground)', paddingBottom: '18px', marginBottom: '32px' }}>
-        <h1
-          style={{
-            fontFamily: 'var(--font-serif)',
-            fontSize: '32px',
-            fontWeight: 600,
-            color: 'var(--foreground)',
-            margin: '0 0 8px',
-            letterSpacing: '-0.01em',
-          }}
-        >
-          Challenge Catalog
-        </h1>
-        <p style={{ fontFamily: 'var(--font-sans)', fontSize: '15px', color: 'var(--muted-text)', margin: 0, lineHeight: 1.6 }}>
+      {/* ── Table of Contents header ── */}
+      <div style={{ borderBottom: '3px double var(--foreground)', paddingBottom: '24px', marginBottom: '40px' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '6px' }}>
+          <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '36px', fontWeight: 700, color: 'var(--foreground)', margin: 0, letterSpacing: '-0.01em' }}>
+            Challenge Catalog
+          </h1>
+          <span style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', color: 'var(--muted-text)', letterSpacing: '0.04em' }}>
+            {challenges.length} {challenges.length === 1 ? 'paper' : 'papers'}
+          </span>
+        </div>
+        <p style={{ fontFamily: 'var(--font-serif)', fontSize: '16px', fontStyle: 'italic', color: 'var(--muted-text)', margin: '8px 0 16px', lineHeight: 1.55 }}>
           A curated collection of multi-agent evaluation scenarios spanning cryptographic protocols,
           game-theoretic equilibria, and adversarial security tasks.
         </p>
 
-        {/* Stats row — footnote style */}
         {stats && (
-          <div style={{ display: 'flex', gap: '32px', marginTop: '14px' }}>
+          <div style={{ display: 'flex', gap: '32px', paddingTop: '12px', borderTop: '1px solid var(--border-warm)', flexWrap: 'wrap' }}>
             {[
-              { value: challenges.length, label: 'Challenges' },
+              { value: challenges.length, label: 'Published challenges' },
               { value: stats.global.participants.toLocaleString(), label: 'Participating agents' },
-              { value: stats.global.gamesPlayed.toLocaleString(), label: 'Games completed' },
+              { value: stats.global.gamesPlayed.toLocaleString(), label: 'Sessions completed' },
             ].map(({ value, label }) => (
               <div key={label}>
-                <span
-                  style={{
-                    fontFamily: 'var(--font-serif)',
-                    fontSize: '22px',
-                    fontWeight: 600,
-                    color: 'var(--accent-blue)',
-                    lineHeight: 1,
-                    display: 'block',
-                  }}
-                >
-                  {value}
-                </span>
-                <span
-                  style={{
-                    fontFamily: 'var(--font-sans)',
-                    fontSize: '11px',
-                    color: 'var(--muted-text)',
-                    letterSpacing: '0.04em',
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  {label}
-                </span>
+                <span style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', fontWeight: 600, color: 'var(--accent-blue)', lineHeight: 1, display: 'block' }}>{value}</span>
+                <span style={{ fontFamily: 'var(--font-sans)', fontSize: '10px', color: 'var(--muted-text)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{label}</span>
               </div>
             ))}
           </div>
         )}
       </div>
 
-      {/* Challenge grid */}
-      <div className="grid grid-cols-3 max-md:grid-cols-2 max-sm:grid-cols-1 gap-6">
-        {challenges.map(({ slug, metadata }) => {
-          const colors = colorMap[metadata.color || "blue"] || colorMap.blue;
-          const icon = iconMap[metadata.icon || ""] || defaultIcon;
+      {/* ── Paper listing ── */}
+      <div>
+        {challenges.map(({ slug, metadata }, idx) => {
+          const gamesPlayed = stats?.challenges?.[slug]?.gamesPlayed ?? 0;
 
           return (
-            <ChallengeCard
+            <div
               key={slug}
-              title={metadata.name}
-              date=""
-              description={metadata.description}
-              gradientFrom={colors.from}
-              gradientVia={colors.via}
-              gradientTo={colors.to}
-              dateColor="text-zinc-900"
-              href={`/challenges/${slug}`}
-              icon={icon}
-              tags={[`${metadata.players ?? 2}-player`, ...(metadata.tags ?? [])]}
-            />
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '44px 1fr auto',
+                gap: '0 20px',
+                paddingBottom: '32px',
+                marginBottom: '32px',
+                borderBottom: '1px solid var(--border-warm)',
+              }}
+            >
+              {/* Number */}
+              <div style={{ paddingTop: '3px', textAlign: 'right' }}>
+                <span style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', color: 'var(--muted-text)', letterSpacing: '0.02em' }}>
+                  {String(idx + 1).padStart(2, '0')}.
+                </span>
+              </div>
+
+              {/* Paper body */}
+              <div>
+                {/* Tags row */}
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '5px' }}>
+                  {metadata.players && (
+                    <span style={{ fontFamily: 'var(--font-sans)', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted-text)', border: '1px solid var(--border-warm)', padding: '1px 6px' }}>
+                      {metadata.players}-player
+                    </span>
+                  )}
+                  {metadata.tags?.map(tag => (
+                    <span key={tag} style={{ fontFamily: 'var(--font-sans)', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--accent-blue)', border: '1px solid var(--accent-blue)', padding: '1px 6px', opacity: 0.8 }}>
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+
+                {/* Title */}
+                <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', fontWeight: 600, color: 'var(--foreground)', lineHeight: 1.25, margin: '0 0 5px' }}>
+                  <Link href={`/challenges/${slug}`} style={{ color: 'inherit', textDecoration: 'none' }}>
+                    {metadata.name}
+                  </Link>
+                </h2>
+
+                {/* Authors */}
+                {metadata.authors && metadata.authors.length > 0 && (
+                  <p style={{ fontFamily: 'var(--font-sans)', fontSize: '12px', color: 'var(--muted-text)', margin: '0 0 10px', lineHeight: 1.4 }}>
+                    {metadata.authors.map((a: { name: string; url?: string }, i: number) => (
+                      <span key={a.name}>
+                        {i > 0 && (i === metadata.authors!.length - 1 ? ' and ' : ', ')}
+                        {a.url
+                          ? <a href={a.url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-blue)', textDecoration: 'none' }}>{a.name}</a>
+                          : a.name
+                        }
+                      </span>
+                    ))}
+                  </p>
+                )}
+
+                {/* Abstract */}
+                <p style={{ fontFamily: 'var(--font-serif)', fontSize: '15px', color: '#3a3020', lineHeight: 1.75, margin: '0 0 12px' }}>
+                  <em style={{ fontStyle: 'normal', fontVariant: 'small-caps', fontSize: '14px', letterSpacing: '0.04em', color: 'var(--foreground)' }}>Abstract. </em>
+                  {metadata.description}
+                </p>
+
+                {/* Footer row */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                  <Link href={`/challenges/${slug}`} style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', fontWeight: 500, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--accent-blue)', textDecoration: 'none', borderBottom: '1px solid var(--accent-blue)', paddingBottom: '1px' }}>
+                    Read Paper →
+                  </Link>
+                  <Link href={`/challenges/${slug}/new`} style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted-text)', textDecoration: 'none' }}>
+                    Participate
+                  </Link>
+                  {gamesPlayed > 0 && (
+                    <span style={{ fontFamily: 'var(--font-sans)', fontSize: '10px', color: 'var(--muted-text)', letterSpacing: '0.03em' }}>
+                      {gamesPlayed.toLocaleString()} sessions
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Right: page-number style info */}
+              <div style={{ textAlign: 'right', paddingTop: '4px', minWidth: '60px' }}>
+                {metadata.url && (
+                  <a href={metadata.url} target="_blank" rel="noopener noreferrer" title="External reference" style={{ color: 'var(--accent-gold)', display: 'inline-block' }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" style={{ width: '14px', height: '14px' }}>
+                      <path d="M12.232 4.232a2.5 2.5 0 0 1 3.536 3.536l-1.225 1.224a.75.75 0 0 0 1.061 1.06l1.224-1.224a4 4 0 0 0-5.656-5.656l-3 3a4 4 0 0 0 .225 5.865.75.75 0 0 0 .977-1.138 2.5 2.5 0 0 1-.142-3.667l3-3Z" />
+                      <path d="M11.603 7.963a.75.75 0 0 0-.977 1.138 2.5 2.5 0 0 1 .142 3.667l-3 3a2.5 2.5 0 0 1-3.536-3.536l1.225-1.224a.75.75 0 0 0-1.061-1.06l-1.224 1.224a4 4 0 1 0 5.656 5.656l3-3a4 4 0 0 0-.225-5.865Z" />
+                    </svg>
+                  </a>
+                )}
+              </div>
+            </div>
           );
         })}
 
-        {/* Submission placeholder — dashed academic style */}
-        <div
-          style={{
-            border: '1px dashed var(--border-warm)',
-            display: 'flex',
-            flexDirection: 'column',
-            height: '100%',
-            minHeight: '280px',
-          }}
-        >
-          <div
-            style={{
-              height: '140px',
-              background: '#f5f3ec',
-              borderBottom: '1px dashed var(--border-warm)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
-          >
-            <svg viewBox="0 0 100 100" style={{ width: '48px', height: '48px', color: 'var(--border-warm)' }}>
-              <line x1="50" y1="30" x2="50" y2="70" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-              <line x1="30" y1="50" x2="70" y2="50" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-            </svg>
+        {/* Submission entry — styled like a pending submission */}
+        <div style={{ display: 'grid', gridTemplateColumns: '44px 1fr auto', gap: '0 20px', paddingBottom: '12px' }}>
+          <div style={{ paddingTop: '3px', textAlign: 'right' }}>
+            <span style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', color: '#c4b49a' }}>
+              {String(challenges.length + 1).padStart(2, '0')}.
+            </span>
           </div>
-          <div style={{ padding: '18px 20px 20px', display: 'flex', flexDirection: 'column', flex: 1, gap: '8px' }}>
-            <h4 style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', fontWeight: 600, color: 'var(--foreground)', margin: 0, lineHeight: 1.3 }}>
-              Propose a Challenge
-            </h4>
-            <p style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', color: 'var(--muted-text)', lineHeight: 1.6, margin: 0 }}>
-              We welcome contributions from the research community. Submit a challenge design for review.
+          <div>
+            <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', fontWeight: 400, color: '#c4b49a', fontStyle: 'italic', margin: '0 0 6px' }}>
+              [Submission Pending Review]
+            </h2>
+            <p style={{ fontFamily: 'var(--font-serif)', fontSize: '14px', color: 'var(--muted-text)', lineHeight: 1.65, margin: '0 0 10px', fontStyle: 'italic' }}>
+              The journal welcomes contributions from the research community.
+              Submit a challenge design to be reviewed for inclusion.
             </p>
-            <a
-              href="https://github.com/nicolapps/arena"
-              style={{
-                marginTop: 'auto',
-                fontFamily: 'var(--font-sans)',
-                fontSize: '12px',
-                fontWeight: 500,
-                letterSpacing: '0.05em',
-                textTransform: 'uppercase',
-                color: 'var(--muted-text)',
-                borderBottom: '1px solid var(--border-warm)',
-                paddingBottom: '1px',
-                textDecoration: 'none',
-                display: 'inline-block',
-                paddingTop: '16px',
-              }}
-            >
+            <a href="https://github.com/nicolapps/arena" target="_blank" rel="noopener noreferrer" style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted-text)', textDecoration: 'none', borderBottom: '1px solid var(--border-warm)', paddingBottom: '1px' }}>
               Submit proposal →
             </a>
           </div>
+          <div />
         </div>
       </div>
 
