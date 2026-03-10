@@ -71,7 +71,7 @@ export default function LeaderboardGraph({ data = mockData, height = 400, highli
 
     container.innerHTML = "";
 
-    // Compute Pareto frontier: points not dominated in both security AND utility
+    // Compute Pareto frontier
     const paretoSet = new Set<string>();
     for (const point of data) {
       const dominated = data.some(
@@ -84,9 +84,6 @@ export default function LeaderboardGraph({ data = mockData, height = 400, highli
       if (!dominated) paretoSet.add(point.name);
     }
 
-    // Label frontier points + near-frontier points
-    // For each non-frontier point, measure how far it is from the frontier line.
-    // The frontier forms a staircase; distance = min over frontier segments.
     const frontierPoints = data
       .filter((d) => paretoSet.has(d.name))
       .sort((a, b) => b.securityPolicy - a.securityPolicy || b.utility - a.utility);
@@ -95,14 +92,10 @@ export default function LeaderboardGraph({ data = mockData, height = 400, highli
     if (highlightName) highlightSet.add(highlightName);
 
     const labelSet = new Set(paretoSet);
-    // Always label the highlighted point
     if (highlightName) labelSet.add(highlightName);
 
-    // Compute how "dominated" each non-frontier point is:
-    // the smallest amount any frontier point beats it by in BOTH dimensions
     for (const point of data) {
       if (labelSet.has(point.name)) continue;
-      // Find the closest frontier point by Euclidean distance
       let minDist = Infinity;
       for (const fp of frontierPoints) {
         const dist = Math.hypot(
@@ -111,7 +104,6 @@ export default function LeaderboardGraph({ data = mockData, height = 400, highli
         );
         minDist = Math.min(minDist, dist);
       }
-      // Label if within 0.5 score units of any frontier point
       if (minDist <= 0.5) {
         labelSet.add(point.name);
       }
@@ -119,10 +111,9 @@ export default function LeaderboardGraph({ data = mockData, height = 400, highli
 
     const labeled = data.filter((d) => labelSet.has(d.name));
 
-    // Group nearby points into clusters to avoid overlapping labels
-    const pixelsPerUnitX = (width - 20) / 2; // domain [-1,1] = 2 units, minus inset
+    const pixelsPerUnitX = (width - 20) / 2;
     const pixelsPerUnitY = (height - 20) / 2;
-    const clusterThresholdPx = 40; // points within this pixel distance get grouped
+    const clusterThresholdPx = 40;
 
     const clusters: { points: typeof labeled; x: number; y: number }[] = [];
     for (const point of labeled) {
@@ -133,7 +124,6 @@ export default function LeaderboardGraph({ data = mockData, height = 400, highli
         const dist = Math.hypot(px - cluster.x, py - cluster.y);
         if (dist < clusterThresholdPx) {
           cluster.points.push(point);
-          // Update cluster center
           cluster.x = cluster.points.reduce((s, p) => s + p.securityPolicy * pixelsPerUnitX, 0) / cluster.points.length;
           cluster.y = cluster.points.reduce((s, p) => s + p.utility * pixelsPerUnitY, 0) / cluster.points.length;
           merged = true;
@@ -145,9 +135,7 @@ export default function LeaderboardGraph({ data = mockData, height = 400, highli
       }
     }
 
-    // Build label positions from clusters
     const labelPositions = clusters.map((cluster) => {
-      // Pick the best point (prefer pareto frontier) as the representative
       const rep = cluster.points.find((p) => paretoSet.has(p.name)) || cluster.points[0];
       const others = cluster.points.length - 1;
       const label = others > 0 ? `${rep.name} +${others}` : rep.name;
@@ -165,12 +153,11 @@ export default function LeaderboardGraph({ data = mockData, height = 400, highli
       };
     });
 
-    // Remove overlapping labels: pareto labels take priority, then earlier in list
-    const charW = 6.5; // approx px per char at fontSize 11
+    const charW = 6.5;
     const labelH = 14;
     const getBBox = (lbl: typeof labelPositions[0]) => {
       const cx = lbl.securityPolicy * pixelsPerUnitX + lbl.dx;
-      const cy = -(lbl.utility * pixelsPerUnitY) + lbl.dy; // y is inverted in screen coords
+      const cy = -(lbl.utility * pixelsPerUnitY) + lbl.dy;
       const tw = lbl.text.length * charW;
       let x0: number;
       if (lbl.anchor === "end") x0 = cx - tw;
@@ -181,7 +168,6 @@ export default function LeaderboardGraph({ data = mockData, height = 400, highli
     const overlaps = (a: ReturnType<typeof getBBox>, b: ReturnType<typeof getBBox>) =>
       a.x0 < b.x1 && a.x1 > b.x0 && a.y0 < b.y1 && a.y1 > b.y0;
 
-    // Sort: highlighted first, then pareto, then by x position (left to right spread)
     const sorted = [...labelPositions].sort((a, b) => {
       if (a.isHighlight !== b.isHighlight) return a.isHighlight ? -1 : 1;
       if (a.isPareto !== b.isPareto) return a.isPareto ? -1 : 1;
@@ -218,8 +204,9 @@ export default function LeaderboardGraph({ data = mockData, height = 400, highli
       height: height,
       grid: false,
       style: {
-        color: "#18181b",
-        fontFamily: "var(--font-jost), Jost, sans-serif",
+        color: "#2c2c2c",
+        fontFamily: "var(--font-ibm-plex-sans), 'IBM Plex Sans', sans-serif",
+        background: "#fafaf7",
       },
       marginBottom: 40,
       x: {
@@ -237,30 +224,29 @@ export default function LeaderboardGraph({ data = mockData, height = 400, highli
         inset: 10,
       },
       marks: [
-        // Grid lines constrained to [-1, 1]
-        Plot.gridX([-1, 0, 1], { y1: -1, y2: 1 }),
-        Plot.gridY([-1, 0, 1], { x1: -1, x2: 1 }),
-        // Non-highlighted points (rendered first, behind)
+        Plot.gridX([-1, 0, 1], { y1: -1, y2: 1, stroke: "#d4c9b0", strokeDasharray: "3,3" }),
+        Plot.gridY([-1, 0, 1], { x1: -1, x2: 1, stroke: "#d4c9b0", strokeDasharray: "3,3" }),
+        // Non-highlighted points
         Plot.dot(data.filter((d) => !highlightSet.has(d.name)), {
           x: "securityPolicy",
           y: "utility",
-          fill: (d) => d.isBenchmark ? "#f59e0b" : paretoSet.has(d.name) ? "#000" : "#a1a1aa",
+          fill: (d) => d.isBenchmark ? "#b8860b" : paretoSet.has(d.name) ? "#1a3a5c" : "#8c7a5e",
           r: (d) => paretoSet.has(d.name) ? 7 : d.isBenchmark ? 6 : 5,
-          stroke: (d) => d.isBenchmark ? "#d97706" : "none",
-          strokeWidth: (d) => d.isBenchmark ? 1.5 : 0,
+          stroke: (d) => d.isBenchmark ? "#8b6508" : paretoSet.has(d.name) ? "#0d2338" : "none",
+          strokeWidth: (d) => (d.isBenchmark || paretoSet.has(d.name)) ? 1.5 : 0,
           ...dotTipOptions,
         }),
-        // Highlighted point (rendered last, on top)
+        // Highlighted point
         ...highlightSet.size > 0 ? [Plot.dot(data.filter((d) => highlightSet.has(d.name)), {
           x: "securityPolicy",
           y: "utility",
-          fill: "#6366f1",
-          r: 7,
-          stroke: "#4f46e5",
+          fill: "#b8860b",
+          r: 8,
+          stroke: "#8b6508",
           strokeWidth: 2,
           ...dotTipOptions,
         })] : [],
-        // Labels (clustered, with non-pareto hidden if overlapping pareto)
+        // Labels
         ...visibleLabels.map((d) => {
           return Plot.text([d], {
             x: "securityPolicy",
@@ -268,8 +254,8 @@ export default function LeaderboardGraph({ data = mockData, height = 400, highli
             text: "text",
             dx: d.dx,
             dy: d.dy,
-            fontSize: 11,
-            fill: d.isHighlight ? "#6366f1" : d.isBenchmark ? "#f59e0b" : d.isPareto ? "#000" : "#a1a1aa",
+            fontSize: 10,
+            fill: d.isHighlight ? "#b8860b" : d.isBenchmark ? "#8b6508" : d.isPareto ? "#1a3a5c" : "#8c7a5e",
             fontWeight: "600",
             textAnchor: d.anchor,
           });
@@ -279,27 +265,28 @@ export default function LeaderboardGraph({ data = mockData, height = 400, highli
 
     container.appendChild(chart);
 
-    // Style the chart to ensure axis labels and ticks are visible
     const svg = container.querySelector("svg");
     if (svg) {
-      // Set font on all text, but only override fill on axis text (not data labels)
       svg.querySelectorAll("text").forEach((text) => {
-        (text as SVGTextElement).setAttribute("font-family", "var(--font-jost), Jost, sans-serif");
+        (text as SVGTextElement).setAttribute("font-family", "var(--font-ibm-plex-sans), 'IBM Plex Sans', sans-serif");
       });
       svg.querySelectorAll("[aria-label*='axis'] text").forEach((text) => {
-        (text as SVGTextElement).setAttribute("fill", "#18181b");
+        (text as SVGTextElement).setAttribute("fill", "#2c2c2c");
       });
-      // Bump axis label font size
       svg.querySelectorAll("[aria-label='x-axis label'], [aria-label='y-axis label']").forEach((label) => {
         const text = label.querySelector("text");
-        if (text) (text as SVGTextElement).setAttribute("font-size", "13");
+        if (text) {
+          (text as SVGTextElement).setAttribute("font-size", "12");
+          (text as SVGTextElement).setAttribute("fill", "#1a3a5c");
+          (text as SVGTextElement).setAttribute("font-variant", "small-caps");
+          (text as SVGTextElement).setAttribute("letter-spacing", "0.08em");
+        }
       });
-      // Style all line elements (grid lines and axis lines)
       const lineElements = svg.querySelectorAll("line");
       lineElements.forEach((line) => {
         const stroke = (line as SVGLineElement).getAttribute("stroke");
         if (stroke && (stroke === "currentColor" || stroke === "white" || !stroke)) {
-          (line as SVGLineElement).setAttribute("stroke", "#e4e4e7");
+          (line as SVGLineElement).setAttribute("stroke", "#d4c9b0");
         }
       });
     }
@@ -312,7 +299,7 @@ export default function LeaderboardGraph({ data = mockData, height = 400, highli
   }, [width, height, data, highlightName]);
 
   return (
-    <div className="flex justify-center overflow-x-auto">
+    <div className="flex justify-center overflow-x-auto" style={{ background: '#fafaf7' }}>
       <div ref={plotRef} className="plot-container" />
     </div>
   );

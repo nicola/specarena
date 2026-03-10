@@ -6,8 +6,8 @@ import { join } from "path";
 
 export async function generateMetadata() {
   const metadata: Metadata = {
-    title: `ARENA - Documentation`,
-    description: "Learn how to participate in the Multi-Agent Arena and compete in challenges.",
+    title: `Academic Oracle — Documentation`,
+    description: "Learn how to participate in the Academic Oracle and compete in challenges.",
   };
   return metadata;
 }
@@ -18,103 +18,206 @@ export default async function DocsPage() {
 
   return (
     <section className="max-w-4xl mx-auto px-6 py-16">
-        <div className="prose prose-zinc max-w-none">
+      {/* Page header */}
+      <div style={{ borderLeft: '4px solid #1a3a5c', paddingLeft: '1.5rem', marginBottom: '3rem' }}>
+        <p style={{
+          fontFamily: 'var(--font-ibm-plex-sans), sans-serif',
+          fontSize: '0.65rem',
+          letterSpacing: '0.15em',
+          textTransform: 'uppercase',
+          color: '#b8860b',
+          marginBottom: '0.4rem',
+        }}>
+          Academic Oracle
+        </p>
+        <h1 style={{
+          fontFamily: 'var(--font-eb-garamond), Georgia, serif',
+          fontSize: '2rem',
+          fontWeight: 600,
+          color: '#1a3a5c',
+          lineHeight: 1.25,
+        }}>
+          Participant Guide
+        </h1>
+      </div>
+
+      {/* Document body */}
+      <div style={{
+        background: '#fff',
+        border: '1px solid #d4c9b0',
+        borderLeft: '4px solid #1a3a5c',
+        padding: '2rem 2.5rem',
+      }}>
+        <div style={{
+          fontFamily: 'var(--font-eb-garamond), Georgia, serif',
+          fontSize: '1.0625rem',
+          lineHeight: '1.85',
+          color: '#2c2c2c',
+        }}>
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={{
               h1: ({ children }) => (
-                <h1 className="text-3xl font-semibold text-zinc-900 mb-4" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
+                <h1 style={{
+                  fontFamily: 'var(--font-eb-garamond), Georgia, serif',
+                  fontSize: '1.625rem',
+                  fontWeight: 600,
+                  color: '#1a3a5c',
+                  marginTop: '2rem',
+                  marginBottom: '0.75rem',
+                  paddingBottom: '0.4rem',
+                  borderBottom: '1px solid #d4c9b0',
+                  lineHeight: 1.3,
+                }}>
                   {children}
                 </h1>
               ),
               h2: ({ children }) => (
-                <h2 className="text-2xl font-semibold text-zinc-900 mt-12 mb-4">
+                <h2 style={{
+                  fontFamily: 'var(--font-eb-garamond), Georgia, serif',
+                  fontSize: '1.375rem',
+                  fontWeight: 600,
+                  color: '#1a3a5c',
+                  marginTop: '2.5rem',
+                  marginBottom: '0.6rem',
+                  paddingBottom: '0.3rem',
+                  borderBottom: '1px solid #e8e0d0',
+                  lineHeight: 1.3,
+                }}>
                   {children}
                 </h2>
               ),
               h3: ({ children }) => (
-                <h3 className="text-xl font-semibold text-zinc-900 mt-8 mb-3">
+                <h3 style={{
+                  fontFamily: 'var(--font-ibm-plex-sans), sans-serif',
+                  fontSize: '0.75rem',
+                  fontVariant: 'small-caps',
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                  color: '#6b5a44',
+                  marginTop: '1.75rem',
+                  marginBottom: '0.5rem',
+                }}>
                   {children}
                 </h3>
               ),
               h4: ({ children }) => (
-                <h4 className="text-lg font-semibold text-zinc-900 mt-6 mb-2">
+                <h4 style={{
+                  fontFamily: 'var(--font-ibm-plex-sans), sans-serif',
+                  fontSize: '0.8125rem',
+                  fontWeight: 600,
+                  color: '#1a3a5c',
+                  marginTop: '1.25rem',
+                  marginBottom: '0.35rem',
+                }}>
                   {children}
                 </h4>
               ),
               p: ({ children }) => (
-                <p className="text-base text-zinc-900 mb-4">
-                  {children}
-                </p>
+                <p style={{ marginBottom: '1rem', textIndent: '1.5em' }}>{children}</p>
               ),
               ul: ({ children }) => (
-                <ul className="list-disc list-inside space-y-2 mb-4 text-base text-zinc-900">
-                  {children}
-                </ul>
+                <ul style={{ marginBottom: '1rem', paddingLeft: '2em', listStyleType: 'disc' }}>{children}</ul>
               ),
               ol: ({ children }) => (
-                <ol className="list-decimal list-inside space-y-2 mb-4 text-base text-zinc-900">
-                  {children}
-                </ol>
+                <ol style={{ marginBottom: '1rem', paddingLeft: '2em', listStyleType: 'decimal' }}>{children}</ol>
               ),
               li: ({ children }) => (
-                <li className="mb-1">{children}</li>
+                <li style={{ marginBottom: '0.3rem' }}>{children}</li>
+              ),
+              blockquote: ({ children }) => (
+                <blockquote style={{
+                  borderLeft: '3px solid #b8860b',
+                  paddingLeft: '1.25rem',
+                  paddingTop: '0.25rem',
+                  paddingBottom: '0.25rem',
+                  margin: '1.5rem 0',
+                  color: '#4a3f2f',
+                  fontStyle: 'italic',
+                  background: '#faf7f0',
+                }}>{children}</blockquote>
               ),
               code: ({ children, className }) => {
                 const isInline = !className;
                 if (isInline) {
                   return (
-                    <code className="bg-zinc-100 text-zinc-800 px-1.5 py-0.5 rounded text-sm font-mono">
+                    <code style={{
+                      fontFamily: 'var(--font-ibm-plex-sans), monospace',
+                      fontSize: '0.875em',
+                      background: '#f0ebe0',
+                      color: '#1a3a5c',
+                      padding: '0.1em 0.4em',
+                      border: '1px solid #d4c9b0',
+                    }}>
                       {children}
                     </code>
                   );
                 }
                 return (
-                  <code className={className}>{children}</code>
+                  <code style={{ fontFamily: 'var(--font-ibm-plex-sans), monospace' }} className={className}>{children}</code>
                 );
               },
               pre: ({ children }) => (
-                <pre className="text-sm text-zinc-800 font-mono bg-gradient-to-br from-zinc-50 to-zinc-100 border border-zinc-200 rounded-xl p-5 overflow-x-auto mb-4">
+                <pre style={{
+                  fontFamily: 'var(--font-ibm-plex-sans), monospace',
+                  fontSize: '0.8125rem',
+                  lineHeight: 1.6,
+                  background: '#f5f0e8',
+                  border: '1px solid #d4c9b0',
+                  padding: '1.25rem',
+                  overflowX: 'auto',
+                  marginBottom: '1rem',
+                }}>
                   {children}
                 </pre>
               ),
               a: ({ href, children }) => (
-                <a href={href} className="text-blue-600 hover:text-blue-800 underline">
+                <a href={href} style={{ color: '#1a3a5c', textDecoration: 'underline', textUnderlineOffset: '2px' }}>
                   {children}
                 </a>
               ),
               strong: ({ children }) => (
-                <strong className="font-semibold">{children}</strong>
+                <strong style={{ fontWeight: 600, color: '#1a3a5c' }}>{children}</strong>
               ),
               table: ({ children }) => (
-                <div className="overflow-x-auto mb-4">
-                  <table className="min-w-full border border-zinc-200 rounded-lg text-sm">
+                <div style={{ overflowX: 'auto', marginBottom: '1rem' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9375rem', border: '1px solid #d4c9b0' }}>
                     {children}
                   </table>
                 </div>
               ),
               thead: ({ children }) => (
-                <thead className="bg-zinc-50">{children}</thead>
+                <thead style={{ background: '#faf7f0', borderBottom: '2px solid #d4c9b0' }}>{children}</thead>
               ),
               tbody: ({ children }) => (
-                <tbody className="divide-y divide-zinc-200">{children}</tbody>
+                <tbody style={{ borderTop: 0 }}>{children}</tbody>
               ),
               tr: ({ children }) => (
-                <tr>{children}</tr>
+                <tr style={{ borderBottom: '1px solid #e8e0d0' }}>{children}</tr>
               ),
               th: ({ children }) => (
-                <th className="px-4 py-2 text-left font-semibold text-zinc-900 border-b border-zinc-200">
+                <th style={{
+                  padding: '0.5rem 0.9rem',
+                  textAlign: 'left',
+                  fontFamily: 'var(--font-ibm-plex-sans), sans-serif',
+                  fontSize: '0.7rem',
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                  color: '#1a3a5c',
+                  fontWeight: 600,
+                }}>
                   {children}
                 </th>
               ),
               td: ({ children }) => (
-                <td className="px-4 py-2 text-zinc-900">{children}</td>
+                <td style={{ padding: '0.5rem 0.9rem', color: '#2c2c2c' }}>{children}</td>
               ),
             }}
           >
             {markdown}
           </ReactMarkdown>
         </div>
-      </section>
+      </div>
+    </section>
   );
 }
