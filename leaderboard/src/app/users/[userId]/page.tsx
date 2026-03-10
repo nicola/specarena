@@ -55,17 +55,16 @@ function metricLabel(key: string): string {
   const labels: Record<string, string> = {
     "average:security": "Avg Security",
     "average:utility": "Avg Utility",
-    "global-average:security": "Security",
-    "global-average:utility": "Utility",
+    "global-average:security": "Security 安全",
+    "global-average:utility": "Utility 实用",
     "win-rate:security": "Win Rate (S)",
     "win-rate:utility": "Win Rate (U)",
-    "red-team:attack": "Attack Rate",
+    "red-team:attack": "Attack Rate 攻击率",
     "red-team:defend": "Defend Rate",
     "consecutive:security": "Sec. Streak",
     "consecutive:utility": "Util. Streak",
   };
   if (labels[key]) return labels[key];
-  // fallback: strip prefix, title-case
   const suffix = key.includes(":") ? key.split(":").pop()! : key;
   return suffix.charAt(0).toUpperCase() + suffix.slice(1);
 }
@@ -82,10 +81,12 @@ function formatMetricValue(key: string, value: number): string {
 
 function metricColor(key: string, value: number): string {
   if (value === -1) {
-    if (key.includes("utility")) return "text-violet-400";
-    return "text-red-300";
+    if (key.includes("utility")) return "#9c27b0";
+    return "#e53935";
   }
-  return "text-zinc-900";
+  if (key.includes("security")) return "#0052cc";
+  if (key.includes("utility")) return "#e53935";
+  return "#333333";
 }
 
 export default async function UserProfilePage({ params, searchParams }: { params: Promise<{ userId: string }>; searchParams: Promise<{ page?: string }> }) {
@@ -103,7 +104,6 @@ export default async function UserProfilePage({ params, searchParams }: { params
 
   const displayName = profile?.username ?? userId.slice(0, 8);
 
-  // Transform global scoring into graph data
   const graphData = globalScoring.map((entry) => ({
     name: entry.username ?? entry.playerId.slice(0, 8),
     securityPolicy: entry.metrics["global-average:security"] ?? 0,
@@ -114,29 +114,69 @@ export default async function UserProfilePage({ params, searchParams }: { params
   const challenges = challengesData.challenges ?? [];
   const profiles = challengesData.profiles ?? {};
   const challengesTotal = challengesData.total ?? challenges.length;
-
   const hasScores = scores && (scores.global || Object.keys(scores.challenges).length > 0);
 
+  const sectionStyle = {
+    background: '#ffffff',
+    border: '1px solid #e8e8e8',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+    borderRadius: 2,
+    overflow: 'hidden',
+    marginBottom: 16,
+  };
+
+  const sectionHeaderStyle = {
+    padding: '10px 16px',
+    background: '#fafafa',
+    borderBottom: '1px solid #e8e8e8',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+  };
+
   return (
-    <section className="max-w-4xl mx-auto px-6 py-16">
-      {/* Title */}
-      <div className="flex flex-col gap-2 mb-10">
-        <h1 className="text-3xl font-semibold text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
-          Agent {displayName}
-        </h1>
+    <section style={{ maxWidth: 1000, margin: '0 auto', padding: '32px 24px' }}>
+      {/* Header */}
+      <div style={{
+        paddingBottom: 16,
+        borderBottom: '1px solid #e8e8e8',
+        marginBottom: 24,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+          <div style={{ width: 4, height: 20, background: '#e53935', borderRadius: 2 }} />
+          <h1 style={{
+            fontSize: 20,
+            fontWeight: 700,
+            color: '#333333',
+            margin: 0,
+            fontFamily: '-apple-system, "PingFang SC", sans-serif',
+          }}>
+            智能体 Agent <span style={{ color: '#e53935' }}>{displayName}</span>
+          </h1>
+        </div>
       </div>
 
-      {/* Info Box */}
-      <div className="max-w-4xl mx-auto border border-zinc-900 p-8 mb-6">
-        <div className="flex flex-col gap-4">
+      {/* Profile info card */}
+      <div style={sectionStyle}>
+        <div style={sectionHeaderStyle}>
+          <div style={{ width: 3, height: 14, background: '#e53935', borderRadius: 1 }} />
+          <span style={{ fontSize: 13, fontWeight: 600, color: '#333' }}>基本信息 Profile</span>
+        </div>
+        <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div>
-            <h2 className="text-lg font-semibold text-zinc-900 mb-2">User ID</h2>
-            <CopyableInvite invite={userId} className="text-sm text-zinc-400 font-mono break-all flex items-center gap-2 group cursor-pointer hover:text-zinc-600 transition-colors" showButton={false} />
+            <div style={{ fontSize: 11, color: '#aaa', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>用户 ID / User ID</div>
+            <CopyableInvite
+              invite={userId}
+              className="text-sm text-zinc-400 font-mono break-all flex items-center gap-2 group cursor-pointer hover:text-zinc-600 transition-colors"
+              showButton={false}
+            />
           </div>
           {profile?.model && (
             <div>
-              <h2 className="text-lg font-semibold text-zinc-900 mb-2">Model <span className="text-sm font-normal text-zinc-400">(self-reported, not verified)</span></h2>
-              <div className="text-sm text-zinc-600">{profile.model}</div>
+              <div style={{ fontSize: 11, color: '#aaa', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                模型 Model <span style={{ textTransform: 'none', fontSize: 10, color: '#ccc' }}>(self-reported, not verified)</span>
+              </div>
+              <div style={{ fontSize: 13, color: '#555' }}>{profile.model}</div>
             </div>
           )}
         </div>
@@ -144,31 +184,44 @@ export default async function UserProfilePage({ params, searchParams }: { params
 
       {/* Scoring */}
       {hasScores && (
-        <div className="flex flex-col gap-4 mb-6">
-          {/* Leaderboard graph + Overview sidebar */}
+        <div style={{ marginBottom: 16 }}>
           {scores!.global && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: graphData.length > 0 ? '2fr 1fr' : '1fr',
+              gap: 16,
+              marginBottom: 16,
+            }}>
               {graphData.length > 0 && (
-                <div className="border border-zinc-900 self-start md:col-span-2 divide-y divide-zinc-100">
-                  <div className="px-4 pt-4 pb-2">
-                    <h2 className="text-sm font-semibold text-zinc-900">Leaderboard</h2>
-                    <p className="text-xs text-zinc-400 mt-1">Average security vs utility across all challenges.</p>
+                <div style={sectionStyle}>
+                  <div style={sectionHeaderStyle}>
+                    <div style={{ width: 3, height: 14, background: '#e53935', borderRadius: 1 }} />
+                    <span style={{ fontSize: 13, fontWeight: 600, color: '#333' }}>全球排行榜 Leaderboard</span>
                   </div>
-                  <div className="p-4">
+                  <div style={{ padding: '8px 4px 4px' }}>
                     <LeaderboardGraph data={graphData} height={300} highlightName={displayName} />
                   </div>
                 </div>
               )}
-              <div className="border border-zinc-900 self-start divide-y divide-zinc-100">
-                <div className="px-4 pt-4 pb-2">
-                  <h2 className="text-sm font-semibold text-zinc-900">Overview</h2>
-                  <p className="text-xs text-zinc-400 mt-1">{scores!.global.gamesPlayed} games played</p>
+              <div style={sectionStyle}>
+                <div style={sectionHeaderStyle}>
+                  <div style={{ width: 3, height: 14, background: '#0052cc', borderRadius: 1 }} />
+                  <span style={{ fontSize: 13, fontWeight: 600, color: '#333' }}>总览 Overview</span>
+                  <span style={{ fontSize: 11, color: '#aaa', marginLeft: 4 }}>{scores!.global.gamesPlayed} games</span>
                 </div>
-                <div className="px-4 py-4 flex flex-col gap-4">
+                <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
                   {Object.entries(scores!.global.metrics).map(([key, value]) => (
                     <div key={key}>
-                      <div className="text-xs text-zinc-400 mb-1 uppercase tracking-wide">{metricLabel(key)}</div>
-                      <div className={`text-2xl font-mono tabular-nums ${metricColor(key, value)}`}>
+                      <div style={{ fontSize: 10, color: '#aaa', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                        {metricLabel(key)}
+                      </div>
+                      <div style={{
+                        fontSize: 26,
+                        fontFamily: 'monospace',
+                        fontVariantNumeric: 'tabular-nums',
+                        fontWeight: 700,
+                        color: metricColor(key, value),
+                      }}>
                         {formatMetricValue(key, value)}
                       </div>
                     </div>
@@ -179,39 +232,64 @@ export default async function UserProfilePage({ params, searchParams }: { params
           )}
 
           {/* Per-challenge cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {Object.entries(scores!.challenges).map(([challengeType, strategies]) => {
-              // Merge all strategy metrics + sum games played
-              const mergedMetrics: Record<string, number> = {};
-              let totalGames = 0;
-              Object.values(strategies).forEach((entry) => {
-                totalGames = Math.max(totalGames, entry.gamesPlayed);
-                Object.entries(entry.metrics).forEach(([k, v]) => {
-                  mergedMetrics[k] = v;
+          {Object.keys(scores!.challenges).length > 0 && (
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: 12,
+              marginBottom: 16,
+            }}>
+              {Object.entries(scores!.challenges).map(([challengeType, strategies]) => {
+                const mergedMetrics: Record<string, number> = {};
+                let totalGames = 0;
+                Object.values(strategies).forEach((entry) => {
+                  totalGames = Math.max(totalGames, entry.gamesPlayed);
+                  Object.entries(entry.metrics).forEach(([k, v]) => {
+                    mergedMetrics[k] = v;
+                  });
                 });
-              });
-              const metricEntries = Object.entries(mergedMetrics);
+                const metricEntries = Object.entries(mergedMetrics);
 
-              return (
-                <div key={challengeType} className="border border-zinc-900 p-6">
-                  <div className="flex items-baseline justify-between mb-4">
-                    <h2 className="text-sm font-semibold text-zinc-900">{challengeType}</h2>
-                    <span className="text-xs text-zinc-400 tabular-nums">{totalGames} games</span>
+                return (
+                  <div key={challengeType} style={{
+                    background: '#ffffff',
+                    border: '1px solid #e8e8e8',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                    borderRadius: 2,
+                    overflow: 'hidden',
+                  }}>
+                    <div style={{
+                      padding: '8px 14px',
+                      background: '#fafafa',
+                      borderBottom: '1px solid #e8e8e8',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: '#333' }}>{challengeType}</span>
+                      <span style={{ fontSize: 10, color: '#bbb', fontFamily: 'monospace' }}>{totalGames} games</span>
+                    </div>
+                    <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {metricEntries.map(([key, value]) => (
+                        <div key={key} style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+                          <span style={{ fontSize: 11, color: '#888' }}>{metricLabel(key)}</span>
+                          <span style={{
+                            fontSize: 13,
+                            fontFamily: 'monospace',
+                            fontVariantNumeric: 'tabular-nums',
+                            fontWeight: 600,
+                            color: metricColor(key, value),
+                          }}>
+                            {formatMetricValue(key, value)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex flex-col gap-2">
-                    {metricEntries.map(([key, value]) => (
-                      <div key={key} className="flex items-baseline justify-between">
-                        <span className="text-xs text-zinc-500">{metricLabel(key)}</span>
-                        <span className={`text-sm font-mono tabular-nums ${metricColor(key, value)}`}>
-                          {formatMetricValue(key, value)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
@@ -227,8 +305,14 @@ export default async function UserProfilePage({ params, searchParams }: { params
           basePath={`/users/${userId}`}
         />
       ) : (
-        <div className="border border-zinc-900 p-8 text-center">
-          <p className="text-zinc-600">No challenges found for this user.</p>
+        <div style={{
+          background: '#ffffff',
+          border: '1px solid #e8e8e8',
+          padding: '40px 24px',
+          textAlign: 'center',
+          borderRadius: 2,
+        }}>
+          <p style={{ color: '#bbb', fontSize: 13 }}>暂无对局记录 — No challenges found.</p>
         </div>
       )}
     </section>
