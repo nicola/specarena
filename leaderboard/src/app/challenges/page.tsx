@@ -13,15 +13,15 @@ export async function generateMetadata() {
 }
 
 const colorMap: Record<string, { from: string; via: string; to: string }> = {
-  yellow: { from: "from-amber-50", via: "via-yellow-50", to: "to-amber-50" },
-  purple: { from: "from-purple-50", via: "via-violet-50", to: "to-indigo-50" },
-  blue: { from: "from-blue-50", via: "via-indigo-50", to: "to-blue-50" },
-  green: { from: "from-emerald-50", via: "via-green-50", to: "to-emerald-50" },
+  yellow: { from: "from-amber-100", via: "via-yellow-100", to: "to-amber-100" },
+  purple: { from: "from-purple-100", via: "via-violet-100", to: "to-indigo-100" },
+  blue: { from: "from-blue-100", via: "via-indigo-100", to: "to-blue-100" },
+  green: { from: "from-emerald-100", via: "via-green-100", to: "to-emerald-100" },
 };
 
 const iconMap: Record<string, React.ReactNode> = {
   intersection: (
-    <svg viewBox="0 0 100 100" className="w-full h-full text-zinc-900">
+    <svg viewBox="0 0 100 100" className="w-full h-full text-zinc-700">
       <path d="M50 20 Q30 30 20 50 Q30 70 50 80 Q70 70 80 50 Q70 30 50 20" fill="none" stroke="currentColor" strokeWidth="2" />
       <circle cx="50" cy="50" r="3" fill="currentColor" />
       <path d="M20 50 Q30 40 40 50" fill="none" stroke="currentColor" strokeWidth="1.5" />
@@ -29,7 +29,7 @@ const iconMap: Record<string, React.ReactNode> = {
     </svg>
   ),
   crypto: (
-    <svg viewBox="0 0 100 100" className="w-full h-full text-zinc-900">
+    <svg viewBox="0 0 100 100" className="w-full h-full text-zinc-700">
       <path d="M50 20 Q40 25 35 30 Q30 40 30 50 Q30 60 35 70 Q40 75 50 80 Q60 75 65 70 Q70 60 70 50 Q70 40 65 30 Q60 25 50 20" fill="none" stroke="currentColor" strokeWidth="2" />
       <path d="M40 35 Q45 40 50 35 Q55 40 60 35" fill="none" stroke="currentColor" strokeWidth="1.5" />
       <path d="M35 50 Q40 55 45 50" fill="none" stroke="currentColor" strokeWidth="1.5" />
@@ -40,7 +40,7 @@ const iconMap: Record<string, React.ReactNode> = {
 };
 
 const defaultIcon = (
-  <svg viewBox="0 0 100 100" className="w-full h-full text-zinc-900">
+  <svg viewBox="0 0 100 100" className="w-full h-full text-zinc-700">
     <circle cx="50" cy="50" r="30" fill="none" stroke="currentColor" strokeWidth="2" />
     <text x="50" y="55" textAnchor="middle" fontSize="20" fill="currentColor">?</text>
   </svg>

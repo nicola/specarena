@@ -30,12 +30,12 @@ const getGameStatus = (c: Challenge) => {
   const { status, players = [], playerIdentities } = c.state ?? {};
   const waitingForPlayers = status === ChallengeStatus.Open && players.length > 0 && players.length < c.invites.length;
   if (status === ChallengeStatus.Ended)
-    return { label: "Ended", dotColor: "bg-zinc-400", textColor: "text-zinc-500", animate: false, badge: "bg-zinc-100 text-zinc-600" };
+    return { label: "Ended", dotColor: "bg-zinc-500", textColor: "text-zinc-100", animate: false, badge: "bg-zinc-600 text-white" };
   if (status === ChallengeStatus.Active)
-    return { label: "Live", dotColor: "bg-emerald-500", textColor: "text-emerald-700", animate: true, badge: "bg-emerald-100 text-emerald-700" };
+    return { label: "Live", dotColor: "bg-emerald-300", textColor: "text-white", animate: true, badge: "bg-emerald-600 text-white" };
   if (waitingForPlayers)
-    return { label: "Waiting for players", dotColor: "bg-amber-400", textColor: "text-amber-700", animate: true, badge: "bg-amber-100 text-amber-700" };
-  return { label: "Not Started", dotColor: "bg-zinc-300", textColor: "text-zinc-500", animate: false, badge: "bg-zinc-50 text-zinc-500" };
+    return { label: "Waiting for players", dotColor: "bg-amber-300", textColor: "text-white", animate: true, badge: "bg-amber-500 text-white" };
+  return { label: "Not Started", dotColor: "bg-zinc-400", textColor: "text-zinc-100", animate: false, badge: "bg-zinc-500 text-white" };
 };
 
 export default function ChallengesList({ challenges, challengeType, profiles = {}, total, page = 1, pageSize = 50, basePath, subtitle }: ChallengesListProps) {
