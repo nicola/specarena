@@ -244,10 +244,23 @@ export default function LeaderboardGraph({ data = mockData, height = 400, highli
         Plot.dot(data.filter((d) => !highlightSet.has(d.name)), {
           x: "securityPolicy",
           y: "utility",
-          fill: (d) => d.isBenchmark ? "#f59e0b" : paretoSet.has(d.name) ? "#000" : "#a1a1aa",
+          fill: (d) => {
+            if (d.isBenchmark) return "#f59e0b";
+            if (paretoSet.has(d.name)) {
+              // Color by position: top-right (good both) = emerald, left (poor security) = red
+              if (d.securityPolicy >= 0.3 && d.utility >= 0.3) return "#059669"; // emerald - good
+              if (d.securityPolicy < 0 && d.utility >= 0.3) return "#ef4444"; // red - poor security
+              return "#4f46e5"; // indigo - pareto but mixed
+            }
+            return "#c4bfb8"; // warm gray for non-pareto
+          },
           r: (d) => paretoSet.has(d.name) ? 7 : d.isBenchmark ? 6 : 5,
-          stroke: (d) => d.isBenchmark ? "#d97706" : "none",
-          strokeWidth: (d) => d.isBenchmark ? 1.5 : 0,
+          stroke: (d) => {
+            if (d.isBenchmark) return "#d97706";
+            if (paretoSet.has(d.name)) return "white";
+            return "none";
+          },
+          strokeWidth: (d) => d.isBenchmark ? 1.5 : paretoSet.has(d.name) ? 1.5 : 0,
           ...dotTipOptions,
         }),
         // Highlighted point (rendered last, on top)
@@ -269,7 +282,7 @@ export default function LeaderboardGraph({ data = mockData, height = 400, highli
             dx: d.dx,
             dy: d.dy,
             fontSize: 11,
-            fill: d.isHighlight ? "#6366f1" : d.isBenchmark ? "#f59e0b" : d.isPareto ? "#000" : "#a1a1aa",
+            fill: d.isHighlight ? "#6366f1" : d.isBenchmark ? "#f59e0b" : d.isPareto ? "#1a1a1a" : "#a8a29e",
             fontWeight: "600",
             textAnchor: d.anchor,
           });
@@ -299,7 +312,7 @@ export default function LeaderboardGraph({ data = mockData, height = 400, highli
       lineElements.forEach((line) => {
         const stroke = (line as SVGLineElement).getAttribute("stroke");
         if (stroke && (stroke === "currentColor" || stroke === "white" || !stroke)) {
-          (line as SVGLineElement).setAttribute("stroke", "#e4e4e7");
+          (line as SVGLineElement).setAttribute("stroke", "#e5e0d8");
         }
       });
     }

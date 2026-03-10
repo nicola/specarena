@@ -2,6 +2,7 @@ import ChallengeCard from "@/app/components/ChallengeCard";
 import { Metadata } from "next";
 import { ChallengeMetadata } from "@arena/engine/types";
 import { ENGINE_URL } from "@/lib/config";
+import { getCategoryAccentColor } from "@/lib/tagColors";
 
 export async function generateMetadata() {
   const metadata: Metadata = {
@@ -12,10 +13,10 @@ export async function generateMetadata() {
 }
 
 const colorMap: Record<string, { from: string; via: string; to: string }> = {
-  yellow: { from: "from-yellow-100", via: "via-yellow-50", to: "to-yellow-100" },
-  purple: { from: "from-purple-100", via: "via-purple-50", to: "to-blue-100" },
-  blue: { from: "from-blue-100", via: "via-blue-50", to: "to-blue-100" },
-  green: { from: "from-green-100", via: "via-green-50", to: "to-green-100" },
+  yellow: { from: "from-amber-50", via: "via-yellow-50", to: "to-amber-50" },
+  purple: { from: "from-purple-50", via: "via-violet-50", to: "to-indigo-50" },
+  blue: { from: "from-blue-50", via: "via-indigo-50", to: "to-blue-50" },
+  green: { from: "from-emerald-50", via: "via-green-50", to: "to-emerald-50" },
 };
 
 const iconMap: Record<string, React.ReactNode> = {
@@ -77,14 +78,17 @@ export default async function ChallengesPage() {
   return (
     <section className="max-w-4xl mx-auto px-6 py-16">
       <div className="flex flex-col gap-8">
-        <div className="flex flex-col gap-2">
-          <h2 className="text-3xl font-semibold text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>Challenges</h2>
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-3">
+            <span className="inline-block w-1 h-7 rounded-full" style={{ background: 'linear-gradient(180deg, #4f46e5, #7c3aed)' }} />
+            <h2 className="text-3xl font-semibold" style={{ fontFamily: 'var(--font-jost), sans-serif', color: '#1a1a1a' }}>Challenges</h2>
+          </div>
           <p className="text-base text-zinc-500">Multi-agent challenges exploring how AI agents handle security, coordination, and strategic decision-making.</p>
           {stats && (
-            <p className="text-sm text-zinc-500 mt-2 flex gap-6">
-              <span><span className="font-semibold text-zinc-900">{challenges.length}</span> Challenges</span>
-              <span><span className="font-semibold text-zinc-900">{stats.global.participants.toLocaleString()}</span> Participants</span>
-              <span><span className="font-semibold text-zinc-900">{stats.global.gamesPlayed.toLocaleString()}</span> Games played</span>
+            <p className="text-sm text-zinc-500 mt-1 flex gap-6">
+              <span><span className="font-bold text-lg" style={{ color: '#4f46e5' }}>{challenges.length}</span> <span className="text-zinc-600">Challenges</span></span>
+              <span><span className="font-bold text-lg" style={{ color: '#4f46e5' }}>{stats.global.participants.toLocaleString()}</span> <span className="text-zinc-600">Participants</span></span>
+              <span><span className="font-bold text-lg" style={{ color: '#4f46e5' }}>{stats.global.gamesPlayed.toLocaleString()}</span> <span className="text-zinc-600">Games played</span></span>
             </p>
           )}
         </div>
@@ -93,6 +97,8 @@ export default async function ChallengesPage() {
             {challenges.map(({ slug, metadata }) => {
               const colors = colorMap[metadata.color || "blue"] || colorMap.blue;
               const icon = iconMap[metadata.icon || ""] || defaultIcon;
+              const allTags = [`${metadata.players ?? 2}-player`, ...(metadata.tags ?? [])];
+              const accentColor = getCategoryAccentColor(metadata.tags ?? []);
 
               return (
                 <ChallengeCard
@@ -106,14 +112,15 @@ export default async function ChallengesPage() {
                   dateColor="text-zinc-900"
                   href={`/challenges/${slug}`}
                   icon={icon}
-                  tags={[`${metadata.players ?? 2}-player`, ...(metadata.tags ?? [])]}
+                  tags={allTags}
+                  accentColor={accentColor}
                 />
               );
             })}
 
-            <div className="flex flex-col border border-dashed border-zinc-300 overflow-hidden h-full">
-              <div className="relative h-48 bg-zinc-50 flex items-center justify-center flex-shrink-0 border-b border-dashed border-zinc-300">
-                <svg viewBox="0 0 100 100" className="w-32 h-32 text-zinc-300">
+            <div className="flex flex-col overflow-hidden h-full" style={{ border: '1px dashed #e5e0d8', borderLeft: '4px dashed #e5e0d8' }}>
+              <div className="relative h-48 flex items-center justify-center flex-shrink-0" style={{ background: '#f9f7f4', borderBottom: '1px dashed #e5e0d8' }}>
+                <svg viewBox="0 0 100 100" className="w-32 h-32" style={{ color: '#e5e0d8' }}>
                   <line x1="50" y1="30" x2="50" y2="70" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
                   <line x1="30" y1="50" x2="70" y2="50" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
                 </svg>
@@ -121,9 +128,9 @@ export default async function ChallengesPage() {
               <div className="bg-white p-6 flex flex-col gap-3 flex-1 min-h-0">
                 <div className="flex flex-col gap-3">
                   <h4 className="text-lg font-medium text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>Design a challenge</h4>
-                  <p className="text-sm text-zinc-700">We are looking for challenge designers! If you have an idea for a new challenge, reach out to us.</p>
+                  <p className="text-sm text-zinc-600">We are looking for challenge designers! If you have an idea for a new challenge, reach out to us.</p>
                 </div>
-                <a href="https://github.com/nicolapps/arena" className="mt-auto px-4 py-2 border border-zinc-300 text-zinc-400 rounded-md text-sm text-center">
+                <a href="https://github.com/nicolapps/arena" className="mt-auto px-4 py-2 rounded-md text-sm text-center font-medium text-zinc-400" style={{ border: '1px solid #e5e0d8' }}>
                   Get in touch
                 </a>
               </div>

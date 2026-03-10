@@ -30,12 +30,12 @@ const getGameStatus = (c: Challenge) => {
   const { status, players = [], playerIdentities } = c.state ?? {};
   const waitingForPlayers = status === ChallengeStatus.Open && players.length > 0 && players.length < c.invites.length;
   if (status === ChallengeStatus.Ended)
-    return { label: "Ended", dotColor: "bg-zinc-500", textColor: "text-zinc-600", animate: false };
+    return { label: "Ended", dotColor: "bg-zinc-400", textColor: "text-zinc-500", animate: false, badge: "bg-zinc-100 text-zinc-600" };
   if (status === ChallengeStatus.Active)
-    return { label: "Live", dotColor: "bg-green-500", textColor: "text-green-600", animate: true };
+    return { label: "Live", dotColor: "bg-emerald-500", textColor: "text-emerald-700", animate: true, badge: "bg-emerald-100 text-emerald-700" };
   if (waitingForPlayers)
-    return { label: "Waiting for players", dotColor: "bg-zinc-300", textColor: "text-zinc-500", animate: true };
-  return { label: "Not Started", dotColor: "bg-zinc-300", textColor: "text-zinc-500", animate: false };
+    return { label: "Waiting for players", dotColor: "bg-amber-400", textColor: "text-amber-700", animate: true, badge: "bg-amber-100 text-amber-700" };
+  return { label: "Not Started", dotColor: "bg-zinc-300", textColor: "text-zinc-500", animate: false, badge: "bg-zinc-50 text-zinc-500" };
 };
 
 export default function ChallengesList({ challenges, challengeType, profiles = {}, total, page = 1, pageSize = 50, basePath, subtitle }: ChallengesListProps) {
@@ -46,17 +46,20 @@ export default function ChallengesList({ challenges, challengeType, profiles = {
 
   return (
     <div className="mt-12">
-      <h2 className="text-2xl font-semibold text-zinc-900 mb-2" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
-        Challenges
-      </h2>
+      <div className="flex items-center gap-3 mb-2">
+        <span className="inline-block w-1 h-7 rounded-full flex-shrink-0" style={{ background: 'linear-gradient(180deg, #4f46e5, #7c3aed)' }} />
+        <h2 className="text-2xl font-semibold" style={{ fontFamily: 'var(--font-jost), sans-serif', color: '#1a1a1a' }}>
+          Challenges
+        </h2>
+      </div>
       {subtitle && <div className="mt-1 mb-6">{subtitle}</div>}
       {challenges.length === 0 ? (
-        <div className="border border-zinc-900 p-8 text-center">
+        <div className="p-8 text-center" style={{ border: '1px solid #e5e0d8' }}>
           <p className="text-zinc-600">No challenges created yet. Be the first to participate!</p>
         </div>
       ) : (
-        <div className="border border-zinc-900 divide-y divide-zinc-100">
-          <div className="flex items-center px-5 py-3 text-xs text-zinc-400 uppercase tracking-wider border-b border-zinc-200">
+        <div className="divide-y" style={{ border: '1px solid #e5e0d8', borderColor: '#e5e0d8', divideColor: '#f0ece6' }}>
+          <div className="flex items-center px-5 py-3 text-xs text-zinc-400 uppercase tracking-wider" style={{ borderBottom: '1px solid #e5e0d8', background: '#fafaf8' }}>
             <span className="w-[80px] max-sm:hidden shrink-0">ID</span>
             <span className="w-[140px] max-sm:hidden shrink-0">Status</span>
             <span className="w-[100px] shrink-0 max-sm:hidden">Date</span>
@@ -76,15 +79,18 @@ export default function ChallengesList({ challenges, challengeType, profiles = {
               <div
                 key={challengeInstance.id}
                 onClick={() => router.push(challengeHref)}
-                className="flex items-start px-5 py-4 hover:bg-zinc-50 transition-colors cursor-pointer"
+                className="flex items-start px-5 py-4 transition-colors cursor-pointer hover:bg-indigo-50/40"
+                style={{ borderBottom: '1px solid #f0ece6' }}
               >
                 <span className={`w-1.5 h-1.5 mt-[7px] ${status.dotColor} rounded-full ${status.animate ? 'animate-pulse' : ''} shrink-0 mr-3 sm:hidden`}></span>
                 <span className="w-[80px] text-sm text-zinc-400 font-mono shrink-0 max-sm:hidden">
                   {challengeInstance.id.slice(0, 8)}
                 </span>
-                <span className={`w-[140px] max-sm:hidden text-sm ${status.textColor} flex items-center gap-2 font-medium shrink-0`}>
-                  <span className={`w-1.5 h-1.5 ${status.dotColor} rounded-full ${status.animate ? 'animate-pulse' : ''}`}></span>
-                  {status.label}
+                <span className="w-[140px] max-sm:hidden shrink-0">
+                  <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full ${status.badge}`}>
+                    <span className={`w-1.5 h-1.5 ${status.dotColor} rounded-full ${status.animate ? 'animate-pulse' : ''}`}></span>
+                    {status.label}
+                  </span>
                 </span>
                 <span className="w-[100px] text-sm text-zinc-400 shrink-0 max-sm:hidden">
                   {formatDate(challengeInstance.createdAt)}

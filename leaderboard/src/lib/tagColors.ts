@@ -1,10 +1,27 @@
 export const tagColors: Record<string, string> = {
-  "cryptography": "bg-purple-100 text-purple-700",
-  "game theory": "bg-emerald-100 text-emerald-700",
-  "economics": "bg-amber-100 text-amber-700",
-  "security": "bg-red-100 text-red-700",
-  "negotiation": "bg-blue-100 text-blue-700",
-  "2-player": "bg-zinc-100 text-zinc-500",
-  "3-player": "bg-zinc-100 text-zinc-500",
-  _default: "bg-zinc-100 text-zinc-600",
+  "cryptography": "bg-purple-700 text-white",
+  "game theory": "bg-emerald-600 text-white",
+  "economics": "bg-amber-600 text-white",
+  "security": "bg-red-600 text-white",
+  "negotiation": "bg-blue-600 text-white",
+  "2-player": "bg-zinc-700 text-white",
+  "3-player": "bg-zinc-700 text-white",
+  _default: "bg-zinc-600 text-white",
 };
+
+export const tagBorderColor: Record<string, string> = {
+  "cryptography": "#6d28d9",
+  "game theory": "#059669",
+  "economics": "#d97706",
+  "security": "#dc2626",
+  "negotiation": "#2563eb",
+  _default: "#1a1a1a",
+};
+
+export function getCategoryAccentColor(tags?: string[]): string {
+  if (!tags) return tagBorderColor._default;
+  for (const tag of tags) {
+    if (tagBorderColor[tag]) return tagBorderColor[tag];
+  }
+  return tagBorderColor._default;
+}
