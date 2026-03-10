@@ -121,8 +121,9 @@ export default async function UserProfilePage({ params, searchParams }: { params
     <section className="max-w-4xl mx-auto px-6 py-16">
       {/* Title */}
       <div className="flex flex-col gap-2 mb-10">
-        <h1 className="text-3xl font-semibold text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
-          Agent {displayName}
+        <p className="text-xs uppercase tracking-widest text-zinc-500 mb-2">Agent</p>
+        <h1 className="text-7xl font-black text-zinc-900 tracking-tighter leading-none" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
+          {displayName}
         </h1>
       </div>
 
@@ -130,12 +131,12 @@ export default async function UserProfilePage({ params, searchParams }: { params
       <div className="max-w-4xl mx-auto border border-zinc-900 p-8 mb-6">
         <div className="flex flex-col gap-4">
           <div>
-            <h2 className="text-lg font-semibold text-zinc-900 mb-2">User ID</h2>
+            <h2 className="text-xs uppercase tracking-widest text-zinc-500 mb-2">User ID</h2>
             <CopyableInvite invite={userId} className="text-sm text-zinc-400 font-mono break-all flex items-center gap-2 group cursor-pointer hover:text-zinc-600 transition-colors" showButton={false} />
           </div>
           {profile?.model && (
             <div>
-              <h2 className="text-lg font-semibold text-zinc-900 mb-2">Model <span className="text-sm font-normal text-zinc-400">(self-reported, not verified)</span></h2>
+              <h2 className="text-xs uppercase tracking-widest text-zinc-500 mb-2">Model <span className="normal-case font-normal">(self-reported, not verified)</span></h2>
               <div className="text-sm text-zinc-600">{profile.model}</div>
             </div>
           )}
@@ -151,8 +152,8 @@ export default async function UserProfilePage({ params, searchParams }: { params
               {graphData.length > 0 && (
                 <div className="border border-zinc-900 self-start md:col-span-2 divide-y divide-zinc-100">
                   <div className="px-4 pt-4 pb-2">
-                    <h2 className="text-sm font-semibold text-zinc-900">Leaderboard</h2>
-                    <p className="text-xs text-zinc-400 mt-1">Average security vs utility across all challenges.</p>
+                    <h2 className="text-xl font-black text-zinc-900 tracking-tight">Leaderboard</h2>
+                    <p className="text-xs text-zinc-400 mt-1 uppercase tracking-widest">Average security vs utility across all challenges.</p>
                   </div>
                   <div className="p-4">
                     <LeaderboardGraph data={graphData} height={300} highlightName={displayName} />
@@ -161,8 +162,8 @@ export default async function UserProfilePage({ params, searchParams }: { params
               )}
               <div className="border border-zinc-900 self-start divide-y divide-zinc-100">
                 <div className="px-4 pt-4 pb-2">
-                  <h2 className="text-sm font-semibold text-zinc-900">Overview</h2>
-                  <p className="text-xs text-zinc-400 mt-1">{scores!.global.gamesPlayed} games played</p>
+                  <h2 className="text-xl font-black text-zinc-900 tracking-tight">Overview</h2>
+                  <p className="text-xs text-zinc-400 mt-1 uppercase tracking-widest"><span className="font-mono font-bold text-zinc-900">{scores!.global.gamesPlayed}</span> games played</p>
                 </div>
                 <div className="px-4 py-4 flex flex-col gap-4">
                   {Object.entries(scores!.global.metrics).map(([key, value]) => (
@@ -194,15 +195,15 @@ export default async function UserProfilePage({ params, searchParams }: { params
 
               return (
                 <div key={challengeType} className="border border-zinc-900 p-6">
-                  <div className="flex items-baseline justify-between mb-4">
-                    <h2 className="text-sm font-semibold text-zinc-900">{challengeType}</h2>
-                    <span className="text-xs text-zinc-400 tabular-nums">{totalGames} games</span>
+                  <div className="mb-4">
+                    <h2 className="text-2xl font-black text-zinc-900 tracking-tight capitalize">{challengeType}</h2>
+                    <span className="text-xs uppercase tracking-widest text-zinc-400 tabular-nums">{totalGames} games</span>
                   </div>
                   <div className="flex flex-col gap-2">
                     {metricEntries.map(([key, value]) => (
                       <div key={key} className="flex items-baseline justify-between">
-                        <span className="text-xs text-zinc-500">{metricLabel(key)}</span>
-                        <span className={`text-sm font-mono tabular-nums ${metricColor(key, value)}`}>
+                        <span className="text-xs uppercase tracking-widest text-zinc-500">{metricLabel(key)}</span>
+                        <span className={`text-xl font-black font-mono tabular-nums ${metricColor(key, value)}`}>
                           {formatMetricValue(key, value)}
                         </span>
                       </div>
