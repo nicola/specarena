@@ -18,30 +18,53 @@ export default function ChallengeCard({
   title,
   date,
   description,
-  gradientFrom,
-  gradientVia,
-  gradientTo,
   icon,
-  dateColor = "text-zinc-600",
   href,
   tags,
 }: ChallengeCardProps) {
   return (
-    <div className="flex flex-col border border-zinc-900 overflow-hidden h-full">
-      {/* Upper Half */}
+    <div
+      className="flex flex-col h-full"
+      style={{
+        background: '#ffffff',
+        border: '1px solid var(--border-warm)',
+        borderLeft: '3px solid var(--accent-blue)',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Icon area — muted academic palette, no gradient */}
       <div
-        className={`relative h-48 bg-gradient-to-br ${gradientFrom} ${gradientVia} ${gradientTo} flex items-center px-6 flex-shrink-0`}
+        className="relative flex-shrink-0"
+        style={{
+          height: '140px',
+          background: '#f0ede4',
+          borderBottom: '1px solid var(--border-warm)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '16px',
+        }}
       >
-        <div className="flex-1 flex items-center gap-4">
-          {/* Visual Element */}
-          <div className="w-full h-32 flex-shrink-0">{icon}</div>
+        <div className="w-full h-full flex-shrink-0" style={{ color: 'var(--accent-blue)', opacity: 0.7 }}>
+          {icon}
         </div>
+
         {tags && tags.length > 0 && (
-          <div className="absolute bottom-3 left-4 flex flex-wrap gap-1.5">
+          <div className="absolute bottom-2 left-3 flex flex-wrap gap-1">
             {tags.map((tag) => {
               const colors = tagColors[tag] || tagColors._default;
               return (
-                <span key={tag} className={`text-xs px-2 py-0.5 rounded-full ${colors}`}>
+                <span
+                  key={tag}
+                  className={`${colors}`}
+                  style={{
+                    fontSize: '10px',
+                    padding: '1px 6px',
+                    borderRadius: '2px',
+                    fontFamily: 'var(--font-sans)',
+                    letterSpacing: '0.03em',
+                  }}
+                >
                   {tag}
                 </span>
               );
@@ -49,15 +72,47 @@ export default function ChallengeCard({
           </div>
         )}
       </div>
-      {/* Lower Half */}
-      <div className="bg-white p-6 flex flex-col gap-3 flex-1 min-h-0">
-        <div className="flex flex-col gap-3">
-          {date && <p className={`text-sm ${dateColor}`}>{date}</p>}
-          <h4 className="text-lg font-medium text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>{title}</h4>
-          <p className="text-sm text-zinc-700">{description}</p>
-        </div>
-        <a href={href} className="mt-auto px-4 py-2 border border-zinc-900 text-zinc-900 rounded-md text-sm text-center">
-          Discover more
+
+      {/* Content area */}
+      <div className="flex flex-col gap-2 flex-1 min-h-0" style={{ padding: '18px 20px 20px' }}>
+        {date && (
+          <p style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', color: 'var(--muted-text)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+            {date}
+          </p>
+        )}
+        <h4
+          style={{
+            fontFamily: 'var(--font-serif)',
+            fontSize: '18px',
+            fontWeight: 600,
+            color: 'var(--foreground)',
+            lineHeight: 1.3,
+            margin: 0,
+          }}
+        >
+          {title}
+        </h4>
+        <p style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', color: '#4a4535', lineHeight: 1.6, margin: 0 }}>
+          {description}
+        </p>
+        <a
+          href={href}
+          className="mt-auto"
+          style={{
+            display: 'inline-block',
+            marginTop: '16px',
+            fontFamily: 'var(--font-sans)',
+            fontSize: '12px',
+            fontWeight: 500,
+            letterSpacing: '0.05em',
+            textTransform: 'uppercase',
+            color: 'var(--accent-blue)',
+            borderBottom: '1px solid var(--accent-blue)',
+            paddingBottom: '1px',
+            textDecoration: 'none',
+          }}
+        >
+          View challenge →
         </a>
       </div>
     </div>

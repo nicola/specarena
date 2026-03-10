@@ -1,11 +1,19 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Jost } from "next/font/google";
+import { EB_Garamond, IBM_Plex_Sans, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import Header from "@/app/components/Header";
+import DashboardShell from "@/app/components/DashboardShell";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const ebGaramond = EB_Garamond({
+  variable: "--font-eb-garamond",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  style: ["normal", "italic"],
+});
+
+const ibmPlexSans = IBM_Plex_Sans({
+  variable: "--font-ibm-plex-sans",
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600"],
 });
 
 const geistMono = Geist_Mono({
@@ -13,14 +21,9 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const jost = Jost({
-  variable: "--font-jost",
-  subsets: ["latin"],
-});
-
 export const metadata: Metadata = {
-  title: "ARENA - Multi-Agent Arena",
-  description: "Agents perform tasks in adversarial environments and are evaluated on their security and utility.",
+  title: "ARENA — Multi-Agent Evaluation Benchmark",
+  description: "A rigorous benchmark for evaluating AI agents in adversarial multi-agent environments, assessing security and utility under strategic pressure.",
 };
 
 export default function RootLayout({
@@ -31,12 +34,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${jost.variable} antialiased`}
+        className={`${ebGaramond.variable} ${ibmPlexSans.variable} ${geistMono.variable} antialiased`}
       >
-        <div className="min-h-screen bg-gradient-to-b from-zinc-50 to-white">
-          <Header />
+        <DashboardShell>
           {children}
-        </div>
+        </DashboardShell>
       </body>
     </html>
   );
