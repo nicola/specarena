@@ -65,7 +65,6 @@ function metricLabel(key: string): string {
     "consecutive:utility": "Util. Streak",
   };
   if (labels[key]) return labels[key];
-  // fallback: strip prefix, title-case
   const suffix = key.includes(":") ? key.split(":").pop()! : key;
   return suffix.charAt(0).toUpperCase() + suffix.slice(1);
 }
@@ -83,9 +82,9 @@ function formatMetricValue(key: string, value: number): string {
 function metricColor(key: string, value: number): string {
   if (value === -1) {
     if (key.includes("utility")) return "text-violet-400";
-    return "text-red-300";
+    return "text-red-400";
   }
-  return "text-zinc-900";
+  return "text-white/80";
 }
 
 export default async function UserProfilePage({ params, searchParams }: { params: Promise<{ userId: string }>; searchParams: Promise<{ page?: string }> }) {
@@ -103,7 +102,6 @@ export default async function UserProfilePage({ params, searchParams }: { params
 
   const displayName = profile?.username ?? userId.slice(0, 8);
 
-  // Transform global scoring into graph data
   const graphData = globalScoring.map((entry) => ({
     name: entry.username ?? entry.playerId.slice(0, 8),
     securityPolicy: entry.metrics["global-average:security"] ?? 0,
@@ -121,22 +119,22 @@ export default async function UserProfilePage({ params, searchParams }: { params
     <section className="max-w-4xl mx-auto px-6 py-16">
       {/* Title */}
       <div className="flex flex-col gap-2 mb-10">
-        <h1 className="text-3xl font-semibold text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
+        <h1 className="text-3xl font-semibold gradient-text-shimmer">
           Agent {displayName}
         </h1>
       </div>
 
       {/* Info Box */}
-      <div className="max-w-4xl mx-auto border border-zinc-900 p-8 mb-6">
+      <div className="glass rounded-xl p-8 mb-6">
         <div className="flex flex-col gap-4">
           <div>
-            <h2 className="text-lg font-semibold text-zinc-900 mb-2">User ID</h2>
-            <CopyableInvite invite={userId} className="text-sm text-zinc-400 font-mono break-all flex items-center gap-2 group cursor-pointer hover:text-zinc-600 transition-colors" showButton={false} />
+            <h2 className="text-lg font-semibold gradient-text mb-2">User ID</h2>
+            <CopyableInvite invite={userId} className="text-sm text-white/40 font-mono break-all flex items-center gap-2 group cursor-pointer hover:text-white/70 transition-colors" showButton={false} />
           </div>
           {profile?.model && (
             <div>
-              <h2 className="text-lg font-semibold text-zinc-900 mb-2">Model <span className="text-sm font-normal text-zinc-400">(self-reported, not verified)</span></h2>
-              <div className="text-sm text-zinc-600">{profile.model}</div>
+              <h2 className="text-lg font-semibold gradient-text mb-2">Model <span className="text-sm font-normal text-white/40">(self-reported, not verified)</span></h2>
+              <div className="text-sm text-white/60">{profile.model}</div>
             </div>
           )}
         </div>
@@ -145,29 +143,28 @@ export default async function UserProfilePage({ params, searchParams }: { params
       {/* Scoring */}
       {hasScores && (
         <div className="flex flex-col gap-4 mb-6">
-          {/* Leaderboard graph + Overview sidebar */}
           {scores!.global && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {graphData.length > 0 && (
-                <div className="border border-zinc-900 self-start md:col-span-2 divide-y divide-zinc-100">
-                  <div className="px-4 pt-4 pb-2">
-                    <h2 className="text-sm font-semibold text-zinc-900">Leaderboard</h2>
-                    <p className="text-xs text-zinc-400 mt-1">Average security vs utility across all challenges.</p>
+                <div className="glass rounded-xl self-start md:col-span-2 overflow-hidden">
+                  <div className="px-4 pt-4 pb-2 border-b border-white/10">
+                    <h2 className="text-sm font-semibold gradient-text">Leaderboard</h2>
+                    <p className="text-xs text-white/40 mt-1">Average security vs utility across all challenges.</p>
                   </div>
                   <div className="p-4">
                     <LeaderboardGraph data={graphData} height={300} highlightName={displayName} />
                   </div>
                 </div>
               )}
-              <div className="border border-zinc-900 self-start divide-y divide-zinc-100">
-                <div className="px-4 pt-4 pb-2">
-                  <h2 className="text-sm font-semibold text-zinc-900">Overview</h2>
-                  <p className="text-xs text-zinc-400 mt-1">{scores!.global.gamesPlayed} games played</p>
+              <div className="glass rounded-xl self-start overflow-hidden">
+                <div className="px-4 pt-4 pb-2 border-b border-white/10">
+                  <h2 className="text-sm font-semibold gradient-text">Overview</h2>
+                  <p className="text-xs text-white/40 mt-1">{scores!.global.gamesPlayed} games played</p>
                 </div>
                 <div className="px-4 py-4 flex flex-col gap-4">
                   {Object.entries(scores!.global.metrics).map(([key, value]) => (
                     <div key={key}>
-                      <div className="text-xs text-zinc-400 mb-1 uppercase tracking-wide">{metricLabel(key)}</div>
+                      <div className="text-xs text-white/40 mb-1 uppercase tracking-wide">{metricLabel(key)}</div>
                       <div className={`text-2xl font-mono tabular-nums ${metricColor(key, value)}`}>
                         {formatMetricValue(key, value)}
                       </div>
@@ -181,7 +178,6 @@ export default async function UserProfilePage({ params, searchParams }: { params
           {/* Per-challenge cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {Object.entries(scores!.challenges).map(([challengeType, strategies]) => {
-              // Merge all strategy metrics + sum games played
               const mergedMetrics: Record<string, number> = {};
               let totalGames = 0;
               Object.values(strategies).forEach((entry) => {
@@ -193,15 +189,15 @@ export default async function UserProfilePage({ params, searchParams }: { params
               const metricEntries = Object.entries(mergedMetrics);
 
               return (
-                <div key={challengeType} className="border border-zinc-900 p-6">
+                <div key={challengeType} className="glass rounded-xl p-6 glow-purple-hover transition-all">
                   <div className="flex items-baseline justify-between mb-4">
-                    <h2 className="text-sm font-semibold text-zinc-900">{challengeType}</h2>
-                    <span className="text-xs text-zinc-400 tabular-nums">{totalGames} games</span>
+                    <h2 className="text-sm font-semibold gradient-text">{challengeType}</h2>
+                    <span className="text-xs text-white/30 tabular-nums">{totalGames} games</span>
                   </div>
                   <div className="flex flex-col gap-2">
                     {metricEntries.map(([key, value]) => (
                       <div key={key} className="flex items-baseline justify-between">
-                        <span className="text-xs text-zinc-500">{metricLabel(key)}</span>
+                        <span className="text-xs text-white/40">{metricLabel(key)}</span>
                         <span className={`text-sm font-mono tabular-nums ${metricColor(key, value)}`}>
                           {formatMetricValue(key, value)}
                         </span>
@@ -227,8 +223,8 @@ export default async function UserProfilePage({ params, searchParams }: { params
           basePath={`/users/${userId}`}
         />
       ) : (
-        <div className="border border-zinc-900 p-8 text-center">
-          <p className="text-zinc-600">No challenges found for this user.</p>
+        <div className="glass rounded-xl p-8 text-center">
+          <p className="text-white/40">No challenges found for this user.</p>
         </div>
       )}
     </section>
