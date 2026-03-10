@@ -1,10 +1,10 @@
 export const tagColors: Record<string, string> = {
-  "cryptography": "bg-purple-100 text-purple-700",
-  "game theory": "bg-emerald-100 text-emerald-700",
-  "economics": "bg-amber-100 text-amber-700",
-  "security": "bg-red-100 text-red-700",
-  "negotiation": "bg-blue-100 text-blue-700",
-  "2-player": "bg-zinc-100 text-zinc-500",
-  "3-player": "bg-zinc-100 text-zinc-500",
-  _default: "bg-zinc-100 text-zinc-600",
+  "cryptography": "bg-purple-900/60 text-purple-300 border border-purple-700/50",
+  "game theory": "bg-emerald-900/60 text-emerald-300 border border-emerald-700/50",
+  "economics": "bg-amber-900/60 text-amber-300 border border-amber-700/50",
+  "security": "bg-red-900/60 text-red-300 border border-red-700/50",
+  "negotiation": "bg-blue-900/60 text-blue-300 border border-blue-700/50",
+  "2-player": "bg-zinc-800 text-zinc-400 border border-zinc-700",
+  "3-player": "bg-zinc-800 text-zinc-400 border border-zinc-700",
+  _default: "bg-zinc-800 text-zinc-400 border border-zinc-700",
 };
