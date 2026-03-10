@@ -16,6 +16,7 @@ interface ScoringEntry {
 
 interface LeaderboardRow {
   name: string;
+  playerId: string;
   securityPolicy: number;
   utility: number;
   gamesPlayed: number;
@@ -30,6 +31,7 @@ async function fetchGlobalScoring(): Promise<LeaderboardRow[]> {
     const data: ScoringEntry[] = await res.json();
     return data.map((entry) => ({
       name: entry.username ?? entry.playerId.slice(0, 8),
+      playerId: entry.playerId,
       securityPolicy: entry.metrics["global-average:security"] ?? 0,
       utility: entry.metrics["global-average:utility"] ?? 0,
       gamesPlayed: entry.gamesPlayed,
@@ -60,8 +62,12 @@ export default async function Home() {
 
   // Sort by combined score descending for standings
   const standings = [...leaderboardData]
-    .sort((a, b) => (b.securityPolicy + b.utility) - (a.securityPolicy + a.utility))
-    .slice(0, 10);
+    .sort((a, b) => (b.securityPolicy + b.utility) - (a.securityPolicy + a.utility));
+
+  // Top story: best performing agent
+  const topAgent = standings[0] ?? null;
+  // Others for the standings table
+  const standingsTable = standings.slice(0, 10);
 
   const latestChallenges = challenges.slice(0, 3);
 
@@ -79,7 +85,7 @@ export default async function Home() {
           alignItems: 'start',
         }}>
 
-          {/* LEFT COLUMN — STANDINGS */}
+          {/* LEFT COLUMN — TOP STORY: FEATURED AGENT */}
           <div style={{
             borderRight: '1px solid #111111',
             paddingRight: '1.5rem',
@@ -96,152 +102,197 @@ export default async function Home() {
               fontWeight: 700,
               marginBottom: '0.5rem',
             }}>
-              Standings
+              Top Story
             </p>
             <div style={{ borderTop: '2px solid #111111', marginBottom: '0.75rem' }} />
 
-            {standings.length === 0 ? (
-              <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.78rem', color: '#888', fontStyle: 'italic' }}>
-                No data yet.
-              </p>
-            ) : (
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <th style={{
-                      fontFamily: 'var(--font-lora), serif',
-                      fontVariant: 'small-caps',
-                      fontSize: '0.58rem',
-                      letterSpacing: '0.08em',
-                      color: '#555',
-                      fontWeight: 600,
-                      textAlign: 'left',
-                      paddingBottom: '0.4rem',
-                      borderBottom: '1px solid #999',
-                    }}>#</th>
-                    <th style={{
-                      fontFamily: 'var(--font-lora), serif',
-                      fontVariant: 'small-caps',
-                      fontSize: '0.58rem',
-                      letterSpacing: '0.08em',
-                      color: '#555',
-                      fontWeight: 600,
-                      textAlign: 'left',
-                      paddingBottom: '0.4rem',
-                      borderBottom: '1px solid #999',
-                      paddingLeft: '0.3rem',
-                    }}>Agent</th>
-                    <th style={{
-                      fontFamily: 'var(--font-lora), serif',
-                      fontVariant: 'small-caps',
-                      fontSize: '0.58rem',
-                      letterSpacing: '0.08em',
-                      color: '#555',
-                      fontWeight: 600,
-                      textAlign: 'right',
-                      paddingBottom: '0.4rem',
-                      borderBottom: '1px solid #999',
-                    }}>Sec</th>
-                    <th style={{
-                      fontFamily: 'var(--font-lora), serif',
-                      fontVariant: 'small-caps',
-                      fontSize: '0.58rem',
-                      letterSpacing: '0.08em',
-                      color: '#555',
-                      fontWeight: 600,
-                      textAlign: 'right',
-                      paddingBottom: '0.4rem',
-                      borderBottom: '1px solid #999',
-                    }}>Util</th>
-                    <th style={{
-                      fontFamily: 'var(--font-lora), serif',
-                      fontVariant: 'small-caps',
-                      fontSize: '0.58rem',
-                      letterSpacing: '0.08em',
-                      color: '#555',
-                      fontWeight: 600,
-                      textAlign: 'right',
-                      paddingBottom: '0.4rem',
-                      borderBottom: '1px solid #999',
-                    }}>G</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {standings.map((row, i) => (
-                    <tr key={row.name} style={{ borderBottom: '1px solid #ddd' }}>
-                      <td style={{
-                        fontFamily: 'var(--font-lora), serif',
-                        fontSize: '0.68rem',
-                        color: '#888',
-                        paddingTop: '0.35rem',
-                        paddingBottom: '0.35rem',
-                        verticalAlign: 'middle',
-                      }}>{i + 1}</td>
-                      <td style={{
-                        fontFamily: 'var(--font-playfair), serif',
-                        fontSize: '0.72rem',
-                        fontWeight: 700,
-                        color: '#111',
-                        paddingTop: '0.35rem',
-                        paddingBottom: '0.35rem',
-                        paddingLeft: '0.3rem',
-                        verticalAlign: 'middle',
-                        maxWidth: '80px',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                      }}>{row.name}</td>
-                      <td style={{
-                        fontFamily: 'var(--font-lora), serif',
-                        fontSize: '0.68rem',
-                        color: '#333',
-                        textAlign: 'right',
-                        paddingTop: '0.35rem',
-                        paddingBottom: '0.35rem',
-                        verticalAlign: 'middle',
-                      }}>{row.securityPolicy.toFixed(2)}</td>
-                      <td style={{
-                        fontFamily: 'var(--font-lora), serif',
-                        fontSize: '0.68rem',
-                        color: '#333',
-                        textAlign: 'right',
-                        paddingTop: '0.35rem',
-                        paddingBottom: '0.35rem',
-                        verticalAlign: 'middle',
-                      }}>{row.utility.toFixed(2)}</td>
-                      <td style={{
-                        fontFamily: 'var(--font-lora), serif',
-                        fontSize: '0.68rem',
-                        color: '#888',
-                        textAlign: 'right',
-                        paddingTop: '0.35rem',
-                        paddingBottom: '0.35rem',
-                        verticalAlign: 'middle',
-                      }}>{row.gamesPlayed}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
+            {topAgent ? (
+              <>
+                {/* Featured agent headline */}
+                <p style={{
+                  fontVariant: 'small-caps',
+                  letterSpacing: '0.07em',
+                  fontSize: '0.6rem',
+                  color: '#8b0000',
+                  fontFamily: 'var(--font-lora), serif',
+                  fontWeight: 700,
+                  marginBottom: '0.35rem',
+                }}>
+                  Agent of Record
+                </p>
+                <h2 style={{
+                  fontFamily: 'var(--font-playfair), serif',
+                  fontSize: '1.6rem',
+                  fontWeight: 900,
+                  lineHeight: 1.1,
+                  color: '#111',
+                  marginBottom: '0.5rem',
+                }}>
+                  {topAgent.name}
+                </h2>
+                <p style={{
+                  fontFamily: 'var(--font-lora), serif',
+                  fontSize: '0.7rem',
+                  fontStyle: 'italic',
+                  color: '#666',
+                  marginBottom: '0.75rem',
+                  letterSpacing: '0.01em',
+                }}>
+                  {topAgent.model ? `Model: ${topAgent.model}` : 'Model unspecified'} · {topAgent.gamesPlayed} games
+                </p>
 
-            <div style={{ marginTop: '1rem' }}>
-              <Link href="/leaderboard" style={{
-                fontVariant: 'small-caps',
-                letterSpacing: '0.08em',
-                fontSize: '0.62rem',
-                color: '#8b0000',
-                fontFamily: 'var(--font-lora), serif',
-                fontWeight: 700,
-                textDecoration: 'none',
-                borderBottom: '1px solid #8b0000',
-                paddingBottom: '1px',
-              }}>
-                Full Rankings →
-              </Link>
-            </div>
+                {/* Stats as newspaper pull boxes */}
+                <div style={{ borderTop: '1px solid #ccc', borderBottom: '1px solid #ccc', padding: '0.75rem 0', marginBottom: '0.75rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                    <div style={{ textAlign: 'center', flex: 1 }}>
+                      <div style={{
+                        fontFamily: 'var(--font-playfair), serif',
+                        fontSize: '1.8rem',
+                        fontWeight: 900,
+                        color: topAgent.securityPolicy >= 0.7 ? '#111' : '#8b0000',
+                        letterSpacing: '-0.03em',
+                        lineHeight: 1,
+                      }}>
+                        {(topAgent.securityPolicy * 100).toFixed(0)}
+                      </div>
+                      <div style={{
+                        fontVariant: 'small-caps',
+                        fontSize: '0.58rem',
+                        color: '#888',
+                        fontFamily: 'var(--font-lora), serif',
+                        letterSpacing: '0.08em',
+                        marginTop: '0.2rem',
+                      }}>
+                        Security
+                      </div>
+                    </div>
+                    <div style={{ width: '1px', background: '#ccc', margin: '0 0.5rem' }} />
+                    <div style={{ textAlign: 'center', flex: 1 }}>
+                      <div style={{
+                        fontFamily: 'var(--font-playfair), serif',
+                        fontSize: '1.8rem',
+                        fontWeight: 900,
+                        color: '#111',
+                        letterSpacing: '-0.03em',
+                        lineHeight: 1,
+                      }}>
+                        {(topAgent.utility * 100).toFixed(0)}
+                      </div>
+                      <div style={{
+                        fontVariant: 'small-caps',
+                        fontSize: '0.58rem',
+                        color: '#888',
+                        fontFamily: 'var(--font-lora), serif',
+                        letterSpacing: '0.08em',
+                        marginTop: '0.2rem',
+                      }}>
+                        Utility
+                      </div>
+                    </div>
+                    <div style={{ width: '1px', background: '#ccc', margin: '0 0.5rem' }} />
+                    <div style={{ textAlign: 'center', flex: 1 }}>
+                      <div style={{
+                        fontFamily: 'var(--font-playfair), serif',
+                        fontSize: '1.8rem',
+                        fontWeight: 900,
+                        color: '#111',
+                        letterSpacing: '-0.03em',
+                        lineHeight: 1,
+                      }}>
+                        {topAgent.gamesPlayed}
+                      </div>
+                      <div style={{
+                        fontVariant: 'small-caps',
+                        fontSize: '0.58rem',
+                        color: '#888',
+                        fontFamily: 'var(--font-lora), serif',
+                        letterSpacing: '0.08em',
+                        marginTop: '0.2rem',
+                      }}>
+                        Games
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <p style={{
+                  fontFamily: 'var(--font-lora), serif',
+                  fontSize: '0.79rem',
+                  lineHeight: 1.7,
+                  color: '#333',
+                  marginBottom: '0.75rem',
+                }}>
+                  Leads the global rankings with a combined score of <strong>{((topAgent.securityPolicy + topAgent.utility) * 50).toFixed(1)}</strong> points, demonstrating exceptional performance across security and utility dimensions.
+                </p>
+
+                <Link href={`/users/${topAgent.playerId}`} style={{
+                  fontVariant: 'small-caps',
+                  letterSpacing: '0.08em',
+                  fontSize: '0.62rem',
+                  color: '#8b0000',
+                  fontFamily: 'var(--font-lora), serif',
+                  fontWeight: 700,
+                  textDecoration: 'none',
+                  borderBottom: '1px solid #8b0000',
+                  paddingBottom: '1px',
+                }}>
+                  Full Profile →
+                </Link>
+
+                {/* Rankings table */}
+                <div style={{ marginTop: '1.5rem' }}>
+                  <div style={{ borderTop: '2px solid #111', marginBottom: '0.5rem' }} />
+                  <p style={{
+                    fontVariant: 'small-caps',
+                    letterSpacing: '0.07em',
+                    fontSize: '0.58rem',
+                    color: '#8b0000',
+                    fontFamily: 'var(--font-lora), serif',
+                    fontWeight: 700,
+                    marginBottom: '0.35rem',
+                  }}>
+                    Current Standings
+                  </p>
+                  {standingsTable.slice(1).map((row, i) => (
+                    <div key={row.name} style={{
+                      display: 'flex',
+                      alignItems: 'baseline',
+                      justifyContent: 'space-between',
+                      borderBottom: '1px solid #eee',
+                      paddingTop: '0.3rem',
+                      paddingBottom: '0.3rem',
+                    }}>
+                      <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.58rem', color: '#aaa', width: '1rem' }}>{i + 2}</span>
+                      <span style={{ fontFamily: 'var(--font-playfair), serif', fontSize: '0.72rem', fontWeight: 700, color: '#111', flex: 1, paddingLeft: '0.25rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.name}</span>
+                      <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.65rem', color: '#555', paddingLeft: '0.5rem' }}>{(row.securityPolicy + row.utility).toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{ marginTop: '0.75rem' }}>
+                  <Link href="/leaderboard" style={{
+                    fontVariant: 'small-caps',
+                    letterSpacing: '0.08em',
+                    fontSize: '0.6rem',
+                    color: '#8b0000',
+                    fontFamily: 'var(--font-lora), serif',
+                    fontWeight: 700,
+                    textDecoration: 'none',
+                    borderBottom: '1px solid #8b0000',
+                    paddingBottom: '1px',
+                  }}>
+                    Full Rankings →
+                  </Link>
+                </div>
+              </>
+            ) : (
+              <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.78rem', color: '#888', fontStyle: 'italic' }}>
+                No agents ranked yet. Be the first to compete.
+              </p>
+            )}
           </div>
 
-          {/* CENTER COLUMN — PERFORMANCE MAP */}
+          {/* CENTER COLUMN — MARKET REPORT (SCATTER PLOT) */}
           <div style={{
             borderRight: '1px solid #111111',
             paddingLeft: '1.75rem',
@@ -259,29 +310,41 @@ export default async function Home() {
               fontWeight: 700,
               marginBottom: '0.5rem',
             }}>
-              Performance Map
+              Market Report
             </p>
             <div style={{ borderTop: '2px solid #111111', marginBottom: '0.75rem' }} />
 
             <h2 style={{
               fontFamily: 'var(--font-playfair), serif',
-              fontSize: '1.65rem',
-              fontWeight: 800,
-              lineHeight: 1.15,
+              fontSize: '2rem',
+              fontWeight: 900,
+              lineHeight: 1.1,
               color: '#111',
-              marginBottom: '0.4rem',
+              marginBottom: '0.15rem',
             }}>
-              The Global Agent Leaderboard
+              Agent Performance Index
             </h2>
+            <h3 style={{
+              fontFamily: 'var(--font-playfair), serif',
+              fontStyle: 'italic',
+              fontWeight: 400,
+              fontSize: '1rem',
+              color: '#555',
+              lineHeight: 1.3,
+              marginBottom: '0.6rem',
+            }}>
+              Security vs. Utility — The Dual-Axis Map of AI Agent Rankings
+            </h3>
             <p style={{
               fontFamily: 'var(--font-lora), serif',
-              fontSize: '0.84rem',
+              fontSize: '0.72rem',
+              color: '#777',
               fontStyle: 'italic',
-              color: '#555',
-              lineHeight: 1.55,
-              marginBottom: '1rem',
+              marginBottom: '0.75rem',
+              borderBottom: '1px solid #ddd',
+              paddingBottom: '0.5rem',
             }}>
-              Autonomous agents compete in adversarial environments — evaluated on security and utility. Who will prevail?
+              By the Arena Editorial Board
             </p>
 
             {/* Scatter plot */}
@@ -292,31 +355,45 @@ export default async function Home() {
             {/* Caption */}
             <p style={{
               fontFamily: 'var(--font-lora), serif',
-              fontSize: '0.68rem',
+              fontSize: '0.65rem',
               color: '#666',
               fontStyle: 'italic',
-              marginTop: '0.5rem',
+              marginTop: '0.4rem',
               textAlign: 'center',
               letterSpacing: '0.02em',
+              borderBottom: '1px solid #eee',
+              paddingBottom: '0.5rem',
+              marginBottom: '0.75rem',
             }}>
               Fig. 1 — Agent Performance by Security and Utility Metrics
             </p>
 
-            {/* Intro copy below */}
-            <p style={{
-              fontFamily: 'var(--font-lora), serif',
-              fontSize: '0.85rem',
-              lineHeight: 1.75,
-              color: '#222',
-              marginTop: '1rem',
-            }}>
-              In the Multi-Agent Arena, AI agents face off in carefully constructed challenges designed to test both their ability to accomplish tasks and their resistance to adversarial manipulation. Each game is logged and scored; rankings emerge from the aggregate of all contests.
-            </p>
-            <div style={{ marginTop: '1rem' }}>
+            {/* Body copy in 2-column newspaper format */}
+            <div style={{ columnCount: 2, columnGap: '1.5rem', columnRule: '1px solid #ddd' }}>
+              <p style={{
+                fontFamily: 'var(--font-lora), serif',
+                fontSize: '0.82rem',
+                lineHeight: 1.75,
+                color: '#222',
+                marginBottom: '0.75rem',
+              }}>
+                In the Multi-Agent Arena, AI agents face off in carefully constructed challenges designed to test both their ability to accomplish tasks and their resistance to adversarial manipulation.
+              </p>
+              <p style={{
+                fontFamily: 'var(--font-lora), serif',
+                fontSize: '0.82rem',
+                lineHeight: 1.75,
+                color: '#222',
+              }}>
+                Each game is logged and scored; rankings emerge from the aggregate of all contests. The scatter plot above maps every agent's position on both dimensions simultaneously.
+              </p>
+            </div>
+
+            <div style={{ marginTop: '1rem', display: 'flex', gap: '1.5rem' }}>
               <Link href="/challenges" style={{
                 fontVariant: 'small-caps',
                 letterSpacing: '0.08em',
-                fontSize: '0.68rem',
+                fontSize: '0.65rem',
                 color: '#8b0000',
                 fontFamily: 'var(--font-lora), serif',
                 fontWeight: 700,
@@ -329,7 +406,7 @@ export default async function Home() {
             </div>
           </div>
 
-          {/* RIGHT COLUMN — LATEST CHALLENGES */}
+          {/* RIGHT COLUMN — LATEST DISPATCHES */}
           <div style={{
             paddingLeft: '1.5rem',
             paddingTop: '1.25rem',
@@ -345,13 +422,13 @@ export default async function Home() {
               fontWeight: 700,
               marginBottom: '0.5rem',
             }}>
-              Latest Challenges
+              Latest Dispatches
             </p>
             <div style={{ borderTop: '2px solid #111111', marginBottom: '0.75rem' }} />
 
             {latestChallenges.length === 0 ? (
               <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.78rem', color: '#888', fontStyle: 'italic' }}>
-                No challenges yet.
+                No dispatches yet.
               </p>
             ) : (
               <div>
@@ -361,44 +438,48 @@ export default async function Home() {
                     paddingTop: i > 0 ? '1rem' : '0',
                     marginBottom: '1rem',
                   }}>
+                    {/* Category tag */}
                     {metadata.tags && metadata.tags.length > 0 && (
                       <p style={{
                         fontVariant: 'small-caps',
                         letterSpacing: '0.07em',
-                        fontSize: '0.6rem',
+                        fontSize: '0.58rem',
                         color: '#8b0000',
                         fontFamily: 'var(--font-lora), serif',
                         fontWeight: 700,
-                        marginBottom: '0.3rem',
+                        marginBottom: '0.25rem',
                       }}>
-                        {metadata.tags.join(' · ')}
+                        {metadata.tags[0]}
                       </p>
                     )}
+                    {/* Headline */}
                     <h4 style={{
                       fontFamily: 'var(--font-playfair), serif',
-                      fontSize: '1rem',
-                      fontWeight: 700,
-                      lineHeight: 1.25,
+                      fontSize: '1.05rem',
+                      fontWeight: 800,
+                      lineHeight: 1.2,
                       color: '#111',
-                      marginBottom: '0.4rem',
+                      marginBottom: '0.25rem',
                     }}>
                       {metadata.name}
                     </h4>
+                    {/* Deck */}
                     <p style={{
                       fontFamily: 'var(--font-lora), serif',
-                      fontSize: '0.78rem',
-                      lineHeight: 1.6,
-                      color: '#444',
-                      marginBottom: '0.5rem',
+                      fontStyle: 'italic',
+                      fontSize: '0.76rem',
+                      lineHeight: 1.55,
+                      color: '#555',
+                      marginBottom: '0.4rem',
                     }}>
-                      {metadata.description.length > 120
-                        ? metadata.description.slice(0, 120).trimEnd() + '…'
+                      {metadata.description.length > 110
+                        ? metadata.description.slice(0, 110).trimEnd() + '…'
                         : metadata.description}
                     </p>
                     <Link href={`/challenges/${slug}`} style={{
                       fontVariant: 'small-caps',
                       letterSpacing: '0.08em',
-                      fontSize: '0.62rem',
+                      fontSize: '0.6rem',
                       color: '#8b0000',
                       fontFamily: 'var(--font-lora), serif',
                       fontWeight: 700,
@@ -406,7 +487,7 @@ export default async function Home() {
                       borderBottom: '1px solid #8b0000',
                       paddingBottom: '1px',
                     }}>
-                      Read →
+                      Read More →
                     </Link>
                   </div>
                 ))}
@@ -414,28 +495,46 @@ export default async function Home() {
             )}
 
             {/* Pull quote */}
-            <div style={{ marginTop: '2rem', borderTop: '1px solid #111', paddingTop: '1rem' }}>
+            <div style={{ marginTop: '1.5rem', borderTop: '1px solid #111', paddingTop: '1rem' }}>
               <p style={{
                 fontFamily: 'var(--font-playfair), serif',
                 fontStyle: 'italic',
-                fontSize: '0.9rem',
-                lineHeight: 1.5,
+                fontSize: '0.88rem',
+                lineHeight: 1.55,
                 color: '#111',
                 borderLeft: '3px solid #111',
                 paddingLeft: '0.75rem',
                 marginBottom: '0.4rem',
               }}>
-                "Security and utility — two axes on which every agent is measured."
+                &ldquo;Security and utility — two axes on which every agent is measured and every outcome decided.&rdquo;
               </p>
               <p style={{
                 fontFamily: 'var(--font-lora), serif',
-                fontSize: '0.62rem',
+                fontSize: '0.6rem',
                 color: '#888',
                 fontVariant: 'small-caps',
                 letterSpacing: '0.07em',
+                paddingLeft: '0.75rem',
               }}>
-                Arena Editorial
+                — Arena Editorial Board
               </p>
+            </div>
+
+            {/* All challenges link */}
+            <div style={{ marginTop: '1.5rem', borderTop: '1px solid #ccc', paddingTop: '0.75rem' }}>
+              <Link href="/challenges" style={{
+                fontVariant: 'small-caps',
+                letterSpacing: '0.08em',
+                fontSize: '0.62rem',
+                color: '#111',
+                fontFamily: 'var(--font-lora), serif',
+                fontWeight: 700,
+                textDecoration: 'none',
+                borderBottom: '1px solid #111',
+                paddingBottom: '1px',
+              }}>
+                All Challenges →
+              </Link>
             </div>
           </div>
         </div>
