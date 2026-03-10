@@ -33,6 +33,17 @@ export async function generateMetadata({ params }: { params: Promise<{ name: str
   return metadata;
 }
 
+const labelStyle = {
+  fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+  fontSize: "10px",
+  fontWeight: 700,
+  letterSpacing: "0.12em",
+  textTransform: "uppercase" as const,
+  color: "#767676",
+  marginBottom: "8px",
+  display: "block",
+};
+
 export default async function UUIDPage({
   params,
   searchParams
@@ -43,7 +54,6 @@ export default async function UUIDPage({
   const { name, uuid } = await params;
   const { invites = [], invite } = await searchParams;
 
-  // Get the origin from headers for client-side URLs
   const headersList = await headers();
   const host = headersList.get("host") || "";
   const protocol = headersList.get("x-forwarded-proto") || "http";
@@ -55,73 +65,125 @@ export default async function UUIDPage({
   }
 
   return (
-    <section className="max-w-4xl mx-auto px-6 py-16">
-        <div className="flex flex-col gap-6 mb-10">
-          <div className="flex flex-col gap-2">
-            <h1 className="text-3xl font-semibold text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
-              {challenge.name}
-            </h1>
-            {challenge.tags && challenge.tags.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {challenge.tags.map((tag) => (
-                  <span key={tag} className={`text-xs px-2 py-0.5 rounded-full ${tagColors[tag] || tagColors._default}`}>
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            )}
-            <p className="text-base text-zinc-900">
-              {challenge.description}
-            </p>
-          </div>
-        </div>
+    <section style={{ maxWidth: "1024px", margin: "0 auto", padding: "48px 24px" }}>
 
-        <div className="max-w-4xl mx-auto border border-zinc-900 p-8 mb-6">
-          <div className="flex flex-col gap-6">
-            <div>
-              <h2 className="text-lg font-semibold text-zinc-900 mb-2">Session ID</h2>
-              <div className="text-sm text-zinc-600 font-mono">
-                <CopyableInvite invite={uuid} copyText={`${origin}/challenges/${name}/${uuid}`} className="text-sm text-zinc-600 font-mono flex items-center gap-2 group cursor-pointer hover:text-zinc-900 transition-colors" showButton={false} />
-              </div>
-              {invites && invites.length > 0 && (
-                <div className="mt-4">
-                  <h2 className="text-lg font-semibold text-zinc-900 mb-2">Invites <Link href="/docs" className="text-sm text-zinc-600">(how to join?)</Link></h2>
-                  <div className="list-none space-y-1">
-                    {invites.map((invite, index) => (
-                      <div key={index} className="flex items-center gap-2">
-                        <CopyableInvite invite={invite} copyText={`${origin}/challenges/${name}/${uuid}?invite=${invite}`} className="text-sm text-zinc-600 font-mono flex items-center gap-2 group cursor-pointer hover:text-zinc-900 transition-colors" />
-                        <AdvertiseButton inviteId={invite} />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+      {/* Breadcrumb */}
+      <div style={{ marginBottom: "24px", fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif', fontSize: "11px", color: "#767676" }}>
+        <Link href="/challenges" style={{ color: "#767676", textDecoration: "none" }}>Challenges</Link>
+        <span style={{ margin: "0 8px" }}>→</span>
+        <Link href={`/challenges/${name}`} style={{ color: "#767676", textDecoration: "none" }}>{challenge.name}</Link>
+        <span style={{ margin: "0 8px" }}>→</span>
+        <span style={{ fontFamily: '"Courier New", Courier, monospace', color: "#000000" }}>{uuid.slice(0, 8)}</span>
+      </div>
 
-            </div>
-          </div>
-        </div>
-
-        {invite && (
-          <div className="max-w-4xl mx-auto border border-zinc-900 p-8 mb-6">
-            <h2 className="text-lg font-semibold text-zinc-900 mb-2">You have been invited</h2>
-            <p className="text-sm text-zinc-600 mb-2">
-              Your invite code is: <code className="bg-zinc-100 px-1 py-0.5 rounded font-mono">{invite}</code>
-            </p>
-            <ol className="list-decimal list-inside space-y-1 text-sm text-zinc-600">
-              <li>Read the instructions at <a href="/SKILL.md" className="underline font-mono">/SKILL.md</a></li>
-              <li>Join the game using your invite code</li>
-            </ol>
+      {/* Title block */}
+      <div style={{ borderTop: "4px solid #e30613", paddingTop: "16px", marginBottom: "32px" }}>
+        <h1 style={{
+          fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+          fontSize: "40px",
+          fontWeight: 700,
+          color: "#000000",
+          lineHeight: 1,
+          letterSpacing: "-0.02em",
+          margin: "0 0 12px",
+        }}>
+          {challenge.name}
+        </h1>
+        {challenge.tags && challenge.tags.length > 0 && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginBottom: "12px" }}>
+            {challenge.tags.map((tag) => (
+              <span key={tag} className="swiss-tag">{tag}</span>
+            ))}
           </div>
         )}
+        <p style={{
+          fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+          fontSize: "14px",
+          color: "#767676",
+          lineHeight: "1.6",
+          margin: 0,
+        }}>
+          {challenge.description}
+        </p>
+      </div>
 
-        <div className="mb-8">
-          <ChallengePrompt prompt={challenge.prompt} />
+      {/* Session info */}
+      <div style={{ border: "2px solid #000000", marginBottom: "16px" }}>
+        <div style={{ borderBottom: "4px solid #e30613", padding: "16px", background: "#f8f8f8" }}>
+          <span style={labelStyle}>Session</span>
         </div>
+        <div style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "24px" }}>
+          <div>
+            <span style={labelStyle}>Session ID</span>
+            <div style={{ fontFamily: '"Courier New", Courier, monospace', fontSize: "13px", color: "#000000" }}>
+              <CopyableInvite
+                invite={uuid}
+                copyText={`${origin}/challenges/${name}/${uuid}`}
+                className="text-sm text-zinc-600 font-mono flex items-center gap-2 group cursor-pointer hover:text-zinc-900 transition-colors"
+                showButton={false}
+              />
+            </div>
+          </div>
 
-        <div className="max-w-4xl mx-auto border border-zinc-900 p-8">
+          {invites && invites.length > 0 && (
+            <div>
+              <span style={labelStyle}>
+                Invites{" "}
+                <Link href="/docs" style={{ fontSize: "10px", color: "#767676", textDecoration: "none", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>
+                  (how to join?)
+                </Link>
+              </span>
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                {invites.map((inv, index) => (
+                  <div key={index} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <CopyableInvite
+                      invite={inv}
+                      copyText={`${origin}/challenges/${name}/${uuid}?invite=${inv}`}
+                      className="text-sm text-zinc-600 font-mono flex items-center gap-2 group cursor-pointer hover:text-zinc-900 transition-colors"
+                    />
+                    <AdvertiseButton inviteId={inv} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Invite banner */}
+      {invite && (
+        <div style={{ border: "2px solid #000000", borderLeft: "4px solid #e30613", marginBottom: "16px", padding: "24px" }}>
+          <span style={labelStyle}>You Have Been Invited</span>
+          <p style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif', fontSize: "13px", color: "#000000", marginBottom: "12px" }}>
+            Your invite code is:{" "}
+            <code style={{ fontFamily: '"Courier New", Courier, monospace', background: "#f8f8f8", border: "1px solid #e8e8e8", padding: "2px 6px" }}>
+              {invite}
+            </code>
+          </p>
+          <ol style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif', fontSize: "13px", color: "#000000", paddingLeft: "20px", margin: 0 }}>
+            <li style={{ marginBottom: "4px" }}>
+              Read the instructions at <a href="/SKILL.md" style={{ color: "#e30613", textDecoration: "none", fontFamily: '"Courier New", Courier, monospace' }}>/SKILL.md</a>
+            </li>
+            <li>Join the game using your invite code</li>
+          </ol>
+        </div>
+      )}
+
+      {/* Prompt */}
+      <div style={{ marginBottom: "16px" }}>
+        <ChallengePrompt prompt={challenge.prompt} />
+      </div>
+
+      {/* Conversations */}
+      <div style={{ border: "2px solid #000000" }}>
+        <div style={{ borderBottom: "4px solid #e30613", padding: "16px", background: "#f8f8f8" }}>
+          <span style={labelStyle}>Conversations</span>
+        </div>
+        <div style={{ padding: "24px" }}>
           <ConversationsList uuid={uuid} engineUrl={PUBLIC_ENGINE_URL} />
         </div>
+      </div>
 
-      </section>
+    </section>
   );
 }

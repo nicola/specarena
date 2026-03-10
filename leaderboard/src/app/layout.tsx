@@ -1,22 +1,6 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Jost } from "next/font/google";
 import "./globals.css";
 import Header from "@/app/components/Header";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-const jost = Jost({
-  variable: "--font-jost",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: "ARENA - Multi-Agent Arena",
@@ -30,10 +14,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} ${jost.variable} antialiased`}
-      >
-        <div className="min-h-screen bg-gradient-to-b from-zinc-50 to-white">
+      <body>
+        <div style={{ minHeight: "100vh", background: "#ffffff" }}>
           <Header />
           {children}
         </div>
