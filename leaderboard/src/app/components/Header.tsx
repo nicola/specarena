@@ -2,18 +2,9 @@
 
 import Link from "next/link";
 import { useState, useRef, useCallback } from "react";
+import { usePathname } from "next/navigation";
 
-const OVAL_WIDTH = 65;
-const OVAL_HEIGHT = 19;
-const OVAL_Y_SHIFT = 6;
-const OVAL_CONTOUR = 3;
-const OVAL_STROKE = 1;
-
-function ArenaLogo({ width = OVAL_WIDTH, height = OVAL_HEIGHT, yShift = OVAL_Y_SHIFT, contour = OVAL_CONTOUR, stroke = OVAL_STROKE }: { width?: number; height?: number; yShift?: number; contour?: number; stroke?: number }) {
-  const rx = width / 2 - 1;
-  const ry = height / 2 - 1;
-  const cx = width / 2;
-  const cy = height / 2;
+function ArenaLogo() {
   const [fighting, setFighting] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -24,83 +15,144 @@ function ArenaLogo({ width = OVAL_WIDTH, height = OVAL_HEIGHT, yShift = OVAL_Y_S
   }, []);
 
   const onLeave = useCallback(() => {
-    // Don't reset — leave letters frozen where they stopped
     if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
     setFighting(false);
   }, []);
 
   return (
-    <Link href="/" className="group relative flex items-center justify-center" style={{ width: `${width}px`, height: `${height}px` }} onMouseEnter={onEnter} onMouseLeave={onLeave}>
-      {/* Top half of oval — behind text (z-0) */}
-      <svg className="absolute inset-0 z-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ top: `${yShift}px` }} viewBox={`0 0 ${width} ${height}`} fill="none" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <clipPath id="topHalf"><rect x="0" y="0" width={width} height={cy} /></clipPath>
-        </defs>
-        <ellipse cx={cx} cy={cy} rx={rx} ry={ry} stroke="#18181b" strokeWidth={stroke} fill="none" clipPath="url(#topHalf)" />
-      </svg>
-      {/* Letter fight animations */}
+    <Link
+      href="/"
+      className="group relative flex items-center gap-2"
+      onMouseEnter={onEnter}
+      onMouseLeave={onLeave}
+    >
       <style>{`
         @keyframes f1 { 0%,100%{transform:translate(0,0) rotate(0)} 25%{transform:translate(-1px,1px) rotate(-8deg)} 50%{transform:translate(1px,-1px) rotate(7deg)} 75%{transform:translate(-0.5px,-0.5px) rotate(-5deg)} }
         @keyframes f2 { 0%,100%{transform:translate(0,0) rotate(0)} 20%{transform:translate(1px,0.5px) rotate(9deg)} 50%{transform:translate(-1px,1px) rotate(-7deg)} 80%{transform:translate(0.5px,-1px) rotate(5deg)} }
         @keyframes f3 { 0%,100%{transform:translate(0,0) rotate(0)} 30%{transform:translate(1px,-1px) rotate(10deg)} 60%{transform:translate(-1px,0.5px) rotate(-8deg)} 85%{transform:translate(0.5px,-0.5px) rotate(5deg)} }
         @keyframes f4 { 0%,100%{transform:translate(0,0) rotate(0)} 15%{transform:translate(-1px,0.5px) rotate(-9deg)} 45%{transform:translate(1px,1px) rotate(8deg)} 70%{transform:translate(-0.5px,-1px) rotate(-6deg)} }
         @keyframes f5 { 0%,100%{transform:translate(0,0) rotate(0)} 35%{transform:translate(0.5px,1px) rotate(8deg)} 55%{transform:translate(-1px,-0.5px) rotate(-9deg)} 80%{transform:translate(1px,0.5px) rotate(5deg)} }
-        .f1{animation:f1 .4s ease-in-out infinite paused}
-        .f2{animation:f2 .35s ease-in-out infinite paused}
-        .f3{animation:f3 .45s ease-in-out infinite paused}
-        .f4{animation:f4 .38s ease-in-out infinite paused}
-        .f5{animation:f5 .42s ease-in-out infinite paused}
-        .fighting .f1,.fighting .f2,.fighting .f3,.fighting .f4,.fighting .f5{animation-play-state:running}
+        .nf1{animation:f1 .4s ease-in-out infinite paused}
+        .nf2{animation:f2 .35s ease-in-out infinite paused}
+        .nf3{animation:f3 .45s ease-in-out infinite paused}
+        .nf4{animation:f4 .38s ease-in-out infinite paused}
+        .nf5{animation:f5 .42s ease-in-out infinite paused}
+        .nfighting .nf1,.nfighting .nf2,.nfighting .nf3,.nfighting .nf4,.nfighting .nf5{animation-play-state:running}
+
+        @keyframes logo-glitch-1 {
+          0%,100%{clip-path:inset(0 0 95% 0);transform:translate(-3px,0);color:#ff0090}
+          30%{clip-path:inset(40% 0 40% 0);transform:translate(3px,0);color:#ff0090}
+          60%{clip-path:inset(80% 0 5% 0);transform:translate(-2px,0);color:#ff0090}
+        }
+        @keyframes logo-glitch-2 {
+          0%,100%{clip-path:inset(60% 0 20% 0);transform:translate(2px,0);color:#00ffff}
+          40%{clip-path:inset(10% 0 75% 0);transform:translate(-3px,0);color:#00ffff}
+          70%{clip-path:inset(50% 0 30% 0);transform:translate(2px,0);color:#00ffff}
+        }
+        @keyframes logo-skew {
+          0%,100%{transform:skewX(0deg)}
+          10%{transform:skewX(-1.5deg)}
+          20%{transform:skewX(0.8deg)}
+          30%{transform:skewX(0deg)}
+          85%{transform:skewX(0.4deg)}
+          90%{transform:skewX(-0.6deg)}
+        }
+        @keyframes neon-logo-pulse {
+          0%,100%{text-shadow:0 0 8px #00ffff,0 0 20px #00ffff,0 0 40px rgba(0,255,255,0.6)}
+          50%{text-shadow:0 0 12px #00ffff,0 0 30px #00ffff,0 0 60px rgba(0,255,255,0.8),0 0 80px rgba(0,255,255,0.3)}
+        }
+        .arena-logo-text {
+          position: relative;
+          display: inline-block;
+          animation: logo-skew 6s infinite linear alternate-reverse, neon-logo-pulse 2s ease-in-out infinite;
+          color: #00ffff;
+        }
+        .arena-logo-text::before, .arena-logo-text::after {
+          content: attr(data-text);
+          position: absolute;
+          top: 0; left: 0;
+          width: 100%; height: 100%;
+          font: inherit;
+        }
+        .arena-logo-text::before {
+          animation: logo-glitch-1 4s infinite linear;
+        }
+        .arena-logo-text::after {
+          animation: logo-glitch-2 3.5s infinite linear;
+        }
       `}</style>
-      {/* Logo text (z-10) */}
+
+      {/* Glitch-animated ARENA text */}
       <span
-        className={`relative z-10 text-zinc-900 font-medium ${fighting ? 'fighting' : ''}`}
-        style={{
-          fontFamily: 'var(--font-jost), sans-serif',
-          paintOrder: 'stroke fill',
-          WebkitTextStroke: `${contour}px white`,
-        }}
+        className={`arena-logo-text text-xl font-black tracking-widest uppercase ${fighting ? 'nfighting' : ''}`}
+        data-text="ARENA"
+        style={{ fontFamily: 'var(--font-orbitron), monospace' }}
       >
-        <span className="inline-block f1 relative z-[3]">A</span><span className="inline-block f2 relative z-[4]">R</span>
-        <span className="inline-block f3 relative text-[12px] font-semibold top-[-4px] left-[2px] z-[3]">E</span>
-        <span className="inline-block f4 relative text-[11px] font-bold top-[5px] left-[-2px] ml-[-1px] z-[6]" style={{ WebkitTextStroke: '0px' }}>N</span>
-        <span className="inline-block f5 relative z-[5]">A</span>
+        <span className="nf1 inline-block relative z-[3]">A</span><span className="nf2 inline-block relative z-[4]">R</span><span className="nf3 inline-block relative z-[3]">E</span><span className="nf4 inline-block relative z-[5]">N</span><span className="nf5 inline-block relative z-[4]">A</span>
       </span>
-      {/* Bottom half of oval — in front of text (z-20) */}
-      <svg className="absolute inset-0 z-20 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ top: `${yShift}px` }} viewBox={`0 0 ${width} ${height}`} fill="none" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <clipPath id="bottomHalf"><rect x="0" y={cy} width={width} height={cy} /></clipPath>
-        </defs>
-        <ellipse cx={cx} cy={cy} rx={rx} ry={ry} stroke="#18181b" strokeWidth={stroke} fill="none" clipPath="url(#bottomHalf)" />
-      </svg>
+
+      {/* Neon dot indicator */}
+      <span className="blink-dot" style={{ marginTop: '2px' }} />
     </Link>
   );
 }
 
 export default function Header() {
+  const pathname = usePathname();
+
+  const navLink = (href: string, label: string) => {
+    const active = pathname === href || (href !== '/' && pathname?.startsWith(href));
+    return (
+      <Link
+        href={href}
+        className="relative text-xs tracking-widest uppercase transition-all duration-200"
+        style={{
+          fontFamily: 'var(--font-share-tech-mono), monospace',
+          color: active ? '#00ffff' : 'rgba(255,255,255,0.6)',
+          textShadow: active ? '0 0 8px #00ffff, 0 0 16px rgba(0,255,255,0.5)' : 'none',
+        }}
+      >
+        {active && <span style={{ color: '#00ffff', marginRight: '4px', opacity: 0.7 }}>&gt;</span>}
+        {label}
+      </Link>
+    );
+  };
+
   return (
-    <header className="w-full border-b border-zinc-900 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-      <div className="max-w-4xl mx-auto px-6 py-4">
+    <header
+      className="w-full sticky top-0 z-50"
+      style={{
+        background: 'rgba(0,0,0,0.92)',
+        backdropFilter: 'blur(8px)',
+        borderBottom: '1px solid rgba(0,255,255,0.25)',
+        boxShadow: '0 1px 20px rgba(0,255,255,0.1)',
+      }}
+    >
+      {/* Top accent bar */}
+      <div style={{
+        height: '2px',
+        background: 'linear-gradient(90deg, transparent, #00ffff, #ff0090, #00ff41, transparent)',
+        opacity: 0.8,
+      }} />
+
+      <div className="max-w-5xl mx-auto px-6 py-3">
         <div className="flex items-center justify-between gap-6">
-          <div className="flex items-center gap-6">
-            <div className="flex items-center justify-center">
-              <ArenaLogo />
-            </div>
+          <div className="flex items-center gap-8">
+            <ArenaLogo />
             <nav className="flex items-center gap-6">
-              <Link href="/" className="text-sm font-medium text-zinc-900 hover:text-zinc-900 transition-colors">
-                Leaderboard
-              </Link>
-              <Link href="/challenges" className="text-sm font-medium text-zinc-900 hover:text-zinc-900 transition-colors">
-                Challenges
-              </Link>
-              <Link href="/docs" className="text-sm font-medium text-zinc-900 hover:text-zinc-900 transition-colors">
-                Docs
-              </Link>
+              {navLink('/', 'Leaderboard')}
+              {navLink('/challenges', 'Challenges')}
+              {navLink('/docs', 'Docs')}
             </nav>
+          </div>
+
+          {/* Status indicator */}
+          <div className="flex items-center gap-2 text-xs" style={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-share-tech-mono), monospace' }}>
+            <span className="blink-dot" style={{ width: '6px', height: '6px' }} />
+            <span style={{ color: '#00ff41' }}>SYSTEM ONLINE</span>
           </div>
         </div>
       </div>
     </header>
   );
 }
-
