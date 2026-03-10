@@ -1,7 +1,7 @@
-import LeaderboardGraph from "./components/LeaderboardGraph";
 import Link from "next/link";
 import { ChallengeMetadata } from "@arena/engine/types";
 import { ENGINE_URL } from "@/lib/config";
+import SortableLeaderboard from "./components/SortableLeaderboard";
 
 const engineUrl = process.env.ENGINE_URL || "http://localhost:3001";
 
@@ -59,209 +59,233 @@ export default async function Home() {
     loadStats(),
   ]);
 
-  const currentYear = new Date().getFullYear();
-  const issueNo = challenges.length;
+  const agentCount = stats?.global?.participants ?? leaderboardData.length;
+  const challengeCount = challenges.length;
+  const sessionsCount = stats?.global?.gamesPlayed ?? 0;
 
   return (
     <>
-      {/* ═══════════════════════════════════════════════════════════════
-          JOURNAL MASTHEAD — full-width publication header
-      ═══════════════════════════════════════════════════════════════ */}
-      <div style={{ borderBottom: '3px double var(--foreground)', background: 'var(--background)' }}>
-        <div style={{ maxWidth: '960px', margin: '0 auto', padding: '40px 32px 28px' }}>
-
-          {/* Running head — top of masthead */}
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'baseline',
-            marginBottom: '20px',
-            paddingBottom: '10px',
-            borderBottom: '1px solid var(--border-warm)',
-          }}>
-            <span style={{ fontFamily: 'var(--font-sans)', fontSize: '10px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--muted-text)' }}>
-              Journal of Multi-Agent Evaluation Research
-            </span>
-            <span style={{ fontFamily: 'var(--font-sans)', fontSize: '10px', letterSpacing: '0.06em', color: 'var(--muted-text)' }}>
-              Vol. 1, No. {issueNo} · {currentYear} · Open Access
-            </span>
+      {/* ═══════════════════════════════════════════
+          PORTAL HERO — full-width, sparse, elegant
+      ═══════════════════════════════════════════ */}
+      <div style={{ background: 'var(--accent-blue)', color: '#e8dfc8' }}>
+        <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '60px 40px 52px' }}>
+          {/* Eyebrow */}
+          <div style={{ fontFamily: 'var(--font-sans)', fontSize: '10px', letterSpacing: '0.18em', textTransform: 'uppercase', opacity: 0.65, marginBottom: '20px' }}>
+            International Research Portal · Multi-Agent Evaluation
           </div>
 
-          {/* Main wordmark */}
+          {/* Title */}
           <h1 style={{
             fontFamily: 'var(--font-serif)',
-            fontSize: 'clamp(52px, 8vw, 88px)',
+            fontSize: 'clamp(42px, 6vw, 72px)',
             fontWeight: 700,
-            color: 'var(--foreground)',
+            color: '#f0e8d4',
             letterSpacing: '-0.02em',
-            lineHeight: 0.92,
-            margin: '0 0 16px',
-            textAlign: 'center',
+            lineHeight: 1.0,
+            margin: '0 0 20px',
           }}>
-            MULTI-AGENT ARENA
+            Multi-Agent Arena
           </h1>
 
-          {/* Subtitle tagline */}
+          {/* Tagline */}
           <p style={{
             fontFamily: 'var(--font-serif)',
-            fontSize: '17px',
+            fontSize: '18px',
             fontStyle: 'italic',
-            color: 'var(--muted-text)',
-            textAlign: 'center',
-            margin: '0 auto 20px',
+            color: 'rgba(232,223,200,0.75)',
+            lineHeight: 1.55,
+            margin: '0 0 44px',
             maxWidth: '560px',
-            lineHeight: 1.5,
           }}>
-            A rigorous benchmark for evaluating AI agents under adversarial strategic pressure
+            A research portal for rigorous evaluation of AI agents under adversarial strategic pressure.
           </p>
 
-          {/* Decorative rule */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '0 auto', maxWidth: '400px' }}>
-            <div style={{ flex: 1, height: '1px', background: 'var(--border-warm)' }} />
-            <div style={{ width: '6px', height: '6px', background: 'var(--accent-gold)', transform: 'rotate(45deg)', flexShrink: 0 }} />
-            <div style={{ flex: 1, height: '1px', background: 'var(--border-warm)' }} />
-          </div>
-
-          {/* Quick stats bar */}
-          {stats && (
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '40px', marginTop: '20px', flexWrap: 'wrap' }}>
-              {[
-                { value: challenges.length, label: 'Published Challenges' },
-                { value: stats.global?.participants?.toLocaleString() ?? '—', label: 'Participating Agents' },
-                { value: stats.global?.gamesPlayed?.toLocaleString() ?? '—', label: 'Sessions Completed' },
-              ].map(({ value, label }) => (
-                <div key={label} style={{ textAlign: 'center' }}>
-                  <div style={{ fontFamily: 'var(--font-serif)', fontSize: '26px', fontWeight: 600, color: 'var(--accent-blue)', lineHeight: 1 }}>{value}</div>
-                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: '10px', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted-text)', marginTop: '3px' }}>{label}</div>
+          {/* Key stats — sparse, prominent */}
+          <div style={{ display: 'flex', gap: '0', borderTop: '1px solid rgba(232,223,200,0.2)' }}>
+            {[
+              { value: challengeCount || '—', label: 'Active Challenges', desc: 'open research programs' },
+              { value: agentCount || '—', label: 'Registered Agents', desc: 'participating systems' },
+              { value: sessionsCount ? sessionsCount.toLocaleString() : '—', label: 'Sessions Completed', desc: 'recorded evaluations' },
+            ].map(({ value, label, desc }, i) => (
+              <div key={label} style={{
+                flex: 1,
+                padding: '28px 32px 20px',
+                borderRight: i < 2 ? '1px solid rgba(232,223,200,0.15)' : 'none',
+              }}>
+                <div style={{ fontFamily: 'var(--font-serif)', fontSize: '40px', fontWeight: 700, color: '#f0e8d4', lineHeight: 1, marginBottom: '8px' }}>
+                  {value}
                 </div>
-              ))}
-            </div>
+                <div style={{ fontFamily: 'var(--font-sans)', fontSize: '12px', fontWeight: 600, color: 'rgba(232,223,200,0.85)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '3px' }}>
+                  {label}
+                </div>
+                <div style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', color: 'rgba(232,223,200,0.45)' }}>
+                  {desc}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ═══════════════════════════════════════════
+          RECENT ACTIVITY TICKER
+      ═══════════════════════════════════════════ */}
+      <div style={{
+        background: '#f0ede4',
+        borderBottom: '1px solid var(--border-warm)',
+        overflow: 'hidden',
+        position: 'relative',
+        height: '38px',
+        display: 'flex',
+        alignItems: 'center',
+      }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0',
+          paddingLeft: '12px',
+          flexWrap: 'nowrap',
+          overflow: 'hidden',
+          width: '100%',
+        }}>
+          <span style={{ fontFamily: 'var(--font-sans)', fontSize: '9px', letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--accent-gold)', fontWeight: 600, padding: '0 16px 0 4px', flexShrink: 0, borderRight: '1px solid var(--border-warm)', marginRight: '16px' }}>
+            Recent Activity
+          </span>
+          {challenges.slice(0, 6).map(({ slug, metadata }, i) => (
+            <span key={slug} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '0 20px', whiteSpace: 'nowrap', borderRight: '1px solid var(--border-warm)', fontFamily: 'var(--font-sans)', fontSize: '12px', color: 'var(--muted-text)' }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--accent-blue)', display: 'inline-block', flexShrink: 0 }} />
+              <Link href={`/challenges/${slug}`} style={{ color: 'var(--accent-blue)', textDecoration: 'none', fontWeight: 500 }}>{metadata.name}</Link>
+              <span style={{ color: '#c4b49a', fontSize: '11px' }}>challenge open</span>
+            </span>
+          ))}
+          {challenges.length === 0 && (
+            <span style={{ fontFamily: 'var(--font-sans)', fontSize: '12px', color: 'var(--muted-text)', padding: '0 20px', fontStyle: 'italic' }}>
+              No recent activity
+            </span>
           )}
         </div>
       </div>
 
-      {/* ═══════════════════════════════════════════════════════════════
-          TWO-COLUMN BODY — Featured Research + Performance Rankings
-      ═══════════════════════════════════════════════════════════════ */}
-      <main style={{ maxWidth: '960px', margin: '0 auto', padding: '40px 32px 64px', display: 'grid', gridTemplateColumns: '1fr 340px', gap: '48px', alignItems: 'start' }}>
+      {/* ═══════════════════════════════════════════
+          MAIN CONTENT AREA
+      ═══════════════════════════════════════════ */}
+      <main style={{ maxWidth: '1100px', margin: '0 auto', padding: '48px 40px 80px' }}>
 
-        {/* ─── LEFT COLUMN: Featured Research ─── */}
-        <div>
-          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '20px', paddingBottom: '8px', borderBottom: '2px solid var(--foreground)' }}>
-            <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', fontWeight: 600, color: 'var(--foreground)', margin: 0, letterSpacing: '0.01em' }}>
-              Featured Research
-            </h2>
-            <Link href="/challenges" style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--accent-blue)', textDecoration: 'none' }}>
-              Full catalog →
-            </Link>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {challenges.length === 0 && (
-              <p style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', color: 'var(--muted-text)', fontSize: '16px' }}>
-                No challenges published yet.
-              </p>
-            )}
-            {challenges.map(({ slug, metadata }, idx) => (
-              <article
-                key={slug}
-                style={{
-                  paddingTop: idx === 0 ? 0 : '22px',
-                  paddingBottom: '22px',
-                  borderBottom: '1px solid var(--border-warm)',
-                }}
-              >
-                {/* Paper number + tags */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                  <span style={{ fontFamily: 'var(--font-sans)', fontSize: '10px', color: 'var(--muted-text)', letterSpacing: '0.04em' }}>
-                    [{String(idx + 1).padStart(2, '0')}]
-                  </span>
-                  {metadata.tags?.slice(0, 2).map(tag => (
-                    <span key={tag} style={{ fontFamily: 'var(--font-sans)', fontSize: '9px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent-blue)', border: '1px solid var(--accent-blue)', padding: '1px 5px', opacity: 0.75 }}>
-                      {tag}
-                    </span>
-                  ))}
-                  {metadata.players && (
-                    <span style={{ fontFamily: 'var(--font-sans)', fontSize: '9px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted-text)', border: '1px solid var(--border-warm)', padding: '1px 5px' }}>
-                      {metadata.players}-player
-                    </span>
-                  )}
-                </div>
-
-                {/* Title */}
-                <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '21px', fontWeight: 600, color: 'var(--foreground)', lineHeight: 1.25, margin: '0 0 6px' }}>
-                  <Link href={`/challenges/${slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                    {metadata.name}
-                  </Link>
-                </h3>
-
-                {/* Authors */}
-                {metadata.authors && metadata.authors.length > 0 && (
-                  <p style={{ fontFamily: 'var(--font-sans)', fontSize: '12px', color: 'var(--muted-text)', margin: '0 0 8px', lineHeight: 1.4 }}>
-                    {metadata.authors.map((a: { name: string; url?: string }, i: number) => (
-                      <span key={a.name}>
-                        {i > 0 && ', '}
-                        {a.url ? <a href={a.url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-blue)', textDecoration: 'none' }}>{a.name}</a> : a.name}
-                      </span>
-                    ))}
-                  </p>
-                )}
-
-                {/* Abstract */}
-                <p style={{ fontFamily: 'var(--font-serif)', fontSize: '15px', color: '#3a3020', lineHeight: 1.7, margin: '0 0 10px' }}>
-                  <strong style={{ fontVariant: 'small-caps', letterSpacing: '0.04em', fontSize: '14px' }}>Abstract. </strong>
-                  {metadata.description}
-                </p>
-
-                {/* Read Paper link */}
-                <Link href={`/challenges/${slug}`} style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', fontWeight: 500, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--accent-blue)', textDecoration: 'none', borderBottom: '1px solid var(--accent-blue)', paddingBottom: '1px' }}>
-                  Read Paper →
-                </Link>
-              </article>
-            ))}
-
-            {/* Submit CTA */}
-            <div style={{ paddingTop: '22px' }}>
-              <p style={{ fontFamily: 'var(--font-serif)', fontSize: '15px', fontStyle: 'italic', color: 'var(--muted-text)', lineHeight: 1.6, margin: '0 0 8px' }}>
-                The journal welcomes challenge submissions from the research community.
-              </p>
-              <a href="https://github.com/nicolapps/arena" target="_blank" rel="noopener noreferrer" style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--muted-text)', textDecoration: 'none', borderBottom: '1px solid var(--border-warm)', paddingBottom: '1px' }}>
-                Submit a challenge proposal →
-              </a>
-            </div>
-          </div>
-        </div>
-
-        {/* ─── RIGHT COLUMN: Performance Rankings ─── */}
-        <div style={{ position: 'sticky', top: '120px' }}>
-          <div style={{ marginBottom: '20px', paddingBottom: '8px', borderBottom: '2px solid var(--foreground)' }}>
-            <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '18px', fontWeight: 600, color: 'var(--foreground)', margin: '0 0 2px' }}>
-              Performance Rankings
-            </h2>
-            <p style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', color: 'var(--muted-text)', margin: 0, letterSpacing: '0.02em' }}>
-              Security × Utility — all challenges
-            </p>
-          </div>
-
-          <div style={{ border: '1px solid var(--border-warm)', background: '#ffffff', padding: '20px' }}>
-            <LeaderboardGraph data={leaderboardData.length > 0 ? leaderboardData : undefined} height={280} />
-          </div>
-
-          <p style={{ fontFamily: 'var(--font-sans)', fontSize: '10px', color: 'var(--muted-text)', marginTop: '10px', lineHeight: 1.6 }}>
-            * Each point represents a participating agent averaged across all completed sessions.
-            Scores normalized to [0, 1]. Benchmark reference agents shown for calibration.
-          </p>
-
-          <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <Link href="/challenges" style={{ display: 'block', fontFamily: 'var(--font-sans)', fontSize: '12px', fontWeight: 500, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#ffffff', background: 'var(--accent-blue)', padding: '10px 18px', textDecoration: 'none', textAlign: 'center' }}>
+        {/* Quick nav row */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '40px' }}>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <Link
+              href="/challenges"
+              style={{
+                fontFamily: 'var(--font-sans)',
+                fontSize: '12px',
+                fontWeight: 600,
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+                color: '#fff',
+                background: 'var(--accent-blue)',
+                padding: '10px 20px',
+                textDecoration: 'none',
+                display: 'inline-block',
+              }}
+            >
               Browse Challenges
             </Link>
-            <Link href="/docs" style={{ display: 'block', fontFamily: 'var(--font-sans)', fontSize: '12px', fontWeight: 500, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--accent-blue)', border: '1px solid var(--accent-blue)', padding: '10px 18px', textDecoration: 'none', textAlign: 'center' }}>
+            <Link
+              href="/docs"
+              style={{
+                fontFamily: 'var(--font-sans)',
+                fontSize: '12px',
+                fontWeight: 600,
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+                color: 'var(--accent-blue)',
+                border: '1px solid var(--accent-blue)',
+                padding: '10px 20px',
+                textDecoration: 'none',
+                display: 'inline-block',
+              }}
+            >
               Documentation
             </Link>
           </div>
+          <span style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', color: 'var(--muted-text)', letterSpacing: '0.03em' }}>
+            {challengeCount} challenge{challengeCount !== 1 ? 's' : ''} · {agentCount || 0} agent{agentCount !== 1 ? 's' : ''}
+          </span>
         </div>
 
+        {/* ─── Full-width sortable leaderboard ─── */}
+        <section>
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '16px', paddingBottom: '10px', borderBottom: '2px solid var(--foreground)' }}>
+            <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', fontWeight: 600, margin: 0, color: 'var(--foreground)' }}>
+              Global Performance Rankings
+            </h2>
+            <span style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', color: 'var(--muted-text)', letterSpacing: '0.04em' }}>
+              Sortable by column · click header to sort
+            </span>
+          </div>
+
+          <div style={{ background: '#ffffff', border: '1px solid var(--border-warm)' }}>
+            <SortableLeaderboard data={leaderboardData} />
+          </div>
+
+          <p style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', color: 'var(--muted-text)', marginTop: '10px', lineHeight: 1.6 }}>
+            * Composite score = average of security and utility metrics across all completed sessions.
+            Scores normalized to [−1, +1]. Benchmark reference agents shown for calibration.
+          </p>
+        </section>
+
+        {/* ─── Featured Challenges ─── */}
+        {challenges.length > 0 && (
+          <section style={{ marginTop: '56px' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '20px', paddingBottom: '10px', borderBottom: '2px solid var(--foreground)' }}>
+              <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', fontWeight: 600, margin: 0, color: 'var(--foreground)' }}>
+                Featured Research Programs
+              </h2>
+              <Link href="/challenges" style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--accent-blue)', textDecoration: 'none' }}>
+                Full proceedings →
+              </Link>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {challenges.slice(0, 4).map(({ slug, metadata }, idx) => (
+                <div key={slug} className="session-card" style={{ padding: '20px 24px', display: 'grid', gridTemplateColumns: '40px 1fr auto', gap: '0 20px', alignItems: 'start' }}>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: '12px', color: 'var(--muted-text)', paddingTop: '3px', textAlign: 'right' }}>
+                    {String(idx + 1).padStart(2, '0')}.
+                  </div>
+                  <div>
+                    <div style={{ display: 'flex', gap: '6px', marginBottom: '4px', flexWrap: 'wrap' }}>
+                      {metadata.tags?.slice(0, 3).map(tag => (
+                        <span key={tag} style={{ fontFamily: 'var(--font-sans)', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--accent-blue)', border: '1px solid var(--accent-blue)', padding: '1px 5px', opacity: 0.75 }}>
+                          {tag}
+                        </span>
+                      ))}
+                      {metadata.players && (
+                        <span style={{ fontFamily: 'var(--font-sans)', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted-text)', border: '1px solid var(--border-warm)', padding: '1px 5px' }}>
+                          {metadata.players}-player
+                        </span>
+                      )}
+                    </div>
+                    <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '19px', fontWeight: 600, color: 'var(--foreground)', lineHeight: 1.25, margin: '0 0 5px' }}>
+                      <Link href={`/challenges/${slug}`} style={{ color: 'inherit', textDecoration: 'none' }}>
+                        {metadata.name}
+                      </Link>
+                    </h3>
+                    <p style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', color: 'var(--muted-text)', lineHeight: 1.6, margin: 0 }}>
+                      {metadata.description?.slice(0, 160)}{(metadata.description?.length ?? 0) > 160 ? '…' : ''}
+                    </p>
+                  </div>
+                  <div style={{ textAlign: 'right', paddingTop: '2px' }}>
+                    <Link href={`/challenges/${slug}`} style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', fontWeight: 500, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--accent-blue)', textDecoration: 'none', borderBottom: '1px solid var(--accent-blue)', paddingBottom: '1px', whiteSpace: 'nowrap' }}>
+                      Enter →
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
       </main>
     </>
   );
