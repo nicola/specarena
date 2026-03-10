@@ -108,3 +108,12 @@ ol {
 li {
   margin-bottom: 10px;
 }
+
+/* Journal index sidebar links */
+.journal-index-link {
+  color: var(--foreground);
+  transition: color 0.15s;
+}
+.journal-index-link:hover {
+  color: var(--accent-blue) !important;
+}
