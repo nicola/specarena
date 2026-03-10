@@ -106,6 +106,9 @@ export default async function ChallengesPage() {
             href={`/challenges/${slug}`}
             icon={iconMap[metadata.icon || ""] || null}
             tags={[`${metadata.players ?? 2}-player`, ...(metadata.tags ?? [])]}
+            author={metadata.authors && metadata.authors.length > 0 ? metadata.authors.map(a => a.name).join(' & ') : 'Arena Research Team'}
+            sessions={stats?.challenges?.[slug]?.gamesPlayed ?? 0}
+            category={metadata.tags && metadata.tags.length > 0 ? metadata.tags[0] : 'Cryptography'}
           />
         ))}
 

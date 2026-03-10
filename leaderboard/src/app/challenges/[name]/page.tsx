@@ -1,6 +1,7 @@
 import ChallengePrompt from "@/app/components/ChallengePrompt";
 import ChallengesList from "@/app/components/ChallengesList";
 import LeaderboardGraph from "@/app/components/LeaderboardGraph";
+import RunningHeader from "@/app/components/RunningHeader";
 import Link from "next/link";
 import { FireIcon, ShieldCheckIcon } from "@heroicons/react/24/solid";
 import { Metadata } from "next";
@@ -108,7 +109,14 @@ export default async function ChallengePage({ params, searchParams }: { params: 
     .filter((d) => d.attack > 0)
     .sort((a, b) => b.attack - a.attack);
 
+  // Determine category label from tags
+  const categoryLabel = challenge.tags && challenge.tags.length > 0
+    ? challenge.tags[0]
+    : 'Cryptography';
+
   return (
+    <>
+    <RunningHeader category={categoryLabel} pageLabel="Page 1 of 1" />
     <section className="max-w-4xl mx-auto px-6 py-12">
       {/* Dateline */}
       <p className="dateline mb-3" style={{ fontFamily: 'var(--font-lora), serif' }}>
@@ -284,5 +292,6 @@ export default async function ChallengePage({ params, searchParams }: { params: 
         }
       />
     </section>
+    </>
   );
 }
