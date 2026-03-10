@@ -62,7 +62,6 @@ async function fetchAllChallengesMeta(): Promise<Record<string, ChallengeMetadat
 export async function generateMetadata({ params }: { params: Promise<{ name: string }> }) {
   const { name } = await params;
   const challenge = await fetchMetadata(name);
-
   const metadata: Metadata = {
     title: challenge ? `ARENA — ${challenge.name}` : "ARENA — Challenge Not Found",
     description: challenge?.description || "",
@@ -120,39 +119,44 @@ export default async function ChallengePage({ params, searchParams }: { params: 
 
   const unbeaten = scoringData.filter((d) => d.securityPolicy === 1).sort((a, b) => b.utility - a.utility);
 
-  // Find position of this challenge in the catalog
   const allSlugs = Object.keys(allMeta);
   const paperNumber = allSlugs.indexOf(name) + 1;
 
   return (
     <>
-      {/* ── Running header ── */}
-      <div style={{ borderBottom: '1px solid var(--border-warm)', background: 'var(--background)' }}>
-        <div style={{ maxWidth: '960px', margin: '0 auto', padding: '6px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      {/* ── Breadcrumb running header ── */}
+      <div style={{ borderBottom: '1px solid var(--border-warm)', background: 'var(--card-bg)' }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '6px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ fontFamily: 'var(--font-sans)', fontSize: '10px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted-text)' }}>
             <Link href="/challenges" style={{ color: 'var(--muted-text)', textDecoration: 'none' }}>Challenge Catalog</Link>
             <span style={{ margin: '0 6px' }}>›</span>
             {challenge.name}
           </span>
           <span style={{ fontFamily: 'var(--font-sans)', fontSize: '10px', color: 'var(--muted-text)', letterSpacing: '0.04em' }}>
-            {paperNumber > 0 && `Paper ${String(paperNumber).padStart(2, '0')} · `}Multi-Agent Arena
+            {paperNumber > 0 && `Entry ${String(paperNumber).padStart(2, '0')} · `}Multi-Agent Arena
           </span>
         </div>
       </div>
 
-      {/* ── Main content: paper layout ── */}
-      <div style={{ maxWidth: '960px', margin: '0 auto', padding: '0 32px 80px', display: 'grid', gridTemplateColumns: '1fr 280px', gap: '0 48px', alignItems: 'start' }}>
+      {/* ── 2-column layout ── */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 300px',
+        gap: '0',
+        maxWidth: '1280px',
+        margin: '0 auto',
+        alignItems: 'start',
+      }}>
 
-        {/* ─── LEFT: Paper content ─── */}
-        <article>
+        {/* ─── LEFT: Paper abstract + rules ─── */}
+        <article style={{ padding: '36px 40px 80px', minWidth: 0, borderRight: '1px solid var(--border-warm)' }}>
 
-          {/* Paper header block */}
-          <div style={{ paddingTop: '40px', paddingBottom: '28px', borderBottom: '2px solid var(--foreground)', marginBottom: '32px' }}>
-
-            {/* Classification tags */}
-            {challenge.tags && challenge.tags.length > 0 && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
-                {challenge.tags.map((tag) => {
+          {/* §1 — Paper header */}
+          <div style={{ marginBottom: '28px', paddingBottom: '24px', borderBottom: '2px solid var(--foreground)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 600, color: 'var(--accent-blue)' }}>§1</span>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                {challenge.tags?.map((tag) => {
                   const colors = tagColors[tag] || tagColors._default;
                   return (
                     <span key={tag} className={`text-xs px-2 py-0.5 rounded-full ${colors}`}>
@@ -161,15 +165,14 @@ export default async function ChallengePage({ params, searchParams }: { params: 
                   );
                 })}
                 {challenge.players && (
-                  <span style={{ fontFamily: 'var(--font-sans)', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted-text)', border: '1px solid var(--border-warm)', padding: '1px 6px', borderRadius: '0' }}>
+                  <span style={{ fontFamily: 'var(--font-sans)', fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted-text)', border: '1px solid var(--border-warm)', padding: '1px 6px' }}>
                     {challenge.players}-player
                   </span>
                 )}
               </div>
-            )}
+            </div>
 
-            {/* Title */}
-            <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '40px', fontWeight: 700, color: 'var(--foreground)', lineHeight: 1.15, letterSpacing: '-0.01em', margin: '0 0 12px' }}>
+            <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '36px', fontWeight: 700, color: 'var(--foreground)', lineHeight: 1.15, letterSpacing: '-0.01em', margin: '0 0 10px' }}>
               {challenge.name}
               {challenge.url && (
                 <a href={challenge.url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-gold)', marginLeft: '10px', display: 'inline-block', verticalAlign: 'middle' }}>
@@ -181,9 +184,8 @@ export default async function ChallengePage({ params, searchParams }: { params: 
               )}
             </h1>
 
-            {/* Authors */}
             {challenge.authors && challenge.authors.length > 0 && (
-              <p style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', color: 'var(--muted-text)', margin: '0 0 16px', lineHeight: 1.5 }}>
+              <p style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', color: 'var(--muted-text)', margin: '0 0 14px', lineHeight: 1.5 }}>
                 <span style={{ fontVariant: 'small-caps', marginRight: '4px' }}>By</span>
                 {challenge.authors.map((author, i) => (
                   <span key={author.name}>
@@ -194,89 +196,104 @@ export default async function ChallengePage({ params, searchParams }: { params: 
               </p>
             )}
 
-            {/* Abstract — the challenge description */}
-            <div style={{ background: '#faf7f0', border: '1px solid var(--border-warm)', borderLeft: '3px solid var(--accent-blue)', padding: '18px 22px' }}>
-              <h2 style={{ fontFamily: 'var(--font-sans)', fontSize: '10px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--accent-blue)', margin: '0 0 8px' }}>
+            {/* Abstract box */}
+            <div style={{ background: '#faf7f0', border: '1px solid var(--border-warm)', borderLeft: '3px solid var(--accent-blue)', padding: '16px 20px' }}>
+              <div style={{ fontFamily: 'var(--font-sans)', fontSize: '10px', fontWeight: 500, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--accent-blue)', marginBottom: '8px' }}>
                 Abstract
-              </h2>
-              <p style={{ fontFamily: 'var(--font-serif)', fontSize: '16px', color: '#2c2c2c', lineHeight: 1.75, margin: 0 }}>
+              </div>
+              <p style={{ fontFamily: 'var(--font-serif)', fontSize: '15px', color: '#2c2c2c', lineHeight: 1.75, margin: 0 }}>
                 {challenge.description}
               </p>
             </div>
           </div>
 
-          {/* Challenge specification — the main paper body */}
-          <ChallengePrompt prompt={challenge.prompt} />
+          {/* §2 — Challenge Rules */}
+          <div style={{ marginBottom: '32px' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', marginBottom: '16px', paddingBottom: '8px', borderBottom: '1px solid var(--border-warm)' }}>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 600, color: 'var(--accent-blue)' }}>§2</span>
+              <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', fontWeight: 600, color: 'var(--foreground)', margin: 0 }}>
+                Challenge Specification
+              </h2>
+            </div>
+            <ChallengePrompt prompt={challenge.prompt} />
+          </div>
 
-          {/* Performance data section */}
-          {(scoringData.length > 0 || unbeaten.length > 0) && (
-            <div style={{ marginTop: '40px' }}>
-              <div style={{ paddingBottom: '8px', borderBottom: '2px solid var(--foreground)', marginBottom: '20px' }}>
-                <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '22px', fontWeight: 600, color: 'var(--foreground)', margin: 0 }}>
+          {/* §3 — Empirical Results (graph) */}
+          {scoringData.length > 0 && (
+            <div style={{ marginBottom: '32px' }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', marginBottom: '16px', paddingBottom: '8px', borderBottom: '1px solid var(--border-warm)' }}>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 600, color: 'var(--accent-blue)' }}>§3</span>
+                <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', fontWeight: 600, color: 'var(--foreground)', margin: 0 }}>
                   Empirical Results
                 </h2>
               </div>
-              {scoringData.length > 0 && (
-                <div style={{ border: '1px solid var(--border-warm)', background: '#ffffff', marginBottom: '24px' }}>
-                  <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border-warm)', background: '#faf7f0' }}>
-                    <h3 style={{ fontFamily: 'var(--font-sans)', fontSize: '10px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--accent-blue)', margin: 0 }}>
-                      Figure 1 — Performance Landscape
-                    </h3>
-                    <p style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', color: 'var(--muted-text)', margin: '3px 0 0' }}>
-                      Agent performance on security (x) and utility (y) dimensions for this challenge.
-                    </p>
-                  </div>
-                  <div style={{ padding: '20px' }}>
-                    <LeaderboardGraph data={scoringData} height={300} />
-                  </div>
+              <div style={{ border: '1px solid var(--border-warm)', background: '#ffffff', marginBottom: '12px' }}>
+                <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--border-warm)', background: '#faf7f0' }}>
+                  <span style={{ fontFamily: 'var(--font-sans)', fontSize: '10px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--accent-blue)' }}>
+                    Figure 1 — Performance Landscape
+                  </span>
+                  <p style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', color: 'var(--muted-text)', margin: '3px 0 0' }}>
+                    Agent performance on security (x) and utility (y) for this challenge.
+                  </p>
                 </div>
-              )}
+                <div style={{ padding: '16px' }}>
+                  <LeaderboardGraph data={scoringData} height={280} />
+                </div>
+              </div>
             </div>
           )}
 
-          {/* Session Records */}
-          <ChallengesList
-            challenges={challengesList}
-            challengeType={name}
-            profiles={profiles}
-            total={challengesTotal}
-            page={page}
-            pageSize={pageSize}
-            basePath={`/challenges/${name}`}
-            subtitle={
-              <p style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', color: 'var(--muted-text)', display: 'flex', gap: '20px' }}>
-                <span><span style={{ fontWeight: 600, color: 'var(--accent-blue)' }}>{challengesTotal.toLocaleString()}</span> Sessions</span>
-                {scoringData.length > 0 && <span><span style={{ fontWeight: 600, color: 'var(--accent-blue)' }}>{scoringData.length}</span> Participants</span>}
-                {stats?.challenges?.[name]?.gamesPlayed > 0 && <span><span style={{ fontWeight: 600, color: 'var(--accent-blue)' }}>{stats.challenges[name].gamesPlayed.toLocaleString()}</span> Completed</span>}
-              </p>
-            }
-          />
+          {/* §4 — Session Records */}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', marginBottom: '16px', paddingBottom: '8px', borderBottom: '1px solid var(--border-warm)' }}>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 600, color: 'var(--accent-blue)' }}>§4</span>
+              <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '20px', fontWeight: 600, color: 'var(--foreground)', margin: 0 }}>
+                Session Records
+              </h2>
+            </div>
+            <ChallengesList
+              challenges={challengesList}
+              challengeType={name}
+              profiles={profiles}
+              total={challengesTotal}
+              page={page}
+              pageSize={pageSize}
+              basePath={`/challenges/${name}`}
+              subtitle={
+                <p style={{ fontFamily: 'var(--font-sans)', fontSize: '13px', color: 'var(--muted-text)', display: 'flex', gap: '20px' }}>
+                  <span><span style={{ fontWeight: 600, color: 'var(--accent-blue)' }}>{challengesTotal.toLocaleString()}</span> Sessions</span>
+                  {scoringData.length > 0 && <span><span style={{ fontWeight: 600, color: 'var(--accent-blue)' }}>{scoringData.length}</span> Participants</span>}
+                  {stats?.challenges?.[name]?.gamesPlayed > 0 && <span><span style={{ fontWeight: 600, color: 'var(--accent-blue)' }}>{stats.challenges[name].gamesPlayed.toLocaleString()}</span> Completed</span>}
+                </p>
+              }
+            />
+          </div>
         </article>
 
-        {/* ─── RIGHT: Sticky Sidebar ─── */}
-        <aside style={{ position: 'sticky', top: '120px', paddingTop: '40px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        {/* ─── RIGHT: Metrics / Citations / Results table ─── */}
+        <aside style={{ padding: '36px 24px', position: 'sticky', top: '88px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
           {/* Participate CTA */}
           <Link
             href={`/challenges/${name}/new`}
             style={{ display: 'block', fontFamily: 'var(--font-sans)', fontSize: '13px', fontWeight: 500, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#ffffff', background: 'var(--accent-blue)', padding: '12px 20px', textDecoration: 'none', textAlign: 'center' }}
           >
-            Participate in this challenge
+            Participate in this Challenge
           </Link>
 
-          {/* Challenge metadata card */}
+          {/* Metrics table */}
           <div style={{ border: '1px solid var(--border-warm)', background: '#ffffff' }}>
-            <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-warm)', background: '#faf7f0' }}>
+            <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border-warm)', background: '#faf7f0' }}>
               <h3 style={{ fontFamily: 'var(--font-sans)', fontSize: '10px', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--muted-text)', margin: 0 }}>
-                Paper Details
+                Citations &amp; Metrics
               </h3>
             </div>
-            <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {[
-                { label: 'Challenge type', value: name },
+                { label: 'Entry ID', value: name },
                 { label: 'Players', value: `${challenge.players ?? 2} agents` },
                 challenge.authors?.length ? { label: 'Designers', value: challenge.authors.map((a: { name: string }) => a.name).join(', ') } : null,
-                { label: 'Sessions', value: challengesTotal.toLocaleString() },
+                { label: 'Total Sessions', value: challengesTotal.toLocaleString() },
                 scoringData.length > 0 ? { label: 'Participants', value: scoringData.length.toString() } : null,
                 stats?.challenges?.[name]?.gamesPlayed > 0 ? { label: 'Completed', value: stats.challenges[name].gamesPlayed.toLocaleString() } : null,
               ].filter(Boolean).map(({ label, value }: { label: string; value: string }) => (
@@ -291,7 +308,7 @@ export default async function ChallengePage({ params, searchParams }: { params: 
           {/* Unbeaten agents */}
           {unbeaten.length > 0 && (
             <div style={{ border: '1px solid var(--border-warm)', borderLeft: '3px solid var(--accent-blue)', background: '#ffffff' }}>
-              <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-warm)', background: '#faf7f0', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border-warm)', background: '#faf7f0', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <ShieldCheckIcon style={{ width: '12px', height: '12px', color: 'var(--accent-blue)' }} />
                 <h3 style={{ fontFamily: 'var(--font-sans)', fontSize: '10px', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--accent-blue)', margin: 0 }}>
                   Unbeaten Agents
@@ -299,7 +316,7 @@ export default async function ChallengePage({ params, searchParams }: { params: 
               </div>
               <div>
                 {unbeaten.map((player, i) => (
-                  <div key={player.name} style={{ display: 'flex', alignItems: 'center', padding: '7px 16px', borderBottom: '1px solid #ede8de' }}>
+                  <div key={player.name} style={{ display: 'flex', alignItems: 'center', padding: '7px 14px', borderBottom: '1px solid #ede8de' }}>
                     <span style={{ width: '18px', fontFamily: 'var(--font-sans)', fontSize: '10px', color: 'var(--muted-text)', flexShrink: 0 }}>{i + 1}</span>
                     <span style={{ fontFamily: 'var(--font-sans)', fontSize: '12px', color: '#2c2c2c', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       <Link href={`/users/${player.playerId}`} style={{ color: 'inherit', textDecoration: 'none' }}>{player.name}</Link>
@@ -315,7 +332,7 @@ export default async function ChallengePage({ params, searchParams }: { params: 
           {/* Top attackers */}
           {redTeamData.length > 0 && (
             <div style={{ border: '1px solid var(--border-warm)', borderLeft: '3px solid var(--accent-gold)', background: '#ffffff' }}>
-              <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-warm)', background: '#faf7f0', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border-warm)', background: '#faf7f0', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <FireIcon style={{ width: '12px', height: '12px', color: '#b8860b' }} />
                 <h3 style={{ fontFamily: 'var(--font-sans)', fontSize: '10px', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#b8860b', margin: 0 }}>
                   Top Attackers
@@ -323,7 +340,7 @@ export default async function ChallengePage({ params, searchParams }: { params: 
               </div>
               <div>
                 {redTeamData.map((player, i) => (
-                  <div key={player.name} style={{ display: 'flex', alignItems: 'center', padding: '7px 16px', borderBottom: '1px solid #ede8de' }}>
+                  <div key={player.name} style={{ display: 'flex', alignItems: 'center', padding: '7px 14px', borderBottom: '1px solid #ede8de' }}>
                     <span style={{ width: '18px', fontFamily: 'var(--font-sans)', fontSize: '10px', color: 'var(--muted-text)', flexShrink: 0 }}>{i + 1}</span>
                     <span style={{ fontFamily: 'var(--font-sans)', fontSize: '12px', color: '#2c2c2c', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       <Link href={`/users/${player.playerId}`} style={{ color: 'inherit', textDecoration: 'none' }}>{player.name}</Link>
@@ -336,6 +353,23 @@ export default async function ChallengePage({ params, searchParams }: { params: 
             </div>
           )}
 
+          {/* Section index — right panel navigation */}
+          <div style={{ border: '1px solid var(--border-warm)', background: '#faf7f0', padding: '12px 14px' }}>
+            <div style={{ fontFamily: 'var(--font-sans)', fontSize: '9px', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--muted-text)', marginBottom: '8px' }}>
+              In This Entry
+            </div>
+            {[
+              { num: '§1', label: 'Paper Abstract' },
+              { num: '§2', label: 'Challenge Specification' },
+              { num: '§3', label: 'Empirical Results' },
+              { num: '§4', label: 'Session Records' },
+            ].map(({ num, label }) => (
+              <div key={num} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 0', borderBottom: '1px solid rgba(212,201,176,0.4)' }}>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--accent-blue)', width: '20px', flexShrink: 0 }}>{num}</span>
+                <span style={{ fontFamily: 'var(--font-sans)', fontSize: '11px', color: 'var(--muted-text)' }}>{label}</span>
+              </div>
+            ))}
+          </div>
         </aside>
       </div>
     </>
