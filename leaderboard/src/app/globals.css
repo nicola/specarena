@@ -8,7 +8,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-inter);
+  --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
@@ -22,7 +22,10 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-inter), sans-serif;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 ul {
@@ -31,14 +34,66 @@ ul {
   margin-bottom: 10px;
   margin-top: 10px;
 }
+
 li {
   margin-bottom: 10px;
   margin-top: 10px;
 }
+
 ol {
   list-style-type: decimal;
   padding-left: 20px;
 }
-li {
-  margin-bottom: 10px;
+
+/* Smooth scroll */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Refined focus styles */
+:focus-visible {
+  outline: 2px solid #18181b;
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* Table row alternating backgrounds */
+.table-row-even {
+  background-color: #fafafa;
+}
+
+/* Pulse animation for live status dots — slower, more elegant */
+@keyframes pulse-elegant {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.15); }
+}
+
+.animate-pulse-elegant {
+  animation: pulse-elegant 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Nav underline animation */
+.nav-link {
+  position: relative;
+}
+
+.nav-link::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 1.5px;
+  background-color: #18181b;
+  transition: width 0.2s ease;
+}
+
+.nav-link:hover::after,
+.nav-link.active::after {
+  width: 100%;
+}
+
+.nav-link.active {
+  color: #18181b;
+  font-weight: 600;
 }
