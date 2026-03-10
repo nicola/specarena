@@ -16,6 +16,8 @@ interface ChallengeCardProps {
   category?: string;
 }
 
+const WIRE_CODES = ["ARENA", "MAS", "AP-AI"];
+
 export default function ChallengeCard({
   title,
   description,
@@ -25,74 +27,111 @@ export default function ChallengeCard({
   sessions,
   category,
 }: ChallengeCardProps) {
-  // Separate category-like tags (e.g. "cryptography") from player count tags
   const playerTag = tags?.find(t => t.includes('-player')) ?? null;
   const categoryTag = category ?? tags?.find(t => !t.includes('-player')) ?? null;
 
-  // Build the top kicker line: CATEGORY · N-PLAYER
-  const kickerParts: string[] = [];
-  if (categoryTag) kickerParts.push(categoryTag.toUpperCase());
-  if (playerTag) kickerParts.push(playerTag.toUpperCase());
-  const kicker = kickerParts.join(' · ');
+  // Pick a deterministic wire code based on title
+  const wc = WIRE_CODES[title.charCodeAt(0) % WIRE_CODES.length];
 
-  // Byline
-  const bylineParts: string[] = [];
-  if (author) bylineParts.push(`By ${author}`);
-  bylineParts.push('Est. March 2026');
-  if (sessions != null) bylineParts.push(`${sessions} Sessions`);
-  const byline = bylineParts.join('  ·  ');
+  const isBreaking = sessions === 0;
+  const isDeveloping = sessions != null && sessions > 0 && sessions < 10;
 
   return (
-    <div className="newspaper-card flex flex-col h-full" style={{ borderTop: '1px solid #111111', paddingTop: '0.75rem' }}>
-
-      {/* Kicker: CATEGORY · N-PLAYER */}
-      {kicker && (
-        <p style={{
-          fontVariant: 'small-caps',
-          letterSpacing: '0.08em',
-          fontSize: '0.62rem',
-          color: '#8b0000',
-          fontFamily: 'var(--font-lora), serif',
+    <div style={{
+      borderTop: '2px solid #111',
+      paddingTop: '0.75rem',
+      display: 'flex',
+      flexDirection: 'column',
+      height: '100%',
+    }}>
+      {/* Wire meta row */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
+        <span style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: '0.55rem',
           fontWeight: 600,
-          marginBottom: '0.5rem',
+          color: '#cc0000',
+          letterSpacing: '0.1em',
+          textTransform: 'uppercase',
         }}>
-          {kicker}
+          {wc}
+        </span>
+        <span style={{ color: '#ddd', fontSize: '0.5rem' }}>|</span>
+        <span style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: '0.5rem',
+          color: '#888',
+          letterSpacing: '0.04em',
+        }}>
+          {new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }).toUpperCase()}
+        </span>
+        <div style={{ marginLeft: 'auto' }}>
+          {isBreaking ? (
+            <span style={{
+              background: '#cc0000', color: '#fff',
+              fontFamily: 'var(--font-mono)', fontSize: '0.48rem', fontWeight: 600,
+              letterSpacing: '0.1em', padding: '0.1em 0.35em', textTransform: 'uppercase',
+            }}>BREAKING</span>
+          ) : isDeveloping ? (
+            <span style={{
+              background: '#111', color: '#fff',
+              fontFamily: 'var(--font-mono)', fontSize: '0.48rem', fontWeight: 600,
+              letterSpacing: '0.1em', padding: '0.1em 0.35em', textTransform: 'uppercase',
+            }}>DEVELOPING</span>
+          ) : (
+            <span style={{
+              border: '1px solid #aaa', color: '#888',
+              fontFamily: 'var(--font-mono)', fontSize: '0.48rem', fontWeight: 600,
+              letterSpacing: '0.1em', padding: '0.1em 0.35em', textTransform: 'uppercase',
+            }}>CLOSED</span>
+          )}
+        </div>
+      </div>
+
+      {/* Category tag */}
+      {categoryTag && (
+        <p style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: '0.5rem',
+          color: '#888',
+          letterSpacing: '0.1em',
+          textTransform: 'uppercase',
+          marginBottom: '0.3rem',
+        }}>
+          {categoryTag}{playerTag && ` · ${playerTag}`}
         </p>
       )}
 
       {/* Headline */}
       <h4 style={{
         fontFamily: 'var(--font-playfair), serif',
-        fontSize: '1.2rem',
+        fontSize: '1.15rem',
         fontWeight: '700',
         lineHeight: 1.2,
         color: '#111111',
-        marginBottom: '0.5rem',
+        marginBottom: '0.4rem',
       }}>
         {title}
       </h4>
 
-      {/* Rule below headline */}
-      <div style={{ borderBottom: '1px solid #aaa', marginBottom: '0.5rem' }} />
+      <div style={{ borderBottom: '1px solid #e8e4dc', marginBottom: '0.4rem' }} />
 
       {/* Byline */}
-      <p style={{
-        fontFamily: 'var(--font-lora), serif',
-        fontSize: '0.68rem',
-        fontStyle: 'italic',
-        color: '#8b0000',
-        marginBottom: '0.6rem',
-        lineHeight: 1.4,
-      }}>
-        {byline}
-      </p>
+      {author && (
+        <p style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: '0.52rem',
+          color: '#888',
+          letterSpacing: '0.04em',
+          marginBottom: '0.4rem',
+        }}>
+          BY {author.toUpperCase()}{sessions != null && ` — ${sessions} SESSIONS`}
+        </p>
+      )}
 
-      {/* Rule below byline */}
-      <div style={{ borderBottom: '1px solid #ddd', marginBottom: '0.6rem' }} />
-
-      {/* Body copy */}
+      {/* Lede */}
       <p style={{
-        fontFamily: 'var(--font-lora), serif',
+        fontFamily: 'var(--font-body)',
         fontSize: '0.82rem',
         lineHeight: 1.6,
         color: '#333333',
@@ -101,20 +140,20 @@ export default function ChallengeCard({
         {description}
       </p>
 
-      {/* Footer: right-aligned "Read More →" */}
+      {/* Read more */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.75rem' }}>
         <a href={href} style={{
-          fontVariant: 'small-caps',
-          letterSpacing: '0.08em',
-          fontSize: '0.68rem',
-          color: '#8b0000',
-          fontFamily: 'var(--font-lora), serif',
+          fontFamily: 'var(--font-mono)',
+          letterSpacing: '0.1em',
+          fontSize: '0.58rem',
+          color: '#cc0000',
           fontWeight: 600,
           textDecoration: 'none',
-          borderBottom: '1px solid #8b0000',
+          borderBottom: '1px solid #cc0000',
           paddingBottom: '1px',
+          textTransform: 'uppercase',
         }}>
-          Read More →
+          READ DISPATCH →
         </a>
       </div>
     </div>

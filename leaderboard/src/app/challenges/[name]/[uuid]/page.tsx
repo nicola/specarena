@@ -22,29 +22,37 @@ export async function generateMetadata({ params }: { params: Promise<{ name: str
   const { name, uuid } = await params;
   const challenge = await fetchMetadata(name);
   if (!challenge) {
-    return { title: "Challenge not found" };
+    return { title: "ARENA WIRE — Dispatch Not Found" };
   }
   const metadata: Metadata = {
-    title: `ARENA — ${challenge.name} · ${uuid.slice(0, 8)}`,
+    title: `ARENA WIRE — ${challenge.name} · ${uuid.slice(0, 8)}`,
     description: challenge.description,
   };
   return metadata;
 }
 
-const panelStyle = {
-  borderTop: '1px solid #111',
-  paddingTop: '1rem',
-  marginBottom: '1.5rem',
+const monoSection = {
+  borderTop: '2px solid #111',
+  borderBottom: '1px solid #ddd',
+  padding: '0.4rem 0',
+  marginBottom: '1rem',
+  fontFamily: 'var(--font-mono)' as const,
+  fontSize: '0.62rem' as const,
+  fontWeight: 700 as const,
+  letterSpacing: '0.15em' as const,
+  textTransform: 'uppercase' as const,
+  color: '#111' as const,
 };
 
-const sectionHeadStyle = {
-  fontVariant: 'small-caps' as const,
-  letterSpacing: '0.1em',
-  fontSize: '0.7rem',
-  color: '#8b0000',
-  fontFamily: 'var(--font-lora), serif',
-  fontWeight: 700,
-  marginBottom: '0.5rem',
+const monoLabel = {
+  fontFamily: 'var(--font-mono)' as const,
+  fontSize: '0.52rem' as const,
+  letterSpacing: '0.1em' as const,
+  fontWeight: 600 as const,
+  textTransform: 'uppercase' as const,
+  color: '#888' as const,
+  display: 'block' as const,
+  marginBottom: '0.2rem',
 };
 
 export default async function UUIDPage({
@@ -64,55 +72,157 @@ export default async function UUIDPage({
 
   const challenge = await fetchMetadata(name);
   if (!challenge) {
-    return <div style={{ fontFamily: 'var(--font-lora), serif', padding: '2rem' }}>Challenge {name} not found</div>;
+    return (
+      <div style={{ fontFamily: 'var(--font-mono)', padding: '2rem', fontSize: '0.8rem', color: '#888', letterSpacing: '0.08em' }}>
+        DISPATCH NOT FOUND — {name.toUpperCase()} — CHECK TRANSMISSION ID
+      </div>
+    );
   }
 
+  const nowStr = new Date().toLocaleString('en-US', {
+    month: 'long', day: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  }).toUpperCase();
+
   return (
-    <section className="max-w-4xl mx-auto px-6 py-12">
-      {/* Dateline */}
-      <p className="dateline mb-3" style={{ fontFamily: 'var(--font-lora), serif' }}>
-        March 2026 — Game Session
-      </p>
+    <div className="max-w-5xl mx-auto px-6 py-8">
+
+      {/* FOR IMMEDIATE RELEASE */}
+      <div style={{
+        borderTop: '4px solid #111',
+        borderBottom: '1px solid #111',
+        padding: '0.5rem 0',
+        marginBottom: '1rem',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+      }}>
+        <span style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: '0.65rem',
+          fontWeight: 700,
+          letterSpacing: '0.15em',
+          textTransform: 'uppercase',
+          color: '#111',
+        }}>
+          FOR IMMEDIATE RELEASE
+        </span>
+        <span style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: '0.58rem',
+          color: '#888',
+          letterSpacing: '0.08em',
+        }}>
+          ARENA WIRE — {nowStr}
+        </span>
+      </div>
+
+      {/* Wire code + dateline */}
+      <div className="flex items-center gap-3 mb-3">
+        <span style={{
+          background: '#cc0000',
+          color: '#fff',
+          fontFamily: 'var(--font-mono)',
+          fontSize: '0.6rem',
+          fontWeight: 600,
+          letterSpacing: '0.1em',
+          padding: '0.15em 0.5em',
+          textTransform: 'uppercase',
+        }}>
+          GAME SESSION
+        </span>
+        {challenge.tags?.map(tag => (
+          <span key={tag} style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: '0.5rem',
+            color: '#888',
+            letterSpacing: '0.08em',
+            border: '1px solid #ddd',
+            padding: '0.1em 0.4em',
+            textTransform: 'uppercase',
+          }}>
+            {tag}
+          </span>
+        ))}
+        <Link href={`/challenges/${name}`} style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: '0.55rem',
+          color: '#888',
+          letterSpacing: '0.06em',
+          textDecoration: 'none',
+          marginLeft: 'auto',
+        }}>
+          ← BACK TO CHALLENGE DISPATCH
+        </Link>
+      </div>
 
       {/* Headline */}
-      <div style={{ borderTop: '3px double #111111', paddingTop: '1rem', marginBottom: '1.5rem' }}>
-        <h1 style={{
-          fontFamily: 'var(--font-playfair), serif',
-          fontSize: '2rem',
-          fontWeight: '800',
-          color: '#111111',
-          lineHeight: 1.15,
-          marginBottom: '0.4rem',
+      <h1 style={{
+        fontFamily: 'var(--font-playfair), serif',
+        fontSize: '2.2rem',
+        fontWeight: '800',
+        color: '#111',
+        lineHeight: 1.1,
+        marginBottom: '0.4rem',
+      }}>
+        {challenge.name}
+      </h1>
+
+      {/* Dateline */}
+      <div style={{
+        borderBottom: '1px solid #111',
+        paddingBottom: '0.75rem',
+        marginBottom: '1.5rem',
+      }}>
+        <p style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: '0.6rem',
+          color: '#555',
+          letterSpacing: '0.06em',
+          textTransform: 'uppercase',
+          marginBottom: '0.25rem',
         }}>
-          {challenge.name}
-        </h1>
-        {challenge.tags && challenge.tags.length > 0 && (
-          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.72rem', color: '#8b0000', fontVariant: 'small-caps', letterSpacing: '0.07em', marginBottom: '0.5rem' }}>
-            {challenge.tags.join(' · ')}
-          </p>
-        )}
-        <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1rem', fontStyle: 'italic', color: '#555' }}>
+          SAN FRANCISCO — {nowStr} — SESSION ID: {uuid.slice(0, 8).toUpperCase()}
+        </p>
+        <p style={{
+          fontFamily: 'var(--font-body)',
+          fontSize: '0.88rem',
+          fontStyle: 'italic',
+          color: '#555',
+          lineHeight: 1.5,
+        }}>
           {challenge.description}
         </p>
       </div>
 
-      {/* Session info panel */}
-      <div style={panelStyle}>
-        <h2 style={sectionHeadStyle}>Session ID</h2>
-        <div style={{ fontFamily: 'monospace', fontSize: '0.82rem', color: '#555' }}>
-          <CopyableInvite
-            invite={uuid}
-            copyText={`${origin}/challenges/${name}/${uuid}`}
-            className="text-sm flex items-center gap-2 group cursor-pointer transition-colors"
-            showButton={false}
-          />
+      {/* Session credentials panel */}
+      <div style={{ marginBottom: '1.5rem' }}>
+        <div style={monoSection}>TRANSMISSION CREDENTIALS</div>
+
+        <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
+          {/* Session ID */}
+          <div>
+            <span style={monoLabel}>Session ID</span>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: '#333' }}>
+              <CopyableInvite
+                invite={uuid}
+                copyText={`${origin}/challenges/${name}/${uuid}`}
+                className="text-sm flex items-center gap-2 group cursor-pointer transition-colors"
+                showButton={false}
+              />
+            </div>
+          </div>
         </div>
+
+        {/* Invites */}
         {invites && invites.length > 0 && (
           <div style={{ marginTop: '1rem' }}>
-            <h2 style={sectionHeadStyle}>
-              Invites{' '}
-              <Link href="/docs" style={{ fontVariant: 'normal', fontSize: '0.72rem', color: '#888', textDecoration: 'none', letterSpacing: 0 }}>(how to join?)</Link>
-            </h2>
+            <span style={monoLabel}>
+              Dispatch Invites{' '}
+              <Link href="/docs" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.52rem', color: '#888', textDecoration: 'none', letterSpacing: '0.04em', textTransform: 'none' }}>
+                (how to join?)
+              </Link>
+            </span>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
               {invites.map((inv, index) => (
                 <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -131,28 +241,36 @@ export default async function UUIDPage({
 
       {/* Invite acceptance */}
       {invite && (
-        <div style={{ ...panelStyle, borderTop: '2px solid #8b0000' }}>
-          <h2 style={{ ...sectionHeadStyle, color: '#8b0000' }}>You Have Been Invited</h2>
-          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.88rem', color: '#333', marginBottom: '0.75rem' }}>
-            Your invite code is: <code style={{ fontFamily: 'monospace', background: '#f0ede6', padding: '0.1em 0.4em', border: '1px solid #ddd' }}>{invite}</code>
+        <div style={{
+          border: '2px solid #cc0000',
+          padding: '1rem',
+          marginBottom: '1.5rem',
+        }}>
+          <div style={{ ...monoSection, borderTop: 'none', color: '#cc0000' }}>DISPATCH INVITATION RECEIVED</div>
+          <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.88rem', color: '#333', marginBottom: '0.75rem' }}>
+            Your invite code:{' '}
+            <code style={{ fontFamily: 'var(--font-mono)', background: '#f0ede6', padding: '0.1em 0.4em', border: '1px solid #ddd', fontSize: '0.82rem' }}>
+              {invite}
+            </code>
           </p>
-          <ol style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.88rem', color: '#333', paddingLeft: '1.25rem', lineHeight: 1.8 }}>
-            <li>Read the instructions at <a href="/SKILL.md" style={{ textDecoration: 'underline', color: '#8b0000', fontFamily: 'monospace' }}>/SKILL.md</a></li>
+          <ol style={{ fontFamily: 'var(--font-body)', fontSize: '0.88rem', color: '#333', paddingLeft: '1.25rem', lineHeight: 1.8 }}>
+            <li>Read the instructions at <a href="/SKILL.md" style={{ textDecoration: 'underline', color: '#cc0000', fontFamily: 'var(--font-mono)' }}>/SKILL.md</a></li>
             <li>Join the game using your invite code</li>
           </ol>
         </div>
       )}
 
-      {/* Prompt */}
+      {/* Challenge brief */}
       <div style={{ marginBottom: '2rem' }}>
+        <div style={monoSection}>CHALLENGE BRIEF — CLASSIFIED TRANSMISSION</div>
         <ChallengePrompt prompt={challenge.prompt} />
       </div>
 
-      {/* Conversations */}
+      {/* Game transcript */}
       <div style={{ borderTop: '3px double #111', paddingTop: '1rem' }}>
-        <h2 style={sectionHeadStyle}>Game Transcript</h2>
+        <div style={monoSection}>GAME TRANSCRIPT — RESULTS TABLE</div>
         <ConversationsList uuid={uuid} engineUrl={PUBLIC_ENGINE_URL} />
       </div>
-    </section>
+    </div>
   );
 }
