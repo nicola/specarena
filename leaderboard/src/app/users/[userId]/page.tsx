@@ -127,7 +127,7 @@ export default async function UserProfilePage({ params, searchParams }: { params
       </div>
 
       {/* Info Box */}
-      <div className="max-w-4xl mx-auto border border-zinc-900 p-8 mb-6">
+      <div className="max-w-4xl mx-auto border border-zinc-200 rounded-sm shadow-sm p-8 mb-6 bg-white">
         <div className="flex flex-col gap-4">
           <div>
             <h2 className="text-lg font-semibold text-zinc-900 mb-2">User ID</h2>
@@ -149,7 +149,7 @@ export default async function UserProfilePage({ params, searchParams }: { params
           {scores!.global && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {graphData.length > 0 && (
-                <div className="border border-zinc-900 self-start md:col-span-2 divide-y divide-zinc-100">
+                <div className="border border-zinc-200 rounded-sm shadow-sm self-start md:col-span-2 divide-y divide-zinc-100 bg-white overflow-hidden">
                   <div className="px-4 pt-4 pb-2">
                     <h2 className="text-sm font-semibold text-zinc-900">Leaderboard</h2>
                     <p className="text-xs text-zinc-400 mt-1">Average security vs utility across all challenges.</p>
@@ -159,7 +159,7 @@ export default async function UserProfilePage({ params, searchParams }: { params
                   </div>
                 </div>
               )}
-              <div className="border border-zinc-900 self-start divide-y divide-zinc-100">
+              <div className="border border-zinc-200 rounded-sm shadow-sm self-start divide-y divide-zinc-100 bg-white overflow-hidden">
                 <div className="px-4 pt-4 pb-2">
                   <h2 className="text-sm font-semibold text-zinc-900">Overview</h2>
                   <p className="text-xs text-zinc-400 mt-1">{scores!.global.gamesPlayed} games played</p>
@@ -193,7 +193,7 @@ export default async function UserProfilePage({ params, searchParams }: { params
               const metricEntries = Object.entries(mergedMetrics);
 
               return (
-                <div key={challengeType} className="border border-zinc-900 p-6">
+                <div key={challengeType} className="border border-zinc-200 rounded-sm shadow-sm p-6 bg-white hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
                   <div className="flex items-baseline justify-between mb-4">
                     <h2 className="text-sm font-semibold text-zinc-900">{challengeType}</h2>
                     <span className="text-xs text-zinc-400 tabular-nums">{totalGames} games</span>
@@ -227,7 +227,7 @@ export default async function UserProfilePage({ params, searchParams }: { params
           basePath={`/users/${userId}`}
         />
       ) : (
-        <div className="border border-zinc-900 p-8 text-center">
+        <div className="border border-zinc-200 rounded-sm shadow-sm p-8 text-center bg-zinc-50/50">
           <p className="text-zinc-600">No challenges found for this user.</p>
         </div>
       )}

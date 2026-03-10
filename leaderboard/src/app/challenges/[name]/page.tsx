@@ -118,12 +118,12 @@ export default async function ChallengePage({ params, searchParams }: { params: 
                 </a>
               )}
             </h1>
-            <p className="text-base text-zinc-900">
+            <p className="text-base text-zinc-500 leading-relaxed">
               {challenge.description}
             </p>
           </div>
           <div className="hidden sm:flex flex-col gap-2 mb-4 items-end">
-            <Link href={`/challenges/${name}/new`} className="text-sm bg-zinc-900 text-white px-4 py-2 rounded-md border border-zinc-900 hover:bg-zinc-900 hover:text-white transition-colors text-center">
+            <Link href={`/challenges/${name}/new`} className="text-sm bg-zinc-900 text-white px-5 py-2.5 rounded-sm border border-zinc-900 hover:bg-zinc-800 hover:shadow-md transition-all duration-200 text-center font-medium">
               Participate
             </Link>
           </div>
@@ -152,7 +152,7 @@ export default async function ChallengePage({ params, searchParams }: { params: 
           </div>
         )}
         <div className="sm:hidden mb-10">
-          <Link href={`/challenges/${name}/new`} className="text-sm bg-zinc-900 text-white px-4 py-2 rounded-md border border-zinc-900 hover:bg-zinc-900 hover:text-white transition-colors text-center inline-block">
+          <Link href={`/challenges/${name}/new`} className="text-sm bg-zinc-900 text-white px-5 py-2.5 rounded-sm border border-zinc-900 hover:bg-zinc-800 hover:shadow-md transition-all duration-200 text-center font-medium inline-block">
             Participate
           </Link>
         </div>
@@ -167,7 +167,7 @@ export default async function ChallengePage({ params, searchParams }: { params: 
           return (
             <div className="mt-6 mb-10 grid grid-cols-1 md:grid-cols-3 gap-6">
               {hasGraph && (
-                <div className="border border-zinc-900 self-start md:col-span-2 divide-y divide-zinc-100">
+                <div className="border border-zinc-200 rounded-sm shadow-sm self-start md:col-span-2 divide-y divide-zinc-100 bg-white overflow-hidden">
                   <div className="px-4 pt-4 pb-2">
                     <h2 className="text-sm font-semibold text-zinc-900">Leaderboard</h2>
                     <p className="text-xs text-zinc-400 mt-1">Average security vs utility scores for this challenge.</p>
@@ -179,7 +179,7 @@ export default async function ChallengePage({ params, searchParams }: { params: 
               )}
               <div className="flex flex-col gap-6">
                 {unbeaten.length > 0 && (
-                  <div className="border border-zinc-900 self-start w-full divide-y divide-zinc-100">
+                  <div className="border border-zinc-200 rounded-sm shadow-sm self-start w-full divide-y divide-zinc-100 bg-white overflow-hidden">
                     <div className="px-4 pt-4 pb-2">
                       <h2 className="text-sm font-semibold text-zinc-900 flex items-center gap-1.5">Unbeaten <ShieldCheckIcon className="w-3.5 h-3.5 text-blue-300" /></h2>
                       <p className="text-xs text-zinc-400 mt-1">Never breached, ranked by utility.</p>
@@ -196,7 +196,7 @@ export default async function ChallengePage({ params, searchParams }: { params: 
                   </div>
                 )}
                 {redTeamData.length > 0 && (
-                  <div className="border border-zinc-900 self-start w-full divide-y divide-zinc-100">
+                  <div className="border border-zinc-200 rounded-sm shadow-sm self-start w-full divide-y divide-zinc-100 bg-white overflow-hidden">
                     <div className="px-4 pt-4 pb-2">
                       <h2 className="text-sm font-semibold text-zinc-900 flex items-center gap-1.5">Top Attackers <FireIcon className="w-3.5 h-3.5 text-red-300" /></h2>
                       <p className="text-xs text-zinc-400 mt-1">Percentage of successful attacks.</p>

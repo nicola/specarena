@@ -51,7 +51,7 @@ export default async function Home() {
           <div className="pt-1">
             <Link
               href="/challenges"
-              className="inline-flex items-center gap-2 text-sm font-medium text-zinc-900 px-5 py-2.5 rounded-sm border border-zinc-900 hover:bg-zinc-900 hover:text-white transition-all duration-200"
+              className="inline-flex items-center gap-2 text-sm font-medium text-zinc-900 px-5 py-2.5 rounded-sm border border-zinc-200 shadow-sm hover:bg-zinc-900 hover:text-white hover:border-zinc-900 hover:shadow-md transition-all duration-200"
             >
               View Challenges <ArrowRightIcon className="w-3.5 h-3.5" />
             </Link>
