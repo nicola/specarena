@@ -1,5 +1,4 @@
 import { ReactNode } from "react";
-import { tagColors } from "@/lib/tagColors";
 
 interface ChallengeCardProps {
   title: string;
@@ -18,46 +17,124 @@ export default function ChallengeCard({
   title,
   date,
   description,
-  gradientFrom,
-  gradientVia,
-  gradientTo,
   icon,
-  dateColor = "text-zinc-600",
   href,
   tags,
 }: ChallengeCardProps) {
   return (
-    <div className="flex flex-col border border-zinc-900 overflow-hidden h-full">
-      {/* Upper Half */}
-      <div
-        className={`relative h-48 bg-gradient-to-br ${gradientFrom} ${gradientVia} ${gradientTo} flex items-center px-6 flex-shrink-0`}
-      >
-        <div className="flex-1 flex items-center gap-4">
-          {/* Visual Element */}
-          <div className="w-full h-32 flex-shrink-0">{icon}</div>
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      border: '1px solid #ffb000',
+      overflow: 'hidden',
+      height: '100%',
+      background: '#0d0a00',
+    }}>
+      {/* Upper Half — icon area */}
+      <div style={{
+        position: 'relative',
+        height: '12rem',
+        background: '#0f0c00',
+        display: 'flex',
+        alignItems: 'center',
+        padding: '1.5rem',
+        flexShrink: 0,
+        borderBottom: '1px solid #ffb000',
+      }}>
+        <div style={{ width: '100%', height: '8rem', flexShrink: 0, color: '#ffb000', opacity: 0.7 }}>
+          {icon}
         </div>
         {tags && tags.length > 0 && (
-          <div className="absolute bottom-3 left-4 flex flex-wrap gap-1.5">
-            {tags.map((tag) => {
-              const colors = tagColors[tag] || tagColors._default;
-              return (
-                <span key={tag} className={`text-xs px-2 py-0.5 rounded-full ${colors}`}>
-                  {tag}
-                </span>
-              );
-            })}
+          <div style={{
+            position: 'absolute',
+            bottom: '0.75rem',
+            left: '1rem',
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '0.375rem',
+          }}>
+            {tags.map((tag) => (
+              <span key={tag} style={{
+                fontFamily: '"Courier New", monospace',
+                fontSize: '0.65rem',
+                padding: '0.1rem 0.4rem',
+                border: '1px solid #cc8800',
+                color: '#cc8800',
+                textShadow: '0 0 4px #cc8800',
+                letterSpacing: '0.05em',
+                textTransform: 'uppercase',
+              }}>
+                {tag}
+              </span>
+            ))}
           </div>
         )}
       </div>
+
       {/* Lower Half */}
-      <div className="bg-white p-6 flex flex-col gap-3 flex-1 min-h-0">
-        <div className="flex flex-col gap-3">
-          {date && <p className={`text-sm ${dateColor}`}>{date}</p>}
-          <h4 className="text-lg font-medium text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>{title}</h4>
-          <p className="text-sm text-zinc-700">{description}</p>
+      <div style={{
+        background: '#0d0a00',
+        padding: '1.5rem',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0.75rem',
+        flex: 1,
+        minHeight: 0,
+      }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          {date && (
+            <p style={{
+              fontFamily: '"Courier New", monospace',
+              fontSize: '0.75rem',
+              color: '#cc8800',
+              textShadow: '0 0 4px #cc8800',
+              margin: 0,
+            }}>{date}</p>
+          )}
+          <h4 style={{
+            fontFamily: '"Courier New", monospace',
+            fontSize: '1rem',
+            fontWeight: 'bold',
+            color: '#ffcc44',
+            textShadow: '0 0 8px #ffcc44',
+            margin: 0,
+            letterSpacing: '0.03em',
+          }}>{title}</h4>
+          <p style={{
+            fontFamily: '"Courier New", monospace',
+            fontSize: '0.78rem',
+            color: '#ffb000',
+            textShadow: '0 0 6px #ffb000',
+            margin: 0,
+            lineHeight: 1.5,
+          }}>{description}</p>
         </div>
-        <a href={href} className="mt-auto px-4 py-2 border border-zinc-900 text-zinc-900 rounded-md text-sm text-center">
-          Discover more
+        <a href={href} style={{
+          marginTop: 'auto',
+          padding: '0.4rem 1rem',
+          border: '1px solid #ffb000',
+          color: '#ffb000',
+          fontFamily: '"Courier New", monospace',
+          fontSize: '0.75rem',
+          textAlign: 'center',
+          textDecoration: 'none',
+          textShadow: '0 0 6px #ffb000',
+          letterSpacing: '0.08em',
+          display: 'block',
+          transition: 'background 0.1s, color 0.1s',
+        }}
+          onMouseEnter={e => {
+            (e.currentTarget as HTMLElement).style.background = '#ffb000';
+            (e.currentTarget as HTMLElement).style.color = '#0d0a00';
+            (e.currentTarget as HTMLElement).style.textShadow = 'none';
+          }}
+          onMouseLeave={e => {
+            (e.currentTarget as HTMLElement).style.background = 'transparent';
+            (e.currentTarget as HTMLElement).style.color = '#ffb000';
+            (e.currentTarget as HTMLElement).style.textShadow = '0 0 6px #ffb000';
+          }}
+        >
+          [DISCOVER MORE]
         </a>
       </div>
     </div>

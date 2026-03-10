@@ -218,8 +218,9 @@ export default function LeaderboardGraph({ data = mockData, height = 400, highli
       height: height,
       grid: false,
       style: {
-        color: "#18181b",
-        fontFamily: "var(--font-jost), Jost, sans-serif",
+        color: "#ffb000",
+        background: "#0d0a00",
+        fontFamily: '"Courier New", monospace',
       },
       marginBottom: 40,
       x: {
@@ -238,25 +239,26 @@ export default function LeaderboardGraph({ data = mockData, height = 400, highli
       },
       marks: [
         // Grid lines constrained to [-1, 1]
-        Plot.gridX([-1, 0, 1], { y1: -1, y2: 1 }),
-        Plot.gridY([-1, 0, 1], { x1: -1, x2: 1 }),
+        Plot.gridX([-1, 0, 1], { y1: -1, y2: 1, stroke: "#2a1f00" }),
+        Plot.gridY([-1, 0, 1], { x1: -1, x2: 1, stroke: "#2a1f00" }),
         // Non-highlighted points (rendered first, behind)
         Plot.dot(data.filter((d) => !highlightSet.has(d.name)), {
           x: "securityPolicy",
           y: "utility",
-          fill: (d) => d.isBenchmark ? "#f59e0b" : paretoSet.has(d.name) ? "#000" : "#a1a1aa",
+          fill: (d) => d.isBenchmark ? "#ffcc44" : paretoSet.has(d.name) ? "#ffb000" : "#cc8800",
           r: (d) => paretoSet.has(d.name) ? 7 : d.isBenchmark ? 6 : 5,
-          stroke: (d) => d.isBenchmark ? "#d97706" : "none",
+          stroke: (d) => d.isBenchmark ? "#ffcc44" : "none",
           strokeWidth: (d) => d.isBenchmark ? 1.5 : 0,
+          opacity: (d) => paretoSet.has(d.name) ? 1 : 0.6,
           ...dotTipOptions,
         }),
         // Highlighted point (rendered last, on top)
         ...highlightSet.size > 0 ? [Plot.dot(data.filter((d) => highlightSet.has(d.name)), {
           x: "securityPolicy",
           y: "utility",
-          fill: "#6366f1",
-          r: 7,
-          stroke: "#4f46e5",
+          fill: "#ffcc44",
+          r: 8,
+          stroke: "#ffb000",
           strokeWidth: 2,
           ...dotTipOptions,
         })] : [],
@@ -268,8 +270,8 @@ export default function LeaderboardGraph({ data = mockData, height = 400, highli
             text: "text",
             dx: d.dx,
             dy: d.dy,
-            fontSize: 11,
-            fill: d.isHighlight ? "#6366f1" : d.isBenchmark ? "#f59e0b" : d.isPareto ? "#000" : "#a1a1aa",
+            fontSize: 10,
+            fill: d.isHighlight ? "#ffcc44" : d.isBenchmark ? "#ffcc44" : d.isPareto ? "#ffb000" : "#cc8800",
             fontWeight: "600",
             textAnchor: d.anchor,
           });
@@ -279,27 +281,32 @@ export default function LeaderboardGraph({ data = mockData, height = 400, highli
 
     container.appendChild(chart);
 
-    // Style the chart to ensure axis labels and ticks are visible
+    // Style the chart for CRT AMBER aesthetic
     const svg = container.querySelector("svg");
     if (svg) {
-      // Set font on all text, but only override fill on axis text (not data labels)
+      svg.style.background = "#0d0a00";
+      // Set font and color on all text
       svg.querySelectorAll("text").forEach((text) => {
-        (text as SVGTextElement).setAttribute("font-family", "var(--font-jost), Jost, sans-serif");
+        (text as SVGTextElement).setAttribute("font-family", '"Courier New", monospace');
+        (text as SVGTextElement).setAttribute("fill", "#cc8800");
       });
       svg.querySelectorAll("[aria-label*='axis'] text").forEach((text) => {
-        (text as SVGTextElement).setAttribute("fill", "#18181b");
+        (text as SVGTextElement).setAttribute("fill", "#cc8800");
       });
       // Bump axis label font size
       svg.querySelectorAll("[aria-label='x-axis label'], [aria-label='y-axis label']").forEach((label) => {
         const text = label.querySelector("text");
-        if (text) (text as SVGTextElement).setAttribute("font-size", "13");
+        if (text) {
+          (text as SVGTextElement).setAttribute("font-size", "11");
+          (text as SVGTextElement).setAttribute("fill", "#ffb000");
+        }
       });
-      // Style all line elements (grid lines and axis lines)
+      // Style axis lines
       const lineElements = svg.querySelectorAll("line");
       lineElements.forEach((line) => {
         const stroke = (line as SVGLineElement).getAttribute("stroke");
         if (stroke && (stroke === "currentColor" || stroke === "white" || !stroke)) {
-          (line as SVGLineElement).setAttribute("stroke", "#e4e4e7");
+          (line as SVGLineElement).setAttribute("stroke", "#2a1f00");
         }
       });
     }
