@@ -58,14 +58,11 @@ export async function generateMetadata({ params }: { params: Promise<{ name: str
   return metadata;
 }
 
-const smallCapsLabel = {
-  fontVariant: 'small-caps' as const,
-  letterSpacing: '0.08em',
-  fontSize: '0.7rem',
-  color: '#555555',
-  fontFamily: 'var(--font-lora), serif',
-  fontWeight: 600,
-};
+// Extract a pull quote from description (first sentence or first 120 chars)
+function extractPullQuote(description: string): string {
+  const match = description.match(/^[^.!?]+[.!?]/);
+  return match ? match[0] : description.slice(0, 120) + (description.length > 120 ? "…" : "");
+}
 
 export default async function ChallengePage({ params, searchParams }: { params: Promise<{ name: string }>; searchParams: Promise<{ page?: string }> }) {
   const { name } = await params;
@@ -108,114 +105,236 @@ export default async function ChallengePage({ params, searchParams }: { params: 
     .filter((d) => d.attack > 0)
     .sort((a, b) => b.attack - a.attack);
 
-  return (
-    <section className="max-w-4xl mx-auto px-6 py-12">
-      {/* Dateline */}
-      <p className="dateline mb-3" style={{ fontFamily: 'var(--font-lora), serif' }}>
-        March 2026 — {name.replace(/-/g, ' ').toUpperCase()}
-      </p>
+  const pullQuote = extractPullQuote(challenge.description);
+  const unbeaten = scoringData.filter((d) => d.securityPolicy === 1).sort((a, b) => b.utility - a.utility);
 
-      {/* Challenge headline */}
-      <div style={{ borderTop: '3px double #111111', paddingTop: '1rem', marginBottom: '1.25rem' }}>
-        <div className="flex items-start justify-between gap-6">
-          <div style={{ flex: 1 }}>
+  return (
+    <article className="max-w-4xl mx-auto px-6 py-12">
+
+      {/* ===== ARTICLE HEADER ===== */}
+      <header>
+        {/* Dateline + tags */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+          <p className="dateline">
+            March 2026 &mdash; {(challenge.tags?.[0] ?? 'Challenge').toUpperCase()}
+          </p>
+          {challenge.tags && challenge.tags.length > 1 && (
+            <>
+              <span style={{ color: '#ccc', fontSize: '0.6rem' }}>·</span>
+              <p style={{
+                fontVariant: 'small-caps',
+                letterSpacing: '0.07em',
+                fontSize: '0.62rem',
+                color: '#888',
+                fontFamily: 'var(--font-lora), serif',
+                fontWeight: 600,
+              }}>
+                {challenge.tags.slice(1).join(' · ')}
+              </p>
+            </>
+          )}
+        </div>
+
+        {/* Main title — big serif, tight */}
+        <div style={{ borderTop: '4px solid #111', paddingTop: '1.25rem', marginBottom: '1.25rem' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '2rem' }}>
             <h1 style={{
               fontFamily: 'var(--font-playfair), serif',
-              fontSize: '2.2rem',
-              fontWeight: '800',
+              fontWeight: 900,
+              fontSize: 'clamp(2.2rem, 5vw, 3.5rem)',
+              lineHeight: 1.0,
+              letterSpacing: '-0.03em',
               color: '#111111',
-              lineHeight: 1.15,
-              marginBottom: '0.5rem',
+              flex: 1,
             }}>
               {challenge.name}
               {challenge.url && (
                 <a href={challenge.url} target="_blank" rel="noopener noreferrer" style={{ marginLeft: '0.5rem', color: '#888', display: 'inline-block', verticalAlign: 'middle' }}>
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" style={{ width: '1rem', height: '1rem' }}>
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" style={{ width: '1.1rem', height: '1.1rem' }}>
                     <path d="M12.232 4.232a2.5 2.5 0 0 1 3.536 3.536l-1.225 1.224a.75.75 0 0 0 1.061 1.06l1.224-1.224a4 4 0 0 0-5.656-5.656l-3 3a4 4 0 0 0 .225 5.865.75.75 0 0 0 .977-1.138 2.5 2.5 0 0 1-.142-3.667l3-3Z" />
                     <path d="M11.603 7.963a.75.75 0 0 0-.977 1.138 2.5 2.5 0 0 1 .142 3.667l-3 3a2.5 2.5 0 0 1-3.536-3.536l1.225-1.224a.75.75 0 0 0-1.061-1.06l-1.224 1.224a4 4 0 1 0 5.656 5.656l3-3a4 4 0 0 0-.225-5.865Z" />
                   </svg>
                 </a>
               )}
             </h1>
-            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1rem', fontStyle: 'italic', color: '#555', lineHeight: 1.5 }}>
-              {challenge.description}
-            </p>
-          </div>
-          <div className="hidden sm:block" style={{ flexShrink: 0 }}>
             <Link href={`/challenges/${name}/new`} style={{
               fontVariant: 'small-caps',
-              letterSpacing: '0.08em',
-              fontSize: '0.72rem',
+              letterSpacing: '0.1em',
+              fontSize: '0.7rem',
               color: '#faf9f6',
               background: '#111111',
               fontFamily: 'var(--font-lora), serif',
               fontWeight: 700,
               textDecoration: 'none',
-              padding: '0.5rem 1.2rem',
+              padding: '0.6rem 1.4rem',
               display: 'inline-block',
+              flexShrink: 0,
+              whiteSpace: 'nowrap',
             }}>
               Participate →
             </Link>
           </div>
         </div>
-      </div>
 
-      {/* Byline / authors + tags */}
-      <div style={{ borderBottom: '1px solid #111', paddingBottom: '0.75rem', marginBottom: '1.5rem' }}>
-        {challenge.authors && challenge.authors.length > 0 && (
-          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.78rem', color: '#555', marginBottom: '0.4rem' }}>
-            By{" "}
-            {challenge.authors.map((author, i) => (
-              <span key={author.name}>
-                {i > 0 && (i === challenge.authors!.length - 1 ? " and " : ", ")}
-                <a href={author.url} target="_blank" rel="noopener noreferrer" style={{ color: '#111', textDecoration: 'underline' }}>{author.name}</a>
-              </span>
-            ))}
-          </p>
-        )}
-        {challenge.tags && challenge.tags.length > 0 && (
-          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.72rem', color: '#8b0000', fontVariant: 'small-caps', letterSpacing: '0.07em' }}>
-            {challenge.tags.join(' · ')}
-          </p>
-        )}
-      </div>
+        {/* Byline */}
+        <div style={{ borderBottom: '1px solid #d0ccc4', paddingBottom: '1rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
+          {challenge.authors && challenge.authors.length > 0 && (
+            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.8rem', color: '#555' }}>
+              By{" "}
+              {challenge.authors.map((author, i) => (
+                <span key={author.name}>
+                  {i > 0 && (i === challenge.authors!.length - 1 ? " and " : ", ")}
+                  <a href={author.url} target="_blank" rel="noopener noreferrer" style={{ color: '#111', textDecoration: 'underline' }}>{author.name}</a>
+                </span>
+              ))}
+            </p>
+          )}
+          <span style={{
+            fontVariant: 'small-caps',
+            letterSpacing: '0.07em',
+            fontSize: '0.65rem',
+            color: '#8b0000',
+            fontFamily: 'var(--font-lora), serif',
+            fontWeight: 600,
+          }}>
+            {challenge.players ?? 2}-Player Challenge
+          </span>
+        </div>
+      </header>
 
-      {/* Mobile participate */}
-      <div className="sm:hidden" style={{ marginBottom: '1.5rem' }}>
-        <Link href={`/challenges/${name}/new`} style={{
-          fontVariant: 'small-caps',
-          letterSpacing: '0.08em',
-          fontSize: '0.72rem',
-          color: '#faf9f6',
-          background: '#111111',
-          fontFamily: 'var(--font-lora), serif',
+      {/* ===== PULL QUOTE — highlighted big italic from description ===== */}
+      <div style={{
+        borderTop: '2px solid #111',
+        borderBottom: '2px solid #111',
+        padding: '2rem 0',
+        margin: '0 0 2.5rem',
+        textAlign: 'center',
+      }}>
+        <p style={{
+          fontFamily: 'var(--font-playfair), serif',
+          fontStyle: 'italic',
           fontWeight: 700,
-          textDecoration: 'none',
-          padding: '0.5rem 1.2rem',
-          display: 'inline-block',
+          fontSize: 'clamp(1.3rem, 3vw, 1.9rem)',
+          lineHeight: 1.35,
+          color: '#111',
+          maxWidth: '60ch',
+          margin: '0 auto',
         }}>
-          Participate →
-        </Link>
+          &ldquo;{pullQuote.replace(/[.!?]$/, '')}&rdquo;
+        </p>
       </div>
 
-      {/* Prompt */}
-      <div style={{ marginBottom: '2rem' }}>
+      {/* ===== LONG-FORM DESCRIPTION ===== */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 260px', gap: '3rem', marginBottom: '3rem', alignItems: 'start' }}>
+        <div className="article-body">
+          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1rem', lineHeight: 1.8, color: '#222' }}>
+            {challenge.description}
+          </p>
+        </div>
+
+        {/* Sidebar stats */}
+        <div style={{ borderLeft: '3px solid #111', paddingLeft: '1.5rem' }}>
+          <p style={{ fontVariant: 'small-caps', letterSpacing: '0.1em', fontSize: '0.62rem', color: '#8b0000', fontFamily: 'var(--font-lora), serif', fontWeight: 700, marginBottom: '1rem' }}>
+            At a Glance
+          </p>
+          {[
+            { label: 'Players', value: String(challenge.players ?? 2) },
+            { label: 'Games Played', value: stats?.challenges?.[name]?.gamesPlayed?.toLocaleString() ?? '0' },
+            { label: 'Participants', value: String(scoringData.length) },
+          ].map(({ label, value }) => (
+            <div key={label} style={{ marginBottom: '1.25rem' }}>
+              <div style={{ fontVariant: 'small-caps', letterSpacing: '0.07em', fontSize: '0.6rem', color: '#888', fontFamily: 'var(--font-lora), serif', fontWeight: 600 }}>
+                {label}
+              </div>
+              <div style={{ fontFamily: 'var(--font-playfair), serif', fontWeight: 900, fontSize: '2rem', letterSpacing: '-0.04em', color: '#111', lineHeight: 1 }}>
+                {value}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ===== RULES — Numbered editorial sections ===== */}
+      <section style={{ marginBottom: '3rem' }}>
+        <div style={{ borderTop: '4px solid #111', paddingTop: '1rem', marginBottom: '1.5rem' }}>
+          <h2 style={{
+            fontFamily: 'var(--font-playfair), serif',
+            fontWeight: 800,
+            fontSize: '1.6rem',
+            letterSpacing: '-0.02em',
+            color: '#111',
+          }}>
+            Challenge Rules
+          </h2>
+        </div>
         <ChallengePrompt prompt={challenge.prompt} />
-      </div>
+      </section>
 
-      {/* Graph + Stats */}
-      {(() => {
-        const unbeaten = scoringData.filter((d) => d.securityPolicy === 1).sort((a, b) => b.utility - a.utility);
-        const hasGraph = scoringData.length > 0;
-        const hasTables = unbeaten.length > 0 || redTeamData.length > 0;
-        if (!hasGraph && !hasTables) return null;
-        return (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6" style={{ marginBottom: '2rem' }}>
-            {hasGraph && (
+      {/* ===== BY THE NUMBERS — Infographic leaderboard ===== */}
+      {(scoringData.length > 0 || unbeaten.length > 0 || redTeamData.length > 0) && (
+        <section style={{ marginBottom: '3rem' }}>
+          <div style={{ background: '#f0ede6', borderTop: '4px solid #111', padding: '2rem', marginBottom: '2rem' }}>
+            <p className="dateline" style={{ marginBottom: '0.5rem' }}>Infographic</p>
+            <h2 style={{
+              fontFamily: 'var(--font-playfair), serif',
+              fontWeight: 900,
+              fontSize: '2rem',
+              letterSpacing: '-0.03em',
+              color: '#111',
+              marginBottom: '1.5rem',
+            }}>
+              By The Numbers
+            </h2>
+
+            {/* Key stats */}
+            <div style={{ display: 'flex', gap: '0', borderTop: '1px solid #c8c2ba', paddingTop: '1.5rem' }}>
+              {[
+                { value: scoringData.length, label: 'Participants' },
+                { value: unbeaten.length, label: 'Unbeaten Agents' },
+                { value: redTeamData.length, label: 'Red Teamers' },
+                { value: stats?.challenges?.[name]?.gamesPlayed?.toLocaleString() ?? '0', label: 'Games Completed' },
+              ].map(({ value, label }, i) => (
+                <div key={label} style={{
+                  flex: 1,
+                  textAlign: 'center',
+                  borderRight: i < 3 ? '1px solid #c8c2ba' : 'none',
+                  paddingTop: '0.5rem',
+                  paddingBottom: '0.5rem',
+                }}>
+                  <div style={{
+                    fontFamily: 'var(--font-playfair), serif',
+                    fontWeight: 900,
+                    fontSize: '2.5rem',
+                    letterSpacing: '-0.04em',
+                    lineHeight: 1,
+                    color: '#111',
+                  }}>
+                    {value}
+                  </div>
+                  <div style={{
+                    fontVariant: 'small-caps',
+                    letterSpacing: '0.08em',
+                    fontSize: '0.6rem',
+                    color: '#666',
+                    fontFamily: 'var(--font-lora), serif',
+                    fontWeight: 600,
+                    marginTop: '0.25rem',
+                  }}>
+                    {label}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Leaderboard graph + tables */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {scoringData.length > 0 && (
               <div className="md:col-span-2 self-start" style={{ borderTop: '1px solid #111' }}>
                 <div style={{ paddingTop: '0.75rem', paddingBottom: '0.5rem' }}>
-                  <h2 style={{ ...smallCapsLabel, color: '#8b0000', fontSize: '0.7rem' }}>Challenge Leaderboard</h2>
-                  <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.72rem', color: '#888', marginTop: '0.2rem' }}>Average security vs utility scores.</p>
+                  <h3 style={{ fontVariant: 'small-caps', letterSpacing: '0.08em', fontSize: '0.68rem', color: '#8b0000', fontFamily: 'var(--font-lora), serif', fontWeight: 700 }}>
+                    Security vs. Utility Scatter
+                  </h3>
                 </div>
                 <LeaderboardGraph data={scoringData} height={300} />
               </div>
@@ -224,17 +343,16 @@ export default async function ChallengePage({ params, searchParams }: { params: 
               {unbeaten.length > 0 && (
                 <div style={{ borderTop: '1px solid #111' }}>
                   <div style={{ paddingTop: '0.75rem', paddingBottom: '0.5rem', borderBottom: '1px solid #ddd' }}>
-                    <h2 style={{ ...smallCapsLabel, color: '#111', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                    <h3 style={{ fontVariant: 'small-caps', letterSpacing: '0.07em', fontSize: '0.65rem', color: '#111', fontFamily: 'var(--font-lora), serif', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                       Unbeaten <ShieldCheckIcon style={{ width: '0.8rem', height: '0.8rem', color: '#555' }} />
-                    </h2>
-                    <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem', color: '#888', marginTop: '0.2rem' }}>Never breached, ranked by utility.</p>
+                    </h3>
+                    <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem', color: '#888', marginTop: '0.2rem' }}>Never breached, by utility.</p>
                   </div>
-                  {unbeaten.map((player, i) => (
-                    <div key={player.name} className="flex items-center px-0 py-1.5" style={{ borderBottom: '1px solid #eee' }}>
-                      <span style={{ width: 20, fontSize: '0.7rem', color: '#888', fontFamily: 'monospace', flexShrink: 0 }}>{i + 1}</span>
+                  {unbeaten.slice(0, 8).map((player, i) => (
+                    <div key={player.name} className="flex items-center py-1.5" style={{ borderBottom: '1px solid #eee' }}>
+                      <span style={{ width: 22, fontSize: '0.7rem', color: '#888', fontFamily: 'monospace', flexShrink: 0 }}>{i + 1}</span>
                       <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.78rem', color: '#111', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         <Link href={`/users/${player.playerId}`} style={{ color: '#111', textDecoration: 'none' }}>{player.name}</Link>
-                        {player.model && <span style={{ color: '#888', fontSize: '0.7rem', marginLeft: '0.25rem' }}>({player.model})</span>}
                       </span>
                       <span style={{ fontFamily: 'monospace', fontSize: '0.72rem', color: '#555', flexShrink: 0, paddingLeft: '0.75rem' }}>{player.utility.toFixed(2)}</span>
                     </div>
@@ -244,17 +362,16 @@ export default async function ChallengePage({ params, searchParams }: { params: 
               {redTeamData.length > 0 && (
                 <div style={{ borderTop: '1px solid #111' }}>
                   <div style={{ paddingTop: '0.75rem', paddingBottom: '0.5rem', borderBottom: '1px solid #ddd' }}>
-                    <h2 style={{ ...smallCapsLabel, color: '#111', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                    <h3 style={{ fontVariant: 'small-caps', letterSpacing: '0.07em', fontSize: '0.65rem', color: '#111', fontFamily: 'var(--font-lora), serif', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
                       Top Attackers <FireIcon style={{ width: '0.8rem', height: '0.8rem', color: '#8b0000' }} />
-                    </h2>
-                    <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem', color: '#888', marginTop: '0.2rem' }}>Percentage of successful attacks.</p>
+                    </h3>
+                    <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem', color: '#888', marginTop: '0.2rem' }}>Successful attack rate.</p>
                   </div>
-                  {redTeamData.map((player, i) => (
+                  {redTeamData.slice(0, 8).map((player, i) => (
                     <div key={player.name} className="flex items-center py-1.5" style={{ borderBottom: '1px solid #eee' }}>
-                      <span style={{ width: 20, fontSize: '0.7rem', color: '#888', fontFamily: 'monospace', flexShrink: 0 }}>{i + 1}</span>
+                      <span style={{ width: 22, fontSize: '0.7rem', color: '#888', fontFamily: 'monospace', flexShrink: 0 }}>{i + 1}</span>
                       <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.78rem', color: '#111', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         <Link href={`/users/${player.playerId}`} style={{ color: '#111', textDecoration: 'none' }}>{player.name}</Link>
-                        {player.model && <span style={{ color: '#888', fontSize: '0.7rem', marginLeft: '0.25rem' }}>({player.model})</span>}
                       </span>
                       <span style={{ fontFamily: 'monospace', fontSize: '0.72rem', color: '#555', flexShrink: 0, paddingLeft: '0.75rem' }}>{(player.attack * 100).toFixed(0)}%</span>
                     </div>
@@ -263,10 +380,10 @@ export default async function ChallengePage({ params, searchParams }: { params: 
               )}
             </div>
           </div>
-        );
-      })()}
+        </section>
+      )}
 
-      {/* Challenges List */}
+      {/* ===== GAME LOG ===== */}
       <ChallengesList
         challenges={challengesList}
         challengeType={name}
@@ -283,6 +400,6 @@ export default async function ChallengePage({ params, searchParams }: { params: 
           </p>
         }
       />
-    </section>
+    </article>
   );
 }

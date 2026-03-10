@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,700;1,900&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&display=swap');
 @import "tailwindcss";
 
 :root {
@@ -5,6 +6,7 @@
   --foreground: #111111;
   --accent: #8b0000;
   --secondary: #555555;
+  --rule-color: #111111;
   --font-heading: 'Playfair Display', 'EB Garamond', Georgia, serif;
   --font-body: 'Lora', Georgia, serif;
 }
@@ -14,76 +16,234 @@
   --color-foreground: var(--foreground);
 }
 
+* {
+  box-sizing: border-box;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-body);
 }
 
-/* Newspaper rules */
-.rule-single {
-  border-top: 1px solid #111111;
+/* ===== MAGAZINE TYPOGRAPHY ===== */
+
+/* Magazine masthead — extra large and bold */
+.mag-masthead {
+  font-family: var(--font-heading);
+  font-weight: 900;
+  font-size: clamp(3rem, 8vw, 6rem);
+  letter-spacing: -0.04em;
+  line-height: 0.9;
+  color: #111111;
 }
 
-.rule-double {
-  border-top: 3px double #111111;
+/* Magazine hero headline */
+.mag-hero-title {
+  font-family: var(--font-heading);
+  font-weight: 900;
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  letter-spacing: -0.03em;
+  line-height: 1.0;
+  color: #ffffff;
 }
 
-.rule-bottom-double {
-  border-bottom: 3px double #111111;
+/* Magazine feature headline */
+.mag-feature-headline {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: clamp(1.5rem, 3vw, 2.2rem);
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: #111111;
 }
 
-/* Small caps utility */
+/* Magazine story headline */
+.mag-story-headline {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 1.2rem;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  color: #111111;
+}
+
+/* ===== RULES ===== */
+.rule-single { border-top: 1px solid #111111; }
+.rule-double { border-top: 3px double #111111; }
+.rule-thick { border-top: 4px solid #111111; }
+.rule-accent { border-top: 3px solid #8b0000; }
+.rule-bottom-double { border-bottom: 3px double #111111; }
+
+/* ===== SMALL CAPS ===== */
 .small-caps {
   font-variant: small-caps;
   letter-spacing: 0.08em;
 }
 
-/* Dateline */
+/* ===== DATELINE ===== */
 .dateline {
   font-variant: small-caps;
-  letter-spacing: 0.1em;
-  color: var(--accent);
-  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  color: #8b0000;
+  font-size: 0.68rem;
   font-family: var(--font-body);
+  font-weight: 600;
 }
 
-/* Pull quote */
+/* ===== MAGAZINE PULL QUOTE ===== */
 .pull-quote {
-  border-left: 3px solid #111111;
-  padding-left: 1.25rem;
-  font-style: italic;
-  font-size: 1.15rem;
-  color: #111111;
   font-family: var(--font-heading);
-  line-height: 1.5;
+  font-style: italic;
+  font-size: clamp(1.4rem, 3vw, 2rem);
+  line-height: 1.35;
+  color: #111111;
+  text-align: center;
+  position: relative;
+  padding: 2rem 1rem;
 }
 
-/* Newspaper card — no background, thin top rule */
-.newspaper-card {
-  border-top: 1px solid #111111;
-  background: transparent;
+.pull-quote::before {
+  content: '\201C';
+  font-size: 5rem;
+  line-height: 0;
+  color: #8b0000;
+  position: absolute;
+  top: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0.15;
+  font-family: var(--font-heading);
+}
+
+/* Side pull quote */
+.pull-quote-side {
+  border-left: 4px solid #8b0000;
+  padding: 0.5rem 0 0.5rem 1.5rem;
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-size: 1.25rem;
+  line-height: 1.4;
+  color: #111111;
+}
+
+/* ===== RANK BADGE ===== */
+.rank-badge {
+  font-family: var(--font-heading);
+  font-weight: 900;
+  font-size: 3rem;
+  line-height: 1;
+  color: #e8e4dc;
+  letter-spacing: -0.04em;
+  user-select: none;
+}
+
+/* ===== MAGAZINE CARDS ===== */
+.story-card {
+  border-top: 3px solid #111111;
   padding-top: 1rem;
+  background: transparent;
+  transition: border-color 0.2s;
 }
 
-/* Section divider */
+.story-card:hover {
+  border-color: #8b0000;
+}
+
+.story-card-featured {
+  background: #111111;
+  color: #ffffff;
+  padding: 2rem;
+}
+
+/* ===== EDITOR PICK BADGE ===== */
+.editors-pick {
+  display: inline-block;
+  background: #8b0000;
+  color: #ffffff;
+  font-variant: small-caps;
+  letter-spacing: 0.1em;
+  font-size: 0.6rem;
+  font-weight: 700;
+  font-family: var(--font-body);
+  padding: 0.15em 0.6em;
+}
+
+/* ===== STAT CALLOUT ===== */
+.stat-callout {
+  font-family: var(--font-heading);
+  font-weight: 900;
+  font-size: 3.5rem;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  color: #111111;
+}
+
+/* ===== SECTION DIVIDER ===== */
 .section-rule {
   border-top: 3px double #111111;
-  margin: 2rem 0;
+  margin: 2.5rem 0;
 }
 
-/* Editorial tag style — small caps, black, bullet-separated */
+/* ===== TAG ===== */
 .tag-editorial {
   font-variant: small-caps;
   letter-spacing: 0.07em;
-  font-size: 0.68rem;
-  color: #111111;
+  font-size: 0.65rem;
+  color: #8b0000;
   background: transparent;
-  border: 1px solid #111111;
-  padding: 0.1em 0.45em;
-  font-family: var(--font-lora), serif;
+  font-family: var(--font-body);
+  font-weight: 600;
 }
 
+/* ===== FULL BLEED HERO ===== */
+.hero-bleed {
+  background: #111111;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ===== MASONRY GRID ===== */
+.masonry-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  grid-template-rows: auto auto;
+  gap: 0;
+}
+
+.masonry-featured {
+  grid-column: 1;
+  grid-row: 1 / 3;
+  border-right: 1px solid #d0ccc4;
+}
+
+.masonry-small-1 { grid-column: 2; grid-row: 1; border-right: 1px solid #d0ccc4; border-bottom: 1px solid #d0ccc4; }
+.masonry-small-2 { grid-column: 3; grid-row: 1; border-bottom: 1px solid #d0ccc4; }
+.masonry-small-3 { grid-column: 2; grid-row: 2; border-right: 1px solid #d0ccc4; }
+.masonry-small-4 { grid-column: 3; grid-row: 2; }
+
+/* ===== SECTION HEADER (magazine section page) ===== */
+.section-header-band {
+  background: #111111;
+  color: #ffffff;
+  padding: 0.4rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* ===== NUMBERED EDITORIAL SECTION ===== */
+.editorial-number {
+  font-family: var(--font-heading);
+  font-weight: 900;
+  font-size: 1.5rem;
+  color: #8b0000;
+  line-height: 1;
+  width: 2rem;
+  flex-shrink: 0;
+}
+
+/* ===== LIST RESETS ===== */
 ul {
   list-style-type: disc;
   padding-left: 20px;
@@ -91,13 +251,60 @@ ul {
   margin-top: 10px;
 }
 li {
-  margin-bottom: 10px;
-  margin-top: 10px;
+  margin-bottom: 8px;
+  margin-top: 8px;
 }
 ol {
   list-style-type: decimal;
   padding-left: 20px;
 }
-li {
-  margin-bottom: 10px;
+
+/* ===== CONTRIBUTOR ACCOLADE ===== */
+.accolade {
+  border-top: 1px solid #d0ccc4;
+  padding-top: 1.25rem;
+}
+
+.accolade-stat {
+  font-family: var(--font-heading);
+  font-weight: 900;
+  font-size: 2.5rem;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: #111111;
+}
+
+/* ===== INFOGRAPHIC ROW ===== */
+.infographic-row {
+  display: flex;
+  gap: 0;
+  border-top: 3px solid #111111;
+  border-bottom: 3px solid #111111;
+}
+
+.infographic-cell {
+  flex: 1;
+  padding: 1.25rem 1.5rem;
+  border-right: 1px solid #d0ccc4;
+  text-align: center;
+}
+
+.infographic-cell:last-child {
+  border-right: none;
+}
+
+/* ===== LONG-FORM ARTICLE ===== */
+.article-body {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.8;
+  color: #222222;
+  max-width: 65ch;
+}
+
+/* ===== BY THE NUMBERS ===== */
+.by-the-numbers {
+  background: #f0ede6;
+  border-top: 4px solid #111111;
+  padding: 2rem;
 }

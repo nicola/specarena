@@ -37,152 +37,156 @@ async function loadStats(): Promise<Stats | null> {
   }
 }
 
-// Map tags to desk names
-const TAG_TO_DESK: Record<string, string> = {
-  "cryptography": "CRYPTOGRAPHY DESK",
-  "game theory": "GAME THEORY DESK",
-  "economics": "ECONOMICS DESK",
-  "security": "SECURITY DESK",
-  "negotiation": "NEGOTIATION DESK",
+const TAG_TO_SECTION: Record<string, string> = {
+  "cryptography": "Cryptography",
+  "game theory": "Game Theory",
+  "economics": "Economics",
+  "security": "Security",
+  "negotiation": "Negotiation",
 };
 
-// Ordered list of desks
-const DESK_ORDER = [
-  "CRYPTOGRAPHY DESK",
-  "GAME THEORY DESK",
-  "ECONOMICS DESK",
-  "SECURITY DESK",
-  "NEGOTIATION DESK",
-];
+const SECTION_ORDER = ["Cryptography", "Game Theory", "Economics", "Security", "Negotiation"];
 
-function getDesk(tags?: string[]): string {
-  if (!tags || tags.length === 0) return "OTHER";
+function getSection(tags?: string[]): string {
+  if (!tags || tags.length === 0) return "Other";
   for (const tag of tags) {
-    const desk = TAG_TO_DESK[tag.toLowerCase()];
-    if (desk) return desk;
+    const section = TAG_TO_SECTION[tag.toLowerCase()];
+    if (section) return section;
   }
-  return "OTHER";
-}
-
-function formatDateline(players?: number): string {
-  return `MARCH 2026 · ${players ?? 2} PLAYER${(players ?? 2) !== 1 ? "S" : ""}`;
+  return "Other";
 }
 
 function getLede(description: string): string {
-  // Return first sentence
   const match = description.match(/^[^.!?]+[.!?]/);
   return match ? match[0] : description.slice(0, 120) + (description.length > 120 ? "…" : "");
 }
 
-interface DeskBannerProps {
-  name: string;
-}
-
-function DeskBanner({ name }: DeskBannerProps) {
-  // Split "CRYPTOGRAPHY DESK" into prefix + "DESK"
-  const parts = name.split(" DESK");
-  const prefix = parts[0].trim();
-
-  return (
-    <div style={{
-      display: 'flex',
-      alignItems: 'stretch',
-      background: '#111111',
-      border: '1px solid #8b0000',
-      marginBottom: '0',
-    }}>
-      <div style={{
-        flex: 1,
-        padding: '0.5rem 1rem',
-        display: 'flex',
-        alignItems: 'center',
-      }}>
-        <span style={{
-          fontFamily: 'var(--font-playfair), serif',
-          fontWeight: 800,
-          fontSize: '0.85rem',
-          color: '#ffffff',
-          letterSpacing: '0.2em',
-        }}>
-          {prefix}
-        </span>
-      </div>
-      <div style={{
-        background: '#8b0000',
-        padding: '0.5rem 1rem',
-        display: 'flex',
-        alignItems: 'center',
-      }}>
-        <span style={{
-          fontFamily: 'var(--font-playfair), serif',
-          fontWeight: 800,
-          fontSize: '0.85rem',
-          color: '#ffffff',
-          letterSpacing: '0.2em',
-        }}>
-          DESK
-        </span>
-      </div>
-    </div>
-  );
-}
-
-interface EditorialEntryProps {
+interface StoryEntryProps {
   slug: string;
   title: string;
   players?: number;
   description: string;
-  isLast: boolean;
+  rank: number;
+  isEditorsPick: boolean;
+  gamesPlayed?: number;
 }
 
-function EditorialEntry({ slug, title, players, description, isLast }: EditorialEntryProps) {
+function StoryEntry({ slug, title, players, description, rank, isEditorsPick, gamesPlayed }: StoryEntryProps) {
   return (
-    <div>
-      <div style={{
-        borderTop: '1px solid #aaa',
-        paddingTop: '1rem',
-        paddingBottom: isLast ? 0 : '1rem',
-      }}>
-        <Link href={`/challenges/${slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-          <p style={{
-            fontFamily: 'var(--font-lora), serif',
-            fontVariant: 'small-caps',
-            letterSpacing: '0.1em',
-            fontSize: '0.65rem',
-            color: '#8b0000',
-            marginBottom: '0.3rem',
-          }}>
-            {formatDateline(players)}
-          </p>
-          <h3 style={{
+    <div style={{ borderTop: '1px solid #d0ccc4', paddingTop: '1.25rem', paddingBottom: '1.25rem' }}>
+      <Link href={`/challenges/${slug}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
+        <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'flex-start' }}>
+          {/* Rank badge */}
+          <div style={{
             fontFamily: 'var(--font-playfair), serif',
-            fontSize: '1.25rem',
-            fontWeight: 700,
-            color: '#111111',
-            lineHeight: 1.2,
-            marginBottom: '0.4rem',
+            fontWeight: 900,
+            fontSize: '2.5rem',
+            color: '#e0dbd2',
+            lineHeight: 1,
+            letterSpacing: '-0.04em',
+            width: '3rem',
+            flexShrink: 0,
+            userSelect: 'none',
           }}>
-            {title}
-          </h3>
-          <p style={{
-            fontFamily: 'var(--font-lora), serif',
-            fontSize: '0.85rem',
-            lineHeight: 1.65,
-            color: '#444',
-          }}>
-            {getLede(description)}
-          </p>
-          <p style={{
-            fontFamily: 'var(--font-lora), serif',
-            fontVariant: 'small-caps',
-            letterSpacing: '0.07em',
-            fontSize: '0.65rem',
-            color: '#8b0000',
-            marginTop: '0.5rem',
-          }}>
-            Read More →
-          </p>
-        </Link>
+            {String(rank).padStart(2, '0')}
+          </div>
+          <div style={{ flex: 1 }}>
+            {/* Badges + dateline */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.4rem', flexWrap: 'wrap' }}>
+              {isEditorsPick && (
+                <span className="editors-pick">Editor&rsquo;s Pick</span>
+              )}
+              <span style={{
+                fontVariant: 'small-caps',
+                letterSpacing: '0.1em',
+                fontSize: '0.62rem',
+                color: '#8b0000',
+                fontFamily: 'var(--font-lora), serif',
+                fontWeight: 600,
+              }}>
+                {players ?? 2}-Player Challenge
+                {gamesPlayed !== undefined && gamesPlayed > 0 && ` · ${gamesPlayed.toLocaleString()} Games`}
+              </span>
+            </div>
+
+            {/* Headline */}
+            <h3 style={{
+              fontFamily: 'var(--font-playfair), serif',
+              fontWeight: 700,
+              fontSize: '1.3rem',
+              lineHeight: 1.2,
+              color: '#111111',
+              marginBottom: '0.4rem',
+              letterSpacing: '-0.01em',
+            }}>
+              {title}
+            </h3>
+
+            {/* One-line summary */}
+            <p style={{
+              fontFamily: 'var(--font-lora), serif',
+              fontSize: '0.85rem',
+              lineHeight: 1.6,
+              color: '#444',
+            }}>
+              {getLede(description)}
+            </p>
+
+            <p style={{
+              fontVariant: 'small-caps',
+              letterSpacing: '0.07em',
+              fontSize: '0.62rem',
+              color: '#8b0000',
+              fontFamily: 'var(--font-lora), serif',
+              fontWeight: 700,
+              marginTop: '0.5rem',
+            }}>
+              Read Story →
+            </p>
+          </div>
+        </div>
+      </Link>
+    </div>
+  );
+}
+
+interface SectionHeaderProps {
+  name: string;
+  count: number;
+}
+
+function SectionHeader({ name, count }: SectionHeaderProps) {
+  return (
+    <div style={{ marginBottom: '0' }}>
+      {/* Thick top rule */}
+      <div style={{ borderTop: '4px solid #111111' }} />
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingTop: '0.75rem',
+        paddingBottom: '0.75rem',
+        borderBottom: '1px solid #111',
+      }}>
+        <h2 style={{
+          fontFamily: 'var(--font-playfair), serif',
+          fontWeight: 800,
+          fontSize: '1.5rem',
+          letterSpacing: '-0.01em',
+          color: '#111111',
+        }}>
+          {name}
+        </h2>
+        <span style={{
+          fontVariant: 'small-caps',
+          letterSpacing: '0.1em',
+          fontSize: '0.62rem',
+          color: '#888',
+          fontFamily: 'var(--font-lora), serif',
+          fontWeight: 600,
+        }}>
+          {count} {count === 1 ? 'Story' : 'Stories'}
+        </span>
       </div>
     </div>
   );
@@ -191,91 +195,103 @@ function EditorialEntry({ slug, title, players, description, isLast }: Editorial
 export default async function ChallengesPage() {
   const [challenges, stats] = await Promise.all([loadChallenges(), loadStats()]);
 
-  // Group challenges by desk
-  const deskMap: Record<string, { slug: string; metadata: ChallengeMetadata }[]> = {};
-  for (const ch of challenges) {
-    const desk = getDesk(ch.metadata.tags);
-    if (!deskMap[desk]) deskMap[desk] = [];
-    deskMap[desk].push(ch);
+  // Find the most played challenge (editor's pick)
+  let mostPlayedSlug = '';
+  if (stats) {
+    let maxGames = 0;
+    for (const [slug, data] of Object.entries(stats.challenges)) {
+      if (data.gamesPlayed > maxGames) {
+        maxGames = data.gamesPlayed;
+        mostPlayedSlug = slug;
+      }
+    }
   }
 
-  // Build ordered desks (only those with entries)
-  const orderedDesks = DESK_ORDER.filter(d => deskMap[d] && deskMap[d].length > 0);
-  // Add any "OTHER" desk at the end
-  if (deskMap["OTHER"] && deskMap["OTHER"].length > 0) {
-    orderedDesks.push("OTHER");
+  // Group by section
+  const sectionMap: Record<string, { slug: string; metadata: ChallengeMetadata }[]> = {};
+  for (const ch of challenges) {
+    const section = getSection(ch.metadata.tags);
+    if (!sectionMap[section]) sectionMap[section] = [];
+    sectionMap[section].push(ch);
   }
+
+  const orderedSections = SECTION_ORDER.filter(s => sectionMap[s] && sectionMap[s].length > 0);
+  if (sectionMap["Other"] && sectionMap["Other"].length > 0) {
+    orderedSections.push("Other");
+  }
+
+  // Global rank counter
+  let globalRank = 1;
 
   return (
-    <section className="max-w-4xl mx-auto px-6 py-12">
-      {/* Dateline */}
-      <p className="dateline mb-3" style={{ fontFamily: 'var(--font-lora), serif' }}>
-        March 2026 — Challenges Desk
-      </p>
+    <div className="max-w-4xl mx-auto px-6 py-12">
 
-      {/* Section header */}
-      <div style={{ borderTop: '3px double #111111', borderBottom: '1px solid #111111', paddingTop: '1rem', paddingBottom: '1rem', marginBottom: '1.5rem' }}>
+      {/* ===== SECTION MASTHEAD ===== */}
+      <div style={{ borderBottom: '4px solid #111', paddingBottom: '1.5rem', marginBottom: '2rem' }}>
+        <p className="dateline" style={{ marginBottom: '0.5rem' }}>
+          March 2026 &mdash; Special Feature
+        </p>
         <h1 style={{
           fontFamily: 'var(--font-playfair), serif',
-          fontSize: '2.4rem',
-          fontWeight: '800',
+          fontWeight: 900,
+          fontSize: 'clamp(2.5rem, 6vw, 4rem)',
+          letterSpacing: '-0.03em',
+          lineHeight: 0.95,
           color: '#111111',
-          lineHeight: 1.1,
-          marginBottom: '0.4rem',
+          marginBottom: '1rem',
         }}>
-          Challenge Compendium
+          Challenge<br />Compendium
         </h1>
         <p style={{
           fontFamily: 'var(--font-lora), serif',
-          fontSize: '1rem',
           fontStyle: 'italic',
-          color: '#555555',
-          lineHeight: 1.5,
+          fontSize: '1.05rem',
+          color: '#555',
+          lineHeight: 1.6,
+          maxWidth: '55ch',
         }}>
           Multi-agent challenges exploring how AI agents handle security, coordination, and strategic decision-making.
         </p>
       </div>
 
-      {/* Stats ticker */}
+      {/* ===== INFOGRAPHIC STATS STRIP ===== */}
       {stats && (
-        <div style={{ borderBottom: '1px solid #111', marginBottom: '2.5rem', paddingBottom: '0.75rem', display: 'flex', gap: '2.5rem', alignItems: 'baseline' }}>
-          <span style={{ fontVariant: 'small-caps', letterSpacing: '0.07em', fontSize: '0.7rem', color: '#555', fontFamily: 'var(--font-lora), serif' }}>
-            <span style={{ fontSize: '1.4rem', fontFamily: 'var(--font-playfair), serif', fontWeight: 700, color: '#111', fontVariant: 'normal', letterSpacing: '-0.02em' }}>{challenges.length}</span>{' '}Challenges
-          </span>
-          <span style={{ color: '#ccc' }}>·</span>
-          <span style={{ fontVariant: 'small-caps', letterSpacing: '0.07em', fontSize: '0.7rem', color: '#555', fontFamily: 'var(--font-lora), serif' }}>
-            <span style={{ fontSize: '1.4rem', fontFamily: 'var(--font-playfair), serif', fontWeight: 700, color: '#111', fontVariant: 'normal', letterSpacing: '-0.02em' }}>{stats.global.participants.toLocaleString()}</span>{' '}Participants
-          </span>
-          <span style={{ color: '#ccc' }}>·</span>
-          <span style={{ fontVariant: 'small-caps', letterSpacing: '0.07em', fontSize: '0.7rem', color: '#555', fontFamily: 'var(--font-lora), serif' }}>
-            <span style={{ fontSize: '1.4rem', fontFamily: 'var(--font-playfair), serif', fontWeight: 700, color: '#111', fontVariant: 'normal', letterSpacing: '-0.02em' }}>{stats.global.gamesPlayed.toLocaleString()}</span>{' '}Games Played
-          </span>
+        <div className="infographic-row" style={{ marginBottom: '3rem' }}>
+          {[
+            { value: challenges.length, label: 'Challenges Available', sub: 'across all sections' },
+            { value: stats.global.participants.toLocaleString(), label: 'Active Agents', sub: 'and counting' },
+            { value: stats.global.gamesPlayed.toLocaleString(), label: 'Games Logged', sub: 'total contest count' },
+          ].map(({ value, label, sub }) => (
+            <div key={label} className="infographic-cell">
+              <div className="stat-callout">{value}</div>
+              <div style={{ fontFamily: 'var(--font-lora), serif', fontVariant: 'small-caps', letterSpacing: '0.08em', fontSize: '0.65rem', color: '#555', fontWeight: 700, marginTop: '0.35rem' }}>{label}</div>
+              <div style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.7rem', color: '#999', marginTop: '0.1rem' }}>{sub}</div>
+            </div>
+          ))}
         </div>
       )}
 
-      {/* Section Desk Grouping */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '3rem' }}>
-        {orderedDesks.map((desk) => {
-          const entries = deskMap[desk];
+      {/* ===== SECTION PAGES ===== */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '3.5rem' }}>
+        {orderedSections.map((section) => {
+          const entries = sectionMap[section];
+          const sectionStartRank = globalRank;
+          globalRank += entries.length;
+
           return (
-            <div key={desk}>
-              <DeskBanner name={desk === "OTHER" ? "OTHER DESK" : desk} />
-              <div style={{
-                border: '1px solid #8b0000',
-                borderTop: 'none',
-                padding: '1.25rem 1.5rem',
-                display: 'grid',
-                gridTemplateColumns: entries.length === 1 ? '1fr' : entries.length === 2 ? '1fr 1fr' : '1fr 1fr 1fr',
-                gap: '0 2rem',
-              }}>
-                {entries.map(({ slug, metadata }, idx) => (
-                  <EditorialEntry
-                    key={slug}
-                    slug={slug}
-                    title={metadata.name}
-                    players={metadata.players}
-                    description={metadata.description}
-                    isLast={idx === entries.length - 1}
+            <div key={section}>
+              <SectionHeader name={section} count={entries.length} />
+              <div>
+                {entries.map((ch, idx) => (
+                  <StoryEntry
+                    key={ch.slug}
+                    slug={ch.slug}
+                    title={ch.metadata.name}
+                    players={ch.metadata.players}
+                    description={ch.metadata.description}
+                    rank={sectionStartRank + idx}
+                    isEditorsPick={ch.slug === mostPlayedSlug}
+                    gamesPlayed={stats?.challenges?.[ch.slug]?.gamesPlayed}
                   />
                 ))}
               </div>
@@ -284,35 +300,39 @@ export default async function ChallengesPage() {
         })}
       </div>
 
-      {/* "Design a challenge" stub */}
-      <div style={{ borderTop: '3px double #111', marginTop: '3rem', paddingTop: '1.5rem' }}>
-        <h4 style={{
-          fontFamily: 'var(--font-playfair), serif',
-          fontSize: '1.15rem',
-          fontWeight: '700',
-          color: '#aaa',
-          marginBottom: '0.5rem',
-        }}>
-          Design a Challenge
-        </h4>
-        <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem', color: '#aaa', lineHeight: 1.6 }}>
-          We are looking for challenge designers. If you have an idea, reach out.
-        </p>
+      {/* ===== FOOTER CTA ===== */}
+      <div style={{ borderTop: '4px solid #111', marginTop: '4rem', paddingTop: '2rem', display: 'grid', gridTemplateColumns: '1fr auto', gap: '2rem', alignItems: 'start' }}>
+        <div>
+          <h3 style={{
+            fontFamily: 'var(--font-playfair), serif',
+            fontWeight: 700,
+            fontSize: '1.5rem',
+            color: '#888',
+            marginBottom: '0.5rem',
+          }}>
+            Design a Challenge
+          </h3>
+          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.85rem', color: '#aaa', lineHeight: 1.65 }}>
+            Have an idea for an adversarial multi-agent scenario? We welcome challenge designers to contribute to the Arena.
+          </p>
+        </div>
         <a href="https://github.com/nicolapps/arena" style={{
           display: 'inline-block',
-          marginTop: '0.75rem',
           fontVariant: 'small-caps',
-          letterSpacing: '0.08em',
+          letterSpacing: '0.1em',
           fontSize: '0.68rem',
-          color: '#aaa',
+          color: '#888',
           fontFamily: 'var(--font-lora), serif',
-          fontWeight: 600,
+          fontWeight: 700,
           textDecoration: 'none',
-          borderBottom: '1px solid #aaa',
+          borderBottom: '1px solid #bbb',
+          paddingBottom: '2px',
+          flexShrink: 0,
+          marginTop: '0.4rem',
         }}>
-          Get in Touch →
+          Get In Touch →
         </a>
       </div>
-    </section>
+    </div>
   );
 }
