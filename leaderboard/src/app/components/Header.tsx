@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, useRef, useCallback } from "react";
+import { usePathname } from "next/navigation";
 
 const OVAL_WIDTH = 65;
 const OVAL_HEIGHT = 19;
@@ -24,7 +25,6 @@ function ArenaLogo({ width = OVAL_WIDTH, height = OVAL_HEIGHT, yShift = OVAL_Y_S
   }, []);
 
   const onLeave = useCallback(() => {
-    // Don't reset — leave letters frozen where they stopped
     if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
     setFighting(false);
   }, []);
@@ -32,11 +32,11 @@ function ArenaLogo({ width = OVAL_WIDTH, height = OVAL_HEIGHT, yShift = OVAL_Y_S
   return (
     <Link href="/" className="group relative flex items-center justify-center" style={{ width: `${width}px`, height: `${height}px` }} onMouseEnter={onEnter} onMouseLeave={onLeave}>
       {/* Top half of oval — behind text (z-0) */}
-      <svg className="absolute inset-0 z-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ top: `${yShift}px` }} viewBox={`0 0 ${width} ${height}`} fill="none" xmlns="http://www.w3.org/2000/svg">
+      <svg className="absolute inset-0 z-0 opacity-0 group-hover:opacity-100" style={{ top: `${yShift}px`, transitionProperty: 'opacity', transitionDuration: '300ms' }} viewBox={`0 0 ${width} ${height}`} fill="none" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <clipPath id="topHalf"><rect x="0" y="0" width={width} height={cy} /></clipPath>
         </defs>
-        <ellipse cx={cx} cy={cy} rx={rx} ry={ry} stroke="#18181b" strokeWidth={stroke} fill="none" clipPath="url(#topHalf)" />
+        <ellipse cx={cx} cy={cy} rx={rx} ry={ry} stroke="var(--primary)" strokeWidth={stroke} fill="none" clipPath="url(#topHalf)" />
       </svg>
       {/* Letter fight animations */}
       <style>{`
@@ -54,11 +54,12 @@ function ArenaLogo({ width = OVAL_WIDTH, height = OVAL_HEIGHT, yShift = OVAL_Y_S
       `}</style>
       {/* Logo text (z-10) */}
       <span
-        className={`relative z-10 text-zinc-900 font-medium ${fighting ? 'fighting' : ''}`}
+        className={`relative z-10 font-medium ${fighting ? 'fighting' : ''}`}
         style={{
-          fontFamily: 'var(--font-jost), sans-serif',
+          fontFamily: 'var(--font-google-sans), Roboto, sans-serif',
+          color: 'var(--primary)',
           paintOrder: 'stroke fill',
-          WebkitTextStroke: `${contour}px white`,
+          WebkitTextStroke: `${contour}px var(--background)`,
         }}
       >
         <span className="inline-block f1 relative z-[3]">A</span><span className="inline-block f2 relative z-[4]">R</span>
@@ -67,35 +68,57 @@ function ArenaLogo({ width = OVAL_WIDTH, height = OVAL_HEIGHT, yShift = OVAL_Y_S
         <span className="inline-block f5 relative z-[5]">A</span>
       </span>
       {/* Bottom half of oval — in front of text (z-20) */}
-      <svg className="absolute inset-0 z-20 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ top: `${yShift}px` }} viewBox={`0 0 ${width} ${height}`} fill="none" xmlns="http://www.w3.org/2000/svg">
+      <svg className="absolute inset-0 z-20 pointer-events-none opacity-0 group-hover:opacity-100" style={{ top: `${yShift}px`, transitionProperty: 'opacity', transitionDuration: '300ms' }} viewBox={`0 0 ${width} ${height}`} fill="none" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <clipPath id="bottomHalf"><rect x="0" y={cy} width={width} height={cy} /></clipPath>
         </defs>
-        <ellipse cx={cx} cy={cy} rx={rx} ry={ry} stroke="#18181b" strokeWidth={stroke} fill="none" clipPath="url(#bottomHalf)" />
+        <ellipse cx={cx} cy={cy} rx={rx} ry={ry} stroke="var(--primary)" strokeWidth={stroke} fill="none" clipPath="url(#bottomHalf)" />
       </svg>
+    </Link>
+  );
+}
+
+function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
+  const pathname = usePathname();
+  const isActive = pathname === href || (href !== '/' && pathname.startsWith(href));
+
+  return (
+    <Link
+      href={href}
+      className="relative text-sm font-medium px-3 py-1.5 rounded-full"
+      style={{
+        color: isActive ? 'var(--primary)' : 'var(--on-surface-variant)',
+        background: isActive ? 'var(--secondary-container)' : 'transparent',
+        fontFamily: 'var(--font-google-sans), Roboto, sans-serif',
+      }}
+    >
+      {children}
     </Link>
   );
 }
 
 export default function Header() {
   return (
-    <header className="w-full border-b border-zinc-900 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-      <div className="max-w-4xl mx-auto px-6 py-4">
+    <header
+      className="w-full sticky top-0 z-50"
+      style={{
+        background: 'rgba(255,251,254,0.92)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        borderBottom: '1px solid var(--outline-variant)',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+      }}
+    >
+      <div className="max-w-5xl mx-auto px-6 py-3">
         <div className="flex items-center justify-between gap-6">
           <div className="flex items-center gap-6">
             <div className="flex items-center justify-center">
               <ArenaLogo />
             </div>
-            <nav className="flex items-center gap-6">
-              <Link href="/" className="text-sm font-medium text-zinc-900 hover:text-zinc-900 transition-colors">
-                Leaderboard
-              </Link>
-              <Link href="/challenges" className="text-sm font-medium text-zinc-900 hover:text-zinc-900 transition-colors">
-                Challenges
-              </Link>
-              <Link href="/docs" className="text-sm font-medium text-zinc-900 hover:text-zinc-900 transition-colors">
-                Docs
-              </Link>
+            <nav className="flex items-center gap-1">
+              <NavLink href="/">Leaderboard</NavLink>
+              <NavLink href="/challenges">Challenges</NavLink>
+              <NavLink href="/docs">Docs</NavLink>
             </nav>
           </div>
         </div>
@@ -103,4 +126,3 @@ export default function Header() {
     </header>
   );
 }
-
