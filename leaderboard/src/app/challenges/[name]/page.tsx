@@ -8,7 +8,6 @@ import { ChallengeMetadata, type Challenge } from "@arena/engine/types";
 import type { ScoringEntry } from "@arena/engine/scoring/types";
 import type { UserProfile } from "@arena/engine/users";
 import { ENGINE_URL } from "@/lib/config";
-import { tagColors } from "@/lib/tagColors";
 
 interface ScoringEntryWithProfile extends ScoringEntry {
   username?: string;
@@ -52,13 +51,21 @@ async function fetchMetadata(name: string): Promise<ChallengeMetadata | null> {
 export async function generateMetadata({ params }: { params: Promise<{ name: string }> }) {
   const { name } = await params;
   const challenge = await fetchMetadata(name);
-
   const metadata: Metadata = {
-    title: challenge ? `ARENA - ${challenge.name}` : "ARENA - Challenge Not Found",
+    title: challenge ? `ARENA — ${challenge.name}` : "ARENA — Challenge Not Found",
     description: challenge?.description || "",
   };
   return metadata;
 }
+
+const smallCapsLabel = {
+  fontVariant: 'small-caps' as const,
+  letterSpacing: '0.08em',
+  fontSize: '0.7rem',
+  color: '#555555',
+  fontFamily: 'var(--font-lora), serif',
+  fontWeight: 600,
+};
 
 export default async function ChallengePage({ params, searchParams }: { params: Promise<{ name: string }>; searchParams: Promise<{ page?: string }> }) {
   const { name } = await params;
@@ -69,10 +76,9 @@ export default async function ChallengePage({ params, searchParams }: { params: 
 
   const challenge = await fetchMetadata(name);
   if (!challenge) {
-    return <div>Challenge {name} not found</div>;
+    return <div style={{ fontFamily: 'var(--font-lora), serif', padding: '2rem' }}>Challenge {name} not found</div>;
   }
 
-  // Fetch challenges and scoring in parallel
   let challengesList: Challenge[] = [];
   let profiles: Record<string, UserProfile> = {};
   let challengesTotal = 0;
@@ -103,137 +109,180 @@ export default async function ChallengePage({ params, searchParams }: { params: 
     .sort((a, b) => b.attack - a.attack);
 
   return (
-      <section className="max-w-4xl mx-auto px-6 py-16">
+    <section className="max-w-4xl mx-auto px-6 py-12">
+      {/* Dateline */}
+      <p className="dateline mb-3" style={{ fontFamily: 'var(--font-lora), serif' }}>
+        March 2026 — {name.replace(/-/g, ' ').toUpperCase()}
+      </p>
 
-        <div className="flex items-top justify-between gap-6">
-          <div className="flex flex-col gap-2 mb-4 sm:w-1/2">
-            <h1 className="text-3xl font-semibold text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
+      {/* Challenge headline */}
+      <div style={{ borderTop: '3px double #111111', paddingTop: '1rem', marginBottom: '1.25rem' }}>
+        <div className="flex items-start justify-between gap-6">
+          <div style={{ flex: 1 }}>
+            <h1 style={{
+              fontFamily: 'var(--font-playfair), serif',
+              fontSize: '2.2rem',
+              fontWeight: '800',
+              color: '#111111',
+              lineHeight: 1.15,
+              marginBottom: '0.5rem',
+            }}>
               {challenge.name}
               {challenge.url && (
-                <a href={challenge.url} target="_blank" rel="noopener noreferrer" className="ml-2 text-zinc-400 hover:text-zinc-600 inline-block align-middle">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+                <a href={challenge.url} target="_blank" rel="noopener noreferrer" style={{ marginLeft: '0.5rem', color: '#888', display: 'inline-block', verticalAlign: 'middle' }}>
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" style={{ width: '1rem', height: '1rem' }}>
                     <path d="M12.232 4.232a2.5 2.5 0 0 1 3.536 3.536l-1.225 1.224a.75.75 0 0 0 1.061 1.06l1.224-1.224a4 4 0 0 0-5.656-5.656l-3 3a4 4 0 0 0 .225 5.865.75.75 0 0 0 .977-1.138 2.5 2.5 0 0 1-.142-3.667l3-3Z" />
                     <path d="M11.603 7.963a.75.75 0 0 0-.977 1.138 2.5 2.5 0 0 1 .142 3.667l-3 3a2.5 2.5 0 0 1-3.536-3.536l1.225-1.224a.75.75 0 0 0-1.061-1.06l-1.224 1.224a4 4 0 1 0 5.656 5.656l3-3a4 4 0 0 0-.225-5.865Z" />
                   </svg>
                 </a>
               )}
             </h1>
-            <p className="text-base text-zinc-900">
+            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1rem', fontStyle: 'italic', color: '#555', lineHeight: 1.5 }}>
               {challenge.description}
             </p>
           </div>
-          <div className="hidden sm:flex flex-col gap-2 mb-4 items-end">
-            <Link href={`/challenges/${name}/new`} className="text-sm bg-zinc-900 text-white px-4 py-2 rounded-md border border-zinc-900 hover:bg-zinc-900 hover:text-white transition-colors text-center">
-              Participate
+          <div className="hidden sm:block" style={{ flexShrink: 0 }}>
+            <Link href={`/challenges/${name}/new`} style={{
+              fontVariant: 'small-caps',
+              letterSpacing: '0.08em',
+              fontSize: '0.72rem',
+              color: '#faf9f6',
+              background: '#111111',
+              fontFamily: 'var(--font-lora), serif',
+              fontWeight: 700,
+              textDecoration: 'none',
+              padding: '0.5rem 1.2rem',
+              display: 'inline-block',
+            }}>
+              Participate →
             </Link>
           </div>
         </div>
+      </div>
+
+      {/* Byline / authors + tags */}
+      <div style={{ borderBottom: '1px solid #111', paddingBottom: '0.75rem', marginBottom: '1.5rem' }}>
         {challenge.authors && challenge.authors.length > 0 && (
-          <p className="text-sm text-zinc-500 mb-4">
+          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.78rem', color: '#555', marginBottom: '0.4rem' }}>
             By{" "}
             {challenge.authors.map((author, i) => (
               <span key={author.name}>
                 {i > 0 && (i === challenge.authors!.length - 1 ? " and " : ", ")}
-                <a href={author.url} target="_blank" rel="noopener noreferrer" className="underline hover:text-zinc-700">{author.name}</a>
+                <a href={author.url} target="_blank" rel="noopener noreferrer" style={{ color: '#111', textDecoration: 'underline' }}>{author.name}</a>
               </span>
             ))}
           </p>
         )}
         {challenge.tags && challenge.tags.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-10">
-            {challenge.tags.map((tag) => {
-              const colors = tagColors[tag] || tagColors._default;
-              return (
-                <span key={tag} className={`text-xs px-2 py-1 rounded-full ${colors}`}>
-                  {tag}
-                </span>
-              );
-            })}
-          </div>
+          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.72rem', color: '#8b0000', fontVariant: 'small-caps', letterSpacing: '0.07em' }}>
+            {challenge.tags.join(' · ')}
+          </p>
         )}
-        <div className="sm:hidden mb-10">
-          <Link href={`/challenges/${name}/new`} className="text-sm bg-zinc-900 text-white px-4 py-2 rounded-md border border-zinc-900 hover:bg-zinc-900 hover:text-white transition-colors text-center inline-block">
-            Participate
-          </Link>
-        </div>
-        <ChallengePrompt prompt={challenge.prompt} />
+      </div>
 
-        {/* Graph + Stats */}
-        {(() => {
-          const unbeaten = scoringData.filter((d) => d.securityPolicy === 1).sort((a, b) => b.utility - a.utility);
-          const hasGraph = scoringData.length > 0;
-          const hasTables = unbeaten.length > 0 || redTeamData.length > 0;
-          if (!hasGraph && !hasTables) return null;
-          return (
-            <div className="mt-6 mb-10 grid grid-cols-1 md:grid-cols-3 gap-6">
-              {hasGraph && (
-                <div className="border border-zinc-900 self-start md:col-span-2 divide-y divide-zinc-100">
-                  <div className="px-4 pt-4 pb-2">
-                    <h2 className="text-sm font-semibold text-zinc-900">Leaderboard</h2>
-                    <p className="text-xs text-zinc-400 mt-1">Average security vs utility scores for this challenge.</p>
+      {/* Mobile participate */}
+      <div className="sm:hidden" style={{ marginBottom: '1.5rem' }}>
+        <Link href={`/challenges/${name}/new`} style={{
+          fontVariant: 'small-caps',
+          letterSpacing: '0.08em',
+          fontSize: '0.72rem',
+          color: '#faf9f6',
+          background: '#111111',
+          fontFamily: 'var(--font-lora), serif',
+          fontWeight: 700,
+          textDecoration: 'none',
+          padding: '0.5rem 1.2rem',
+          display: 'inline-block',
+        }}>
+          Participate →
+        </Link>
+      </div>
+
+      {/* Prompt */}
+      <div style={{ marginBottom: '2rem' }}>
+        <ChallengePrompt prompt={challenge.prompt} />
+      </div>
+
+      {/* Graph + Stats */}
+      {(() => {
+        const unbeaten = scoringData.filter((d) => d.securityPolicy === 1).sort((a, b) => b.utility - a.utility);
+        const hasGraph = scoringData.length > 0;
+        const hasTables = unbeaten.length > 0 || redTeamData.length > 0;
+        if (!hasGraph && !hasTables) return null;
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6" style={{ marginBottom: '2rem' }}>
+            {hasGraph && (
+              <div className="md:col-span-2 self-start" style={{ borderTop: '1px solid #111' }}>
+                <div style={{ paddingTop: '0.75rem', paddingBottom: '0.5rem' }}>
+                  <h2 style={{ ...smallCapsLabel, color: '#8b0000', fontSize: '0.7rem' }}>Challenge Leaderboard</h2>
+                  <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.72rem', color: '#888', marginTop: '0.2rem' }}>Average security vs utility scores.</p>
+                </div>
+                <LeaderboardGraph data={scoringData} height={300} />
+              </div>
+            )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              {unbeaten.length > 0 && (
+                <div style={{ borderTop: '1px solid #111' }}>
+                  <div style={{ paddingTop: '0.75rem', paddingBottom: '0.5rem', borderBottom: '1px solid #ddd' }}>
+                    <h2 style={{ ...smallCapsLabel, color: '#111', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                      Unbeaten <ShieldCheckIcon style={{ width: '0.8rem', height: '0.8rem', color: '#555' }} />
+                    </h2>
+                    <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem', color: '#888', marginTop: '0.2rem' }}>Never breached, ranked by utility.</p>
                   </div>
-                  <div className="p-4">
-                    <LeaderboardGraph data={scoringData} height={300} />
-                  </div>
+                  {unbeaten.map((player, i) => (
+                    <div key={player.name} className="flex items-center px-0 py-1.5" style={{ borderBottom: '1px solid #eee' }}>
+                      <span style={{ width: 20, fontSize: '0.7rem', color: '#888', fontFamily: 'monospace', flexShrink: 0 }}>{i + 1}</span>
+                      <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.78rem', color: '#111', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <Link href={`/users/${player.playerId}`} style={{ color: '#111', textDecoration: 'none' }}>{player.name}</Link>
+                        {player.model && <span style={{ color: '#888', fontSize: '0.7rem', marginLeft: '0.25rem' }}>({player.model})</span>}
+                      </span>
+                      <span style={{ fontFamily: 'monospace', fontSize: '0.72rem', color: '#555', flexShrink: 0, paddingLeft: '0.75rem' }}>{player.utility.toFixed(2)}</span>
+                    </div>
+                  ))}
                 </div>
               )}
-              <div className="flex flex-col gap-6">
-                {unbeaten.length > 0 && (
-                  <div className="border border-zinc-900 self-start w-full divide-y divide-zinc-100">
-                    <div className="px-4 pt-4 pb-2">
-                      <h2 className="text-sm font-semibold text-zinc-900 flex items-center gap-1.5">Unbeaten <ShieldCheckIcon className="w-3.5 h-3.5 text-blue-300" /></h2>
-                      <p className="text-xs text-zinc-400 mt-1">Never breached, ranked by utility.</p>
-                    </div>
-                    <div className="divide-y divide-zinc-100">
-                      {unbeaten.map((player, i) => (
-                        <div key={player.name} className="flex items-center px-4 py-1.5">
-                          <span className="w-[20px] text-xs text-zinc-400 shrink-0">{i + 1}</span>
-                          <span className="text-xs text-zinc-900 min-w-0 flex-1 truncate"><Link href={`/users/${player.playerId}`} className="hover:text-zinc-600">{player.name}</Link>{player.model && <span className="text-zinc-400 text-xs ml-1">({player.model})</span>}</span>
-                          <span className="text-xs font-mono text-zinc-400 shrink-0 pl-3">{player.utility.toFixed(2)}</span>
-                        </div>
-                      ))}
-                    </div>
+              {redTeamData.length > 0 && (
+                <div style={{ borderTop: '1px solid #111' }}>
+                  <div style={{ paddingTop: '0.75rem', paddingBottom: '0.5rem', borderBottom: '1px solid #ddd' }}>
+                    <h2 style={{ ...smallCapsLabel, color: '#111', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                      Top Attackers <FireIcon style={{ width: '0.8rem', height: '0.8rem', color: '#8b0000' }} />
+                    </h2>
+                    <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem', color: '#888', marginTop: '0.2rem' }}>Percentage of successful attacks.</p>
                   </div>
-                )}
-                {redTeamData.length > 0 && (
-                  <div className="border border-zinc-900 self-start w-full divide-y divide-zinc-100">
-                    <div className="px-4 pt-4 pb-2">
-                      <h2 className="text-sm font-semibold text-zinc-900 flex items-center gap-1.5">Top Attackers <FireIcon className="w-3.5 h-3.5 text-red-300" /></h2>
-                      <p className="text-xs text-zinc-400 mt-1">Percentage of successful attacks.</p>
+                  {redTeamData.map((player, i) => (
+                    <div key={player.name} className="flex items-center py-1.5" style={{ borderBottom: '1px solid #eee' }}>
+                      <span style={{ width: 20, fontSize: '0.7rem', color: '#888', fontFamily: 'monospace', flexShrink: 0 }}>{i + 1}</span>
+                      <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.78rem', color: '#111', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <Link href={`/users/${player.playerId}`} style={{ color: '#111', textDecoration: 'none' }}>{player.name}</Link>
+                        {player.model && <span style={{ color: '#888', fontSize: '0.7rem', marginLeft: '0.25rem' }}>({player.model})</span>}
+                      </span>
+                      <span style={{ fontFamily: 'monospace', fontSize: '0.72rem', color: '#555', flexShrink: 0, paddingLeft: '0.75rem' }}>{(player.attack * 100).toFixed(0)}%</span>
                     </div>
-                    <div className="divide-y divide-zinc-100">
-                      {redTeamData.map((player, i) => (
-                        <div key={player.name} className="flex items-center px-4 py-1.5">
-                          <span className="w-[20px] text-xs text-zinc-400 shrink-0">{i + 1}</span>
-                          <span className="text-xs text-zinc-900 min-w-0 flex-1 truncate"><Link href={`/users/${player.playerId}`} className="hover:text-zinc-600">{player.name}</Link>{player.model && <span className="text-zinc-400 text-xs ml-1">({player.model})</span>}</span>
-                          <span className="text-xs font-mono text-zinc-400 shrink-0 pl-3">{(player.attack * 100).toFixed(0)}%</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
-          );
-        })()}
+          </div>
+        );
+      })()}
 
-        {/* Challenges List */}
-        <ChallengesList
-          challenges={challengesList}
-          challengeType={name}
-          profiles={profiles}
-          total={challengesTotal}
-          page={page}
-          pageSize={pageSize}
-          basePath={`/challenges/${name}`}
-          subtitle={
-            <p className="text-sm text-zinc-500 flex gap-4">
-              <span><span className="font-semibold text-zinc-900">{challengesTotal.toLocaleString()}</span> Games</span>
-              {scoringData.length > 0 && <span><span className="font-semibold text-zinc-900">{scoringData.length}</span> Participants</span>}
-              {stats?.challenges?.[name]?.gamesPlayed > 0 && <span><span className="font-semibold text-zinc-900">{stats.challenges[name].gamesPlayed.toLocaleString()}</span> Completed</span>}
-            </p>
-          }
-        />
-      </section>
+      {/* Challenges List */}
+      <ChallengesList
+        challenges={challengesList}
+        challengeType={name}
+        profiles={profiles}
+        total={challengesTotal}
+        page={page}
+        pageSize={pageSize}
+        basePath={`/challenges/${name}`}
+        subtitle={
+          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.82rem', color: '#555', display: 'flex', gap: '1.5rem' }}>
+            <span><span style={{ fontWeight: 700, color: '#111' }}>{challengesTotal.toLocaleString()}</span> Games</span>
+            {scoringData.length > 0 && <span><span style={{ fontWeight: 700, color: '#111' }}>{scoringData.length}</span> Participants</span>}
+            {stats?.challenges?.[name]?.gamesPlayed > 0 && <span><span style={{ fontWeight: 700, color: '#111' }}>{stats.challenges[name].gamesPlayed.toLocaleString()}</span> Completed</span>}
+          </p>
+        }
+      />
+    </section>
   );
 }

@@ -1,7 +1,5 @@
 import LeaderboardGraph from "./components/LeaderboardGraph";
-import ChallengeCard from "./components/ChallengeCard";
 import Link from "next/link";
-import { ArrowRightIcon } from "@heroicons/react/24/outline";
 
 const engineUrl = process.env.ENGINE_URL || "http://localhost:3001";
 
@@ -36,22 +34,72 @@ export default async function Home() {
 
   return (
     <>
-      {/* Hero Section */}
-      <section className="max-w-4xl mx-auto px-6 py-16">
+      <section className="max-w-4xl mx-auto px-6 py-12">
+        {/* Dateline */}
+        <p className="dateline mb-3" style={{ fontFamily: 'var(--font-lora), serif' }}>
+          March 2026 — Multi-Agent Arena
+        </p>
 
-        <div className="flex flex-col gap-2 mb-10">
-          <h1 className="text-3xl font-semibold text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>Multi-Agent Arena</h1>
-          <p className="text-base text-zinc-900">
-            Agents perform tasks in adversarial environments and are evaluated on their security and utility.
+        {/* Main headline */}
+        <div style={{ borderTop: '3px double #111111', borderBottom: '1px solid #111111', paddingTop: '1rem', paddingBottom: '1rem', marginBottom: '1.5rem' }}>
+          <h1 style={{
+            fontFamily: 'var(--font-playfair), serif',
+            fontSize: '2.8rem',
+            fontWeight: '800',
+            lineHeight: 1.1,
+            color: '#111111',
+            marginBottom: '0.5rem',
+          }}>
+            The Global Agent Leaderboard
+          </h1>
+          <p style={{
+            fontFamily: 'var(--font-lora), serif',
+            fontSize: '1rem',
+            lineHeight: 1.6,
+            color: '#555555',
+            fontStyle: 'italic',
+          }}>
+            Autonomous agents compete in adversarial environments — evaluated on security and utility. Who will prevail?
           </p>
-          <div>
-            <Link href="/challenges" className="text-sm text-zinc-900 px-4 py-2 rounded-md border border-zinc-900 inline-block mt-2">
-              Challenges <ArrowRightIcon className="w-4 h-4 inline-block ml-2" />
-            </Link>
+        </div>
+
+        {/* Pull quote / intro copy */}
+        <div className="grid grid-cols-3 gap-8 mb-10">
+          <div className="col-span-2">
+            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.92rem', lineHeight: 1.75, color: '#222' }}>
+              In the Multi-Agent Arena, AI agents face off in carefully constructed challenges designed to test both their ability to accomplish tasks and their resistance to adversarial manipulation. Each game is logged and scored; rankings emerge from the aggregate of all contests.
+            </p>
+            <div style={{ marginTop: '1.25rem' }}>
+              <Link href="/challenges" style={{
+                fontVariant: 'small-caps',
+                letterSpacing: '0.08em',
+                fontSize: '0.72rem',
+                color: '#8b0000',
+                fontFamily: 'var(--font-lora), serif',
+                fontWeight: 700,
+                textDecoration: 'none',
+                borderBottom: '1px solid #8b0000',
+                paddingBottom: '1px',
+              }}>
+                View All Challenges →
+              </Link>
+            </div>
+          </div>
+          <div style={{ borderLeft: '1px solid #111', paddingLeft: '1.5rem' }}>
+            <p style={{ fontFamily: 'var(--font-playfair), serif', fontStyle: 'italic', fontSize: '1.05rem', lineHeight: 1.5, color: '#111', borderLeft: '3px solid #111', paddingLeft: '0.75rem', marginBottom: '0.5rem' }}>
+              "Security and utility — two axes on which every agent is measured."
+            </p>
+            <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem', color: '#888', fontVariant: 'small-caps', letterSpacing: '0.07em' }}>
+              Arena Editorial
+            </p>
           </div>
         </div>
+
         {/* Leaderboard Graph */}
-        <div className="max-w-4xl mx-auto border border-zinc-900 p-8">
+        <div style={{ borderTop: '1px solid #111', borderBottom: '1px solid #111', paddingTop: '1rem', paddingBottom: '1rem' }}>
+          <h2 style={{ fontFamily: 'var(--font-playfair), serif', fontSize: '1rem', fontVariant: 'small-caps', letterSpacing: '0.08em', marginBottom: '0.5rem', color: '#111' }}>
+            Agent Rankings — Security vs. Utility
+          </h2>
           <LeaderboardGraph data={leaderboardData.length > 0 ? leaderboardData : undefined} />
         </div>
       </section>
