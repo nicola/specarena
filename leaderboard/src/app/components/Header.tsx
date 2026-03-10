@@ -1,106 +1,73 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useRef, useCallback } from "react";
 
-const OVAL_WIDTH = 65;
-const OVAL_HEIGHT = 19;
-const OVAL_Y_SHIFT = 6;
-const OVAL_CONTOUR = 3;
-const OVAL_STROKE = 1;
-
-function ArenaLogo({ width = OVAL_WIDTH, height = OVAL_HEIGHT, yShift = OVAL_Y_SHIFT, contour = OVAL_CONTOUR, stroke = OVAL_STROKE }: { width?: number; height?: number; yShift?: number; contour?: number; stroke?: number }) {
-  const rx = width / 2 - 1;
-  const ry = height / 2 - 1;
-  const cx = width / 2;
-  const cy = height / 2;
-  const [fighting, setFighting] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const onEnter = useCallback(() => {
-    setFighting(true);
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => setFighting(false), 2000);
-  }, []);
-
-  const onLeave = useCallback(() => {
-    // Don't reset — leave letters frozen where they stopped
-    if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
-    setFighting(false);
-  }, []);
-
-  return (
-    <Link href="/" className="group relative flex items-center justify-center" style={{ width: `${width}px`, height: `${height}px` }} onMouseEnter={onEnter} onMouseLeave={onLeave}>
-      {/* Top half of oval — behind text (z-0) */}
-      <svg className="absolute inset-0 z-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ top: `${yShift}px` }} viewBox={`0 0 ${width} ${height}`} fill="none" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <clipPath id="topHalf"><rect x="0" y="0" width={width} height={cy} /></clipPath>
-        </defs>
-        <ellipse cx={cx} cy={cy} rx={rx} ry={ry} stroke="#18181b" strokeWidth={stroke} fill="none" clipPath="url(#topHalf)" />
-      </svg>
-      {/* Letter fight animations */}
-      <style>{`
-        @keyframes f1 { 0%,100%{transform:translate(0,0) rotate(0)} 25%{transform:translate(-1px,1px) rotate(-8deg)} 50%{transform:translate(1px,-1px) rotate(7deg)} 75%{transform:translate(-0.5px,-0.5px) rotate(-5deg)} }
-        @keyframes f2 { 0%,100%{transform:translate(0,0) rotate(0)} 20%{transform:translate(1px,0.5px) rotate(9deg)} 50%{transform:translate(-1px,1px) rotate(-7deg)} 80%{transform:translate(0.5px,-1px) rotate(5deg)} }
-        @keyframes f3 { 0%,100%{transform:translate(0,0) rotate(0)} 30%{transform:translate(1px,-1px) rotate(10deg)} 60%{transform:translate(-1px,0.5px) rotate(-8deg)} 85%{transform:translate(0.5px,-0.5px) rotate(5deg)} }
-        @keyframes f4 { 0%,100%{transform:translate(0,0) rotate(0)} 15%{transform:translate(-1px,0.5px) rotate(-9deg)} 45%{transform:translate(1px,1px) rotate(8deg)} 70%{transform:translate(-0.5px,-1px) rotate(-6deg)} }
-        @keyframes f5 { 0%,100%{transform:translate(0,0) rotate(0)} 35%{transform:translate(0.5px,1px) rotate(8deg)} 55%{transform:translate(-1px,-0.5px) rotate(-9deg)} 80%{transform:translate(1px,0.5px) rotate(5deg)} }
-        .f1{animation:f1 .4s ease-in-out infinite paused}
-        .f2{animation:f2 .35s ease-in-out infinite paused}
-        .f3{animation:f3 .45s ease-in-out infinite paused}
-        .f4{animation:f4 .38s ease-in-out infinite paused}
-        .f5{animation:f5 .42s ease-in-out infinite paused}
-        .fighting .f1,.fighting .f2,.fighting .f3,.fighting .f4,.fighting .f5{animation-play-state:running}
-      `}</style>
-      {/* Logo text (z-10) */}
-      <span
-        className={`relative z-10 text-zinc-900 font-medium ${fighting ? 'fighting' : ''}`}
-        style={{
-          fontFamily: 'var(--font-jost), sans-serif',
-          paintOrder: 'stroke fill',
-          WebkitTextStroke: `${contour}px white`,
-        }}
-      >
-        <span className="inline-block f1 relative z-[3]">A</span><span className="inline-block f2 relative z-[4]">R</span>
-        <span className="inline-block f3 relative text-[12px] font-semibold top-[-4px] left-[2px] z-[3]">E</span>
-        <span className="inline-block f4 relative text-[11px] font-bold top-[5px] left-[-2px] ml-[-1px] z-[6]" style={{ WebkitTextStroke: '0px' }}>N</span>
-        <span className="inline-block f5 relative z-[5]">A</span>
-      </span>
-      {/* Bottom half of oval — in front of text (z-20) */}
-      <svg className="absolute inset-0 z-20 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ top: `${yShift}px` }} viewBox={`0 0 ${width} ${height}`} fill="none" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <clipPath id="bottomHalf"><rect x="0" y={cy} width={width} height={cy} /></clipPath>
-        </defs>
-        <ellipse cx={cx} cy={cy} rx={rx} ry={ry} stroke="#18181b" strokeWidth={stroke} fill="none" clipPath="url(#bottomHalf)" />
-      </svg>
-    </Link>
-  );
-}
+const TERMINAL_STYLE = {
+  fontFamily: "'VT323', 'Courier New', Courier, monospace",
+} as const;
 
 export default function Header() {
   return (
-    <header className="w-full border-b border-zinc-900 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-      <div className="max-w-4xl mx-auto px-6 py-4">
-        <div className="flex items-center justify-between gap-6">
-          <div className="flex items-center gap-6">
-            <div className="flex items-center justify-center">
-              <ArenaLogo />
-            </div>
-            <nav className="flex items-center gap-6">
-              <Link href="/" className="text-sm font-medium text-zinc-900 hover:text-zinc-900 transition-colors">
-                Leaderboard
+    <header style={{
+      ...TERMINAL_STYLE,
+      width: '100%',
+      background: '#000000',
+      borderBottom: '1px solid #00ff00',
+      position: 'sticky',
+      top: 0,
+      zIndex: 50,
+    }}>
+      {/* Title bar */}
+      <div style={{
+        background: '#00ff00',
+        color: '#000000',
+        textAlign: 'center',
+        fontSize: '14px',
+        padding: '1px 0',
+        letterSpacing: '2px',
+      }}>
+        ┤ ARENA v1.0.0 - Multi-Agent Combat System ├
+      </div>
+      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '8px 24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
+            {/* Logo */}
+            <Link href="/" style={{
+              ...TERMINAL_STYLE,
+              color: '#00ff00',
+              fontSize: '24px',
+              letterSpacing: '4px',
+              textDecoration: 'none',
+              fontWeight: 'bold',
+            }}>
+              [<span style={{ color: '#ffffff' }}>ARENA</span>]
+            </Link>
+            <nav style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+              <Link href="/" style={{ ...TERMINAL_STYLE, color: '#00ff00', fontSize: '18px', textDecoration: 'none' }}
+                onMouseEnter={e => (e.currentTarget.style.color = '#ffffff')}
+                onMouseLeave={e => (e.currentTarget.style.color = '#00ff00')}
+              >
+                $ leaderboard
               </Link>
-              <Link href="/challenges" className="text-sm font-medium text-zinc-900 hover:text-zinc-900 transition-colors">
-                Challenges
+              <Link href="/challenges" style={{ ...TERMINAL_STYLE, color: '#00ff00', fontSize: '18px', textDecoration: 'none' }}
+                onMouseEnter={e => (e.currentTarget.style.color = '#ffffff')}
+                onMouseLeave={e => (e.currentTarget.style.color = '#00ff00')}
+              >
+                $ challenges
               </Link>
-              <Link href="/docs" className="text-sm font-medium text-zinc-900 hover:text-zinc-900 transition-colors">
-                Docs
+              <Link href="/docs" style={{ ...TERMINAL_STYLE, color: '#00ff00', fontSize: '18px', textDecoration: 'none' }}
+                onMouseEnter={e => (e.currentTarget.style.color = '#ffffff')}
+                onMouseLeave={e => (e.currentTarget.style.color = '#00ff00')}
+              >
+                $ docs
               </Link>
             </nav>
+          </div>
+          <div style={{ color: '#008800', fontSize: '14px' }}>
+            <span style={{ color: '#00ff00' }}>▓</span> ONLINE
           </div>
         </div>
       </div>
     </header>
   );
 }
-

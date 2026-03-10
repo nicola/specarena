@@ -14,50 +14,115 @@ interface ChallengeCardProps {
   tags?: string[];
 }
 
+const TERMINAL_STYLE = {
+  fontFamily: "'VT323', 'Courier New', Courier, monospace",
+} as const;
+
 export default function ChallengeCard({
   title,
   date,
   description,
-  gradientFrom,
-  gradientVia,
-  gradientTo,
   icon,
-  dateColor = "text-zinc-600",
   href,
   tags,
 }: ChallengeCardProps) {
   return (
-    <div className="flex flex-col border border-zinc-900 overflow-hidden h-full">
-      {/* Upper Half */}
-      <div
-        className={`relative h-48 bg-gradient-to-br ${gradientFrom} ${gradientVia} ${gradientTo} flex items-center px-6 flex-shrink-0`}
-      >
-        <div className="flex-1 flex items-center gap-4">
-          {/* Visual Element */}
-          <div className="w-full h-32 flex-shrink-0">{icon}</div>
+    <div style={{
+      ...TERMINAL_STYLE,
+      display: 'flex',
+      flexDirection: 'column',
+      border: '1px solid #00ff00',
+      background: '#000000',
+      height: '100%',
+    }}>
+      {/* Top section - ASCII art area */}
+      <div style={{
+        position: 'relative',
+        height: '192px',
+        background: '#000000',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
+        borderBottom: '1px solid #00ff00',
+        padding: '16px',
+      }}>
+        {/* Icon rendered in green */}
+        <div style={{
+          width: '100%',
+          height: '128px',
+          flexShrink: 0,
+          filter: 'invert(1) sepia(1) saturate(5) hue-rotate(90deg)',
+          opacity: 0.8,
+        }}>
+          {icon}
         </div>
         {tags && tags.length > 0 && (
-          <div className="absolute bottom-3 left-4 flex flex-wrap gap-1.5">
+          <div style={{
+            position: 'absolute',
+            bottom: '8px',
+            left: '8px',
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '4px',
+          }}>
             {tags.map((tag) => {
-              const colors = tagColors[tag] || tagColors._default;
               return (
-                <span key={tag} className={`text-xs px-2 py-0.5 rounded-full ${colors}`}>
-                  {tag}
+                <span key={tag} style={{
+                  ...TERMINAL_STYLE,
+                  fontSize: '12px',
+                  padding: '1px 6px',
+                  border: '1px solid #008800',
+                  color: '#008800',
+                  background: '#000000',
+                }}>
+                  [{tag}]
                 </span>
               );
             })}
           </div>
         )}
       </div>
-      {/* Lower Half */}
-      <div className="bg-white p-6 flex flex-col gap-3 flex-1 min-h-0">
-        <div className="flex flex-col gap-3">
-          {date && <p className={`text-sm ${dateColor}`}>{date}</p>}
-          <h4 className="text-lg font-medium text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>{title}</h4>
-          <p className="text-sm text-zinc-700">{description}</p>
+      {/* Lower section */}
+      <div style={{
+        background: '#000000',
+        padding: '16px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '8px',
+        flex: 1,
+      }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {date && <p style={{ ...TERMINAL_STYLE, fontSize: '13px', color: '#008800', margin: 0 }}>{date}</p>}
+          <h4 style={{ ...TERMINAL_STYLE, fontSize: '20px', color: '#ffffff', margin: 0 }}>
+            &gt; {title}
+          </h4>
+          <p style={{ ...TERMINAL_STYLE, fontSize: '16px', color: '#00cc00', margin: 0, lineHeight: '1.3' }}>{description}</p>
         </div>
-        <a href={href} className="mt-auto px-4 py-2 border border-zinc-900 text-zinc-900 rounded-md text-sm text-center">
-          Discover more
+        <a
+          href={href}
+          style={{
+            ...TERMINAL_STYLE,
+            marginTop: 'auto',
+            padding: '6px 12px',
+            border: '1px solid #00ff00',
+            color: '#00ff00',
+            fontSize: '18px',
+            textAlign: 'center',
+            display: 'block',
+            textDecoration: 'none',
+            background: '#000000',
+          }}
+          onMouseEnter={e => {
+            (e.currentTarget as HTMLElement).style.background = '#00ff00';
+            (e.currentTarget as HTMLElement).style.color = '#000000';
+          }}
+          onMouseLeave={e => {
+            (e.currentTarget as HTMLElement).style.background = '#000000';
+            (e.currentTarget as HTMLElement).style.color = '#00ff00';
+          }}
+        >
+          [ ENTER ]
         </a>
       </div>
     </div>

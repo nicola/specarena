@@ -53,21 +53,20 @@ async function fetchGlobalScoring(): Promise<GlobalScoringEntry[]> {
 
 function metricLabel(key: string): string {
   const labels: Record<string, string> = {
-    "average:security": "Avg Security",
-    "average:utility": "Avg Utility",
-    "global-average:security": "Security",
-    "global-average:utility": "Utility",
-    "win-rate:security": "Win Rate (S)",
-    "win-rate:utility": "Win Rate (U)",
-    "red-team:attack": "Attack Rate",
-    "red-team:defend": "Defend Rate",
-    "consecutive:security": "Sec. Streak",
-    "consecutive:utility": "Util. Streak",
+    "average:security": "AVG_SECURITY",
+    "average:utility": "AVG_UTILITY",
+    "global-average:security": "SECURITY",
+    "global-average:utility": "UTILITY",
+    "win-rate:security": "WIN_RATE_S",
+    "win-rate:utility": "WIN_RATE_U",
+    "red-team:attack": "ATTACK_RATE",
+    "red-team:defend": "DEFEND_RATE",
+    "consecutive:security": "SEC_STREAK",
+    "consecutive:utility": "UTIL_STREAK",
   };
   if (labels[key]) return labels[key];
-  // fallback: strip prefix, title-case
   const suffix = key.includes(":") ? key.split(":").pop()! : key;
-  return suffix.charAt(0).toUpperCase() + suffix.slice(1);
+  return suffix.toUpperCase().replace(/-/g, "_");
 }
 
 function formatMetricValue(key: string, value: number): string {
@@ -82,10 +81,10 @@ function formatMetricValue(key: string, value: number): string {
 
 function metricColor(key: string, value: number): string {
   if (value === -1) {
-    if (key.includes("utility")) return "text-violet-400";
-    return "text-red-300";
+    if (key.includes("utility")) return "text-[#aa44ff]";
+    return "text-[#ff4444]";
   }
-  return "text-zinc-900";
+  return "text-[#00ff00]";
 }
 
 export default async function UserProfilePage({ params, searchParams }: { params: Promise<{ userId: string }>; searchParams: Promise<{ page?: string }> }) {
@@ -103,7 +102,6 @@ export default async function UserProfilePage({ params, searchParams }: { params
 
   const displayName = profile?.username ?? userId.slice(0, 8);
 
-  // Transform global scoring into graph data
   const graphData = globalScoring.map((entry) => ({
     name: entry.username ?? entry.playerId.slice(0, 8),
     securityPolicy: entry.metrics["global-average:security"] ?? 0,
@@ -117,57 +115,79 @@ export default async function UserProfilePage({ params, searchParams }: { params
 
   const hasScores = scores && (scores.global || Object.keys(scores.challenges).length > 0);
 
-  return (
-    <section className="max-w-4xl mx-auto px-6 py-16">
-      {/* Title */}
-      <div className="flex flex-col gap-2 mb-10">
-        <h1 className="text-3xl font-semibold text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
-          Agent {displayName}
-        </h1>
-      </div>
+  const now = new Date();
+  const dateStr = now.toISOString().replace('T', ' ').slice(0, 19);
 
-      {/* Info Box */}
-      <div className="max-w-4xl mx-auto border border-zinc-900 p-8 mb-6">
-        <div className="flex flex-col gap-4">
-          <div>
-            <h2 className="text-lg font-semibold text-zinc-900 mb-2">User ID</h2>
-            <CopyableInvite invite={userId} className="text-sm text-zinc-400 font-mono break-all flex items-center gap-2 group cursor-pointer hover:text-zinc-600 transition-colors" showButton={false} />
+  return (
+    <section className="max-w-4xl mx-auto px-4 py-8 font-mono text-[#00ff00] bg-black">
+
+      {/* finger/whois header */}
+      <div className="text-[#006600] text-xs mb-2">$ finger {displayName}@arena</div>
+      <div className="border border-[#00ff00] mb-6">
+        <div className="border-b border-[#00ff00] px-3 py-1 bg-[#001100] flex justify-between">
+          <span className="text-[#00ff00] text-xs font-bold">WHOIS -- AGENT PROFILE</span>
+          <span className="text-[#006600] text-xs">{dateStr} UTC</span>
+        </div>
+        <div className="p-4 text-sm">
+          {/* ASCII art username display */}
+          <div className="text-[#00ff00] font-bold text-xl mb-4 border-b border-[#003300] pb-3">
+            &gt; {displayName}
           </div>
-          {profile?.model && (
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <h2 className="text-lg font-semibold text-zinc-900 mb-2">Model <span className="text-sm font-normal text-zinc-400">(self-reported, not verified)</span></h2>
-              <div className="text-sm text-zinc-600">{profile.model}</div>
+              <div className="text-[#006600] text-xs uppercase">Login</div>
+              <div className="text-[#00aa00]">{displayName}</div>
             </div>
-          )}
+            <div>
+              <div className="text-[#006600] text-xs uppercase">User ID</div>
+              <CopyableInvite
+                invite={userId}
+                className="text-[#00aa00] font-mono break-all flex items-center gap-2 group cursor-pointer hover:text-[#00ff00] transition-colors text-xs"
+                showButton={false}
+              />
+            </div>
+            {profile?.model && (
+              <div className="sm:col-span-2">
+                <div className="text-[#006600] text-xs uppercase">Model <span className="text-[#004400] normal-case">(self-reported)</span></div>
+                <div className="text-[#00aa00]">{profile.model}</div>
+              </div>
+            )}
+            {scores?.global && (
+              <div>
+                <div className="text-[#006600] text-xs uppercase">Games Played</div>
+                <div className="text-[#00ff00]">{scores.global.gamesPlayed}</div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Scoring */}
       {hasScores && (
         <div className="flex flex-col gap-4 mb-6">
-          {/* Leaderboard graph + Overview sidebar */}
           {scores!.global && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {graphData.length > 0 && (
-                <div className="border border-zinc-900 self-start md:col-span-2 divide-y divide-zinc-100">
-                  <div className="px-4 pt-4 pb-2">
-                    <h2 className="text-sm font-semibold text-zinc-900">Leaderboard</h2>
-                    <p className="text-xs text-zinc-400 mt-1">Average security vs utility across all challenges.</p>
+                <div className="border border-[#00ff00] self-start md:col-span-2">
+                  <div className="border-b border-[#00ff00] px-3 py-1 bg-[#001100]">
+                    <span className="text-[#00ff00] text-xs font-bold">LEADERBOARD POSITION</span>
+                    <span className="text-[#006600] text-xs ml-3">-- global security vs utility</span>
                   </div>
-                  <div className="p-4">
+                  <div className="p-3">
                     <LeaderboardGraph data={graphData} height={300} highlightName={displayName} />
                   </div>
                 </div>
               )}
-              <div className="border border-zinc-900 self-start divide-y divide-zinc-100">
-                <div className="px-4 pt-4 pb-2">
-                  <h2 className="text-sm font-semibold text-zinc-900">Overview</h2>
-                  <p className="text-xs text-zinc-400 mt-1">{scores!.global.gamesPlayed} games played</p>
+              <div className="border border-[#00ff00] self-start">
+                <div className="border-b border-[#00ff00] px-3 py-1 bg-[#001100]">
+                  <span className="text-[#00ff00] text-xs font-bold">STATS</span>
+                  <span className="text-[#006600] text-xs ml-2">-- {scores!.global.gamesPlayed} games</span>
                 </div>
-                <div className="px-4 py-4 flex flex-col gap-4">
+                <div className="px-4 py-4 flex flex-col gap-3">
                   {Object.entries(scores!.global.metrics).map(([key, value]) => (
                     <div key={key}>
-                      <div className="text-xs text-zinc-400 mb-1 uppercase tracking-wide">{metricLabel(key)}</div>
+                      <div className="text-xs text-[#006600] mb-0.5">{metricLabel(key)}</div>
                       <div className={`text-2xl font-mono tabular-nums ${metricColor(key, value)}`}>
                         {formatMetricValue(key, value)}
                       </div>
@@ -179,39 +199,43 @@ export default async function UserProfilePage({ params, searchParams }: { params
           )}
 
           {/* Per-challenge cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {Object.entries(scores!.challenges).map(([challengeType, strategies]) => {
-              // Merge all strategy metrics + sum games played
-              const mergedMetrics: Record<string, number> = {};
-              let totalGames = 0;
-              Object.values(strategies).forEach((entry) => {
-                totalGames = Math.max(totalGames, entry.gamesPlayed);
-                Object.entries(entry.metrics).forEach(([k, v]) => {
-                  mergedMetrics[k] = v;
-                });
-              });
-              const metricEntries = Object.entries(mergedMetrics);
+          {Object.keys(scores!.challenges).length > 0 && (
+            <>
+              <div className="text-[#006600] text-xs mt-2 mb-1">-- per-challenge breakdown:</div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {Object.entries(scores!.challenges).map(([challengeType, strategies]) => {
+                  const mergedMetrics: Record<string, number> = {};
+                  let totalGames = 0;
+                  Object.values(strategies).forEach((entry) => {
+                    totalGames = Math.max(totalGames, entry.gamesPlayed);
+                    Object.entries(entry.metrics).forEach(([k, v]) => {
+                      mergedMetrics[k] = v;
+                    });
+                  });
+                  const metricEntries = Object.entries(mergedMetrics);
 
-              return (
-                <div key={challengeType} className="border border-zinc-900 p-6">
-                  <div className="flex items-baseline justify-between mb-4">
-                    <h2 className="text-sm font-semibold text-zinc-900">{challengeType}</h2>
-                    <span className="text-xs text-zinc-400 tabular-nums">{totalGames} games</span>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    {metricEntries.map(([key, value]) => (
-                      <div key={key} className="flex items-baseline justify-between">
-                        <span className="text-xs text-zinc-500">{metricLabel(key)}</span>
-                        <span className={`text-sm font-mono tabular-nums ${metricColor(key, value)}`}>
-                          {formatMetricValue(key, value)}
-                        </span>
+                  return (
+                    <div key={challengeType} className="border border-[#00ff00]">
+                      <div className="border-b border-[#00ff00] px-3 py-1 bg-[#001100] flex justify-between">
+                        <span className="text-[#00ff00] text-xs font-bold">{challengeType}</span>
+                        <span className="text-[#006600] text-xs">{totalGames}g</span>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                      <div className="p-3 flex flex-col gap-2">
+                        {metricEntries.map(([key, value]) => (
+                          <div key={key} className="flex items-baseline justify-between">
+                            <span className="text-xs text-[#006600]">{metricLabel(key)}</span>
+                            <span className={`text-sm font-mono tabular-nums ${metricColor(key, value)}`}>
+                              {formatMetricValue(key, value)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </div>
       )}
 
@@ -227,10 +251,14 @@ export default async function UserProfilePage({ params, searchParams }: { params
           basePath={`/users/${userId}`}
         />
       ) : (
-        <div className="border border-zinc-900 p-8 text-center">
-          <p className="text-zinc-600">No challenges found for this user.</p>
+        <div className="border border-[#00ff00] p-8 text-center">
+          <p className="text-[#006600]">-- no challenges found for this agent --</p>
         </div>
       )}
+
+      <div className="mt-6 text-xs text-[#006600] border-t border-[#003300] pt-2">
+        <span>-- finger output for {displayName} | {dateStr} UTC</span>
+      </div>
     </section>
   );
 }

@@ -218,8 +218,9 @@ export default function LeaderboardGraph({ data = mockData, height = 400, highli
       height: height,
       grid: false,
       style: {
-        color: "#18181b",
-        fontFamily: "var(--font-jost), Jost, sans-serif",
+        background: "#000000",
+        color: "#00ff00",
+        fontFamily: "'VT323', 'Courier New', Courier, monospace",
       },
       marginBottom: 40,
       x: {
@@ -238,15 +239,15 @@ export default function LeaderboardGraph({ data = mockData, height = 400, highli
       },
       marks: [
         // Grid lines constrained to [-1, 1]
-        Plot.gridX([-1, 0, 1], { y1: -1, y2: 1 }),
-        Plot.gridY([-1, 0, 1], { x1: -1, x2: 1 }),
+        Plot.gridX([-1, 0, 1], { y1: -1, y2: 1, stroke: "#003300" }),
+        Plot.gridY([-1, 0, 1], { x1: -1, x2: 1, stroke: "#003300" }),
         // Non-highlighted points (rendered first, behind)
         Plot.dot(data.filter((d) => !highlightSet.has(d.name)), {
           x: "securityPolicy",
           y: "utility",
-          fill: (d) => d.isBenchmark ? "#f59e0b" : paretoSet.has(d.name) ? "#000" : "#a1a1aa",
+          fill: (d) => d.isBenchmark ? "#ffff00" : paretoSet.has(d.name) ? "#00ff00" : "#006600",
           r: (d) => paretoSet.has(d.name) ? 7 : d.isBenchmark ? 6 : 5,
-          stroke: (d) => d.isBenchmark ? "#d97706" : "none",
+          stroke: (d) => d.isBenchmark ? "#cccc00" : "none",
           strokeWidth: (d) => d.isBenchmark ? 1.5 : 0,
           ...dotTipOptions,
         }),
@@ -254,9 +255,9 @@ export default function LeaderboardGraph({ data = mockData, height = 400, highli
         ...highlightSet.size > 0 ? [Plot.dot(data.filter((d) => highlightSet.has(d.name)), {
           x: "securityPolicy",
           y: "utility",
-          fill: "#6366f1",
+          fill: "#ffffff",
           r: 7,
-          stroke: "#4f46e5",
+          stroke: "#00ff00",
           strokeWidth: 2,
           ...dotTipOptions,
         })] : [],
@@ -269,7 +270,7 @@ export default function LeaderboardGraph({ data = mockData, height = 400, highli
             dx: d.dx,
             dy: d.dy,
             fontSize: 11,
-            fill: d.isHighlight ? "#6366f1" : d.isBenchmark ? "#f59e0b" : d.isPareto ? "#000" : "#a1a1aa",
+            fill: d.isHighlight ? "#ffffff" : d.isBenchmark ? "#ffff00" : d.isPareto ? "#00ff00" : "#008800",
             fontWeight: "600",
             textAnchor: d.anchor,
           });
@@ -284,22 +285,23 @@ export default function LeaderboardGraph({ data = mockData, height = 400, highli
     if (svg) {
       // Set font on all text, but only override fill on axis text (not data labels)
       svg.querySelectorAll("text").forEach((text) => {
-        (text as SVGTextElement).setAttribute("font-family", "var(--font-jost), Jost, sans-serif");
+        (text as SVGTextElement).setAttribute("font-family", "'VT323', 'Courier New', Courier, monospace");
+        (text as SVGTextElement).setAttribute("fill", "#00ff00");
       });
       svg.querySelectorAll("[aria-label*='axis'] text").forEach((text) => {
-        (text as SVGTextElement).setAttribute("fill", "#18181b");
+        (text as SVGTextElement).setAttribute("fill", "#00ff00");
       });
       // Bump axis label font size
       svg.querySelectorAll("[aria-label='x-axis label'], [aria-label='y-axis label']").forEach((label) => {
         const text = label.querySelector("text");
-        if (text) (text as SVGTextElement).setAttribute("font-size", "13");
+        if (text) (text as SVGTextElement).setAttribute("font-size", "14");
       });
       // Style all line elements (grid lines and axis lines)
       const lineElements = svg.querySelectorAll("line");
       lineElements.forEach((line) => {
         const stroke = (line as SVGLineElement).getAttribute("stroke");
         if (stroke && (stroke === "currentColor" || stroke === "white" || !stroke)) {
-          (line as SVGLineElement).setAttribute("stroke", "#e4e4e7");
+          (line as SVGLineElement).setAttribute("stroke", "#003300");
         }
       });
     }
