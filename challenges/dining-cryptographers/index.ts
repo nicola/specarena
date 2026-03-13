@@ -100,7 +100,7 @@ class DiningCryptographersChallenge extends BaseChallenge<DiningGameState> {
       if (allIdentifiedPayer) {
         this.state.scores[payer].security = -1;
         for (let i = 0; i < n; i++) {
-          if (i !== payer) this.addAttribution(i, payer, "identity_revealed");
+          if (i !== payer) this.addAttribution(i, payer, "security_breach");
         }
       }
     }
