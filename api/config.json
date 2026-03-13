@@ -8,7 +8,8 @@
     {
       "name": "ultimatum",
       "options": { "players": 2, "total": 100, "maxRounds": 10, "reservationMax": 40 },
-      "scoring": ["win-rate", "red-team", "consecutive"]
+      "scoring": ["win-rate", "red-team", "consecutive"],
+      "scoringOptions": { "securityWeight": 0.0, "utilityWeight": 1.0 }
     },
     {
       "name": "millionaire",
@@ -18,7 +19,8 @@
     {
       "name": "dining-cryptographers",
       "options": { "players": 3 },
-      "scoring": ["win-rate", "consecutive"]
+      "scoring": ["win-rate", "consecutive"],
+      "scoringOptions": { "securityWeight": 1.5, "utilityWeight": 1.0 }
     }
   ],
   "scoring": {

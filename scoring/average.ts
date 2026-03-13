@@ -1,4 +1,4 @@
-import type { ScoringStrategy, GameResult, ScoringStorageAdapter } from "./types";
+import type { ScoringStrategy, ScoringOptions, GameResult, ScoringStorageAdapter } from "./types";
 
 interface AverageState {
   sumSecurity: number;
@@ -12,9 +12,14 @@ export const average: ScoringStrategy = {
   metrics: [
     { key: "average:security", label: "Security" },
     { key: "average:utility", label: "Utility" },
+    { key: "average:combined", label: "Combined" },
   ],
 
-  async update(result: GameResult, store: ScoringStorageAdapter): Promise<void> {
+  async update(result: GameResult, store: ScoringStorageAdapter, options?: ScoringOptions): Promise<void> {
+    const securityWeight = options?.securityWeight ?? 1.0;
+    const utilityWeight = options?.utilityWeight ?? 1.0;
+    const totalWeight = securityWeight + utilityWeight;
+
     for (let i = 0; i < result.players.length; i++) {
       const playerId = result.playerIdentities[result.players[i]];
       if (!playerId) continue;
@@ -29,13 +34,20 @@ export const average: ScoringStrategy = {
         count: (prev?.count ?? 0) + 1,
       };
 
+      const avgSecurity = state.sumSecurity / state.count;
+      const avgUtility = state.sumUtility / state.count;
+      const combined = totalWeight > 0
+        ? (avgSecurity * securityWeight + avgUtility * utilityWeight) / totalWeight
+        : 0;
+
       await store.setStrategyState(result.challengeType, this.name, playerId, state);
       await store.setScoreEntry(result.challengeType, this.name, {
         playerId,
         gamesPlayed: state.count,
         metrics: {
-          "average:security": state.sumSecurity / state.count,
-          "average:utility": state.sumUtility / state.count,
+          "average:security": avgSecurity,
+          "average:utility": avgUtility,
+          "average:combined": combined,
         },
       });
     }

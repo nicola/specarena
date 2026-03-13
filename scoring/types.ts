@@ -32,11 +32,20 @@ export interface ScoringEntry {
   metrics: Record<string, number>;
 }
 
+/** Options passed to a per-challenge scoring strategy (e.g. metric weights). */
+export interface ScoringOptions {
+  /** Weight applied to the security score when computing a combined metric. Defaults to 1.0. */
+  securityWeight?: number;
+  /** Weight applied to the utility score when computing a combined metric. Defaults to 1.0. */
+  utilityWeight?: number;
+  [key: string]: unknown;
+}
+
 /** Per-challenge: incrementally update scores for one game result. */
 export interface ScoringStrategy {
   readonly name: string;
   readonly metrics: MetricDescriptor[];
-  update(result: GameResult, store: ScoringStorageAdapter): Promise<void>;
+  update(result: GameResult, store: ScoringStorageAdapter, options?: ScoringOptions): Promise<void>;
 }
 
 /** Global: incrementally update global scores for one game result. */

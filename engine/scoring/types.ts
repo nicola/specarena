@@ -1,4 +1,4 @@
-export type { Score, GameResult, PlayerScores, ScoringEntry, MetricDescriptor, ScoringStrategy, GlobalScoringStrategy, ScoringStorageAdapter } from "@arena/scoring";
+export type { Score, GameResult, PlayerScores, ScoringEntry, MetricDescriptor, ScoringStrategy, GlobalScoringStrategy, ScoringStorageAdapter, ScoringOptions } from "@arena/scoring";
 
 export interface ScoringConfig {
   default: string[];
@@ -10,6 +10,8 @@ export interface ChallengeConfigEntry {
   name: string;
   options?: Record<string, unknown>;
   scoring?: string[];
+  /** Per-challenge options forwarded to scoring strategies (e.g. securityWeight, utilityWeight). */
+  scoringOptions?: Record<string, unknown>;
 }
 
 export interface EngineConfig {

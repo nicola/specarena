@@ -40,11 +40,13 @@ export class ScoringModule {
   /** Incrementally update per-challenge scores for a single game result. */
   private async updateChallenge(result: GameResult, store: ScoringStorageAdapter): Promise<void> {
     const strategyNames = this.getStrategiesForChallenge(result.challengeType);
+    const challengeConfig = this.config.challenges.find((c) => c.name === result.challengeType);
+    const scoringOptions = challengeConfig?.scoringOptions;
 
     for (const name of strategyNames) {
       const strategy = this.strategies[name];
       if (!strategy) continue;
-      await strategy.update(result, store);
+      await strategy.update(result, store, scoringOptions);
     }
   }
 
@@ -159,6 +161,6 @@ export class ScoringModule {
   }
 }
 
-export type { GameResult, PlayerScores, ScoringEntry, MetricDescriptor, ScoringStrategy, GlobalScoringStrategy, EngineConfig, ScoringConfig, ChallengeConfigEntry } from "./types";
+export type { GameResult, PlayerScores, ScoringEntry, MetricDescriptor, ScoringStrategy, GlobalScoringStrategy, ScoringOptions, EngineConfig, ScoringConfig, ChallengeConfigEntry } from "./types";
 export type { ScoringStorageAdapter } from "./store";
 export { InMemoryScoringStore } from "./store";

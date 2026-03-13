@@ -30,9 +30,12 @@ describe("global-average strategy", () => {
   });
 
   /** Feed games through average strategy then global-average, return global entries. */
-  async function computeGlobal(games: GameResult[]) {
+  async function computeGlobal(
+    games: GameResult[],
+    options?: { securityWeight?: number; utilityWeight?: number }
+  ) {
     for (const game of games) {
-      await average.update(game, store);
+      await average.update(game, store, options);
       await globalAverage.update(game, store, "average");
     }
     return store.getGlobalScores();
@@ -42,6 +45,7 @@ describe("global-average strategy", () => {
     assert.deepStrictEqual(globalAverage.metrics, [
       { key: "global-average:security", label: "Security" },
       { key: "global-average:utility", label: "Utility" },
+      { key: "global-average:combined", label: "Combined" },
     ]);
   });
 
@@ -143,5 +147,35 @@ describe("global-average strategy", () => {
     assert.ok(Math.abs(alice.metrics["global-average:security"] - 0.5) < 1e-10);
     assert.ok(Math.abs(alice.metrics["global-average:utility"] - 0.5) < 1e-10);
     assert.equal(alice.gamesPlayed, 6);
+  });
+
+  // ── Weighted combined propagation ──────────────────────────────────────────
+
+  it("combined metric propagates from per-challenge weighted average", async () => {
+    // single game, alice: security=1, utility=0
+    // weights: securityWeight=1.5, utilityWeight=1.0
+    // average:combined = (1*1.5 + 0*1.0) / 2.5 = 0.6
+    // global-average:combined should also be 0.6 (single challenge)
+    const entries = await computeGlobal(
+      [makeGame({ security: 1, utility: 0 }, { security: 0, utility: 0 })],
+      { securityWeight: 1.5, utilityWeight: 1.0 }
+    );
+
+    const alice = entries.find((e) => e.playerId === "alice")!;
+    assert.ok(Math.abs(alice.metrics["global-average:combined"] - 0.6) < 1e-10);
+    // security and utility averages are unaffected by weights
+    assert.equal(alice.metrics["global-average:security"], 1);
+    assert.equal(alice.metrics["global-average:utility"], 0);
+  });
+
+  it("combined with utility-only weights (securityWeight=0) reflects utility-only scoring", async () => {
+    // alice: security=0.9, utility=0.3 → combined=(0+0.3)/1=0.3
+    const entries = await computeGlobal(
+      [makeGame({ security: 0.9, utility: 0.3 }, { security: 0, utility: 0 })],
+      { securityWeight: 0.0, utilityWeight: 1.0 }
+    );
+
+    const alice = entries.find((e) => e.playerId === "alice")!;
+    assert.ok(Math.abs(alice.metrics["global-average:combined"] - 0.3) < 1e-10);
   });
 });

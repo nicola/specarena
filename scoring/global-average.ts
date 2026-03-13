@@ -19,6 +19,7 @@ export const globalAverage: GlobalScoringStrategy = {
   metrics: [
     { key: "global-average:security", label: "Security" },
     { key: "global-average:utility", label: "Utility" },
+    { key: "global-average:combined", label: "Combined" },
   ],
 
   async update(result: GameResult, store: ScoringStorageAdapter, challengeStrategyName: string): Promise<void> {

@@ -336,6 +336,7 @@ describe("scoring", () => {
       assert.deepStrictEqual(descriptors.strategies["average"], [
         { key: "average:security", label: "Security" },
         { key: "average:utility", label: "Utility" },
+        { key: "average:combined", label: "Combined" },
       ]);
     });
   });

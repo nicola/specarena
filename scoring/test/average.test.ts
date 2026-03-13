@@ -28,9 +28,9 @@ describe("average strategy", () => {
     store = new InMemoryScoringStore();
   });
 
-  async function computeEntries(games: GameResult[]) {
+  async function computeEntries(games: GameResult[], options?: { securityWeight?: number; utilityWeight?: number }) {
     for (const game of games) {
-      await average.update(game, store);
+      await average.update(game, store, options);
     }
     const scores = await store.getScores("psi");
     return scores["average"] ?? [];
@@ -40,6 +40,7 @@ describe("average strategy", () => {
     assert.deepStrictEqual(average.metrics, [
       { key: "average:security", label: "Security" },
       { key: "average:utility", label: "Utility" },
+      { key: "average:combined", label: "Combined" },
     ]);
   });
 
@@ -138,5 +139,80 @@ describe("average strategy", () => {
     assert.equal(charlie.gamesPlayed, 1);
     assert.equal(charlie.metrics["average:security"], 0);
     assert.equal(charlie.metrics["average:utility"], 0);
+  });
+
+  // ── Weighted combined metric ────────────────────────────────────────────────
+
+  it("default weights (1.0/1.0) — combined equals mean of security and utility", async () => {
+    const entries = await computeEntries([
+      makeGame({ security: 1, utility: 0 }, { security: 0, utility: 1 }),
+    ]);
+
+    const alice = entries.find((e) => e.playerId === "alice")!;
+    const bob = entries.find((e) => e.playerId === "bob")!;
+
+    // combined = (security * 1 + utility * 1) / 2
+    assert.equal(alice.metrics["average:combined"], 0.5); // (1 + 0) / 2
+    assert.equal(bob.metrics["average:combined"], 0.5);   // (0 + 1) / 2
+  });
+
+  it("utility-only weights (securityWeight=0) — combined equals utility average", async () => {
+    const entries = await computeEntries(
+      [makeGame({ security: 0.8, utility: 0.4 }, { security: -0.8, utility: -0.4 })],
+      { securityWeight: 0.0, utilityWeight: 1.0 }
+    );
+
+    const alice = entries.find((e) => e.playerId === "alice")!;
+    const bob = entries.find((e) => e.playerId === "bob")!;
+
+    assert.equal(alice.metrics["average:combined"], 0.4);
+    assert.equal(bob.metrics["average:combined"], -0.4);
+    // Security average is still tracked separately
+    assert.equal(alice.metrics["average:security"], 0.8);
+  });
+
+  it("security-heavy weights (1.5/1.0) — combined skews toward security", async () => {
+    // security=1, utility=0: combined = (1*1.5 + 0*1.0) / 2.5 = 0.6
+    const entries = await computeEntries(
+      [makeGame({ security: 1, utility: 0 }, { security: 0, utility: 0 })],
+      { securityWeight: 1.5, utilityWeight: 1.0 }
+    );
+
+    const alice = entries.find((e) => e.playerId === "alice")!;
+    assert.ok(Math.abs(alice.metrics["average:combined"] - 0.6) < 1e-10);
+    // Unweighted averages are unaffected
+    assert.equal(alice.metrics["average:security"], 1);
+    assert.equal(alice.metrics["average:utility"], 0);
+  });
+
+  it("weighted combined averages correctly across multiple games", async () => {
+    // Game 1: alice security=1, utility=0 → combined=(1.5+0)/2.5=0.6
+    // Game 2: alice security=0, utility=1 → combined=(0+1)/2.5=0.4
+    // Average combined = (0.6+0.4)/2 = 0.5
+    // Equivalently: avgSec=0.5, avgUtil=0.5 → (0.5*1.5+0.5*1)/2.5=0.5
+    const entries = await computeEntries(
+      [
+        makeGame({ security: 1, utility: 0 }, { security: 0, utility: 0 }),
+        makeGame({ security: 0, utility: 1 }, { security: 0, utility: 0 }),
+      ],
+      { securityWeight: 1.5, utilityWeight: 1.0 }
+    );
+
+    const alice = entries.find((e) => e.playerId === "alice")!;
+    assert.equal(alice.gamesPlayed, 2);
+    assert.ok(Math.abs(alice.metrics["average:combined"] - 0.5) < 1e-10);
+  });
+
+  it("no options provided — combined defaults to equal weight (1.0/1.0)", async () => {
+    const games = [makeGame({ security: 0.6, utility: 0.4 }, { security: 0, utility: 0 })];
+    // No options passed — should default to equal weights
+    for (const game of games) {
+      await average.update(game, store);
+    }
+    const scores = await store.getScores("psi");
+    const entries = scores["average"] ?? [];
+    const alice = entries.find((e) => e.playerId === "alice")!;
+    // combined = (0.6 + 0.4) / 2 = 0.5
+    assert.ok(Math.abs(alice.metrics["average:combined"] - 0.5) < 1e-10);
   });
 });
