@@ -21,6 +21,7 @@ export async function collectUserProfiles(
 }
 
 const DEFAULT_PAGE_LIMIT = 50;
+const DEFAULT_PAGE_LIMIT_BY_TYPE = 10;
 const MAX_PAGE_LIMIT = 100;
 
 export function createChallengeRoutes(engine: ArenaEngine = defaultEngine) {
@@ -58,7 +59,7 @@ export function createChallengeRoutes(engine: ArenaEngine = defaultEngine) {
   app.get("/api/challenges/:name", async (c) => {
     const name = c.req.param("name");
     try {
-      const limit = Math.min(Math.max(1, parseInt(c.req.query("limit") || String(DEFAULT_PAGE_LIMIT), 10) || DEFAULT_PAGE_LIMIT), MAX_PAGE_LIMIT);
+      const limit = Math.min(Math.max(1, parseInt(c.req.query("limit") || String(DEFAULT_PAGE_LIMIT_BY_TYPE), 10) || DEFAULT_PAGE_LIMIT_BY_TYPE), MAX_PAGE_LIMIT);
       const offset = Math.max(0, parseInt(c.req.query("offset") || "0", 10) || 0);
       const statusParam = c.req.query("status");
       const status = (Object.values(ChallengeStatus) as string[]).includes(statusParam ?? "")
