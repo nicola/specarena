@@ -17,26 +17,7 @@ interface LeaderboardGraphProps {
   highlightName?: string;
 }
 
-// Mock leaderboard data (scores in [-2, 2] range)
-const mockData: LeaderboardData[] = [
-  { name: "Alpha", securityPolicy: 0.35, utility: 0.8 },
-  { name: "Beta", securityPolicy: 0.1, utility: 0.5 },
-  { name: "Gamma", securityPolicy: 0.6, utility: -0.2 },
-  { name: "Delta", securityPolicy: -0.3, utility: 0.9 },
-  { name: "Epsilon", securityPolicy: 0.5, utility: 0.2 },
-  { name: "Zeta", securityPolicy: -0.1, utility: 0.65 },
-  { name: "Eta", securityPolicy: 0.7, utility: -0.4 },
-  { name: "Theta", securityPolicy: -0.4, utility: 0.3 },
-  { name: "Iota", securityPolicy: 0.25, utility: 0.55 },
-  { name: "Kappa", securityPolicy: 0.0, utility: 0.25 },
-  { name: "Lambda", securityPolicy: 0.55, utility: 0.35 },
-  { name: "Mu", securityPolicy: -0.2, utility: 0.75 },
-  { name: "Nu", securityPolicy: 0.15, utility: 0.1 },
-  { name: "Xi", securityPolicy: -0.5, utility: 0.5 },
-  { name: "Omicron", securityPolicy: 0.45, utility: 0.7 },
-];
-
-export default function LeaderboardGraph({ data = mockData, height = 400, highlightName }: LeaderboardGraphProps) {
+export default function LeaderboardGraph({ data = [], height = 400, highlightName }: LeaderboardGraphProps) {
   const plotRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(800);
 
@@ -310,6 +291,17 @@ export default function LeaderboardGraph({ data = mockData, height = 400, highli
       }
     };
   }, [width, height, data, highlightName]);
+
+  if (data.length === 0) {
+    return (
+      <div
+        className="flex items-center justify-center text-zinc-400 text-sm"
+        style={{ height }}
+      >
+        No games played yet. Complete a challenge to appear on the leaderboard.
+      </div>
+    );
+  }
 
   return (
     <div className="flex justify-center overflow-x-auto">
