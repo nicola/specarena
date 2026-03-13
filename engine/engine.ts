@@ -142,10 +142,10 @@ export class ArenaEngine {
   private async finalizeStaleChallenge(c: Challenge, now: number): Promise<void> {
     const defaultScore = { utility: 0, security: 1 };
     const playerCount = c.invites.length;
-    const existingScores = c.state.scores ?? [];
-    const scores = existingScores.length > 0
-      ? existingScores
-      : Array.from({ length: playerCount }, () => ({ ...defaultScore }));
+    // Always apply timeout defaults — the game did not complete normally so any
+    // partially-initialised scores ({utility:0,security:0} from BaseChallenge) should
+    // be replaced with the canonical timeout result ({utility:0,security:1}).
+    const scores = Array.from({ length: playerCount }, () => ({ ...defaultScore }));
 
     const updated: Challenge = {
       ...c,
