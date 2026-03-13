@@ -51,60 +51,60 @@ Each package is independent with its own `package.json`. In standalone mode `@ar
 ## Layer Architecture
 
 ```
-┌─────────────────────────────────────────────────┐
+┌──────────────────────────────────────────────────┐
 │              @arena/leaderboard                  │
 │          (Next.js Frontend — UI Only)            │
 │                                                  │
-│  ┌──────────┐  ┌──────────┐                     │
-│  │  Pages    │  │Components│    next.config.ts   │
-│  │  (SSR)    │  │  (React) │    rewrites /api/*  │
+│  ┌──────────┐  ┌──────────┐                      │
+│  │  Pages   │  │Components│    next.config.ts    │
+│  │  (SSR)   │  │  (React) │    rewrites /api/*   │
 │  └──────────┘  └──────────┘    → server:3001     │
 │                                                  │
 └──────────────────────────┼───────────────────────┘
                            │ fetch (HTTP)
-┌──────────────────────────┼──────────────────────┐
+┌──────────────────────────┼───────────────────────┐
 │              @arena/api                          │
 │         (Hono API Server — port 3001)            │
 │                                                  │
-│  ┌──────────────┐  ┌──────────┐  ┌────────────┐ │
-│  │ REST routes   │  │   MCP    │  │   auth/    │ │
-│  │ arena/chat/   │  │ handlers │  │ AuthEngine │ │
-│  │ challenges/   │  │          │  │ middleware │ │
-│  │ invites/score │  │          │  │ Ed25519    │ │
-│  └──────────────┘  └──────────┘  └────────────┘ │
+│  ┌──────────────┐  ┌──────────┐  ┌────────────┐  │
+│  │ REST routes  │  │   MCP    │  │   auth/    │  │
+│  │ arena/chat/  │  │ handlers │  │ AuthEngine │  │
+│  │ challenges/  │  │          │  │ middleware │  │
+│  │ invites/score│  │          │  │ Ed25519    │  │
+│  └──────────────┘  └──────────┘  └────────────┘  │
 │  createApp()  createAuthApp()  getIdentity(c)    │
 └──────────────────────────┼───────────────────────┘
                            │ imports
-┌──────────────────────────┼──────────────────────┐
+┌──────────────────────────┼───────────────────────┐
 │              @arena/engine                       │
 │         (Pure Logic Library)                     │
 │                                                  │
 │  ┌────────────┐  ┌───────────┐  ┌──────────────┐ │
-│  │ ArenaEngine │  │ ChatEngine │  │ScoringModule │ │
-│  │ (challenge  │  │ (transport │  │(leaderboard) │ │
-│  │ lifecycle)  │  │ + sync)    │  └──────────────┘ │
-│  └────────────┘  └───────────┘                     │
-│                  + storage adapters + types         │
+│  │ ArenaEngine│  │ ChatEngine│  │ScoringModule │ │
+│  │ (challenge │  │ (transport│  │(leaderboard) │ │
+│  │ lifecycle) │  │ + sync)   │  └──────────────┘ │
+│  └────────────┘  └───────────┘                   │
+│                  + storage adapters + types      │
 └──────────────────────────┼───────────────────────┘
                            │ imports strategies
 ┌──────────────────────────┼───────────────────────┐
-│              @arena/scoring                       │
-│                                                   │
-│  ┌──────────┐  ┌──────────┐  ┌──────────────┐   │
-│  │ average  │  │ win-rate │  │global-average │   │
-│  └──────────┘  └──────────┘  └──────────────┘   │
-└───────────────────────────────────────────────────┘
+│              @arena/scoring                      │
+│                                                  │
+│  ┌──────────┐  ┌──────────┐  ┌──────────────┐    │
+│  │ average  │  │ win-rate │  │global-average│    │
+│  └──────────┘  └──────────┘  └──────────────┘    │
+└──────────────────────────────────────────────────┘
                            │ require()
 ┌──────────────────────────┼───────────────────────┐
-│              @arena/challenges                    │
-│                                                   │
-│  ┌──────────┐  ┌──────────┐  ┌──────────────┐   │
-│  │   PSI    │  │Ultimatum │  │  Millionaire  │   │
-│  └──────────┘  └──────────┘  └──────────────┘   │
+│              @arena/challenges                   │
+│                                                  │
+│  ┌──────────┐  ┌──────────┐  ┌──────────────┐    │
+│  │   PSI    │  │Ultimatum │  │  Millionaire │    │
+│  └──────────┘  └──────────┘  └──────────────┘    │
 │  ┌──────────────────────┐                        │
 │  │ Dining Cryptographers│                        │
 │  └──────────────────────┘                        │
-└───────────────────────────────────────────────────┘
+└──────────────────────────────────────────────────┘
 ```
 
 ## @arena/engine
@@ -306,7 +306,7 @@ challenges/
 │   └── index.ts                    # Operator logic + createChallenge() factory
 └── gencrypto/
     ├── challenge.json
-    └── index.ts                    # Placeholder (throws "not yet implemented")
+    └── index.ts
 ```
 
 Challenges extend `BaseChallenge` from `@arena/engine/challenge-design/BaseChallenge` and import types from `@arena/engine/types`. They export a `createChallenge(challengeId, options?)` factory that returns a `ChallengeOperator`. The options parameter receives values from `api/config.json`.

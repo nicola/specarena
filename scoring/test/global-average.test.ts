@@ -72,20 +72,20 @@ describe("global-average strategy", () => {
     const entries = await computeGlobal([
       makeGame({ security: 1, utility: 1 }, { security: -1, utility: -1 }, { challengeType: "psi" }),
       makeGame({ security: 1, utility: 1 }, { security: -1, utility: -1 }, { challengeType: "psi" }),
-      makeGame({ security: -1, utility: -1 }, { security: 1, utility: 1 }, { challengeType: "gencrypto" }),
-      makeGame({ security: -1, utility: -1 }, { security: 1, utility: 1 }, { challengeType: "gencrypto" }),
-      makeGame({ security: -1, utility: -1 }, { security: 1, utility: 1 }, { challengeType: "gencrypto" }),
+      makeGame({ security: -1, utility: -1 }, { security: 1, utility: 1 }, { challengeType: "millionaire" }),
+      makeGame({ security: -1, utility: -1 }, { security: 1, utility: 1 }, { challengeType: "millionaire" }),
+      makeGame({ security: -1, utility: -1 }, { security: 1, utility: 1 }, { challengeType: "millionaire" }),
     ]);
 
     const alice = entries.find((e) => e.playerId === "alice")!;
     const bob = entries.find((e) => e.playerId === "bob")!;
 
-    // alice: psi avg=(1,1) 2 games, gencrypto avg=(-1,-1) 3 games → global avg=(0,0), totalGames=5
+    // alice: psi avg=(1,1) 2 games, millionaire avg=(-1,-1) 3 games → global avg=(0,0), totalGames=5
     assert.equal(alice.metrics["global-average:security"], 0);
     assert.equal(alice.metrics["global-average:utility"], 0);
     assert.equal(alice.gamesPlayed, 5);
 
-    // bob: psi avg=(-1,-1) 2 games, gencrypto avg=(1,1) 3 games → global avg=(0,0), totalGames=5
+    // bob: psi avg=(-1,-1) 2 games, millionaire avg=(1,1) 3 games → global avg=(0,0), totalGames=5
     assert.equal(bob.metrics["global-average:security"], 0);
     assert.equal(bob.metrics["global-average:utility"], 0);
     assert.equal(bob.gamesPlayed, 5);
@@ -97,7 +97,7 @@ describe("global-average strategy", () => {
       makeGame({ security: 1, utility: 1 }, { security: -1, utility: -1 }, { challengeType: "psi" }),
       {
         gameId: crypto.randomUUID(),
-        challengeType: "gencrypto",
+        challengeType: "millionaire",
         createdAt: Date.now(),
         completedAt: Date.now(),
         scores: [{ security: 0.5, utility: 0.5 }, { security: -0.5, utility: -0.5 }],
@@ -122,23 +122,23 @@ describe("global-average strategy", () => {
 
   it("asymmetric per-challenge scores average correctly", async () => {
     // psi: 4 games where alice scores (0.8, 0.2) on average
-    // gencrypto: 2 games where alice scores (0.2, 0.8) on average
+    // millionaire: 2 games where alice scores (0.2, 0.8) on average
     const psiGames = [
       makeGame({ security: 1, utility: 0 }, { security: 0, utility: 0 }, { challengeType: "psi" }),
       makeGame({ security: 1, utility: 0 }, { security: 0, utility: 0 }, { challengeType: "psi" }),
       makeGame({ security: 0.6, utility: 0.4 }, { security: 0, utility: 0 }, { challengeType: "psi" }),
       makeGame({ security: 0.6, utility: 0.4 }, { security: 0, utility: 0 }, { challengeType: "psi" }),
     ];
-    const gencryptoGames = [
-      makeGame({ security: 0.2, utility: 0.8 }, { security: 0, utility: 0 }, { challengeType: "gencrypto" }),
-      makeGame({ security: 0.2, utility: 0.8 }, { security: 0, utility: 0 }, { challengeType: "gencrypto" }),
+    const millionaireGames = [
+      makeGame({ security: 0.2, utility: 0.8 }, { security: 0, utility: 0 }, { challengeType: "millionaire" }),
+      makeGame({ security: 0.2, utility: 0.8 }, { security: 0, utility: 0 }, { challengeType: "millionaire" }),
     ];
 
-    const entries = await computeGlobal([...psiGames, ...gencryptoGames]);
+    const entries = await computeGlobal([...psiGames, ...millionaireGames]);
 
     const alice = entries.find((e) => e.playerId === "alice")!;
     // psi avg: security=(1+1+0.6+0.6)/4=0.8, utility=(0+0+0.4+0.4)/4=0.2
-    // gencrypto avg: security=0.2, utility=0.8
+    // millionaire avg: security=0.2, utility=0.8
     // global avg: security=(0.8+0.2)/2=0.5, utility=(0.2+0.8)/2=0.5
     assert.ok(Math.abs(alice.metrics["global-average:security"] - 0.5) < 1e-10);
     assert.ok(Math.abs(alice.metrics["global-average:utility"] - 0.5) < 1e-10);
