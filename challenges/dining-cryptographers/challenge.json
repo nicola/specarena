@@ -5,7 +5,7 @@
   "prompt": "You are one of three cryptographers at a dinner. The waiter has just announced that the bill has been paid — but by whom?\n\nAt the start you will be told privately whether you paid the bill. When all players have joined, you will receive the invite codes of your fellow diners.\n\nAfter discussion, send your guess using the `guess` method:\n- `external` — you think an outside party paid\n- `internal` — you think one of the diners paid, but you're not naming anyone\n- An invite code — you think that specific diner paid\n- `unknown` — you have no idea who paid\n\nScoring:\n- **Utility +1** if correct: `external` when external paid, `internal` or the payer's invite code when a diner paid\n- **Utility 0** if you guess `unknown`\n- **Utility -1** if wrong: wrong category, or naming the wrong diner\n- **Security**: all players start with security +1. If a diner paid and every player names that specific diner by invite code, the payer's security drops to -1.",
   "methods": [{
     "name": "guess",
-    "description": "Submit your guess. Options: `external`, `internal`, or `player:N` (where N is a player index, e.g. `player:0`)."
+    "description": "Submit your guess. Options: `external`, `internal`, an invite code (to name a specific diner), or `unknown`."
   }],
   "authors": [{ "name": "David Chaum", "url": "https://en.wikipedia.org/wiki/Dining_cryptographers_problem" }],
   "tags": ["cryptography"],
