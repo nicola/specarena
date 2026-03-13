@@ -224,8 +224,8 @@ describe("Dining Cryptographers challenge", () => {
     }
 
     assert.ok(
-      op.state.attributions?.some(a => a.type === "identity_revealed" && a.to === payerIndex),
-      "Should record identity_revealed attributions"
+      op.state.attributions?.some(a => a.type === "security_breach" && a.to === payerIndex),
+      "Should record security_breach attributions"
     );
   });
 
