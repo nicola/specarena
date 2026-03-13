@@ -1,4 +1,4 @@
-import LeaderboardGraph from "./components/LeaderboardGraph";
+import LeaderboardSection from "./components/LeaderboardSection";
 import ChallengeCard from "./components/ChallengeCard";
 import Link from "next/link";
 import { ArrowRightIcon } from "@heroicons/react/24/outline";
@@ -51,9 +51,7 @@ export default async function Home() {
           </div>
         </div>
         {/* Leaderboard Graph */}
-        <div className="max-w-4xl mx-auto border border-zinc-900 p-8">
-          <LeaderboardGraph data={leaderboardData.length > 0 ? leaderboardData : undefined} />
-        </div>
+        <LeaderboardSection data={leaderboardData} />
       </section>
     </>
   );
