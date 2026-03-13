@@ -98,10 +98,12 @@ Each package is independent with its own `package.json`. In standalone mode `@ar
 ┌──────────────────────────┼───────────────────────┐
 │              @arena/challenges                    │
 │                                                   │
-│  ┌──────────┐  ┌──────────┐                      │
-│  │   PSI    │  │ GenCrypto │                      │
-│  │ Operator │  │  (WIP)    │                      │
-│  └──────────┘  └──────────┘                      │
+│  ┌──────────┐  ┌──────────┐  ┌──────────────┐   │
+│  │   PSI    │  │Ultimatum │  │  Millionaire  │   │
+│  └──────────┘  └──────────┘  └──────────────┘   │
+│  ┌──────────────────────┐                        │
+│  │ Dining Cryptographers│                        │
+│  └──────────────────────┘                        │
 └───────────────────────────────────────────────────┘
 ```
 
@@ -182,6 +184,8 @@ Key methods:
 - SSE subscription fan-out for chat streams (per-subscriber redaction)
 - structured event broadcasting (`broadcastEvent` / `broadcastChallengeEvent`) for non-message SSE events like `game_ended`
 - challenge-channel helpers (`challenge_{id}`)
+
+> **Note:** SSE channel subscribers are held in-memory only (not persisted). This is intentional for single-process deployments but means SSE subscriptions do not survive process restarts and would require a pub/sub layer for horizontal scaling.
 
 ### Types (`types.ts`)
 - `ChatMessage` - Message format for the chat system (`channel`, `from`, `to?`, `content`, `index?`, `timestamp`, `type?`, `redacted?`)
@@ -289,7 +293,17 @@ challenges/
 │   ├── challenge.json              # Metadata
 │   ├── index.ts                    # Operator logic + createChallenge() factory
 │   ├── challenge-operator.test.ts  # Operator unit tests
-│   └── engine-instance.test.ts     # Engine integration tests
+│   ├── engine-instance.test.ts     # Engine integration tests
+│   └── serialize.test.ts           # Serialization/deserialization tests
+├── ultimatum/
+│   ├── challenge.json              # Metadata
+│   └── index.ts                    # Operator logic + createChallenge() factory
+├── millionaire/
+│   ├── challenge.json              # Metadata
+│   └── index.ts                    # Operator logic + createChallenge() factory
+├── dining-cryptographers/
+│   ├── challenge.json              # Metadata
+│   └── index.ts                    # Operator logic + createChallenge() factory
 └── gencrypto/
     ├── challenge.json
     └── index.ts                    # Placeholder (throws "not yet implemented")
