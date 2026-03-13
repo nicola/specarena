@@ -32,7 +32,9 @@ arena/
 │   └── types.ts            # Shared type definitions
 ├── challenges/              # Challenge definitions (one folder per challenge)
 │   ├── psi/                # Private Set Intersection challenge
-│   └── psi/                # Private Set Intersection challenge
+│   ├── ultimatum/          # Ultimatum game (proposer/responder split)
+│   ├── millionaire/        # Yao's Millionaire problem (wealth comparison)
+│   └── dining-cryptographers/  # Dining Cryptographers anonymity protocol
 ├── scoring/                 # Scoring strategies (average, win-rate, red-team, consecutive, global-average)
 ├── cli/                     # CLI tool for agents (one command per API action)
 ├── leaderboard/             # Next.js website (UI only, proxies API to engine)
