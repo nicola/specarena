@@ -45,23 +45,31 @@ describe("Stale challenge garbage collection", () => {
     await engine.clearRuntimeState();
   });
 
-  it("prunes stale unstarted challenges from storage and invite lookup", async () => {
+  it("finalizes stale unstarted challenges (status=ended, default scores)", async () => {
     const challenge = await createPsiChallenge();
 
     const removed = await engine.pruneStaleChallenges(futureNow());
     assert.equal(removed, 1);
 
+    // Challenge is still in storage — finalized, not deleted
     const { items: typed } = await engine.getChallengesByType("psi");
-    assert.ok(!typed.some((c) => c.id === challenge.id));
+    const finalized = typed.find((c) => c.id === challenge.id);
+    assert.ok(finalized, "finalized challenge should still be in storage");
+    assert.equal(finalized.state.status, "ended");
 
-    const { items: all } = await engine.listChallenges();
-    assert.ok(!all.some((c) => c.id === challenge.id));
+    // Default scores applied: utility=0, security=1 for each invite slot
+    assert.equal(finalized.state.scores.length, challenge.invites.length);
+    for (const score of finalized.state.scores) {
+      assert.equal(score.utility, 0);
+      assert.equal(score.security, 1);
+    }
 
+    // Invite lookup still works
     const invite = await engine.getChallengeFromInvite(challenge.invites[0]);
-    assert.equal(invite.success, false);
+    assert.equal(invite.success, true);
   });
 
-  it("prunes old challenges that have started but not ended", async () => {
+  it("finalizes challenges that have started but not ended", async () => {
     const challenge = await createPsiChallenge();
     await request("POST", "/api/arena/join", { invite: challenge.invites[0] });
     await request("POST", "/api/arena/join", { invite: challenge.invites[1] });
@@ -73,8 +81,11 @@ describe("Stale challenge garbage collection", () => {
     const removed = await engine.pruneStaleChallenges(futureNow());
     assert.equal(removed, 1);
 
+    // Challenge persisted as ended
     const { items: typed } = await engine.getChallengesByType("psi");
-    assert.ok(!typed.some((c) => c.id === challenge.id));
+    const finalized = typed.find((c) => c.id === challenge.id);
+    assert.ok(finalized, "finalized challenge should still be in storage");
+    assert.equal(finalized.state.status, "ended");
   });
 
   it("does not prune old challenges that have ended", async () => {
@@ -91,16 +102,18 @@ describe("Stale challenge garbage collection", () => {
     assert.ok(typed.some((c) => c.id === challenge.id));
   });
 
-  it("removes chat data for stale challenge channels", async () => {
+  it("preserves chat data for finalized challenge channels", async () => {
     const challenge = await createPsiChallenge();
 
     await engine.chat.sendMessage(challenge.id, "a", "public");
     await engine.chat.sendMessage(toChallengeChannel(challenge.id), "operator", "private", "a");
     await engine.pruneStaleChallenges(futureNow());
 
+    // Chat data is preserved — finalization does not delete channels
     const publicChannel = await engine.chat.getMessagesForChannel(challenge.id);
     const privateChannel = await engine.chat.getMessagesForChannel(toChallengeChannel(challenge.id));
-    assert.equal(publicChannel.length, 0);
-    assert.equal(privateChannel.length, 0);
+    assert.ok(publicChannel.length > 0, "public channel messages should be preserved");
+    // The private challenge channel gets the timeout broadcast message added
+    assert.ok(privateChannel.length > 0, "private channel messages should be preserved");
   });
 });

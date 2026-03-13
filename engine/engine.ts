@@ -8,6 +8,7 @@ import {
   ChallengeOperator,
   ChallengeOperatorError,
   ChallengeOperatorState,
+  ChallengeStatus,
   GameCategory,
   Result,
   fromChallengeChannel,
@@ -137,18 +138,50 @@ export class ArenaEngine {
     return !gameEnded && challenge.createdAt < cutoff;
   }
 
+  /** Finalize a stale challenge: mark it ended, assign default scores, persist, and record scoring. */
+  private async finalizeStaleChallenge(c: Challenge, now: number): Promise<void> {
+    const defaultScore = { utility: 0, security: 1 };
+    const playerCount = c.invites.length;
+    const existingScores = c.state.scores ?? [];
+    const scores = existingScores.length > 0
+      ? existingScores
+      : Array.from({ length: playerCount }, () => ({ ...defaultScore }));
+
+    const updated: Challenge = {
+      ...c,
+      state: {
+        ...c.state,
+        status: ChallengeStatus.Ended,
+        completedAt: now,
+        scores,
+      },
+    };
+
+    await this.storageAdapter.setChallenge(updated);
+
+    // Notify via challenge channel (best-effort)
+    try {
+      await this.chat.sendChallengeMessage(c.id, "operator", "Game timed out. No result recorded.");
+    } catch {
+      // channel may not exist — ignore
+    }
+
+    // Record scoring only if players actually joined
+    if (updated.state.players.length > 0 && this.scoring) {
+      const result = ScoringModule.challengeToGameResult(updated);
+      if (result) {
+        this.scoring.recordGame(result)
+          .catch((err) => console.error("Scoring recordGame (stale GC) failed:", err));
+      }
+    }
+  }
+
   async pruneStaleChallenges(now: number = Date.now()): Promise<number> {
     const { items: challenges } = await this.storageAdapter.listChallenges();
     const stale = challenges.filter((c) => this.isChallengeStale(c, now));
     if (stale.length === 0) return 0;
 
-    await Promise.all(
-      stale.flatMap((c) => [
-        this.storageAdapter.deleteChallenge(c.id),
-        this.chat.deleteChannel(c.id),
-        this.chat.deleteChannel(toChallengeChannel(c.id)),
-      ]),
-    );
+    await Promise.all(stale.map((c) => this.finalizeStaleChallenge(c, now)));
 
     return stale.length;
   }
@@ -227,12 +260,7 @@ export class ArenaEngine {
       return challenge;
     }
 
-    await Promise.all([
-      this.storageAdapter.deleteChallenge(challenge.id),
-      this.chat.deleteChannel(challenge.id),
-      this.chat.deleteChannel(toChallengeChannel(challenge.id)),
-    ]);
-    
+    await this.finalizeStaleChallenge(challenge, Date.now());
     return undefined;
   }
 
