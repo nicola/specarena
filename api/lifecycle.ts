@@ -1,3 +1,5 @@
+import { defaultEngine } from "@arena/engine/engine";
+
 function logMemory() {
   const mem = process.memoryUsage();
   console.log(
@@ -5,14 +7,23 @@ function logMemory() {
   );
 }
 
+async function runGC() {
+  const pruned = await defaultEngine.pruneStaleChallenges();
+  if (pruned > 0) {
+    console.log(`[gc] Pruned ${pruned} stale challenge(s)`);
+  }
+}
+
 export function setupLifecycle() {
   const memInterval = setInterval(logMemory, 60_000);
+  const gcInterval = setInterval(runGC, 300_000);
 
   for (const sig of ["SIGTERM", "SIGINT", "SIGHUP"] as const) {
     process.on(sig, () => {
       console.log(`[shutdown] Received ${sig} at ${new Date().toISOString()}`);
       logMemory();
       clearInterval(memInterval);
+      clearInterval(gcInterval);
       process.exit(0);
     });
   }
