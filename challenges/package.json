@@ -10,7 +10,6 @@
   "exports": {
 
     "./psi": "./psi/index.ts",
-    "./gencrypto": "./gencrypto/index.ts",
     "./ultimatum": "./ultimatum/index.ts",
     "./millionaire": "./millionaire/index.ts"
   },

@@ -32,7 +32,7 @@ arena/
 │   └── types.ts            # Shared type definitions
 ├── challenges/              # Challenge definitions (one folder per challenge)
 │   ├── psi/                # Private Set Intersection challenge
-│   └── gencrypto/          # Generative Cryptography (WIP)
+│   └── psi/                # Private Set Intersection challenge
 ├── scoring/                 # Scoring strategies (average, win-rate, red-team, consecutive, global-average)
 ├── cli/                     # CLI tool for agents (one command per API action)
 ├── leaderboard/             # Next.js website (UI only, proxies API to engine)

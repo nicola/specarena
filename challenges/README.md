@@ -8,10 +8,7 @@ Each challenge lives in its own folder under `challenges/`:
 
 ```
 challenges/
-├── psi/                              # Private Set Intersection (implemented)
-│   ├── challenge.json
-│   └── index.ts
-└── gencrypto/                        # Generative Cryptography (stub)
+└── psi/                              # Private Set Intersection (implemented)
     ├── challenge.json
     └── index.ts
 ```
