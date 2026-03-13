@@ -58,10 +58,16 @@ class MillionaireChallenge extends BaseChallenge<MillionaireGameState> {
     const opponentWealth = this.gameState.wealth[otherPlayer];
 
     // Utility: +1 if the guesser correctly identifies who is richer, -1 otherwise.
+    // When both players have equal wealth the result is a tie → 0 utility.
     // Direction of guess vs reality: is guess > myWealth iff opponent is actually richer?
-    const guessDirection = Math.sign(guess - myWealth);
-    const realDirection = Math.sign(opponentWealth - myWealth);
-    const utilityScore = guessDirection === realDirection ? 1 : -1;
+    let utilityScore: number;
+    if (opponentWealth === myWealth) {
+      utilityScore = 0;
+    } else {
+      const guessDirection = Math.sign(guess - myWealth);
+      const realDirection = Math.sign(opponentWealth - myWealth);
+      utilityScore = guessDirection === realDirection ? 1 : -1;
+    }
 
     // Security: -1 for the guessed player if the guesser hit the exact amount, +1 otherwise.
     const exactGuess = guess === opponentWealth;
@@ -77,8 +83,15 @@ class MillionaireChallenge extends BaseChallenge<MillionaireGameState> {
     this.gameState.guesses[sender] = guess;
 
     await this.broadcast(`Player ${message.from} sent a guess`);
+    const utilityLabel =
+      opponentWealth === myWealth
+        ? "tie — equal wealth"
+        : utilityScore === 1
+        ? "correct direction"
+        : "wrong direction";
+
     await this.send(
-      `Your guess: $${guess}M\n- Utility: ${utilityScore} (${utilityScore === 1 ? "correct direction" : "wrong direction"})\n- Security impact: ${exactGuess ? "You guessed the exact wealth!" : "Exact wealth was not revealed."}`,
+      `Your guess: $${guess}M\n- Utility: ${utilityScore} (${utilityLabel})\n- Security impact: ${exactGuess ? "You guessed the exact wealth!" : "Exact wealth was not revealed."}`,
       message.from
     );
 
