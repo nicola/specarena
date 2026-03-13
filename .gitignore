@@ -3,3 +3,5 @@ node_modules
 .env
 scripts/.keys/
 scripts/.benchmark-keys.json
+context.md
+leaderboard/public/logo-variations.html
