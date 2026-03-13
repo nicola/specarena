@@ -41,16 +41,21 @@ describe("Dining Cryptographers challenge", () => {
     }
   });
 
-  it("broadcasts all invite codes when game starts", async () => {
+  it("broadcasts anonymous player labels (not invite codes) when game starts", async () => {
     const { operator, chat } = createDining("test_broadcast_start");
     await joinAll(operator);
 
     const messages = await chat.getMessagesForChallengeChannel("test_broadcast_start");
     const startMsg = messages.find(m => m.content.includes("All diners have arrived"));
     assert.ok(startMsg, "Should broadcast game start");
+    // Invite codes must NOT appear in the broadcast (privacy requirement)
     for (const invite of INVITES) {
-      assert.ok(startMsg!.content.includes(invite), `Broadcast should include invite ${invite}`);
+      assert.ok(!startMsg!.content.includes(invite), `Broadcast must NOT expose invite code ${invite}`);
     }
+    // Anonymous labels should appear instead
+    assert.ok(startMsg!.content.includes("Player 1"), "Broadcast should include Player 1");
+    assert.ok(startMsg!.content.includes("Player 2"), "Broadcast should include Player 2");
+    assert.ok(startMsg!.content.includes("Player 3"), "Broadcast should include Player 3");
   });
 
   it("game is active after all players join", async () => {

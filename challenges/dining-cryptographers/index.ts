@@ -39,7 +39,7 @@ class DiningCryptographersChallenge extends BaseChallenge<DiningGameState> {
   }
 
   protected async onGameStart(): Promise<void> {
-    const playerList = this.state.players.join(", ");
+    const playerList = this.state.players.map((_, i) => `Player ${i + 1}`).join(", ");
     await this.broadcast(`All diners have arrived: ${playerList}.\n\nThe bill has been paid — but by whom? Submit your guess.`);
   }
 
@@ -52,7 +52,7 @@ class DiningCryptographersChallenge extends BaseChallenge<DiningGameState> {
     if (guess === null) {
       throw new ChallengeOperatorError(
         "INVALID_GUESS",
-        `Invalid guess. Send "external", "internal", "unknown", or a valid invite code (${this.state.players.join(", ")}).`
+        `Invalid guess. Send "external", "internal", "unknown", or your own invite code to name a specific diner.`
       );
     }
 
