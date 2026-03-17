@@ -248,7 +248,7 @@ export class ArenaEngine {
     const result = await this.getChallengeFromInvite(invite);
 
     if (!result.success) {
-      return { error: result.message };
+      return { error: result.message, code: result.error };
     }
 
     const challenge = result.data;
@@ -276,7 +276,7 @@ export class ArenaEngine {
     const challenge = await this.getChallenge(challengeId);
 
     if (!challenge) {
-      return { error: "Challenge not found" };
+      return { error: "Challenge not found", code: ChallengeError.NOT_FOUND };
     }
 
     await this.chat.sendChallengeMessage(challengeId, from, (messageType ? `(${messageType}) ` : "") + content, "operator");
