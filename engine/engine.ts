@@ -8,6 +8,7 @@ import {
   ChallengeOperator,
   ChallengeOperatorError,
   ChallengeOperatorState,
+  ChallengeStatus,
   GameCategory,
   Result,
   fromChallengeChannel,
@@ -137,18 +138,48 @@ export class ArenaEngine {
     return !gameEnded && challenge.createdAt < cutoff;
   }
 
+  private async terminateChallenge(challenge: Challenge): Promise<void> {
+    try {
+      const operator = this.recreateOperator(challenge);
+      if (operator.onTimeout) {
+        await operator.onTimeout();
+      } else {
+        operator.state.status = ChallengeStatus.Ended;
+        operator.state.completedAt = Date.now();
+      }
+      await this.persistOperator(challenge, operator);
+    } catch (err) {
+      console.error(`[prune] Failed to terminate challenge ${challenge.id}:`, err);
+      // Fallback: delete the challenge if termination fails
+      await Promise.all([
+        this.storageAdapter.deleteChallenge(challenge.id),
+        this.chat.deleteChannel(challenge.id),
+        this.chat.deleteChannel(toChallengeChannel(challenge.id)),
+      ]);
+    }
+  }
+
   async pruneStaleChallenges(now: number = Date.now()): Promise<number> {
     const { items: challenges } = await this.storageAdapter.listChallenges();
     const stale = challenges.filter((c) => this.isChallengeStale(c, now));
     if (stale.length === 0) return 0;
 
+    const openStale = stale.filter((c) => c.state.status === ChallengeStatus.Open);
+    const activeStale = stale.filter((c) => c.state.status === ChallengeStatus.Active);
+
+    // Delete open challenges that never started
     await Promise.all(
-      stale.flatMap((c) => [
+      openStale.flatMap((c) => [
         this.storageAdapter.deleteChallenge(c.id),
         this.chat.deleteChannel(c.id),
         this.chat.deleteChannel(toChallengeChannel(c.id)),
       ]),
     );
+
+    // Terminate active challenges with timeout scores
+    for (const c of activeStale) {
+      await this.terminateChallenge(c);
+    }
 
     return stale.length;
   }
@@ -227,12 +258,19 @@ export class ArenaEngine {
       return challenge;
     }
 
+    // Terminate active stale challenges instead of deleting them
+    if (challenge.state.status === ChallengeStatus.Active) {
+      await this.terminateChallenge(challenge);
+      return this.storageAdapter.getChallenge(challengeId);
+    }
+
+    // Delete open stale challenges
     await Promise.all([
       this.storageAdapter.deleteChallenge(challenge.id),
       this.chat.deleteChannel(challenge.id),
       this.chat.deleteChannel(toChallengeChannel(challenge.id)),
     ]);
-    
+
     return undefined;
   }
 

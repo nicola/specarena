@@ -109,6 +109,27 @@ export abstract class BaseChallenge<TGameState> implements ChallengeOperator<TGa
     this.state.attributions.push({ from, to, type });
   }
 
+  // --- Timeout ---
+
+  // Called by the engine when a challenge exceeds the stale timeout while
+  // still active.  The default implementation assigns fallback scores to any
+  // player that was never scored (security=0, utility=0 is the initial value)
+  // and then ends the game normally through `endGame()`.
+  // Challenge authors can override this for custom timeout behaviour.
+  async onTimeout(): Promise<void> {
+    if (this.state.status !== ChallengeStatus.Active) return;
+
+    for (let i = 0; i < this.state.scores.length; i++) {
+      const s = this.state.scores[i];
+      if (s.security === 0 && s.utility === 0) {
+        this.state.scores[i] = { security: 1, utility: 0 };
+      }
+    }
+
+    await this.broadcast("Game timed out.");
+    await this.endGame();
+  }
+
   // --- Game lifecycle ---
 
   // Standard game-finalization helper used by challenges after scoring.
