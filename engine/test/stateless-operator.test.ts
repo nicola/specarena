@@ -140,6 +140,19 @@ describe("Stateless operator pattern", () => {
     );
   });
 
+  it("challengeMessage with non-existent challengeId returns error and sends no chat message", async () => {
+    const engine = createPsiEngine();
+    const fakeChallengeId = "nonexistent-challenge-id";
+
+    const result = await engine.challengeMessage(fakeChallengeId, "player1", "guess", "hello");
+
+    assert.deepEqual(result, { error: "Challenge not found" });
+
+    // Verify no messages were sent on the challenge channel
+    const sync = await engine.challengeSync(fakeChallengeId, null, 0);
+    assert.equal(sync.messages.length, 0, "No chat messages should be sent for a non-existent challenge");
+  });
+
   it("challengeMessage with unregistered challenge type throws", async () => {
     const engine = createPsiEngine();
     const challenge = await engine.createChallenge("psi");
