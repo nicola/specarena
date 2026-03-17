@@ -39,6 +39,7 @@ export interface ChallengeOperator<TGameState = {}> {
   message(message: ChatMessage): Promise<void>;
   restore(challenge: Challenge<TGameState>): void;
   serialize(): { gameState: TGameState; state: ChallengeOperatorState };
+  onTimeout?(): Promise<void>;
   state: ChallengeOperatorState;
   gameState: TGameState;
 }
