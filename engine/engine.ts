@@ -275,11 +275,11 @@ export class ArenaEngine {
   async challengeMessage(challengeId: string, from: string, messageType: string, content: string) {
     const challenge = await this.getChallenge(challengeId);
 
-    await this.chat.sendChallengeMessage(challengeId, from, (messageType ? `(${messageType}) ` : "") + content, "operator");
-
     if (!challenge) {
       return { error: "Challenge not found" };
     }
+
+    await this.chat.sendChallengeMessage(challengeId, from, (messageType ? `(${messageType}) ` : "") + content, "operator");
 
     const operator = this.recreateOperator(challenge);
 
