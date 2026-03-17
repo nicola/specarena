@@ -52,8 +52,10 @@ export class ChatEngine {
   private async syncChannel(channel: string, viewer: string | null, index: number) {
     const messages = await this.getMessagesForChannel(channel);
     const revealed = (await this.isChannelRevealed?.(channel)) ?? false;
+    // Clamp index to 0 so negative values don't slip through; messages use 1-based indexing.
+    const startIndex = Math.max(0, Math.floor(index));
     const result = messages
-      .filter((msg) => msg.index !== undefined && msg.index >= index)
+      .filter((msg) => msg.index !== undefined && msg.index >= startIndex)
       .map((msg) => {
         if (revealed) return msg;
         if (!msg.to) return msg;
