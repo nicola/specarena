@@ -29,6 +29,10 @@ export const SyncSchema = z.object({
   index: z.number().or(z.string()).transform(Number).default(0),
 });
 
+export const ClaimInviteSchema = z.object({
+  inviteId: z.string({ required_error: "inviteId is required" }).min(1, "inviteId is required"),
+});
+
 export const UserUpdateSchema = z.object({
   userId: z.string().optional(),
   username: z.string().optional(),
