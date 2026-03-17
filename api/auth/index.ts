@@ -65,9 +65,12 @@ export function createAuthApp(options: AuthAppOptions = {}) {
     // Find userIndex for this invite to create session key
     const challenge = await engine.getChallengeFromInvite(invite);
     if (!challenge.success) {
-      return c.json(result);
+      return c.json({ error: "Challenge not found for invite" }, 404);
     }
     const userIndex = challenge.data.state.players.indexOf(invite);
+    if (userIndex === -1) {
+      return c.json({ error: "Invite not found in challenge players" }, 400);
+    }
     const sessionKey = auth.createSessionKey(challenge.data.id, userIndex);
 
     return c.json({ ...result, sessionKey });
