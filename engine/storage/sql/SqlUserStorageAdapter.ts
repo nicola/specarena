@@ -67,7 +67,7 @@ export class SqlUserStorageAdapter implements UserStorageAdapter {
       userId: row.user_id,
       username: row.username ?? undefined,
       model: row.model ?? undefined,
-      isBenchmark: row.is_benchmark || undefined,
+      isBenchmark: row.is_benchmark ?? undefined,
     };
   }
 }

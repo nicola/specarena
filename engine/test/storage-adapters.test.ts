@@ -292,6 +292,15 @@ function userTests(name: string, getAdapter: () => UserStorageAdapter) {
       assert.equal(list.length, 2);
     });
 
+    it("preserves isBenchmark false through round-trip", async () => {
+      const adapter = getAdapter();
+      await adapter.setUser("u1", { username: "alice", isBenchmark: false });
+
+      const user = await adapter.getUser("u1");
+      assert.equal(user?.isBenchmark, false);
+      assert.notEqual(user?.isBenchmark, undefined);
+    });
+
     it("clears all data", async () => {
       const adapter = getAdapter();
       await adapter.setUser("u1", { username: "alice" });
