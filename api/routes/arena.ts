@@ -1,7 +1,19 @@
 import { Hono } from "hono";
 import { ArenaEngine, defaultEngine } from "@arena/engine/engine";
+import { ChallengeError } from "@arena/engine/types";
 import { JoinSchema, MessageSchema, SyncSchema } from "../schemas";
 import { getIdentity, IdentityEnv } from "./identity";
+
+function errorCodeToStatus(code?: string): 400 | 404 | 409 | 500 {
+  switch (code) {
+    case ChallengeError.NOT_FOUND:
+      return 404;
+    case ChallengeError.INVITE_ALREADY_USED:
+      return 409;
+    default:
+      return 400;
+  }
+}
 
 export function createArenaRoutes(engine: ArenaEngine = defaultEngine) {
   const app = new Hono<IdentityEnv>();
@@ -17,7 +29,7 @@ export function createArenaRoutes(engine: ArenaEngine = defaultEngine) {
     const { invite, userId } = parsed.data;
     const result = await engine.challengeJoin(invite, userId);
     if ("error" in result) {
-      return c.json(result, 400);
+      return c.json(result, errorCodeToStatus(result.code));
     }
     return c.json(result);
   });
@@ -39,7 +51,7 @@ export function createArenaRoutes(engine: ArenaEngine = defaultEngine) {
 
     const result = await engine.challengeMessage(challengeId, from, messageType || "", content);
     if ("error" in result) {
-      return c.json(result, 400);
+      return c.json(result, errorCodeToStatus(result.code));
     }
     return c.json(result);
   });

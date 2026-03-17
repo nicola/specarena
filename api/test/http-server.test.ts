@@ -72,9 +72,9 @@ describe("http-server", () => {
     assert.equal(data.messages[0].content, "hello");
   });
 
-  it("POST /api/arena/join returns 400 for invalid invite, not 500", async () => {
+  it("POST /api/arena/join returns 404 for invalid invite", async () => {
     const res = await req("POST", "/api/arena/join", { invite: "inv_fake" });
-    assert.equal(res.status, 400);
+    assert.equal(res.status, 404);
 
     const data = await res.json();
     assert.ok(data.error);

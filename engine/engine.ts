@@ -248,7 +248,7 @@ export class ArenaEngine {
     const result = await this.getChallengeFromInvite(invite);
 
     if (!result.success) {
-      return { error: result.message };
+      return { error: result.message, code: result.error };
     }
 
     const challenge = result.data;
@@ -278,7 +278,7 @@ export class ArenaEngine {
     await this.chat.sendChallengeMessage(challengeId, from, (messageType ? `(${messageType}) ` : "") + content, "operator");
 
     if (!challenge) {
-      return { error: "Challenge not found" };
+      return { error: "Challenge not found", code: ChallengeError.NOT_FOUND };
     }
 
     const operator = this.recreateOperator(challenge);

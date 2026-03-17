@@ -49,11 +49,22 @@ describe("REST API for arena", () => {
     assert.equal(res.status, 400);
   });
 
-  it("POST /api/arena/join — returns 400 for invalid invite", async () => {
+  it("POST /api/arena/join — returns 404 for invalid invite", async () => {
     const res = await request("POST", "/api/arena/join", { invite: "inv_fake" });
-    assert.equal(res.status, 400);
+    assert.equal(res.status, 404);
     const data = await res.json();
     assert.ok(data.error);
+    assert.equal(data.code, "NOT_FOUND");
+  });
+
+  it("POST /api/arena/join — returns 409 for already-used invite", async () => {
+    const { invites } = await createPsiChallenge();
+    await request("POST", "/api/arena/join", { invite: invites[0] });
+    const res = await request("POST", "/api/arena/join", { invite: invites[0] });
+    assert.equal(res.status, 409);
+    const data = await res.json();
+    assert.ok(data.error);
+    assert.equal(data.code, "INVITE_ALREADY_USED");
   });
 
   it("POST /api/arena/message — sends a guess", async () => {
@@ -80,16 +91,17 @@ describe("REST API for arena", () => {
     assert.equal(res.status, 400);
   });
 
-  it("POST /api/arena/message — returns 400 for nonexistent challenge", async () => {
+  it("POST /api/arena/message — returns 404 for nonexistent challenge", async () => {
     const res = await request("POST", "/api/arena/message", {
       challengeId: "nonexistent",
       from: "player",
       messageType: "guess",
       content: "1 2 3",
     });
-    assert.equal(res.status, 400);
+    assert.equal(res.status, 404);
     const data = await res.json();
     assert.ok(data.error.includes("not found"));
+    assert.equal(data.code, "NOT_FOUND");
   });
 
   it("GET /api/arena/sync — returns messages", async () => {
