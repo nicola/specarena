@@ -37,11 +37,11 @@ export class ArenaEngine {
   scoring: ScoringModule | null;
 
   constructor(options: EngineOptions = {}) {
-    const defaults = (!options.storageAdapter && !options.userStorage && !options.chatStorageAdapter)
+    const defaults = (!options.storageAdapter || !options.userStorage || !options.chatStorageAdapter)
       ? createStorage()
       : undefined;
-    this.storageAdapter = options.storageAdapter ?? defaults?.arena ?? createStorage().arena;
-    this.users = options.userStorage ?? defaults?.user ?? createStorage().user;
+    this.storageAdapter = options.storageAdapter ?? defaults!.arena;
+    this.users = options.userStorage ?? defaults!.user;
     this.challengeFactories = new Map<string, ChallengeFactory>();
     this.challengeOptions = new Map<string, Record<string, unknown>>();
     this.challengeMetadataMap = new Map<string, ChallengeMetadata>();
