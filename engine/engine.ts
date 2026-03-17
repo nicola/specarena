@@ -8,6 +8,7 @@ import {
   ChallengeOperator,
   ChallengeOperatorError,
   ChallengeOperatorState,
+  ChallengeStatus,
   GameCategory,
   Result,
   fromChallengeChannel,
@@ -132,9 +133,8 @@ export class ArenaEngine {
   }
 
   private isChallengeStale(challenge: Challenge, now: number = Date.now()): boolean {
-    const gameEnded = challenge.state?.status === "ended";
     const cutoff = now - STALE_CHALLENGE_TIMEOUT_MS;
-    return !gameEnded && challenge.createdAt < cutoff;
+    return challenge.state?.status === ChallengeStatus.Open && challenge.createdAt < cutoff;
   }
 
   async pruneStaleChallenges(now: number = Date.now()): Promise<number> {
