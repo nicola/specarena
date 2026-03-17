@@ -1,3 +1,4 @@
+import { isWin } from "./types";
 import type { ScoringStrategy, GameResult, ScoringStorageAdapter } from "./types";
 
 /** Per-challenge strategy: tracks current streak of consecutive successful games. */
@@ -40,8 +41,8 @@ export const consecutive: ScoringStrategy = {
       const prev = await store.getScoreEntry(result.challengeType, this.name, playerId);
       const prevMetrics = prev?.metrics ?? {};
 
-      const security = score.security >= 1 ? (prevMetrics["consecutive:security"] ?? 0) + 1 : 0;
-      const utility = score.utility >= 1 ? (prevMetrics["consecutive:utility"] ?? 0) + 1 : 0;
+      const security = isWin(score.security) ? (prevMetrics["consecutive:security"] ?? 0) + 1 : 0;
+      const utility = isWin(score.utility) ? (prevMetrics["consecutive:utility"] ?? 0) + 1 : 0;
       const attack = (breachesBy.get(playerId) ?? 0) > 0 ? (prevMetrics["consecutive:attack"] ?? 0) + 1 : 0;
 
       await store.setScoreEntry(result.challengeType, this.name, {

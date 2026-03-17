@@ -67,3 +67,17 @@ export interface PlayerScores {
   global: ScoringEntry | null;
   challenges: Record<string, Record<string, ScoringEntry>>;
 }
+
+/**
+ * Shared win-threshold predicate used by scoring strategies.
+ *
+ * A score dimension counts as a "win" when it reaches the maximum possible
+ * value (>= 1).  Challenges that use fractional scores (e.g. Ultimatum with
+ * 0.5) intentionally do NOT qualify — partial success is not a win for
+ * streak / win-rate purposes.  If a challenge needs a lower bar it should
+ * either normalise its scores to 0-or-1 before emitting a GameResult, or
+ * use a strategy (like `average`) that does not apply a threshold.
+ */
+export function isWin(score: number): boolean {
+  return score >= 1;
+}

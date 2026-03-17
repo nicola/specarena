@@ -1,14 +1,10 @@
+import { isWin } from "./types";
 import type { ScoringStrategy, GameResult, ScoringStorageAdapter } from "./types";
 
 interface WinRateState {
   securityWins: number;
   utilityWins: number;
   count: number;
-}
-
-/** Threshold-based win: score >= 1 counts as a win, otherwise a loss. */
-function isWin(score: number): number {
-  return score >= 1 ? 1 : 0;
 }
 
 /** Per-challenge strategy: fraction of games where each player achieved score >= 1 per dimension. */
@@ -29,8 +25,8 @@ export const winRate: ScoringStrategy = {
 
       const prev = await store.getStrategyState<WinRateState>(result.challengeType, this.name, playerId);
       const state: WinRateState = {
-        securityWins: (prev?.securityWins ?? 0) + isWin(score.security),
-        utilityWins: (prev?.utilityWins ?? 0) + isWin(score.utility),
+        securityWins: (prev?.securityWins ?? 0) + (isWin(score.security) ? 1 : 0),
+        utilityWins: (prev?.utilityWins ?? 0) + (isWin(score.utility) ? 1 : 0),
         count: (prev?.count ?? 0) + 1,
       };
 

@@ -17,4 +17,5 @@ export const globalStrategies: Record<string, GlobalScoringStrategy> = {
 };
 
 export type { Score, Attribution, GameResult, PlayerScores, ScoringEntry, MetricDescriptor, ScoringStrategy, GlobalScoringStrategy, ScoringStorageAdapter } from "./types";
+export { isWin } from "./types";
 export { InMemoryScoringStore } from "./store";
