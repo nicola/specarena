@@ -89,6 +89,26 @@ function arenaTests(name: string, getAdapter: () => ArenaStorageAdapter) {
       assert.equal(total, 2);
     });
 
+    it("listChallenges returns results sorted by createdAt descending", async () => {
+      const adapter = getAdapter();
+      await adapter.setChallenge(mockChallenge("c1", ["inv_a"], { createdAt: 1000 }));
+      await adapter.setChallenge(mockChallenge("c2", ["inv_b"], { createdAt: 3000 }));
+      await adapter.setChallenge(mockChallenge("c3", ["inv_c"], { createdAt: 2000 }));
+
+      const { items } = await adapter.listChallenges();
+      assert.deepEqual(items.map((c) => c.id), ["c2", "c3", "c1"]);
+    });
+
+    it("listChallenges pagination respects sort order", async () => {
+      const adapter = getAdapter();
+      await adapter.setChallenge(mockChallenge("c1", ["inv_a"], { createdAt: 1000 }));
+      await adapter.setChallenge(mockChallenge("c2", ["inv_b"], { createdAt: 3000 }));
+      await adapter.setChallenge(mockChallenge("c3", ["inv_c"], { createdAt: 2000 }));
+
+      const { items } = await adapter.listChallenges({ limit: 2, offset: 0 });
+      assert.deepEqual(items.map((c) => c.id), ["c2", "c3"]);
+    });
+
     it("finds challenges by userId via playerIdentities", async () => {
       const adapter = getAdapter();
       const c = mockChallenge("c1", ["inv_a", "inv_b"]);
