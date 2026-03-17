@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { ArenaEngine, defaultEngine } from "@arena/engine/engine";
 import { ChallengeError } from "@arena/engine/types";
+import { ClaimInviteSchema } from "../schemas";
 
 export function createInviteRoutes(engine: ArenaEngine = defaultEngine) {
   const app = new Hono();
@@ -26,11 +27,12 @@ export function createInviteRoutes(engine: ArenaEngine = defaultEngine) {
   // POST /api/invites - claim invite
   app.post("/api/invites", async (c) => {
     const body = await c.req.json();
-    const { inviteId } = body;
-
-    if (!inviteId) {
-      return c.json({ error: "inviteId is required" }, 400);
+    const parsed = ClaimInviteSchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json({ error: parsed.error.issues[0].message }, 400);
     }
+
+    const { inviteId } = parsed.data;
 
     const result = await engine.getInvite(inviteId);
     if (!result.success) {
@@ -38,7 +40,12 @@ export function createInviteRoutes(engine: ArenaEngine = defaultEngine) {
       return c.json({ error: result.message }, status);
     }
 
-    await engine.chat.sendMessage("invites", "operator", `${inviteId}`);
+    try {
+      await engine.chat.sendMessage("invites", "operator", `${inviteId}`);
+    } catch (error) {
+      console.error("Error sending invite notification:", error);
+      return c.json({ error: "Failed to send invite notification" }, 500);
+    }
 
     return c.json({ success: true });
   });

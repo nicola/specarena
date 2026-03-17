@@ -152,6 +152,44 @@ describe("Invites REST API", () => {
     assert.equal(data2.id, c2.id);
   });
 
+  // -- POST /api/invites input validation --
+
+  it("POST /api/invites returns 400 when inviteId is not a string", async () => {
+    const res = await request("POST", "/api/invites", { inviteId: 123 });
+    assert.equal(res.status, 400);
+
+    const data = await res.json();
+    assert.ok(data.error);
+  });
+
+  it("POST /api/invites returns 400 when inviteId is an empty string", async () => {
+    const res = await request("POST", "/api/invites", { inviteId: "" });
+    assert.equal(res.status, 400);
+
+    const data = await res.json();
+    assert.ok(data.error.includes("required"));
+  });
+
+  // -- POST /api/invites sendMessage error handling --
+
+  it("POST /api/invites returns 500 when sendMessage fails", async () => {
+    const { invites } = await createPsiChallenge();
+
+    // Temporarily sabotage chat.sendMessage to simulate a failure
+    const originalSendMessage = engine.chat.sendMessage;
+    engine.chat.sendMessage = async () => { throw new Error("send failed"); };
+
+    try {
+      const res = await request("POST", "/api/invites", { inviteId: invites[0] });
+      assert.equal(res.status, 500);
+
+      const data = await res.json();
+      assert.ok(data.error.includes("Failed to send invite notification"));
+    } finally {
+      engine.chat.sendMessage = originalSendMessage;
+    }
+  });
+
   // -- Both invites claimed --
 
   it("both invites can be checked and claimed independently", async () => {
