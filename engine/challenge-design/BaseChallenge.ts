@@ -127,11 +127,11 @@ export abstract class BaseChallenge<TGameState> implements ChallengeOperator<TGa
   }
 
   restore(challenge: Challenge<TGameState>): void {
-    this.state = {...challenge.state};
-    this.gameState = {...challenge.gameState};
+    this.state = structuredClone(challenge.state);
+    this.gameState = structuredClone(challenge.gameState);
   }
 
   serialize(): { gameState: TGameState; state: ChallengeOperatorState } {
-    return { gameState: this.gameState, state: this.state };
+    return { gameState: structuredClone(this.gameState), state: structuredClone(this.state) };
   }
 }

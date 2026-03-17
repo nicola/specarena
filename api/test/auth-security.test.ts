@@ -133,6 +133,33 @@ describe("Auth security — join signature verification", () => {
   });
 });
 
+describe("Auth security — join error handling", () => {
+  beforeEach(async () => engine.clearRuntimeState());
+
+  it("returns non-200 status when joining a non-existent challenge", async () => {
+    // Try to join with a completely fake invite code
+    const { res, data } = await joinWithAuth("inv_nonexistent_abc123", keyA);
+    assert.notEqual(res.status, 200, "error response must not return 200");
+    assert.ok(data.error, "response should contain an error field");
+  });
+
+  it("returns non-200 status when challenge is cleared between join and session key creation", async () => {
+    const { invites } = await createChallenge();
+
+    // Join with first player succeeds
+    const { res: res1 } = await joinWithAuth(invites[0], keyA);
+    assert.equal(res1.status, 200);
+
+    // Clear all state — simulates challenge being pruned/deleted
+    await engine.clearRuntimeState();
+
+    // Second player's join should fail with non-200 since the challenge is gone
+    const { res: res2, data: data2 } = await joinWithAuth(invites[1], keyB);
+    assert.notEqual(res2.status, 200, "error response must not return 200");
+    assert.ok(data2.error, "response should contain an error field");
+  });
+});
+
 describe("Auth security — session key validation on message route", () => {
   beforeEach(async () => engine.clearRuntimeState());
 

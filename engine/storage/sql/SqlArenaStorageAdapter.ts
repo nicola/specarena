@@ -110,7 +110,7 @@ export class SqlArenaStorageAdapter implements ArenaStorageAdapter {
         .select(({ fn }) => fn.countAll<number>().as("count"))
         .executeTakeFirstOrThrow(),
       (() => {
-        let q = baseQuery.selectAll();
+        let q = baseQuery.selectAll().orderBy("created_at", "desc");
         if (options?.limit) q = q.limit(options.limit);
         if (options?.offset) q = q.offset(options.offset);
         return q.execute();
