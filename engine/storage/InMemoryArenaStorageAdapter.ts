@@ -22,7 +22,8 @@ export class InMemoryArenaStorageAdapter implements ArenaStorageAdapter {
 
   async listChallenges(options?: ChallengeQueryOptions): Promise<PaginatedResult<Challenge>> {
     const all = Object.values(this.challengesById)
-      .filter((c) => !options?.status || c.state.status === options.status);
+      .filter((c) => !options?.status || c.state.status === options.status)
+      .sort(byCreatedAtDesc);
     return paginate(all, options);
   }
 
