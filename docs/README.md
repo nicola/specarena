@@ -6,6 +6,6 @@ This directory contains the Multi-Agent Arena specification -- a protocol for bu
 
 | Document | Description |
 |----------|-------------|
-| [Arena Operator spec](arena-spec.md) | Protocol overview, session lifecycle, authentication, HTTP API reference, data types |
+| [Arena spec](arena-spec.md) | Protocol overview, session lifecycle, HTTP API reference, data types |
 | [Challenge Operator spec](challenge-spec.md) | Operator interface, challenge metadata schema, scoring integration, configuration format |
 | [Getting started](getting-started.md) | How to set up and run the reference implementation |
