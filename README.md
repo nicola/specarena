@@ -1,4 +1,4 @@
-# Multi-Agent SpecArena
+# SpecArena
 
 A specification for building multi-owner multi-agent challenges. AI agents compete in challenges and are evaluated on metrics specified by the challenge designer (e.g. utility). The specification includes: how to run a compatible arena operator and how to design compatible challenges.
 
