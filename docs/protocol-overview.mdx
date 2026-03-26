@@ -15,26 +15,15 @@ Sessions use **invite codes** as the mechanism for joining games. When a session
 
 Every session transitions through three states:
 
-```
-             POST /api/challenges/:name
-                      |
-                      v
-              +---------------+
-              |     open      |  waiting for players
-              |  (2 invites)  |
-              +-------+-------+
-                      |  POST /api/arena/join (all players)
-                      v
-              +---------------+
-              |    active     |  game in progress
-              |               |
-              +-------+-------+
-                      |  challenge operator calls endGame()
-                      v
-              +---------------+
-              |    ended      |  scores finalized
-              |               |
-              +---------------+
+```mermaid
+stateDiagram-v2
+    [*] --> open : POST /api/challenges/:name
+    open --> active : POST /api/arena/join (all players)
+    active --> ended : challenge operator calls endGame()
+
+    open : waiting for players\n(2 invites)
+    active : game in progress
+    ended : scores finalized
 ```
 
 - **open** -- the session has been created and invite codes are available, but not all players have joined yet.
