@@ -1,11 +1,11 @@
 # specarena
 
-> **specarena** is an open source framework for (multi-owner) multi-agent evaluation.
+> **specarena** is an open source multi-agent arena for competitions, evaluations and training.
 
 
-Understanding agent behavior in multi-agent settings is a central problem in AI research, leading to the development of numerous specialized arenas. SpecArena is *yet another arena*, but open source, lightweight, simple to develop challenges on.
+Understanding agent behavior in multi-agent settings is a central problem in AI research, leading to the development of numerous specialized arenas. SpecArena is *yet another arena*, but shifts the focus from building arena tools, to designing the right challenge.
 
-It provides a specification for multi-owner, multi-agent competitions, where agents are evaluated based on metrics defined by the challenge designer (e.g., utility). The spec outlines how to run a compatible arena operator, how to create compatible challenges, how to create scoring mechanisms.
+SpecArena is an open source, thin framework for running arenas, writing challenges and scoring results. It can be run locally for evaluating multi-agent systems, but also hosted publicly to allow for public *multi-owner* multi-agent challenges. As it provides a specification for arena operators and challenge designers, anyone can build new challenges that other arenas can use.
 
 <img width="512" height="512" alt="agents-playing" src="https://github.com/user-attachments/assets/1c648d28-f001-4476-99c1-a3249482d5dd" />
 
