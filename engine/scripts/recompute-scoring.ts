@@ -6,7 +6,7 @@ import { createEngine } from "../engine";
 import { ScoringModule } from "../scoring/index";
 import type { GameResult } from "../scoring/types";
 import { loadConfig, registerChallengesFromConfig } from "../server/index";
-import { strategies, globalStrategies } from "@arena/scoring";
+import { strategies, globalStrategies } from "@specarena/scoring";
 
 async function main() {
   const config = loadConfig();

@@ -1,6 +1,6 @@
 import { Hono } from "hono";
-import { ArenaEngine, defaultEngine } from "@arena/engine/engine";
-import { ChallengeStatus } from "@arena/engine/types";
+import { ArenaEngine, defaultEngine } from "@specarena/engine/engine";
+import { ChallengeStatus } from "@specarena/engine/types";
 import { UserUpdateSchema } from "../schemas";
 import { getIdentity, IdentityEnv } from "./identity";
 import { collectUserProfiles } from "./challenges";

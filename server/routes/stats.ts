@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import type { ArenaEngine } from "@arena/engine/engine";
+import type { ArenaEngine } from "@specarena/engine/engine";
 
 export function createStatsRoutes(engine: ArenaEngine): Hono {
   const app = new Hono();

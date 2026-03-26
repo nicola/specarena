@@ -1,6 +1,6 @@
 # Engine Scoring Module
 
-The scoring module lives inside the engine and orchestrates leaderboard computation. It hooks into `game_ended` events, passes each result to pluggable strategies from `@arena/scoring` for incremental score updates, and exposes the computed leaderboard via API routes.
+The scoring module lives inside the engine and orchestrates leaderboard computation. It hooks into `game_ended` events, passes each result to pluggable strategies from `@specarena/scoring` for incremental score updates, and exposes the computed leaderboard via API routes.
 
 ## Architecture
 
@@ -11,7 +11,7 @@ engine/scoring/
 └── index.ts    # ScoringModule class — orchestration + lifecycle
 ```
 
-The module does **not** contain strategy implementations. Strategies live in the root `scoring/` package (`@arena/scoring`) and are passed into the module at construction time.
+The module does **not** contain strategy implementations. Strategies live in the root `scoring/` package (`@specarena/scoring`) and are passed into the module at construction time.
 
 ## How It Works
 

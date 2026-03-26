@@ -1,8 +1,8 @@
 import ChallengesList from "@/app/components/ChallengesList";
 import CopyableInvite from "@/app/challenges/[name]/[uuid]/CopyableInvite";
 import LeaderboardGraph from "@/app/components/LeaderboardGraph";
-import type { UserProfile } from "@arena/engine/users";
-import type { ScoringEntry, PlayerScores } from "@arena/engine/scoring";
+import type { UserProfile } from "@specarena/engine/users";
+import type { ScoringEntry, PlayerScores } from "@specarena/engine/scoring";
 import { ENGINE_URL } from "@/lib/config";
 
 async function fetchUserProfile(userId: string): Promise<UserProfile | null> {

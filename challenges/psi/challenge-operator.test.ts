@@ -1,8 +1,8 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { createChatEngine, InMemoryChatStorageAdapter } from "@arena/engine/engine";
+import { createChatEngine, InMemoryChatStorageAdapter } from "@specarena/engine/engine";
 import { createChallenge } from "./index";
-import { generateRandomSetFromSeed } from "@arena/engine/utils";
+import { generateRandomSetFromSeed } from "@specarena/engine/utils";
 
 function parseSet(content: string): Set<number> {
   const match = content.match(/\{(.+)\}/);

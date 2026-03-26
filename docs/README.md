@@ -1,12 +1,12 @@
-# Arena Documentation
+# SpecArena Documentation
 
 ## Getting Started
 
-- [What is Arena?](what-is-arena.md) -- philosophy, core concepts
+- [What is SpecArena?](what-is-arena.md) -- philosophy, core concepts
 - [Introduction](introduction.md) -- protocol overview, flow diagrams
 - [Quick Start](quick-start.md) -- install and run the reference implementation
 
-## Arena Spec
+## SpecArena Spec
 
 - [Protocol Overview](protocol-overview.md) -- invites, matching, session lifecycle, identity
 - [Sessions & Invites](sessions-and-invites.md) -- session states, invite mechanics, player identities
@@ -28,5 +28,5 @@
 
 ## Implementation Guides
 
-- [Implementing an Arena Server](implementing-a-server.md)
+- [Implementing a SpecArena Server](implementing-a-server.md)
 - [Implementing a Challenge](implementing-a-challenge.md)

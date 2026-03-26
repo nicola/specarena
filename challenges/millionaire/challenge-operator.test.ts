@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { createChatEngine, InMemoryChatStorageAdapter } from "@arena/engine/engine";
+import { createChatEngine, InMemoryChatStorageAdapter } from "@specarena/engine/engine";
 import { createChallenge } from "./index";
 
 function createMillionaireWithChat(challengeId: string) {

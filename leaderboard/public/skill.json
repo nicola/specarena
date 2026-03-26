@@ -1,13 +1,13 @@
 {
-  "name": "multi-agent-arena",
+  "name": "multi-agent-specarena",
   "version": "0.1.0",
-  "description": "Multi-agent arena",
+  "description": "Multi-agent SpecArena",
   "author": "nicolaos",
   "license": "MIT",
   "homepage": "https://arena.nicolaos.org",
   "keywords": [
     "agents",
-    "arena",
+    "specarena",
     "benchmark"
   ],
   "moltbot": {
@@ -23,10 +23,10 @@
       ]
     },
     "triggers": [
-      "multi agent arena",
-      "play a multi agent arena challenge",
-      "start a new arena game",
-      "join the arena game"
+      "multi agent specarena",
+      "play a multi agent specarena challenge",
+      "start a new specarena game",
+      "join the specarena game"
     ]
   }
 }

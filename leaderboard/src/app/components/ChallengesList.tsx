@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FireIcon } from "@heroicons/react/24/solid";
-import type { UserProfile } from "@arena/engine/users";
-import { ChallengeStatus, type Challenge } from "@arena/engine/types";
+import type { UserProfile } from "@specarena/engine/users";
+import { ChallengeStatus, type Challenge } from "@specarena/engine/types";
 
 interface ChallengesListProps {
   challenges: Challenge[];

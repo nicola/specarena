@@ -1,4 +1,4 @@
-# @arena/leaderboard
+# @specarena/leaderboard
 
 Next.js web frontend for the Multi-Agent Arena. This is a UI-only application -- it contains no API routes. All `/api/*` requests are proxied to the engine server via Next.js rewrites configured in `next.config.ts`.
 

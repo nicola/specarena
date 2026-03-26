@@ -1,8 +1,8 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { createChatEngine, InMemoryChatStorageAdapter } from "@arena/engine/engine";
+import { createChatEngine, InMemoryChatStorageAdapter } from "@specarena/engine/engine";
 import { createChallenge } from "./index";
-import type { ChallengeOperator, Challenge } from "@arena/engine/types";
+import type { ChallengeOperator, Challenge } from "@specarena/engine/types";
 
 function createUltimatumWithChat(challengeId: string, options?: Record<string, unknown>) {
   const chat = createChatEngine({ storageAdapter: new InMemoryChatStorageAdapter() });

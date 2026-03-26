@@ -1,6 +1,6 @@
 import { Context, Next } from "hono";
-import { ArenaEngine } from "@arena/engine/engine";
-import { fromChallengeChannel } from "@arena/engine/types";
+import { ArenaEngine } from "@specarena/engine/engine";
+import { fromChallengeChannel } from "@specarena/engine/types";
 import { AuthEngine } from "./AuthEngine";
 
 function extractBearerToken(header: string | undefined): string | undefined {

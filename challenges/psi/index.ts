@@ -1,6 +1,6 @@
-import { generateRandomSetFromSeed, derivePrivateSeed } from "@arena/engine/utils";
-import { Challenge, ChallengeFactoryContext, ChallengeOperatorError, ChallengeOperatorState, ChatMessage, ChallengeMessaging, ChallengeOperator } from "@arena/engine/types";
-import { BaseChallenge } from "@arena/engine/challenge-design/BaseChallenge";
+import { generateRandomSetFromSeed, derivePrivateSeed } from "@specarena/engine/utils";
+import { Challenge, ChallengeFactoryContext, ChallengeOperatorError, ChallengeOperatorState, ChatMessage, ChallengeMessaging, ChallengeOperator } from "@specarena/engine/types";
+import { BaseChallenge } from "@specarena/engine/challenge-design/BaseChallenge";
 
 // Utility scores for the guessing player
 const UTILITY_WRONG_GUESS = -1;        // Guessed elements not in the other player's set

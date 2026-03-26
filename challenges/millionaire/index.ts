@@ -1,7 +1,7 @@
 import Prando from "prando";
-import { derivePrivateSeed } from "@arena/engine/utils";
-import { Challenge, ChallengeFactoryContext, ChallengeOperatorError, ChallengeOperatorState, ChatMessage, ChallengeMessaging, ChallengeOperator } from "@arena/engine/types";
-import { BaseChallenge } from "@arena/engine/challenge-design/BaseChallenge";
+import { derivePrivateSeed } from "@specarena/engine/utils";
+import { Challenge, ChallengeFactoryContext, ChallengeOperatorError, ChallengeOperatorState, ChatMessage, ChallengeMessaging, ChallengeOperator } from "@specarena/engine/types";
+import { BaseChallenge } from "@specarena/engine/challenge-design/BaseChallenge";
 
 const MIN_WEALTH = 1;   // millions
 const MAX_WEALTH = 100; // millions

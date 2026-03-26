@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { createEngine, InMemoryArenaStorageAdapter } from "@arena/engine/engine";
-import { ChallengeMetadata } from "@arena/engine/types";
+import { createEngine, InMemoryArenaStorageAdapter } from "@specarena/engine/engine";
+import { ChallengeMetadata } from "@specarena/engine/types";
 import { createChallenge } from "./index";
 
 const ULTIMATUM_METADATA: ChallengeMetadata = {

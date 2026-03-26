@@ -66,8 +66,8 @@ Call `await this.endGame()` when the game is over. This sets `gameEnded = true` 
 See `challenges/psi/index.ts` for a complete implementation. The minimal structure is:
 
 ```ts
-import { ChallengeOperator, ChatMessage } from "@arena/engine/types";
-import { BaseChallenge } from "@arena/engine/challenge-design/BaseChallenge";
+import { ChallengeOperator, ChatMessage } from "@specarena/engine/types";
+import { BaseChallenge } from "@specarena/engine/challenge-design/BaseChallenge";
 
 interface MyGameState {
   // your custom state

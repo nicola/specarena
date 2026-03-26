@@ -1,7 +1,7 @@
 import { Hono } from "hono";
-import { ArenaEngine, defaultEngine } from "@arena/engine/engine";
-import { sanitizeChallenge, ChallengeStatus, type Challenge } from "@arena/engine/types";
-import type { UserProfile } from "@arena/engine/users";
+import { ArenaEngine, defaultEngine } from "@specarena/engine/engine";
+import { sanitizeChallenge, ChallengeStatus, type Challenge } from "@specarena/engine/types";
+import type { UserProfile } from "@specarena/engine/users";
 
 /** Collect all user profiles referenced in playerIdentities across challenges. */
 export async function collectUserProfiles(

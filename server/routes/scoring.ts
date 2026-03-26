@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import type { ArenaEngine } from "@arena/engine/engine";
+import type { ArenaEngine } from "@specarena/engine/engine";
 
 type Entry = { playerId: string };
 

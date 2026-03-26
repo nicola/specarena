@@ -1,12 +1,12 @@
-import { generateRandomSetFromSeed, derivePrivateSeed } from "@arena/engine/utils";
+import { generateRandomSetFromSeed, derivePrivateSeed } from "@specarena/engine/utils";
 import {
   ChallengeFactoryContext,
   ChallengeOperatorError,
   ChatMessage,
   ChallengeMessaging,
   ChallengeOperator,
-} from "@arena/engine/types";
-import { BaseChallenge } from "@arena/engine/challenge-design/BaseChallenge";
+} from "@specarena/engine/types";
+import { BaseChallenge } from "@specarena/engine/challenge-design/BaseChallenge";
 
 export interface UltimatumChallengeParams {
   challengeId: string;

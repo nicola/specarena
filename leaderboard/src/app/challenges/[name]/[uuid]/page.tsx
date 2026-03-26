@@ -5,7 +5,7 @@ import AdvertiseButton from "./AdvertiseButton";
 import Link from "next/link";
 import { headers } from "next/headers";
 import { Metadata } from "next";
-import { ChallengeMetadata } from "@arena/engine/types";
+import { ChallengeMetadata } from "@specarena/engine/types";
 import { ENGINE_URL, PUBLIC_ENGINE_URL } from "@/lib/config";
 import { tagColors } from "@/lib/tagColors";
 

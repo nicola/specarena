@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { createEngine } from "@arena/engine/engine";
-import { ChallengeMetadata } from "@arena/engine/types";
+import { createEngine } from "@specarena/engine/engine";
+import { ChallengeMetadata } from "@specarena/engine/types";
 import { createChallenge } from "./index";
 
 const DINING_METADATA: ChallengeMetadata = {

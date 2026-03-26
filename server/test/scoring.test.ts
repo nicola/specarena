@@ -1,9 +1,9 @@
 import { describe, it, before, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import { ScoringModule } from "@arena/engine/scoring";
-import { ChallengeStatus } from "@arena/engine/types";
-import type { GameResult, EngineConfig, ScoringEntry } from "@arena/engine/scoring/types";
-import { strategies, globalStrategies } from "@arena/scoring";
+import { ScoringModule } from "@specarena/engine/scoring";
+import { ChallengeStatus } from "@specarena/engine/types";
+import type { GameResult, EngineConfig, ScoringEntry } from "@specarena/engine/scoring/types";
+import { strategies, globalStrategies } from "@specarena/scoring";
 import { createTestAppFromEnv, type TestApp } from "./helpers/create-app";
 
 let app: TestApp["app"];

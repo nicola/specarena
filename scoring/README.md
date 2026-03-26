@@ -1,6 +1,6 @@
 # Scoring Strategies
 
-This package (`@arena/scoring`) contains the pluggable scoring strategy implementations used by the engine's scoring module to compute leaderboard rankings.
+This package (`@specarena/scoring`) contains the pluggable scoring strategy implementations used by the engine's scoring module to compute leaderboard rankings.
 
 ## Named Metrics Model
 

@@ -23,7 +23,7 @@
             ]
           },
           {
-            "group": "Arena Spec",
+            "group": "SpecArena Spec",
             "pages": [
               "protocol-overview",
               "sessions-and-invites",

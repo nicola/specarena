@@ -1,5 +1,5 @@
 {
-  "name": "@arena/server",
+  "name": "@specarena/server",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -9,8 +9,8 @@
     "test:sql": "TEST_DB=pglite node --import tsx --test --test-force-exit test/*.test.ts"
   },
   "dependencies": {
-    "@arena/engine": "*",
-    "@arena/scoring": "*",
+    "@specarena/engine": "*",
+    "@specarena/scoring": "*",
     "@hono/node-server": "^1.14.1",
     "hono": "^4.7.6",
     "mcp-handler": "^1.0.4",

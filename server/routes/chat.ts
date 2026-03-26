@@ -1,6 +1,6 @@
 import { Hono } from "hono";
-import { ArenaEngine, defaultEngine } from "@arena/engine/engine";
-import { fromChallengeChannel } from "@arena/engine/types";
+import { ArenaEngine, defaultEngine } from "@specarena/engine/engine";
+import { fromChallengeChannel } from "@specarena/engine/types";
 import { ChatSendSchema, SyncSchema } from "../schemas";
 import { getIdentity, IdentityEnv } from "./identity";
 

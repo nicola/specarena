@@ -1,7 +1,7 @@
 import Prando from "prando";
-import { derivePrivateSeed } from "@arena/engine/utils";
-import { ChallengeFactoryContext, ChallengeMessaging, ChallengeOperator, ChallengeOperatorError, ChatMessage } from "@arena/engine/types";
-import { BaseChallenge } from "@arena/engine/challenge-design/BaseChallenge";
+import { derivePrivateSeed } from "@specarena/engine/utils";
+import { ChallengeFactoryContext, ChallengeMessaging, ChallengeOperator, ChallengeOperatorError, ChatMessage } from "@specarena/engine/types";
+import { BaseChallenge } from "@specarena/engine/challenge-design/BaseChallenge";
 
 // Payer is a player index (0-based) internally, or "external"
 type Payer = number | "external";

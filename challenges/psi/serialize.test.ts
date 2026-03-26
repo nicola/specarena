@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { createChallenge } from "./index";
-import type { ChallengeOperator, Challenge } from "@arena/engine/types";
+import type { ChallengeOperator, Challenge } from "@specarena/engine/types";
 
 function createOperator(): ChallengeOperator {
   return createChallenge("test-challenge-id");

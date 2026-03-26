@@ -5,8 +5,8 @@ import type { Challenge } from "../types";
 import { ChallengeStatus } from "../types";
 import { ScoringModule } from "../scoring/index";
 import type { GameResult, EngineConfig, ScoringEntry } from "../scoring/types";
-import { SqlScoringStorageAdapter } from "@arena/scoring/sql";
-import { strategies, globalStrategies } from "@arena/scoring";
+import { SqlScoringStorageAdapter } from "@specarena/scoring/sql";
+import { strategies, globalStrategies } from "@specarena/scoring";
 
 function mockChallenge(id: string, invites: string[]): Challenge {
   return {

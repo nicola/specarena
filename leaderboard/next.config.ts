@@ -5,7 +5,7 @@ import { ENGINE_URL } from "./src/lib/config";
 const rootDir = path.resolve(process.cwd(), "..");
 
 const nextConfig: NextConfig = {
-  transpilePackages: ["@arena/engine"],
+  transpilePackages: ["@specarena/engine"],
   turbopack: {
     root: rootDir,
   },

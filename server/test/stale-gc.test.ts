@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { createTestAppFromEnv, type TestApp } from "./helpers/create-app";
 let app: TestApp["app"];
 let engine: TestApp["engine"];
-import { toChallengeChannel } from "@arena/engine/types";
+import { toChallengeChannel } from "@specarena/engine/types";
 
 const STALE_MS = 11 * 60 * 1000;
 const futureNow = () => Date.now() + STALE_MS;

@@ -1,7 +1,7 @@
 import { Hono } from "hono";
-import { ArenaEngine, createEngine } from "@arena/engine/engine";
+import { ArenaEngine, createEngine } from "@specarena/engine/engine";
 import { createApp } from "../../index";
-import type { StorageAdapters } from "@arena/engine/storage/createStorage";
+import type { StorageAdapters } from "@specarena/engine/storage/createStorage";
 
 export interface TestApp {
   app: Hono;
@@ -31,7 +31,7 @@ export async function createTestAppFromEnv(): Promise<TestApp> {
     const { Kysely } = await import("kysely");
     const { PGliteDialect } = await import("kysely-pglite-dialect");
     const { up, SqlArenaStorageAdapter, SqlChatStorageAdapter, SqlUserStorageAdapter } =
-      await import("@arena/engine/storage/sql");
+      await import("@specarena/engine/storage/sql");
 
     const client = new PGlite();
     await client.waitReady;

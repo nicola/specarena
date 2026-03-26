@@ -6,12 +6,12 @@
     "wt:rm": "./scripts/wt-rm.sh",
     "wt:prune": "git worktree prune",
     "test": "npm run test --workspaces --if-present",
-    "test:engine": "npm run test --workspace @arena/engine",
-    "test:challenges": "npm run test --workspace @arena/challenges",
-    "test:server": "npm run test --workspace @arena/server",
-    "test:leaderboard": "npm run test --workspace @arena/leaderboard --if-present",
-    "test:scoring": "npm run test --workspace @arena/scoring",
-    "test:sql": "npm run test:sql --workspace @arena/server",
+    "test:engine": "npm run test --workspace @specarena/engine",
+    "test:challenges": "npm run test --workspace @specarena/challenges",
+    "test:server": "npm run test --workspace @specarena/server",
+    "test:leaderboard": "npm run test --workspace @specarena/leaderboard --if-present",
+    "test:scoring": "npm run test --workspace @specarena/scoring",
+    "test:sql": "npm run test:sql --workspace @specarena/server",
     "benchmark": "node --import tsx scripts/benchmark.ts"
   },
   "workspaces": [

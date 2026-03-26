@@ -4,8 +4,8 @@ import { execFile } from "node:child_process";
 import { join } from "node:path";
 import { serve } from "@hono/node-server";
 import type { ServerType } from "@hono/node-server";
-import { createApp } from "@arena/server";
-import { ArenaEngine } from "@arena/engine/engine";
+import { createApp } from "@specarena/server";
+import { ArenaEngine } from "@specarena/engine/engine";
 
 // ── Test server with accessible engine ───────────────────────────────
 

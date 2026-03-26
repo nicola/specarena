@@ -1,5 +1,5 @@
 import type { ArenaStorageAdapter, ChatStorageAdapter, UserStorageAdapter } from "./types";
-import type { ScoringStorageAdapter } from "@arena/scoring";
+import type { ScoringStorageAdapter } from "@specarena/scoring";
 import { InMemoryArenaStorageAdapter } from "./InMemoryArenaStorageAdapter";
 import { InMemoryChatStorageAdapter } from "./InMemoryChatStorageAdapter";
 import { InMemoryUserStorageAdapter } from "../users/index";

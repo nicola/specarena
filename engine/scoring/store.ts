@@ -1,2 +1,2 @@
-export type { ScoringStorageAdapter } from "@arena/scoring";
-export { InMemoryScoringStore } from "@arena/scoring";
+export type { ScoringStorageAdapter } from "@specarena/scoring";
+export { InMemoryScoringStore } from "@specarena/scoring";

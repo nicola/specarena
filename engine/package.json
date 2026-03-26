@@ -1,5 +1,5 @@
 {
-  "name": "@arena/engine",
+  "name": "@specarena/engine",
   "version": "0.1.0",
   "private": true,
   "exports": {
@@ -24,7 +24,7 @@
     "test": "node --import tsx --test --test-force-exit test/*.test.ts"
   },
   "dependencies": {
-    "@arena/scoring": "*",
+    "@specarena/scoring": "*",
     "kysely": "^0.28.11",
     "pg": "^8.20.0",
     "prando": "^6.0.1",

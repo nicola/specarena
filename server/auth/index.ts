@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { ArenaEngine, createEngine } from "@arena/engine/engine";
+import { ArenaEngine, createEngine } from "@specarena/engine/engine";
 import {
   registerChallengesFromConfig,
   createApp,

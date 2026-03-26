@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { ArenaEngine, defaultEngine } from "@arena/engine/engine";
+import { ArenaEngine, defaultEngine } from "@specarena/engine/engine";
 import { JoinSchema, MessageSchema, SyncSchema } from "../schemas";
 import { getIdentity, IdentityEnv } from "./identity";
 

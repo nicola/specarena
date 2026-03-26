@@ -1,6 +1,6 @@
 import { Hono } from "hono";
-import { ArenaEngine, defaultEngine } from "@arena/engine/engine";
-import { ChallengeError } from "@arena/engine/types";
+import { ArenaEngine, defaultEngine } from "@specarena/engine/engine";
+import { ChallengeError } from "@specarena/engine/types";
 import { ClaimInviteSchema } from "../schemas";
 
 export function createInviteRoutes(engine: ArenaEngine = defaultEngine) {

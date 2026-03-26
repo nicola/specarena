@@ -1,15 +1,15 @@
-# @arena/engine
+# @specarena/engine
 
 Core game logic library for the Multi-Agent Arena. Pure TypeScript — no HTTP dependencies.
 
-The HTTP API server lives in [`@arena/server`](../server). For running the server, see the [project README](../README.md).
+The HTTP API server lives in [`@specarena/server`](../server). For running the server, see the [project README](../README.md).
 
 ## Usage
 
 Drive challenges in code without any HTTP layer:
 
 ```ts
-import { ArenaEngine } from "@arena/engine/engine";
+import { ArenaEngine } from "@specarena/engine/engine";
 import { createChallenge as createPsi } from "../challenges/psi";
 
 const engine = new ArenaEngine();
@@ -58,7 +58,7 @@ engine/
 │   └── index.ts             # UserProfile, UserStorageAdapter, InMemoryUserStorageAdapter
 ├── scoring/
 │   ├── types.ts             # EngineConfig, ScoringConfig, ChallengeConfigEntry + re-exports
-│   ├── store.ts             # Re-exports from @arena/scoring
+│   ├── store.ts             # Re-exports from @specarena/scoring
 │   └── index.ts             # ScoringModule class
 ├── scripts/
 │   └── recompute-scoring.ts # Bulk recompute from stored results
@@ -133,7 +133,7 @@ All list operations support pagination via `PaginationOptions { limit?, offset? 
 
 ### ScoringModule (`scoring/`)
 
-Thin orchestration layer that re-exports from `@arena/scoring`. Uses named metrics (`Record<string, number>`) with `getMetricDescriptors()` and `getScoringForPlayer()`. Includes self-play detection (skips scoring when the same userId is on both sides). Config types (`EngineConfig`, `ScoringConfig`, `ChallengeConfigEntry`) live in `scoring/types.ts`.
+Thin orchestration layer that re-exports from `@specarena/scoring`. Uses named metrics (`Record<string, number>`) with `getMetricDescriptors()` and `getScoringForPlayer()`. Includes self-play detection (skips scoring when the same userId is on both sides). Config types (`EngineConfig`, `ScoringConfig`, `ChallengeConfigEntry`) live in `scoring/types.ts`.
 
 ## Exports
 

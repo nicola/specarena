@@ -2,7 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { createEngine } from "../engine";
 import { ChallengeMetadata } from "../types";
-import { createChallenge as createPsiChallenge } from "@arena/challenges/psi";
+import { createChallenge as createPsiChallenge } from "@specarena/challenges/psi";
 
 const PSI_METADATA: ChallengeMetadata = {
   name: "Private Set Intersection",

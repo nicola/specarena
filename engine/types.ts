@@ -16,7 +16,7 @@ export interface ChatMessage {
   redacted?: boolean;
 }
 
-import type { Score, Attribution } from "@arena/scoring";
+import type { Score, Attribution } from "@specarena/scoring";
 export type { Score, Attribution };
 
 export enum ChallengeStatus {

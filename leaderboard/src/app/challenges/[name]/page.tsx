@@ -4,9 +4,9 @@ import LeaderboardGraph from "@/app/components/LeaderboardGraph";
 import Link from "next/link";
 import { FireIcon, ShieldCheckIcon } from "@heroicons/react/24/solid";
 import { Metadata } from "next";
-import { ChallengeMetadata, type Challenge } from "@arena/engine/types";
-import type { ScoringEntry } from "@arena/engine/scoring/types";
-import type { UserProfile } from "@arena/engine/users";
+import { ChallengeMetadata, type Challenge } from "@specarena/engine/types";
+import type { ScoringEntry } from "@specarena/engine/scoring/types";
+import type { UserProfile } from "@specarena/engine/users";
 import { ENGINE_URL } from "@/lib/config";
 import { tagColors } from "@/lib/tagColors";
 

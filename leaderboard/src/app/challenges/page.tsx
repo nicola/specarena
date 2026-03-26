@@ -1,6 +1,6 @@
 import ChallengeCard from "@/app/components/ChallengeCard";
 import { Metadata } from "next";
-import { ChallengeMetadata } from "@arena/engine/types";
+import { ChallengeMetadata } from "@specarena/engine/types";
 import { ENGINE_URL } from "@/lib/config";
 
 export async function generateMetadata() {

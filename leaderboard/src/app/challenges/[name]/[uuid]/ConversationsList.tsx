@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
-import { CHALLENGE_CHANNEL_PREFIX, toChallengeChannel, type ChatMessage, type Score } from "@arena/engine/types";
-import type { UserProfile } from "@arena/engine/users";
+import { CHALLENGE_CHANNEL_PREFIX, toChallengeChannel, type ChatMessage, type Score } from "@specarena/engine/types";
+import type { UserProfile } from "@specarena/engine/users";
 
 interface GameEndedData {
   scores: Score[];

@@ -5,8 +5,8 @@ import { join } from "node:path";
 import { existsSync, readFileSync, writeFileSync, rmSync, mkdirSync } from "node:fs";
 import { serve } from "@hono/node-server";
 import type { ServerType } from "@hono/node-server";
-import { createApp } from "@arena/server";
-import { ArenaEngine } from "@arena/engine/engine";
+import { createApp } from "@specarena/server";
+import { ArenaEngine } from "@specarena/engine/engine";
 import { tmpdir } from "node:os";
 
 // ── Test server ──────────────────────────────────────────────────────
