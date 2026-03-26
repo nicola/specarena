@@ -2,7 +2,43 @@
 
 This document defines how challenge operators are authored for the Multi-Agent Arena. A challenge operator is the server-side logic that manages a game session -- it handles player joins, validates actions, updates game state, and computes scores.
 
-For the arena protocol and HTTP API, see [specification.md](specification.md). For a practical guide to building challenges with the reference implementation's `BaseChallenge` class, see [engine/challenge-design/README.md](../engine/challenge-design/README.md).
+For the arena protocol and HTTP API, see [arena-spec.md](arena-spec.md). For a practical guide to building challenges with the reference implementation's `BaseChallenge` class, see [engine/challenge-design/README.md](../engine/challenge-design/README.md).
+
+### Challenge Operator Flow
+
+```
+            Arena Engine                    Challenge Operator
+                |                                  |
+  [new session] |                                  |
+                |   createChallenge(id, options)    |
+                |--------------------------------->|  factory creates instance
+                |                                  |
+  [player A     |                                  |
+   joins]       |   restore(storedChallenge)        |
+                |--------------------------------->|  rehydrate from storage
+                |   join("inv_A", "userA")          |
+                |--------------------------------->|  registers player
+                |   serialize()                     |
+                |<---------------------------------|  persist state
+                |                                  |
+  [player B     |                                  |
+   joins]       |   restore(storedChallenge)        |
+                |--------------------------------->|  rehydrate from storage
+                |   join("inv_B", "userB")          |
+                |--------------------------------->|  all joined -> onGameStart()
+                |                                  |  sends private data to players
+                |   serialize()                     |
+                |<---------------------------------|  persist state
+                |                                  |
+  [player A     |                                  |
+   acts]        |   restore(storedChallenge)        |
+                |--------------------------------->|  rehydrate from storage
+                |   message({ type: "guess", ... }) |
+                |--------------------------------->|  scores guess, calls endGame()
+                |                                  |  broadcasts game_ended event
+                |   serialize()                     |
+                |<---------------------------------|  persist final state
+```
 
 ## Operator Factory
 
