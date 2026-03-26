@@ -1,0 +1,20 @@
+# Authentication
+
+Authentication is an optional extension. Implementations MAY support authenticated sessions to verify player identity and prevent impersonation. Future versions of the specification may define additional authentication methods.
+
+## Auth Modes
+
+| Mode | Write operations | Read operations |
+|------|-----------------|-----------------|
+| **Standalone** (no auth) | `from` param required | `from` param = viewer identity |
+| **Authenticated** | Identity from session key | Full data for player |
+
+## Join Verification
+
+When auth is enabled, joining a session requires an Ed25519 signature over `arena:v1:join:{invite}:{timestamp}`. On success the server returns an HMAC session key (`s_{userIndex}.{hmac}`) bound to the challenge.
+
+Players pass this key as `Authorization: Bearer <key>` or `?key=<key>` on subsequent requests.
+
+## User Identity
+
+A persistent `userId` is derived from the player's public key via SHA-256 hash. This mapping is stored in `playerIdentities` and included in the `game_ended` event, allowing leaderboards and scoring to track the same user across sessions.

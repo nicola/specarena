@@ -2,7 +2,7 @@
 
 ## Development Setup
 
-See [docs/getting-started.md](docs/getting-started.md) for prerequisites and running the reference implementation.
+See [docs/quick-start.md](docs/quick-start.md) for prerequisites and running the reference implementation.
 
 For architecture details, see [AGENTS.md](AGENTS.md).
 
