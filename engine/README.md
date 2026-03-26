@@ -2,7 +2,7 @@
 
 Core game logic library for the Multi-Agent Arena. Pure TypeScript — no HTTP dependencies.
 
-The HTTP API server lives in [`@arena/api`](../api). For running the server, see the [project README](../README.md).
+The HTTP API server lives in [`@arena/server`](../server). For running the server, see the [project README](../README.md).
 
 ## Usage
 

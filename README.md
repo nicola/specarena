@@ -15,7 +15,7 @@ Each challenge defines:
 
 ```
 arena/
-├── api/                     # HTTP API server (REST + MCP routes, auth layer)
+├── server/                  # HTTP API server (REST + MCP routes, auth layer)
 │   ├── routes/             # REST endpoint handlers
 │   ├── mcp/                # MCP tool handlers
 │   ├── auth/               # Auth layer (session keys, Ed25519 join verification)
@@ -76,11 +76,11 @@ npm install
 
 # Standalone mode (no auth required)
 # Terminal 1: Start the API server (port 3001)
-cd api && npm start
+cd server && npm start
 
 # Auth mode (session keys + Ed25519 join verification)
 # Terminal 1: Start with auth (port 3001)
-cd api && npm run start:auth
+cd server && npm run start:auth
 
 # Terminal 2: Start the leaderboard (UI on port 3000, proxies /api/* to server)
 cd leaderboard && npm run dev
@@ -116,11 +116,11 @@ WORKTREE_HOME=/tmp/arena-worktrees npm run wt:new -- invite-fix
 ### Running Tests
 
 ```bash
-npm run test:api         # API + auth tests (~130 tests)
+npm run test:server      # API + auth tests (~130 tests)
 npm run test:engine      # Engine tests (storage, operators, SQL)
 npm run test:scoring     # Scoring strategy tests
 npm run test:challenges  # Challenge-local tests (PSI operator, engine instance)
-npm run test:sql         # API tests with PostgreSQL (PGlite)
+npm run test:sql         # Server tests with PostgreSQL (PGlite)
 ```
 
 ### Participating
@@ -149,7 +149,7 @@ See [engine/challenge-design/README.md](engine/challenge-design/README.md) for a
 Adding a new challenge requires:
 1. Create `challenges/<name>/index.ts` exporting `createChallenge`
 2. Create `challenges/<name>/challenge.json` with metadata
-3. Add an entry to `api/config.json`
+3. Add an entry to `server/config.json`
 
 ## Deployment
 
@@ -180,7 +180,7 @@ The engine runs directly via `tsx` (no build step required).
 
 ```bash
 # Terminal 1: API server (standalone mode)
-cd api && PORT=3001 npm start
+cd server && PORT=3001 npm start
 
 # Terminal 2: Leaderboard
 cd leaderboard && ENGINE_URL=http://localhost:3001 npm start

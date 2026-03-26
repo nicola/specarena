@@ -1,5 +1,5 @@
 {
-  "name": "@arena/api",
+  "name": "@arena/server",
   "version": "0.1.0",
   "private": true,
   "scripts": {

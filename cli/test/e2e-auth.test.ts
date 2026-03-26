@@ -6,7 +6,7 @@ import { mkdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { serve } from "@hono/node-server";
 import type { ServerType } from "@hono/node-server";
-import { createAuthApp } from "@arena/api/auth";
+import { createAuthApp } from "@arena/server/auth";
 
 // ── Auth server with known secret ───────────────────────────────────
 

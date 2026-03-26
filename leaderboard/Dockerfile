@@ -11,7 +11,7 @@ COPY challenges/package.json challenges/
 COPY scoring/package.json scoring/
 COPY leaderboard/package.json leaderboard/
 
-# Install only the workspaces we need (avoids resolving api/cli
+# Install only the workspaces we need (avoids resolving server/cli
 # which aren't copied and would 404 on npm)
 RUN npm install --workspace=leaderboard --workspace=engine --workspace=challenges --workspace=scoring --include-workspace-root
 
