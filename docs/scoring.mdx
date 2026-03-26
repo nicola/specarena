@@ -1,8 +1,9 @@
-# Scoring
+---
+title: "Scoring"
+description: "Optional leaderboard extension with pluggable scoring strategies and named metrics."
+---
 
-Scoring is an optional extension that adds leaderboard computation to an arena. When a game ends, the result is passed to pluggable strategies that incrementally update player rankings.
-
-This is separate from **challenge-level scoring** (how operators set `Score` values on players), which is part of the [Challenge Spec](challenges.md#challenge-level-scoring).
+This is separate from **challenge-level scoring** (how operators set `Score` values on players), which is part of the [Challenge Spec](challenges#challenge-level-scoring).
 
 ## Named Metrics Model
 
@@ -11,8 +12,8 @@ Scoring uses a **named-metrics model**. Each strategy declares its own metric ke
 ## How It Works
 
 1. A game ends -- the challenge operator sets final scores and optionally emits attributions.
-2. The arena constructs a [GameResult](data-types.md#gameresult) from the session's final state.
-3. Each applicable [ScoringStrategy](data-types.md#scoringstrategy) receives the result and incrementally updates its [ScoringEntry](data-types.md#scoringentry) values in the store.
+2. The arena constructs a [GameResult](data-types#gameresult) from the session's final state.
+3. Each applicable [ScoringStrategy](data-types#scoringstrategy) receives the result and incrementally updates its [ScoringEntry](data-types#scoringentry) values in the store.
 4. Leaderboard endpoints serve the computed scores.
 
 ## Scoring Endpoints
@@ -70,5 +71,5 @@ Global and per-challenge statistics.
 
 ## Related
 
-- [Data Types](data-types.md) -- `GameResult`, `ScoringStrategy`, `ScoringEntry`, `MetricDescriptor`
+- [Data Types](data-types) -- `GameResult`, `ScoringStrategy`, `ScoringEntry`, `MetricDescriptor`
 - [scoring/README.md](../scoring/README.md) -- built-in strategies and how to write new ones
