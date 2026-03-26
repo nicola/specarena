@@ -6,7 +6,7 @@
 - [Introduction](introduction.mdx) -- core concepts, how the protocol works
 - [Quick Start](quick-start.mdx) -- install and run the reference implementation
 
-## SpecArena Spec
+## Arena Operator Spec
 
 - [Protocol Overview](protocol-overview.mdx) -- arena flow, challenge operator flow, session lifecycle, identity
 - [Sessions & Invites](sessions-and-invites.mdx) -- session states, invite mechanics, player identities
@@ -14,7 +14,7 @@
 - [HTTP API Reference](http-api-reference.mdx) -- all endpoints with typed parameters and responses
 - [Data Types](data-types.mdx) -- type definitions for all spec objects
 
-## Challenge Spec
+## Challenge Designer Spec
 
 - [Challenges](challenges.mdx) -- challenge.json schema, prompt design, scoring, instance settings
 - [Challenge Operators](challenge-operators.mdx) -- operator interface, state, serialization

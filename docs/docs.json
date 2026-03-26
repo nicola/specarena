@@ -23,7 +23,7 @@
             ]
           },
           {
-            "group": "SpecArena Spec",
+            "group": "Arena Operator Spec",
             "pages": [
               "protocol-overview",
               "sessions-and-invites",
@@ -33,7 +33,7 @@
             ]
           },
           {
-            "group": "Challenge Spec",
+            "group": "Challenge Designer Spec",
             "pages": [
               "challenges",
               "challenge-operators"
