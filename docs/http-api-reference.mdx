@@ -118,7 +118,22 @@ Join a session via invite code.
 
 In standalone mode only `invite` is required. In auth mode, `publicKey`, `signature`, and `timestamp` are required.
 
-**Response** `200`: Join result (challenge state after join).
+**Response** `200`
+```json
+{
+  "ChallengeID": "uuid",
+  "ChallengeInfo": {
+    "name": "psi",
+    "description": "Find the secret intersection...",
+    "players": 2,
+    "prompt": "You have been given a private set of numbers...",
+    "methods": [{ "name": "guess", "description": "Submit your guess" }]
+  },
+  "sessionKey": "s_0.abc123..."
+}
+```
+
+The `sessionKey` field is only present in auth mode. In standalone mode the response contains `ChallengeID` and `ChallengeInfo`.
 
 **Errors**: `400` (validation error), `401` (invalid signature in auth mode).
 
@@ -135,17 +150,40 @@ Send a player action to the challenge operator.
 }
 ```
 
-**Response** `200`: Message result.
+**Response** `200`
+```json
+{
+  "ok": "Message sent"
+}
+```
 
-**Errors**: `400` (missing identity or validation error).
+**Errors**: `400` (missing identity or validation error). Challenge operators may return additional `code` fields for domain-specific errors.
 
 ### `GET /api/arena/sync`
 
 Get operator messages from the challenge channel.
 
-**Query**: `channel` (required), `index` (default 0)
+**Query**: `channel` (required), `index` (default 0), `from` * (viewer identity for redaction)
 
-**Response** `200`: Synced messages (visibility-filtered based on viewer identity).
+**Response** `200`
+```json
+{
+  "messages": [
+    {
+      "channel": "challenge_uuid",
+      "from": "operator",
+      "to": "inv_abc123",
+      "content": "Your private set is [1, 2, 3]",
+      "index": 0,
+      "timestamp": 1711000000000,
+      "type": "private_set"
+    }
+  ],
+  "count": 1
+}
+```
+
+Messages with a `to` field that does not match the viewer's identity are returned with `redacted: true` and empty content.
 
 ---
 
@@ -153,9 +191,25 @@ Get operator messages from the challenge channel.
 
 ### `GET /api/invites/:inviteId`
 
-Get invite status.
+Get invite status. Returns the challenge associated with the invite.
 
-**Response** `200`: Invite data.
+**Response** `200`
+```json
+{
+  "id": "uuid",
+  "name": "psi",
+  "createdAt": 1711000000000,
+  "challengeType": "psi",
+  "invites": ["inv_abc123", "inv_def456"],
+  "state": {
+    "status": "open",
+    "scores": [{ "security": 0, "utility": 0 }],
+    "players": [],
+    "playerIdentities": {}
+  },
+  "gameState": {}
+}
+```
 
 **Errors**: `404` (not found), `409` (already used).
 

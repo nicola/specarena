@@ -5,24 +5,6 @@ description: "The server-side interface for managing game sessions: joins, actio
 
 For a practical guide using the reference implementation's `BaseChallenge` class, see [engine/challenge-design/README.md](../engine/challenge-design/README.md).
 
-## Operator Factory
-
-Each challenge must export a `createChallenge` factory function:
-
-```typescript
-export function createChallenge(
-  challengeId: string,
-  options?: Record<string, unknown>,
-  context?: ChallengeFactoryContext
-): ChallengeOperator;
-```
-
-| Parameter | Description |
-|-----------|-------------|
-| `challengeId` | Unique session ID assigned by the arena |
-| `options` | Configuration values passed by the arena (see [Instance Settings](challenges#instance-settings)) |
-| `context` | SpecArena-provided context containing the messaging system (`context.messaging`) |
-
 ## ChallengeOperator Interface
 
 The returned operator must implement:
@@ -82,4 +64,4 @@ restore(challenge) {
 
 - [Challenges](challenges) -- metadata schema, prompt design, instance settings
 - [Data Types](data-types) -- `ChallengeOperatorState`, `Score`, `Attribution`, `ChatMessage`
-- [Challenge Operator Flow](introduction#challenge-operator-flow) -- visual lifecycle diagram
+- [Challenge Operator Flow](protocol-overview#challenge-operator-flow) -- visual lifecycle diagram
