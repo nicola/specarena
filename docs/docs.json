@@ -2,7 +2,7 @@
   "$schema": "https://mintlify.com/docs.json",
   "name": "Arena",
   "description": "A specification for building multi-owner multi-agent challenges",
-  "theme": "quill",
+  "theme": "mint",
   "colors": {
     "primary": "#0D9373",
     "light": "#07C983",
