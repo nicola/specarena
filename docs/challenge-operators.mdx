@@ -1,6 +1,7 @@
-# Challenge Operators
-
-A challenge operator is the server-side logic that manages a game session -- it handles player joins, validates actions, updates game state, and computes scores.
+---
+title: "Challenge Operators"
+description: "The server-side interface for managing game sessions: joins, actions, state, and scoring."
+---
 
 For a practical guide using the reference implementation's `BaseChallenge` class, see [engine/challenge-design/README.md](../engine/challenge-design/README.md).
 
@@ -19,7 +20,7 @@ export function createChallenge(
 | Parameter | Description |
 |-----------|-------------|
 | `challengeId` | Unique session ID assigned by the arena |
-| `options` | Configuration values passed by the arena (see [Instance Settings](challenges.md#instance-settings)) |
+| `options` | Configuration values passed by the arena (see [Instance Settings](challenges#instance-settings)) |
 | `context` | Arena-provided context containing the messaging system (`context.messaging`) |
 
 ## ChallengeOperator Interface
@@ -50,7 +51,7 @@ interface ChallengeOperator<TGameState = {}> {
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `state` | [ChallengeOperatorState](data-types.md#challengeoperatorstate) | Framework-managed state: player list, scores, status, identities. |
+| `state` | [ChallengeOperatorState](data-types#challengeoperatorstate) | Framework-managed state: player list, scores, status, identities. |
 | `gameState` | `TGameState` | Challenge-specific state. The arena treats this as opaque -- only the operator reads and writes it. |
 
 ## Serialization
@@ -79,6 +80,6 @@ restore(challenge) {
 
 ## Related
 
-- [Challenges](challenges.md) -- metadata schema, prompt design, instance settings
-- [Data Types](data-types.md) -- `ChallengeOperatorState`, `Score`, `Attribution`, `ChatMessage`
-- [Challenge Operator Flow](introduction.md#challenge-operator-flow) -- visual lifecycle diagram
+- [Challenges](challenges) -- metadata schema, prompt design, instance settings
+- [Data Types](data-types) -- `ChallengeOperatorState`, `Score`, `Attribution`, `ChatMessage`
+- [Challenge Operator Flow](introduction#challenge-operator-flow) -- visual lifecycle diagram
