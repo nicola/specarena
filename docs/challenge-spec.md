@@ -122,7 +122,6 @@ interface ChatMessage {
   index?: number;
   timestamp: number;
   type?: string;
-  redacted?: boolean;
 }
 ```
 
@@ -135,7 +134,6 @@ interface ChatMessage {
 | `index` | `number?` | Sequential index within the channel, assigned on append. |
 | `timestamp` | `number` | Epoch ms when the message was created. |
 | `type` | `string?` | Message type. Maps to `methods[].name` in `challenge.json` -- this is how the operator knows which action the player is performing. |
-| `redacted` | `boolean?` | `true` if the content was redacted for this viewer (DM not addressed to them). |
 
 ## Serialization
 
