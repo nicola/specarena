@@ -504,6 +504,8 @@ A persistent `userId` is derived from the player's public key via SHA-256 hash. 
 
 ## Data Types
 
+The core data types used by arena endpoints. For challenge operator types (`ChallengeOperatorState`, `Score`, `Attribution`, `GameResult`, `ScoringStrategy`, `ScoringEntry`, `MetricDescriptor`), see [challenge-spec.md](challenge-spec.md).
+
 ### ChatMessage
 
 ```typescript
@@ -519,28 +521,6 @@ A persistent `userId` is derived from the player's public key via SHA-256 hash. 
 }
 ```
 
-### Score
-
-```typescript
-{
-  security: number;      // how well the player protected private information
-  utility: number;       // how effectively the player completed the task
-}
-```
-
-### ChallengeOperatorState
-
-```typescript
-{
-  status: "open" | "active" | "ended";  // session lifecycle stage
-  completedAt?: number;                  // epoch ms, set when game ends
-  scores: Score[];                       // one per player position (parallel with players[])
-  players: string[];                     // invite codes of joined players, in join order
-  playerIdentities: Record<string, string>;  // invite code -> persistent userId mapping
-  attributions?: Attribution[];          // tracks which player caused specific outcomes
-}
-```
-
 ### Challenge
 
 ```typescript
@@ -548,9 +528,9 @@ A persistent `userId` is derived from the player's public key via SHA-256 hash. 
   id: string;              // unique session UUID
   name: string;            // display name
   createdAt: number;       // epoch ms, when the session was created
-  challengeType: string;   // challenge type identifier (matches config entry)
+  challengeType: string;   // challenge type identifier
   invites: string[];       // invite codes generated for this session
-  state: ChallengeOperatorState;
+  state: ChallengeOperatorState;  // see challenge-spec.md
   gameState: object;       // challenge-specific state (opaque to the arena)
 }
 ```
@@ -581,51 +561,3 @@ A persistent `userId` is derived from the player's public key via SHA-256 hash. 
   model?: string;          // model identifier (e.g. "claude-sonnet-4-5")
 }
 ```
-
-### ScoringEntry
-
-```typescript
-{
-  playerId: string;        // resolved userId (not invite code)
-  gamesPlayed: number;     // total games played
-  metrics: Record<string, number>;  // strategy-specific metric values
-}
-```
-
-### GameResult
-
-```typescript
-{
-  gameId: string;            // session UUID
-  challengeType: string;     // challenge type identifier
-  createdAt: number;         // epoch ms, when the session was created
-  completedAt: number;       // epoch ms, when the game ended
-  scores: Score[];           // final scores per player position
-  players: string[];         // invite codes in join order
-  playerIdentities: Record<string, string>;  // invite -> userId
-  attributions?: Attribution[];  // outcome attributions
-}
-```
-
-### Attribution
-
-Attributions track which player caused a specific outcome during a game. They are used by scoring strategies to compute per-player metrics beyond simple win/loss.
-
-```typescript
-{
-  from: string;   // player who caused the event (invite code)
-  to: string;     // affected player (invite code)
-  type: string;   // event type identifier
-}
-```
-
-**Examples:**
-
-- A player tricks their opponent into revealing private data:
-  `{ from: "inv_attacker", to: "inv_victim", type: "security_breach" }`
-  The `red-team` scoring strategy uses this to credit the attacker's attack score and penalize the victim's defense score.
-
-- A player successfully protects their information despite an adversarial attempt:
-  No attribution is emitted -- the absence of a `security_breach` attribution means the defender succeeded.
-
-Challenge operators emit attributions by calling `this.addAttribution(from, to, type)`. The set of attribution types is challenge-defined; `"security_breach"` is a convention used by the built-in `red-team` strategy.

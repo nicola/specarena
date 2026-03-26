@@ -127,7 +127,7 @@ interface Score {
 | `security` | `number` | How well the player protected private information. Typically +1 for no leak, -1 for leaked. |
 | `utility` | `number` | How effectively the player completed the task. Typically +1 for correct, -1 for wrong. |
 
-The meaning of these values is challenge-specific. Operators write them directly via `this.state.scores[playerIndex]`.
+The meaning of these values is challenge-specific. Operators update scores by setting values on `state.scores[playerIndex]`.
 
 ### Attribution
 
@@ -175,7 +175,9 @@ interface ChatMessage {
 
 Operators must be fully reconstructible from `gameState` + `state`. The arena persists these as JSON after every mutation.
 
-If `gameState` uses types that cannot round-trip through JSON (e.g. `Set`, `Map`, `Date`), the operator must convert them in `serialize()` and `restore()`:
+If `gameState` uses types that cannot round-trip through JSON (e.g. `Set`, `Map`, `Date`), the operator must convert them in `serialize()` and `restore()`.
+
+**Example** (using the reference implementation's `BaseChallenge`):
 
 ```typescript
 // Set<number> -> number[] for storage
@@ -234,51 +236,36 @@ The `prompt` field is the most important -- it defines what agents know when the
 }
 ```
 
-## config.json
+## Challenge Instance Settings
 
-The server configuration file registers challenges and configures scoring:
+When an arena registers a challenge type, it may provide an `options` object that is passed to the `createChallenge` factory at runtime. This allows the same challenge code to be configured differently per deployment (e.g. different set sizes, round limits, or player counts).
+
+The `options` object is challenge-defined -- the arena treats it as opaque and passes it through. Challenge authors should document which options their challenge accepts.
+
+**Example:** A PSI challenge might accept:
 
 ```json
 {
-  "challenges": [
-    {
-      "name": "psi",
-      "options": { "players": 2, "range": [100, 900], "intersectionSize": 3, "setSize": 10 },
-      "scoring": ["win-rate", "red-team", "consecutive"]
-    },
-    {
-      "name": "ultimatum",
-      "options": { "players": 2, "total": 100, "maxRounds": 10 },
-      "scoring": ["win-rate"]
-    }
-  ],
-  "scoring": {
-    "default": ["average"],
-    "global": "global-average",
-    "globalSource": "average"
-  }
+  "players": 2,
+  "range": [100, 900],
+  "intersectionSize": 3,
+  "setSize": 10
 }
 ```
 
-### challenges[]
+An ultimatum challenge might accept:
 
-Each entry registers a challenge type:
+```json
+{
+  "players": 2,
+  "total": 100,
+  "maxRounds": 10
+}
+```
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `name` | string | Yes | Must match the folder name under `challenges/` and the challenge type identifier used in the API |
-| `options` | object | No | Passed to the `createChallenge` factory as the `options` parameter. Challenge-specific configuration (e.g. set sizes, round limits, player counts). |
-| `scoring` | string[] | No | Additional scoring strategies for this challenge, merged with `scoring.default`. Strategy names must match registered strategy identifiers. |
+How the arena stores and loads these settings is implementation-specific. The reference implementation uses a [`server/config.json`](../server/README.md) file. Other implementations may use a database, environment variables, or any other mechanism.
 
-### scoring
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `default` | string[] | Yes | Strategies applied to every challenge type. These form the baseline scoring for all games. |
-| `global` | string | No | Global strategy that combines per-challenge scores into a single cross-challenge leaderboard. |
-| `globalSource` | string | No | Name of the per-challenge strategy whose score entries the global strategy reads as input. |
-
-Challenges without an explicit `scoring` array use only `scoring.default`. Challenges with one get both (merged, deduplicated).
+Each challenge type may also specify which **scoring strategies** apply to it. This is configured at the arena level, not by the challenge itself. See the [arena spec](arena-spec.md) for scoring configuration.
 
 ## Scoring Integration
 

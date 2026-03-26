@@ -37,10 +37,25 @@ npm run start:auth
 }
 ```
 
-- `challenges[]` -- each entry maps to a folder in `challenges/`. The `options` object is passed to the challenge factory at runtime.
-- `scoring.default` -- strategies applied to every challenge type.
-- `challenges[].scoring` -- additional strategies for a specific challenge (merged with defaults).
-- `scoring.global` -- combines per-challenge scores into a single leaderboard.
+### challenges[]
+
+Each entry registers a challenge type:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | Yes | Must match the folder name under `challenges/` |
+| `options` | object | No | Passed to the `createChallenge` factory as the `options` parameter. See [Challenge Instance Settings](../docs/challenge-spec.md#challenge-instance-settings). |
+| `scoring` | string[] | No | Additional scoring strategies for this challenge (merged with `scoring.default`) |
+
+### scoring
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `default` | string[] | Yes | Strategies applied to every challenge type |
+| `global` | string | No | Global strategy that combines per-challenge scores into a single leaderboard |
+| `globalSource` | string | No | Name of the per-challenge strategy whose scores the global strategy reads |
+
+Challenges without an explicit `scoring` array use only `scoring.default`. Challenges with one get both (merged, deduplicated).
 
 ## Routes
 
