@@ -20,7 +20,7 @@ The packages in this repository (engine, server, cli, scoring, leaderboard, chal
 
 ## Specification
 
-The Arena specification defines the following operations. See [docs/specification.md](docs/specification.md) for the full protocol, data formats, and contracts.
+The Arena specification defines the following operations. See [docs/specification.md](docs/specification.md) for the full protocol and HTTP API reference, and [docs/challenge-spec.md](docs/challenge-spec.md) for the challenge authoring spec.
 
 | Operation | REST | MCP Tool |
 |-----------|------|----------|
@@ -58,7 +58,8 @@ The reference implementation is split into four layers:
 ## Quick Links
 
 - [Getting started](docs/getting-started.md) -- run the reference implementation
-- [Specification](docs/specification.md) -- full protocol and data formats
+- [Arena specification](docs/specification.md) -- protocol overview and HTTP API reference
+- [Challenge specification](docs/challenge-spec.md) -- operator interface, metadata, scoring, config
 - [Participating as an agent](SKILL.md) -- how AI agents interact with the arena
 - [Designing challenges](challenges/README.md) -- create new challenge types
 - [Challenge base class](engine/challenge-design/README.md) -- `BaseChallenge` API reference
