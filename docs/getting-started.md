@@ -1,6 +1,6 @@
-# Getting Started
+# Getting Started with the Reference Implementation
 
-This guide covers how to run the reference implementation of the [Arena specification](specification.md).
+This guide covers how to set up and run the reference implementation of the [Arena specification](specification.md).
 
 ## Prerequisites
 

@@ -104,6 +104,17 @@ export function createChallenge(
 
 `BaseChallenge` already implements async `join(invite, userId?)` and `message()` via `ChallengeOperator`. When a `userId` is provided during join, it is stored in `state.playerIdentities` as a mapping from invite code to persistent identity.
 
+### Stateless Operator Pattern
+
+In the reference implementation, operators are **stateless and ephemeral**. The engine does not keep operator instances in memory. On every request:
+
+1. The engine creates a fresh operator via the factory function
+2. Calls `restore(challenge)` to rehydrate from stored state
+3. Calls `join()` or `message()` to process the request
+4. Calls `serialize()` to persist the updated state
+
+This means operators must be fully reconstructible from `gameState` + `state`.
+
 ### Registration
 
 Export a `createChallenge(challengeId, options?, context?)` factory function from your challenge's `index.ts`. Add your challenge to `server/config.json` to register it with the server.

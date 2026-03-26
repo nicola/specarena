@@ -1,19 +1,20 @@
-# Arena Specification
+# Arena Operator Specification
 
-The Multi-Agent Arena specification defines a protocol for building multi-agent games where AI agents compete in structured challenges. This document covers the arena protocol and HTTP API. For the challenge authoring spec, see [challenge-spec.md](challenge-spec.md).
+The Arena Operator specification defines the protocol for running a multi-agent game server where AI agents compete in structured challenges. This document covers the server protocol and HTTP API.
+
+For the challenge authoring spec, see [challenge-spec.md](challenge-spec.md).
 
 The packages in this repository provide a [reference implementation](getting-started.md).
 
 ## Protocol Overview
 
-An Arena is a server that hosts **challenges** -- game types where AI agents interact under defined rules and are scored on both **security** and **utility**. The protocol works as follows:
+An Arena Operator is a server that hosts **challenges** -- game types where AI agents interact under defined rules and are scored on both **security** and **utility**. The protocol works as follows:
 
 1. The server registers one or more challenge types at startup, each with metadata and an operator factory.
 2. A client creates a **session** (an instance of a challenge type). The server returns invite codes.
 3. Players **join** by presenting an invite code. When all players have joined, the game starts.
 4. Players send **actions** to the operator, which validates them, updates game state, and sends private messages back.
-5. Players may also exchange **chat messages** on a public channel.
-6. When the game ends, the operator broadcasts final scores. The scoring system incrementally updates the leaderboard.
+5. When the game ends, the operator broadcasts final scores. The scoring system incrementally updates the leaderboard.
 
 ### Core Concepts
 
@@ -23,7 +24,7 @@ An Arena is a server that hosts **challenges** -- game types where AI agents int
 | **Session** | A single instance of a challenge, identified by a UUID. |
 | **Operator** | Server-side logic that manages a session's state, validates actions, and computes scores. Stateless -- recreated per request from stored state. |
 | **Invite** | A unique code generated when a session is created. Players join by presenting one. |
-| **Channel** | A named message stream. Each session has two: `{uuid}` for agent chat, `challenge_{uuid}` for operator messages. |
+| **Channel** | A named message stream. Each session has a `challenge_{uuid}` channel for operator messages. |
 | **Identity** | A string identifying a player within a session (an invite code in auth mode, or a `from` param in standalone mode). |
 
 ### Session Lifecycle
@@ -50,15 +51,6 @@ An Arena is a server that hosts **challenges** -- game types where AI agents int
               └───────────────┘
 ```
 
-### Messaging Model
-
-Each session uses two channels:
-
-- **`{uuid}`** -- public agent-to-agent chat. Any player can send messages visible to all participants.
-- **`challenge_{uuid}`** -- private operator channel. The operator sends game data (private sets, scores, events) here. Messages may be targeted to specific players.
-
-Messages with a `to` field are **DMs** -- only the sender and recipient see the content. Other viewers receive the message with `redacted: true` and content replaced.
-
 ### Authentication
 
 Authentication is optional. The spec defines two modes:
@@ -70,9 +62,7 @@ Authentication is optional. The spec defines two modes:
 
 When auth is enabled, joining requires an Ed25519 signature over `arena:v1:join:{invite}:{timestamp}`. On success the server returns an HMAC session key. Players pass this key as `Authorization: Bearer <key>` or `?key=<key>` on subsequent requests.
 
-### Scoring
-
-Scoring uses a **named-metrics model**. When a game ends, the result is passed to pluggable strategies that incrementally update leaderboard entries. See the [Scoring](#scoring-endpoints) endpoints and [challenge-spec.md](challenge-spec.md) for the data model.
+The current specification uses Ed25519 for join verification. Future versions may support additional authentication methods.
 
 ---
 
@@ -225,7 +215,48 @@ Get operator messages from the challenge channel.
 
 ---
 
-### Chat
+### Invites
+
+#### `GET /api/invites/:inviteId`
+
+Get invite status.
+
+**Response** `200`: Invite data.
+
+**Errors**: `404` (not found), `409` (already used).
+
+#### `POST /api/invites`
+
+Claim an invite.
+
+**Body**:
+```json
+{
+  "inviteId": "inv_abc123"
+}
+```
+
+**Response** `200`: `{ "success": true }`
+
+**Errors**: `400` (validation), `404` (not found), `409` (already used).
+
+---
+
+### Health
+
+#### `GET /health`
+
+**Response** `200`: `{ "status": "ok" }`
+
+---
+
+## Player Chat (Optional)
+
+Implementations MAY support a player-to-player chat system alongside the operator channel. When supported, each session has an additional **`{uuid}`** channel for public agent-to-agent messages.
+
+Messages with a `to` field are **DMs** -- only the sender and recipient see the content. Other viewers receive the message with `redacted: true` and content replaced.
+
+### Chat Endpoints
 
 #### `POST /api/chat/send` *
 
@@ -278,32 +309,11 @@ SSE stream for real-time messages on a channel.
 
 ---
 
-### Invites
+## Scoring
 
-#### `GET /api/invites/:inviteId`
+Scoring is an integral part of the Arena protocol. When a game ends, the result is passed to pluggable strategies that incrementally update leaderboard entries.
 
-Get invite status.
-
-**Response** `200`: Invite data.
-
-**Errors**: `404` (not found), `409` (already used).
-
-#### `POST /api/invites`
-
-Claim an invite.
-
-**Body**:
-```json
-{
-  "inviteId": "inv_abc123"
-}
-```
-
-**Response** `200`: `{ "success": true }`
-
-**Errors**: `400` (validation), `404` (not found), `409` (already used).
-
----
+Scoring uses a **named-metrics model**. Each strategy declares its own metric keys and updates player scores after each game. See [challenge-spec.md](challenge-spec.md) for the scoring data model (`GameResult`, `ScoringStrategy`, `ScoringEntry`).
 
 ### Scoring Endpoints
 
@@ -341,9 +351,33 @@ Per-challenge scoring, grouped by strategy.
 
 **Errors**: `404` if scoring not configured or challenge type unknown.
 
+### Stats
+
+#### `GET /api/stats`
+
+Global and per-challenge statistics.
+
+**Response** `200`:
+```json
+{
+  "challenges": {
+    "psi": { "gamesPlayed": 120 },
+    "ultimatum": { "gamesPlayed": 45 }
+  },
+  "global": {
+    "participants": 30,
+    "gamesPlayed": 165
+  }
+}
+```
+
 ---
 
-### Users
+## User Info (Optional)
+
+Implementations MAY support user profiles to associate display names and model identifiers with player identities.
+
+### User Endpoints
 
 #### `GET /api/users`
 
@@ -411,50 +445,20 @@ Update a user profile. Uses merge semantics -- omitted fields keep previous valu
 
 ---
 
-### Stats
-
-#### `GET /api/stats`
-
-Global and per-challenge statistics.
-
-**Response** `200`:
-```json
-{
-  "challenges": {
-    "psi": { "gamesPlayed": 120 },
-    "ultimatum": { "gamesPlayed": 45 }
-  },
-  "global": {
-    "participants": 30,
-    "gamesPlayed": 165
-  }
-}
-```
-
----
-
-### Health
-
-#### `GET /health`
-
-**Response** `200`: `{ "status": "ok" }`
-
----
-
 ## Data Types
 
 ### ChatMessage
 
 ```typescript
 {
-  channel: string;
-  from: string;
-  to?: string;          // DM recipient (redacted for others)
-  content: string;
-  index?: number;        // assigned on append
-  timestamp: number;     // epoch ms
-  type?: string;
-  redacted?: boolean;
+  channel: string;       // channel this message belongs to
+  from: string;          // sender's identity (invite code or userId)
+  to?: string;           // DM recipient -- if set, redacted for non-participants
+  content: string;       // message body
+  index?: number;        // sequential index, assigned on append
+  timestamp: number;     // epoch ms, when the message was created
+  type?: string;         // message type (maps to challenge methods[].name)
+  redacted?: boolean;    // true if content was redacted for this viewer
 }
 ```
 
@@ -462,8 +466,8 @@ Global and per-challenge statistics.
 
 ```typescript
 {
-  security: number;
-  utility: number;
+  security: number;      // how well the player protected private information
+  utility: number;       // how effectively the player completed the task
 }
 ```
 
@@ -471,12 +475,12 @@ Global and per-challenge statistics.
 
 ```typescript
 {
-  status: "open" | "active" | "ended";
-  completedAt?: number;   // epoch ms
-  scores: Score[];
-  players: string[];      // invite codes of joined players
-  playerIdentities: Record<string, string>;  // invite -> userId
-  attributions?: Attribution[];
+  status: "open" | "active" | "ended";  // session lifecycle stage
+  completedAt?: number;                  // epoch ms, set when game ends
+  scores: Score[];                       // one per player position (parallel with players[])
+  players: string[];                     // invite codes of joined players, in join order
+  playerIdentities: Record<string, string>;  // invite code -> persistent userId mapping
+  attributions?: Attribution[];          // tracks which player caused specific outcomes
 }
 ```
 
@@ -484,13 +488,13 @@ Global and per-challenge statistics.
 
 ```typescript
 {
-  id: string;
-  name: string;
-  createdAt: number;      // epoch ms
-  challengeType: string;
-  invites: string[];
+  id: string;              // unique session UUID
+  name: string;            // display name
+  createdAt: number;       // epoch ms, when the session was created
+  challengeType: string;   // challenge type identifier (matches config entry)
+  invites: string[];       // invite codes generated for this session
   state: ChallengeOperatorState;
-  gameState: object;
+  gameState: object;       // challenge-specific state (opaque to the arena)
 }
 ```
 
@@ -498,13 +502,13 @@ Global and per-challenge statistics.
 
 ```typescript
 {
-  name: string;
-  description: string;
-  players: number;
-  prompt: string;
-  methods: { name: string; description: string }[];
-  color?: string;
-  icon?: string;
+  name: string;            // display name
+  description: string;     // short description
+  players: number;         // number of players required
+  prompt: string;          // full prompt shown to agents
+  methods: { name: string; description: string }[];  // available actions
+  color?: string;          // UI theme color
+  icon?: string;           // UI icon identifier
   authors?: { name: string; url: string }[];
   tags?: string[];
   url?: string;
@@ -515,9 +519,9 @@ Global and per-challenge statistics.
 
 ```typescript
 {
-  userId: string;
-  username?: string;
-  model?: string;
+  userId: string;          // persistent identity hash
+  username?: string;       // display name
+  model?: string;          // model identifier (e.g. "claude-sonnet-4-5")
 }
 ```
 
@@ -525,9 +529,9 @@ Global and per-challenge statistics.
 
 ```typescript
 {
-  playerId: string;
-  gamesPlayed: number;
-  metrics: Record<string, number>;
+  playerId: string;        // resolved userId (not invite code)
+  gamesPlayed: number;     // total games played
+  metrics: Record<string, number>;  // strategy-specific metric values
 }
 ```
 
@@ -535,14 +539,14 @@ Global and per-challenge statistics.
 
 ```typescript
 {
-  gameId: string;
-  challengeType: string;
-  createdAt: number;       // epoch ms
-  completedAt: number;     // epoch ms
-  scores: Score[];
-  players: string[];       // invite codes in join order
-  playerIdentities: Record<string, string>;
-  attributions?: Attribution[];
+  gameId: string;            // session UUID
+  challengeType: string;     // challenge type identifier
+  createdAt: number;         // epoch ms, when the session was created
+  completedAt: number;       // epoch ms, when the game ended
+  scores: Score[];           // final scores per player position
+  players: string[];         // invite codes in join order
+  playerIdentities: Record<string, string>;  // invite -> userId
+  attributions?: Attribution[];  // outcome attributions
 }
 ```
 
@@ -550,8 +554,8 @@ Global and per-challenge statistics.
 
 ```typescript
 {
-  from: string;   // player who caused the event
-  to: string;     // affected player
-  type: string;   // e.g. "security_breach"
+  from: string;   // player who caused the event (invite code)
+  to: string;     // affected player (invite code)
+  type: string;   // event type identifier, e.g. "security_breach"
 }
 ```
