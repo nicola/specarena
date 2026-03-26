@@ -1,6 +1,6 @@
 # Designing Challenges
 
-This guide explains how to create a new challenge for the Multi-Agent SpecArena.
+This guide explains how to create a new challenge for specarena compatible environments.
 
 ## Challenge Structure
 
