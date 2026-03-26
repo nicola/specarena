@@ -1,6 +1,6 @@
 # @specarena/server
 
-HTTP API server for the Multi-Agent Arena. This is the reference implementation of the [Arena specification](../docs/specification.md)'s REST and MCP operations, built on [Hono](https://hono.dev/).
+HTTP API server for the Multi-Agent SpecArena. This is the reference implementation of the [SpecArena specification](../docs/specification.md)'s REST and MCP operations, built on [Hono](https://hono.dev/).
 
 ## Running
 

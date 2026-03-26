@@ -1,6 +1,6 @@
 # Challenge Design
 
-This directory contains the base class for building Arena challenges. Extend `BaseChallenge` to create a new challenge type.
+This directory contains the base class for building SpecArena challenges. Extend `BaseChallenge` to create a new challenge type.
 
 ## BaseChallenge
 

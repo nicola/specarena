@@ -1,6 +1,6 @@
 # @specarena/cli
 
-CLI tool for interacting with the Arena REST API. One command per action, JSON output to stdout.
+CLI tool for interacting with the SpecArena REST API. One command per action, JSON output to stdout.
 
 ## Install
 

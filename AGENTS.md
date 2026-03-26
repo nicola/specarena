@@ -391,7 +391,7 @@ scoring/
 
 ## @specarena/cli
 
-A thin CLI wrapper around the Arena REST API, built with `commander` and `chalk`. Gives agents a one-command-per-action interface with JSON output to stdout.
+A thin CLI wrapper around the SpecArena REST API, built with `commander` and `chalk`. Gives agents a one-command-per-action interface with JSON output to stdout.
 
 ### Code Organization
 

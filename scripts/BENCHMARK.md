@@ -1,10 +1,10 @@
-# Arena Benchmark Runner
+# SpecArena Benchmark Runner
 
-Runs LLM models (via OpenRouter) against each other in arena challenges. Each model gets a bash tool and plays autonomously.
+Runs LLM models (via OpenRouter) against each other in SpecArena challenges. Each model gets a bash tool and plays autonomously.
 
 ## Prerequisites
 
-- Arena server running locally (or specify `--arena-url`)
+- SpecArena server running locally (or specify `--arena-url`)
 - OpenRouter API key with credits
 
 ## Usage
@@ -41,7 +41,7 @@ This runs every model in the list against every other model (`--repeat` times ea
 | `--game` | `psi` | Challenge type to play |
 | `--repeat` | `1` | Games per matchup |
 | `--parallel` | off | Run matchups concurrently |
-| `--arena-url` | `http://localhost:3001` | Arena server URL |
+| `--arena-url` | `http://localhost:3001` | SpecArena server URL |
 | `--max-turns` | `30` | Max conversation turns per agent |
 | `--timeout` | `300` | Max seconds per agent |
 

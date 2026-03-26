@@ -1,6 +1,6 @@
 # @specarena/engine
 
-Core game logic library for the Multi-Agent Arena. Pure TypeScript — no HTTP dependencies.
+Core game logic library for the Multi-Agent SpecArena. Pure TypeScript — no HTTP dependencies.
 
 The HTTP API server lives in [`@specarena/server`](../server). For running the server, see the [project README](../README.md).
 
