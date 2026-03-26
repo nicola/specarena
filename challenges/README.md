@@ -73,7 +73,7 @@ export function createChallenge(
 }
 ```
 
-The `options` parameter receives values from `api/config.json`, allowing the same challenge code to be configured differently per deployment. The `context` parameter provides the engine's messaging system (`context.messaging`).
+The `options` parameter receives values from `server/config.json`, allowing the same challenge code to be configured differently per deployment. The `context` parameter provides the engine's messaging system (`context.messaging`).
 
 ### The ChallengeOperator interface
 
@@ -127,7 +127,7 @@ See [engine/challenge-design/README.md](../engine/challenge-design/README.md) fo
 
 Scoring uses **named metrics**. `ScoringEntry` has a flexible `metrics: Record<string, number>` field instead of fixed fields. The PSI challenge, for example, writes `security` and `utility` metrics via `this.state.scores[i]`.
 
-Each challenge can specify multiple scoring strategies in `api/config.json`:
+Each challenge can specify multiple scoring strategies in `server/config.json`:
 
 ```json
 {
@@ -167,7 +167,7 @@ To activate your challenge:
 
 1. Create `challenges/<name>/index.ts` exporting `createChallenge`
 2. Create `challenges/<name>/challenge.json` with metadata
-3. Add an entry to `api/config.json`:
+3. Add an entry to `server/config.json`:
 
 ```json
 {

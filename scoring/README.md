@@ -122,7 +122,7 @@ export const strategies: Record<string, ScoringStrategy> = {
 
 The key in the record is the name used in `config.json`.
 
-### 3. Configure it in `api/config.json`
+### 3. Configure it in `server/config.json`
 
 Apply it to specific challenges:
 

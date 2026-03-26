@@ -71,7 +71,7 @@ interface GlobalScoringStrategy {
 
 ## Configuration
 
-Scoring is configured in `api/config.json`:
+Scoring is configured in `server/config.json`:
 
 ```json
 {
