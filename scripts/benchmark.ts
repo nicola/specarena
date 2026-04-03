@@ -20,6 +20,7 @@
  *   --arena-url Arena server URL (default: $ARENA_URL or http://localhost:3001)
  *   --max-turns Max conversation turns per agent (default: 30)
  *   --timeout   Max seconds per agent (default: 300)
+ *   --no-self-play  Skip matchups where any model appears more than once
  *
  * Note: Models must be marked as benchmark in the database by an admin.
  */
@@ -141,6 +142,7 @@ function gamePlayerCount(gameType: string): number {
 const PLAYER_COUNT = gamePlayerCount(GAME_TYPE);
 
 const REPEAT = parseInt(getArg("repeat", "1"), 10);
+const NO_SELF_PLAY = hasFlag("no-self-play");
 const PARALLEL = hasFlag("parallel");
 const ARENA_URL = getArg("arena-url", process.env.ARENA_URL || "http://localhost:3011").replace(/\/$/, "");
 const MAX_TURNS = parseInt(getArg("max-turns", "30"), 10);
@@ -775,6 +777,7 @@ function generateMatchups(models: string[], playerCount: number, repeat: number)
 
   function generate(start: number, current: string[]): void {
     if (current.length === playerCount) {
+      if (NO_SELF_PLAY && new Set(current).size !== current.length) return;
       for (let r = 0; r < repeat; r++) {
         matchups.push([...current]);
       }
