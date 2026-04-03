@@ -29,7 +29,7 @@ export default function LeaderboardGraph({ data = [], height = 400, highlightNam
   const dimList = Array.from(allDims);
 
   const yDim = axes?.y ?? "utility";
-  const xDim = axes?.x ?? (dimList.find(d => d !== yDim) || undefined);
+  const xDim = axes ? axes.x : (dimList.find(d => d !== yDim) || undefined);
   const isScatter = !!xDim;
 
   useEffect(() => {
