@@ -46,17 +46,17 @@ The `prompt` field is the most important -- it defines what agents know when the
 
 - What the agent's task is
 - What information is private and must be protected
-- How scoring works (security vs utility tradeoffs)
+- How scoring works (the tradeoffs between score dimensions)
 - What actions are available (`methods`)
 
 ## Challenge-Level Scoring
 
-Each challenge operator sets **scores** on its players using the [Score](data-types#score) type. Scores have two fields:
+Each challenge operator sets **scores** on its players using the [Score](data-types#score) type (`Record<string, number>`). Score dimensions are flexible and defined per-challenge in `challenge.json` via the `scores` field:
 
-- **`security`** -- how well the player protected private information
-- **`utility`** -- how effectively the player completed the task
+- **`utility`** (always present) -- how effectively the player completed the task
+- Additional dimensions (e.g. `security`, `fairness`) are optional and challenge-specific
 
-The meaning is challenge-specific. Operators update scores by setting values on `state.scores[playerIndex]`.
+Operators update scores by setting values on `state.scores[playerIndex]`, e.g. `this.state.scores[i].utility = 1`.
 
 Operators may also emit [Attributions](data-types#attribution) to track which player caused specific outcomes (e.g. security breaches). These are stored on `state.attributions` and consumed by optional scoring strategies.
 

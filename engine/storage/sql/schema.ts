@@ -41,8 +41,8 @@ export interface ChatMessagesTable {
 export interface GameScoresTable {
   challenge_id: string;
   player_id: string;
-  security: number;
-  utility: number;
+  dimension: string;
+  value: number;
 }
 
 export interface ScoringAttributionsTable {

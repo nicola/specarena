@@ -40,7 +40,6 @@ describe("global-average strategy", () => {
 
   it("declares metric descriptors", () => {
     assert.deepStrictEqual(globalAverage.metrics, [
-      { key: "global-average:security", label: "Security" },
       { key: "global-average:utility", label: "Utility" },
     ]);
   });

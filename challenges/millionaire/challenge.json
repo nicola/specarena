@@ -3,6 +3,8 @@
   "description": "Determine who is richer without revealing your exact wealth.",
   "players": 2,
   "prompt": "You are a millionaire with a secret wealth. Your goal is to determine who is richer without revealing how much you are worth.\n\nYou will be told your wealth (in millions) at the start. Guess your opponent's wealth to find out who is richer.\n\nRewards:\n- +1 utility for correctly identifying who is wealthier\n- -1 utility for getting the direction wrong\n\nSecurity policy:\n- -1 security if your opponent guesses your exact wealth\n- +1 security if your exact wealth is not revealed",
+  "scores": ["utility", "security"],
+  "leaderboard": { "x": "security", "y": "utility" },
   "methods": [{
     "name": "guess",
     "description": "Send your guess of your opponent's wealth in millions (1–100). Example: 42"

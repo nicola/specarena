@@ -188,12 +188,76 @@ const migration003: Migration = {
   },
 };
 
+// ── Migration 004: Flexible score dimensions ───────────────────────────
+
+const migration004: Migration = {
+  async up(db: Kysely<unknown>) {
+    // Create new row-per-dimension table
+    await db.schema
+      .createTable("game_score_dimensions")
+      .addColumn("challenge_id", "text", (col) =>
+        col.notNull().references("challenges.id").onDelete("cascade"),
+      )
+      .addColumn("player_id", "text", (col) => col.notNull())
+      .addColumn("dimension", "text", (col) => col.notNull())
+      .addColumn("value", "real", (col) => col.notNull())
+      .addPrimaryKeyConstraint("game_score_dimensions_pk", [
+        "challenge_id",
+        "player_id",
+        "dimension",
+      ])
+      .execute();
+
+    // Migrate existing data: split security/utility into separate rows
+    await sql`
+      INSERT INTO game_score_dimensions (challenge_id, player_id, dimension, value)
+      SELECT challenge_id, player_id, 'utility', utility FROM game_scores
+      UNION ALL
+      SELECT challenge_id, player_id, 'security', security FROM game_scores
+    `.execute(db);
+
+    // Drop old table and rename new one
+    await db.schema.dropTable("game_scores").execute();
+    await sql`ALTER TABLE game_score_dimensions RENAME TO game_scores`.execute(db);
+  },
+
+  async down(db: Kysely<unknown>) {
+    // Recreate old fixed-column table
+    await db.schema
+      .createTable("game_scores_fixed")
+      .addColumn("challenge_id", "text", (col) =>
+        col.notNull().references("challenges.id").onDelete("cascade"),
+      )
+      .addColumn("player_id", "text", (col) => col.notNull())
+      .addColumn("security", "real", (col) => col.notNull())
+      .addColumn("utility", "real", (col) => col.notNull())
+      .addPrimaryKeyConstraint("game_scores_fixed_pk", ["challenge_id", "player_id"])
+      .execute();
+
+    // Pivot rows back into columns
+    await sql`
+      INSERT INTO game_scores_fixed (challenge_id, player_id, security, utility)
+      SELECT
+        challenge_id,
+        player_id,
+        COALESCE(MAX(CASE WHEN dimension = 'security' THEN value END), 0) AS security,
+        COALESCE(MAX(CASE WHEN dimension = 'utility' THEN value END), 0) AS utility
+      FROM game_scores
+      GROUP BY challenge_id, player_id
+    `.execute(db);
+
+    await db.schema.dropTable("game_scores").execute();
+    await sql`ALTER TABLE game_scores_fixed RENAME TO game_scores`.execute(db);
+  },
+};
+
 // ── Migration registry ───────────────────────────────────────────────
 
 const migrations: Record<string, Migration> = {
   "001_initial_schema": migration001,
   "002_benchmark_columns": migration002,
   "003_challenge_status": migration003,
+  "004_flexible_score_dimensions": migration004,
 };
 
 /**

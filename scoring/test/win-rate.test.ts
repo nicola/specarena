@@ -38,7 +38,6 @@ describe("win-rate strategy (threshold-based)", () => {
 
   it("declares metric descriptors", () => {
     assert.deepStrictEqual(winRate.metrics, [
-      { key: "win-rate:security", label: "Security Win Rate" },
       { key: "win-rate:utility", label: "Utility Win Rate" },
     ]);
   });

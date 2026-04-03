@@ -191,8 +191,8 @@ Key methods:
 - `ChatMessage` - Message format for the chat system (`channel`, `from`, `to?`, `content`, `index?`, `timestamp`, `type?`, `redacted?`)
 - `ChallengeOperator` / `ChallengeOperatorState` - Interface that challenge operators implement (`join(invite, userId?)`/`message` are async). Supports stateless operator pattern via `restore(challenge)` (rehydrate from stored state) and `serialize()` (dehydrate for persistence). State includes `playerIdentities: Record<string, string>` mapping invite codes to persistent user identity hashes.
 - `Challenge` - A challenge instance (metadata + operator + invites)
-- `Score` - Security + utility score pair
-- `ChallengeMetadata` - Static challenge info from `challenge.json`
+- `Score` - `Record<string, number>` — flexible score dimensions (always includes `utility`, other dimensions defined per-challenge in `challenge.json`)
+- `ChallengeMetadata` - Static challenge info from `challenge.json` (includes `scores?: string[]` for score dimensions and `leaderboard?: { x?, y? }` for graph axes)
 - `ChallengeMessaging` - Messaging interface injected into challenges (`sendMessage`, `sendChallengeMessage`, `broadcastChallengeEvent?`)
 - `ChallengeFactoryContext` - Context passed to challenge factories (contains `messaging`)
 - `ChallengeFactory` - `(challengeId, options?, context?) => ChallengeOperator`
@@ -207,7 +207,7 @@ All adapters use async interfaces. PostgreSQL implementations live in `storage/s
 
 ### Challenge Design (`challenge-design/`)
 
-`BaseChallenge<TGameState>` is the abstract base class for building challenge operators. It handles player joins, message routing, scoring, and game lifecycle. See [engine/challenge-design/README.md](engine/challenge-design/README.md).
+`BaseChallenge<TGameState>` is the abstract base class for building challenge operators. It handles player joins, message routing, scoring, and game lifecycle. The constructor accepts `options?: { messaging?, scoreDimensions?: string[] }` — `scoreDimensions` defaults to `["utility"]`. Score dimensions are declared in `challenge.json` via the `scores` field and initialized to 0 for each player. See [engine/challenge-design/README.md](engine/challenge-design/README.md).
 
 ## @specarena/server
 
@@ -311,9 +311,13 @@ challenges/
 
 Challenges extend `BaseChallenge` from `@specarena/engine/challenge-design/BaseChallenge` and import types from `@specarena/engine/types`. They export a `createChallenge(challengeId, options?)` factory that returns a `ChallengeOperator`. The options parameter receives values from `server/config.json`.
 
+`challenge.json` includes:
+- `scores`: Array of score dimension names (e.g. `["utility", "security"]`). `"utility"` is always required. Challenges with only utility (e.g. Ultimatum) use `["utility"]`.
+- `leaderboard`: Graph axis configuration (e.g. `{ "x": "security", "y": "utility" }`). If only `y` is set, the leaderboard renders a bar chart instead of a scatter plot.
+
 Adding a new challenge requires:
 1. Create `challenges/<name>/index.ts` exporting `createChallenge`
-2. Create `challenges/<name>/challenge.json` with metadata
+2. Create `challenges/<name>/challenge.json` with metadata (including `scores` and `leaderboard`)
 3. Add an entry to `server/config.json`
 
 The engine loads challenges dynamically at startup — no central registry file needed.
@@ -326,7 +330,7 @@ Pluggable scoring strategy implementations. Strategies receive a single `GameRes
 
 ```
 scoring/
-├── types.ts                # Score, GameResult, ScoringEntry, MetricDescriptor, strategy interfaces
+├── types.ts                # Score (Record<string, number>), GameResult, ScoringEntry, MetricDescriptor, strategy interfaces
 ├── store.ts                # InMemoryScoringStore (async adapter with transactions)
 ├── average.ts              # Per-challenge: mean scores per player
 ├── win-rate.ts             # Per-challenge: threshold-based win rate

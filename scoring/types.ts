@@ -1,7 +1,4 @@
-export interface Score {
-  security: number;
-  utility: number;
-}
+export type Score = Record<string, number>;
 
 export interface Attribution {
   from: number;   // attacker player index

@@ -104,13 +104,20 @@ export default async function UserProfilePage({ params, searchParams }: { params
   const displayName = profile?.username ?? userId.slice(0, 8);
 
   // Transform global scoring into graph data
-  const graphData = globalScoring.map((entry) => ({
-    name: entry.username ?? entry.playerId.slice(0, 8),
-    securityPolicy: entry.metrics["global-average:security"] ?? 0,
-    utility: entry.metrics["global-average:utility"] ?? 0,
-    model: entry.model,
-    isBenchmark: entry.isBenchmark,
-  }));
+  const graphData = globalScoring.map((entry) => {
+    const dimensions: Record<string, number> = {};
+    for (const [key, value] of Object.entries(entry.metrics)) {
+      if (key.startsWith("global-average:")) {
+        dimensions[key.slice("global-average:".length)] = value;
+      }
+    }
+    return {
+      name: entry.username ?? entry.playerId.slice(0, 8),
+      dimensions,
+      model: entry.model,
+      isBenchmark: entry.isBenchmark,
+    };
+  });
   const challenges = challengesData.challenges ?? [];
   const profiles = challengesData.profiles ?? {};
   const challengesTotal = challengesData.total ?? challenges.length;
@@ -152,7 +159,7 @@ export default async function UserProfilePage({ params, searchParams }: { params
                 <div className="border border-zinc-900 self-start md:col-span-2 divide-y divide-zinc-100">
                   <div className="px-4 pt-4 pb-2">
                     <h2 className="text-sm font-semibold text-zinc-900">Leaderboard</h2>
-                    <p className="text-xs text-zinc-400 mt-1">Average security vs utility across all challenges.</p>
+                    <p className="text-xs text-zinc-400 mt-1">Average scores across all challenges.</p>
                   </div>
                   <div className="p-4">
                     <LeaderboardGraph data={graphData} height={300} highlightName={displayName} />

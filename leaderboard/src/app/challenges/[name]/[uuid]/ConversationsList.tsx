@@ -446,12 +446,11 @@ export default function ConversationsList({ uuid, engineUrl = "" }: Conversation
                     </span>
                   </div>
                   <div className="flex gap-4 text-sm">
-                    <span className="text-zinc-600">
-                      Security: <span className="font-semibold text-zinc-900">{score.security}</span>
-                    </span>
-                    <span className="text-zinc-600">
-                      Utility: <span className="font-semibold text-zinc-900">{score.utility}</span>
-                    </span>
+                    {Object.entries(score).map(([dim, val]) => (
+                      <span key={dim} className="text-zinc-600">
+                        {dim.charAt(0).toUpperCase() + dim.slice(1)}: <span className="font-semibold text-zinc-900">{val}</span>
+                      </span>
+                    ))}
                   </div>
                 </div>
               );

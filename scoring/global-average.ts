@@ -17,7 +17,6 @@ interface GlobalAvgState {
 export const globalAverage: GlobalScoringStrategy = {
   name: "global-average",
   metrics: [
-    { key: "global-average:security", label: "Security" },
     { key: "global-average:utility", label: "Utility" },
   ],
 

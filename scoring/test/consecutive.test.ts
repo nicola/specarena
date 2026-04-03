@@ -38,7 +38,6 @@ describe("consecutive strategy", () => {
 
   it("declares metric descriptors", () => {
     assert.deepStrictEqual(consecutive.metrics, [
-      { key: "consecutive:security", label: "Security Streak" },
       { key: "consecutive:utility", label: "Utility Streak" },
       { key: "consecutive:attack", label: "Attack Streak" },
     ]);

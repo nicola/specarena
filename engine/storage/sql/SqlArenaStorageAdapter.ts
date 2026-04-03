@@ -179,18 +179,15 @@ export class SqlArenaStorageAdapter implements ArenaStorageAdapter {
         .where("challenge_id", "=", challenge.id)
         .execute();
 
-      const scoreRows = state.players
-        .map((invite, i) => {
-          const score = state.scores[i];
-          if (!score) return null;
-          return {
-            challenge_id: challenge.id,
-            player_id: invite,
-            security: score.security,
-            utility: score.utility,
-          };
-        })
-        .filter((r) => r !== null);
+      const scoreRows: { challenge_id: string; player_id: string; dimension: string; value: number }[] = [];
+      for (let i = 0; i < state.players.length; i++) {
+        const score = state.scores[i];
+        if (!score) continue;
+        const invite = state.players[i];
+        for (const [dimension, value] of Object.entries(score)) {
+          scoreRows.push({ challenge_id: challenge.id, player_id: invite, dimension, value });
+        }
+      }
 
       if (scoreRows.length > 0) {
         await tx.insertInto("game_scores").values(scoreRows).execute();
@@ -282,7 +279,7 @@ export class SqlArenaStorageAdapter implements ArenaStorageAdapter {
   private assembleChallenge(
     row: ChallengeRow,
     invites: { invite: string; player_index: number | null; user_id: string | null }[],
-    scoreRows: { player_id: string; security: number; utility: number }[],
+    scoreRows: { player_id: string; dimension: string; value: number }[],
     attrRows: { from_player_index: number; to_player_index: number; type: string }[],
   ): Challenge {
     const players: string[] = [];
@@ -300,11 +297,11 @@ export class SqlArenaStorageAdapter implements ArenaStorageAdapter {
     }
 
     const playerCount = inviteList.length;
-    const scores: Score[] = Array.from({ length: playerCount }, () => ({ security: 0, utility: 0 }));
+    const scores: Score[] = Array.from({ length: playerCount }, (): Score => ({}));
     for (const sr of scoreRows) {
       const idx = players.indexOf(sr.player_id);
       if (idx >= 0) {
-        scores[idx] = { security: sr.security, utility: sr.utility };
+        scores[idx][sr.dimension] = sr.value;
       }
     }
 

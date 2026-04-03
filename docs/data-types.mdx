@@ -74,13 +74,12 @@ description: "Type definitions used across the Arena and Challenge specs."
 ## Score
 
 ```typescript
-{
-  security: number;      // how well the player protected private information
-  utility: number;       // how effectively the player completed the task
-}
+Record<string, number>
 ```
 
-The meaning of these values is challenge-specific. Typically +1 for success, -1 for failure.
+A flexible map of score dimensions. Every challenge includes `utility` (how effectively the player completed the task). Additional dimensions are defined per-challenge in `challenge.json` via the `scores` field (e.g. `"scores": ["utility", "security"]`).
+
+The meaning and range of each dimension is challenge-specific. Typically +1 for success, -1 for failure.
 
 ## Attribution
 

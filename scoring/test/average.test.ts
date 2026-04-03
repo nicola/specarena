@@ -38,7 +38,6 @@ describe("average strategy", () => {
 
   it("declares metric descriptors", () => {
     assert.deepStrictEqual(average.metrics, [
-      { key: "average:security", label: "Security" },
       { key: "average:utility", label: "Utility" },
     ]);
   });

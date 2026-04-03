@@ -1,16 +1,14 @@
 import type { ScoringStrategy, GameResult, ScoringStorageAdapter } from "./types";
 
 interface AverageState {
-  sumSecurity: number;
-  sumUtility: number;
+  sums: Record<string, number>;
   count: number;
 }
 
-/** Per-challenge strategy: mean security + utility per player across all their games. */
+/** Per-challenge strategy: mean score per dimension per player across all their games. */
 export const average: ScoringStrategy = {
   name: "average",
   metrics: [
-    { key: "average:security", label: "Security" },
     { key: "average:utility", label: "Utility" },
   ],
 
@@ -23,20 +21,24 @@ export const average: ScoringStrategy = {
       if (!score) continue;
 
       const prev = await store.getStrategyState<AverageState>(result.challengeType, this.name, playerId);
-      const state: AverageState = {
-        sumSecurity: (prev?.sumSecurity ?? 0) + score.security,
-        sumUtility: (prev?.sumUtility ?? 0) + score.utility,
-        count: (prev?.count ?? 0) + 1,
-      };
+      const sums: Record<string, number> = { ...(prev?.sums ?? {}) };
+      for (const [dim, val] of Object.entries(score)) {
+        sums[dim] = (sums[dim] ?? 0) + val;
+      }
+      const count = (prev?.count ?? 0) + 1;
+      const state: AverageState = { sums, count };
 
       await store.setStrategyState(result.challengeType, this.name, playerId, state);
+
+      const metrics: Record<string, number> = {};
+      for (const [dim, sum] of Object.entries(sums)) {
+        metrics[`average:${dim}`] = sum / count;
+      }
+
       await store.setScoreEntry(result.challengeType, this.name, {
         playerId,
-        gamesPlayed: state.count,
-        metrics: {
-          "average:security": state.sumSecurity / state.count,
-          "average:utility": state.sumUtility / state.count,
-        },
+        gamesPlayed: count,
+        metrics,
       });
     }
   },
