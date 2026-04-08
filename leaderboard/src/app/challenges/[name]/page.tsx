@@ -52,7 +52,6 @@ async function fetchMetadata(name: string): Promise<ChallengeMetadata | null> {
 export async function generateMetadata({ params }: { params: Promise<{ name: string }> }) {
   const { name } = await params;
   const challenge = await fetchMetadata(name);
-
   const metadata: Metadata = {
     title: challenge ? `ARENA - ${challenge.name}` : "ARENA - Challenge Not Found",
     description: challenge?.description || "",
@@ -72,7 +71,6 @@ export default async function ChallengePage({ params, searchParams }: { params: 
     return <div>Challenge {name} not found</div>;
   }
 
-  // Fetch challenges and scoring in parallel
   let challengesList: Challenge[] = [];
   let profiles: Record<string, UserProfile> = {};
   let challengesTotal = 0;
@@ -103,137 +101,142 @@ export default async function ChallengePage({ params, searchParams }: { params: 
     .sort((a, b) => b.attack - a.attack);
 
   return (
-      <section className="max-w-4xl mx-auto px-6 py-16">
-
-        <div className="flex items-top justify-between gap-6">
-          <div className="flex flex-col gap-2 mb-4 sm:w-1/2">
-            <h1 className="text-3xl font-semibold text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
+    <section className="max-w-7xl mx-auto px-4 py-6">
+      {/* Title row */}
+      <div className="flex items-start justify-between gap-4 mb-3">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <h1 className="font-semibold" style={{ color: '#212529', fontSize: '18px' }}>
               {challenge.name}
               {challenge.url && (
-                <a href={challenge.url} target="_blank" rel="noopener noreferrer" className="ml-2 text-zinc-400 hover:text-zinc-600 inline-block align-middle">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+                <a href={challenge.url} target="_blank" rel="noopener noreferrer" className="ml-1.5 inline-block align-middle" style={{ color: '#adb5bd' }}>
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
                     <path d="M12.232 4.232a2.5 2.5 0 0 1 3.536 3.536l-1.225 1.224a.75.75 0 0 0 1.061 1.06l1.224-1.224a4 4 0 0 0-5.656-5.656l-3 3a4 4 0 0 0 .225 5.865.75.75 0 0 0 .977-1.138 2.5 2.5 0 0 1-.142-3.667l3-3Z" />
                     <path d="M11.603 7.963a.75.75 0 0 0-.977 1.138 2.5 2.5 0 0 1 .142 3.667l-3 3a2.5 2.5 0 0 1-3.536-3.536l1.225-1.224a.75.75 0 0 0-1.061-1.06l-1.224 1.224a4 4 0 1 0 5.656 5.656l3-3a4 4 0 0 0-.225-5.865Z" />
                   </svg>
                 </a>
               )}
             </h1>
-            <p className="text-base text-zinc-900">
-              {challenge.description}
-            </p>
+            {challenge.tags && challenge.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1 items-center">
+                {challenge.tags.map((tag) => {
+                  const colors = tagColors[tag] || tagColors._default;
+                  return (
+                    <span key={tag} className={`px-1.5 py-0 rounded font-medium ${colors}`} style={{ fontSize: '11px' }}>
+                      {tag}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
           </div>
-          <div className="hidden sm:flex flex-col gap-2 mb-4 items-end">
-            <Link href={`/challenges/${name}/new`} className="text-sm bg-zinc-900 text-white px-4 py-2 rounded-md border border-zinc-900 hover:bg-zinc-900 hover:text-white transition-colors text-center">
-              Participate
-            </Link>
-          </div>
-        </div>
-        {challenge.authors && challenge.authors.length > 0 && (
-          <p className="text-sm text-zinc-500 mb-4">
-            By{" "}
-            {challenge.authors.map((author, i) => (
-              <span key={author.name}>
-                {i > 0 && (i === challenge.authors!.length - 1 ? " and " : ", ")}
-                <a href={author.url} target="_blank" rel="noopener noreferrer" className="underline hover:text-zinc-700">{author.name}</a>
-              </span>
-            ))}
-          </p>
-        )}
-        {challenge.tags && challenge.tags.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-10">
-            {challenge.tags.map((tag) => {
-              const colors = tagColors[tag] || tagColors._default;
-              return (
-                <span key={tag} className={`text-xs px-2 py-1 rounded-full ${colors}`}>
-                  {tag}
+          <p style={{ color: '#6c757d', fontSize: '13px' }}>{challenge.description}</p>
+          {challenge.authors && challenge.authors.length > 0 && (
+            <p className="mt-1" style={{ color: '#adb5bd', fontSize: '12px' }}>
+              By{" "}
+              {challenge.authors.map((author, i) => (
+                <span key={author.name}>
+                  {i > 0 && (i === challenge.authors!.length - 1 ? " and " : ", ")}
+                  <a href={author.url} target="_blank" rel="noopener noreferrer" className="hover:underline" style={{ color: '#6c757d' }}>{author.name}</a>
                 </span>
-              );
-            })}
-          </div>
-        )}
-        <div className="sm:hidden mb-10">
-          <Link href={`/challenges/${name}/new`} className="text-sm bg-zinc-900 text-white px-4 py-2 rounded-md border border-zinc-900 hover:bg-zinc-900 hover:text-white transition-colors text-center inline-block">
-            Participate
-          </Link>
+              ))}
+            </p>
+          )}
         </div>
-        <ChallengePrompt prompt={challenge.prompt} />
+        <Link href={`/challenges/${name}/new`} className="px-3 py-1.5 rounded font-medium transition-colors hover:opacity-90 shrink-0" style={{ background: '#0d6efd', color: '#fff', fontSize: '13px', textDecoration: 'none' }}>
+          Participate
+        </Link>
+      </div>
 
-        {/* Graph + Stats */}
-        {(() => {
-          const unbeaten = scoringData.filter((d) => d.securityPolicy === 1).sort((a, b) => b.utility - a.utility);
-          const hasGraph = scoringData.length > 0;
-          const hasTables = unbeaten.length > 0 || redTeamData.length > 0;
-          if (!hasGraph && !hasTables) return null;
-          return (
-            <div className="mt-6 mb-10 grid grid-cols-1 md:grid-cols-3 gap-6">
-              {hasGraph && (
-                <div className="border border-zinc-900 self-start md:col-span-2 divide-y divide-zinc-100">
-                  <div className="px-4 pt-4 pb-2">
-                    <h2 className="text-sm font-semibold text-zinc-900">Leaderboard</h2>
-                    <p className="text-xs text-zinc-400 mt-1">Average security vs utility scores for this challenge.</p>
+      {/* Graph + Stats side by side */}
+      {(() => {
+        const unbeaten = scoringData.filter((d) => d.securityPolicy === 1).sort((a, b) => b.utility - a.utility);
+        const hasGraph = scoringData.length > 0;
+        const hasTables = unbeaten.length > 0 || redTeamData.length > 0;
+        if (!hasGraph && !hasTables) return null;
+        return (
+          <div className="mb-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+            {hasGraph && (
+              <div className="md:col-span-2 self-start" style={{ border: '1px solid #dee2e6', background: '#fff' }}>
+                <div className="px-3 py-2" style={{ borderBottom: '1px solid #dee2e6' }}>
+                  <span className="font-semibold" style={{ fontSize: '13px', color: '#212529' }}>Leaderboard</span>
+                  <span className="ml-2" style={{ fontSize: '11px', color: '#6c757d' }}>Avg security vs utility for this challenge</span>
+                </div>
+                <div className="p-2">
+                  <LeaderboardGraph data={scoringData} height={260} />
+                </div>
+              </div>
+            )}
+            <div className="flex flex-col gap-3">
+              {unbeaten.length > 0 && (
+                <div className="self-start w-full" style={{ border: '1px solid #dee2e6', background: '#fff' }}>
+                  <div className="px-3 py-2 flex items-center gap-1.5" style={{ borderBottom: '1px solid #dee2e6' }}>
+                    <span className="font-semibold" style={{ fontSize: '13px', color: '#212529' }}>Unbeaten</span>
+                    <ShieldCheckIcon className="w-3.5 h-3.5" style={{ color: '#0d6efd' }} />
+                    <span className="ml-auto" style={{ fontSize: '11px', color: '#adb5bd' }}>Never breached</span>
                   </div>
-                  <div className="p-4">
-                    <LeaderboardGraph data={scoringData} height={300} />
+                  <div>
+                    {unbeaten.map((player, i) => (
+                      <div key={player.name} className="flex items-center px-3 py-1" style={{ borderBottom: '1px solid #f1f3f5', fontSize: '12px' }}>
+                        <span className="w-5 shrink-0" style={{ color: '#adb5bd' }}>{i + 1}</span>
+                        <span className="min-w-0 flex-1 truncate" style={{ color: '#212529' }}>
+                          <Link href={`/users/${player.playerId}`} className="hover:underline" style={{ color: '#0d6efd' }}>{player.name}</Link>
+                          {player.model && <span style={{ color: '#adb5bd', fontSize: '11px' }}> ({player.model})</span>}
+                        </span>
+                        <span className="shrink-0 font-mono pl-2" style={{ color: '#6c757d', fontSize: '11px' }}>{player.utility.toFixed(2)}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
-              <div className="flex flex-col gap-6">
-                {unbeaten.length > 0 && (
-                  <div className="border border-zinc-900 self-start w-full divide-y divide-zinc-100">
-                    <div className="px-4 pt-4 pb-2">
-                      <h2 className="text-sm font-semibold text-zinc-900 flex items-center gap-1.5">Unbeaten <ShieldCheckIcon className="w-3.5 h-3.5 text-blue-300" /></h2>
-                      <p className="text-xs text-zinc-400 mt-1">Never breached, ranked by utility.</p>
-                    </div>
-                    <div className="divide-y divide-zinc-100">
-                      {unbeaten.map((player, i) => (
-                        <div key={player.name} className="flex items-center px-4 py-1.5">
-                          <span className="w-[20px] text-xs text-zinc-400 shrink-0">{i + 1}</span>
-                          <span className="text-xs text-zinc-900 min-w-0 flex-1 truncate"><Link href={`/users/${player.playerId}`} className="hover:text-zinc-600">{player.name}</Link>{player.model && <span className="text-zinc-400 text-xs ml-1">({player.model})</span>}</span>
-                          <span className="text-xs font-mono text-zinc-400 shrink-0 pl-3">{player.utility.toFixed(2)}</span>
-                        </div>
-                      ))}
-                    </div>
+              {redTeamData.length > 0 && (
+                <div className="self-start w-full" style={{ border: '1px solid #dee2e6', background: '#fff' }}>
+                  <div className="px-3 py-2 flex items-center gap-1.5" style={{ borderBottom: '1px solid #dee2e6' }}>
+                    <span className="font-semibold" style={{ fontSize: '13px', color: '#212529' }}>Top Attackers</span>
+                    <FireIcon className="w-3.5 h-3.5" style={{ color: '#dc3545' }} />
+                    <span className="ml-auto" style={{ fontSize: '11px', color: '#adb5bd' }}>Attack success</span>
                   </div>
-                )}
-                {redTeamData.length > 0 && (
-                  <div className="border border-zinc-900 self-start w-full divide-y divide-zinc-100">
-                    <div className="px-4 pt-4 pb-2">
-                      <h2 className="text-sm font-semibold text-zinc-900 flex items-center gap-1.5">Top Attackers <FireIcon className="w-3.5 h-3.5 text-red-300" /></h2>
-                      <p className="text-xs text-zinc-400 mt-1">Percentage of successful attacks.</p>
-                    </div>
-                    <div className="divide-y divide-zinc-100">
-                      {redTeamData.map((player, i) => (
-                        <div key={player.name} className="flex items-center px-4 py-1.5">
-                          <span className="w-[20px] text-xs text-zinc-400 shrink-0">{i + 1}</span>
-                          <span className="text-xs text-zinc-900 min-w-0 flex-1 truncate"><Link href={`/users/${player.playerId}`} className="hover:text-zinc-600">{player.name}</Link>{player.model && <span className="text-zinc-400 text-xs ml-1">({player.model})</span>}</span>
-                          <span className="text-xs font-mono text-zinc-400 shrink-0 pl-3">{(player.attack * 100).toFixed(0)}%</span>
-                        </div>
-                      ))}
-                    </div>
+                  <div>
+                    {redTeamData.map((player, i) => (
+                      <div key={player.name} className="flex items-center px-3 py-1" style={{ borderBottom: '1px solid #f1f3f5', fontSize: '12px' }}>
+                        <span className="w-5 shrink-0" style={{ color: '#adb5bd' }}>{i + 1}</span>
+                        <span className="min-w-0 flex-1 truncate" style={{ color: '#212529' }}>
+                          <Link href={`/users/${player.playerId}`} className="hover:underline" style={{ color: '#0d6efd' }}>{player.name}</Link>
+                          {player.model && <span style={{ color: '#adb5bd', fontSize: '11px' }}> ({player.model})</span>}
+                        </span>
+                        <span className="shrink-0 font-mono pl-2" style={{ color: '#6c757d', fontSize: '11px' }}>{(player.attack * 100).toFixed(0)}%</span>
+                      </div>
+                    ))}
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
-          );
-        })()}
+          </div>
+        );
+      })()}
 
-        {/* Challenges List */}
-        <ChallengesList
-          challenges={challengesList}
-          challengeType={name}
-          profiles={profiles}
-          total={challengesTotal}
-          page={page}
-          pageSize={pageSize}
-          basePath={`/challenges/${name}`}
-          subtitle={
-            <p className="text-sm text-zinc-500 flex gap-4">
-              <span><span className="font-semibold text-zinc-900">{challengesTotal.toLocaleString()}</span> Games</span>
-              {scoringData.length > 0 && <span><span className="font-semibold text-zinc-900">{scoringData.length}</span> Participants</span>}
-              {stats?.challenges?.[name]?.gamesPlayed > 0 && <span><span className="font-semibold text-zinc-900">{stats.challenges[name].gamesPlayed.toLocaleString()}</span> Completed</span>}
-            </p>
-          }
-        />
-      </section>
+      {/* Prompt */}
+      <div className="mb-4">
+        <ChallengePrompt prompt={challenge.prompt} />
+      </div>
+
+      {/* Games List */}
+      <ChallengesList
+        challenges={challengesList}
+        challengeType={name}
+        profiles={profiles}
+        total={challengesTotal}
+        page={page}
+        pageSize={pageSize}
+        basePath={`/challenges/${name}`}
+        subtitle={
+          <span className="flex gap-3">
+            <span><span className="font-semibold" style={{ color: '#212529' }}>{challengesTotal.toLocaleString()}</span> games</span>
+            {scoringData.length > 0 && <span><span className="font-semibold" style={{ color: '#212529' }}>{scoringData.length}</span> participants</span>}
+            {stats?.challenges?.[name]?.gamesPlayed > 0 && <span><span className="font-semibold" style={{ color: '#212529' }}>{stats.challenges[name].gamesPlayed.toLocaleString()}</span> completed</span>}
+          </span>
+        }
+      />
+    </section>
   );
 }

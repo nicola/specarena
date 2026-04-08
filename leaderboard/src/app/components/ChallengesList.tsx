@@ -27,15 +27,15 @@ const formatDate = (timestamp: number) => {
 };
 
 const getGameStatus = (c: Challenge) => {
-  const { status, players = [], playerIdentities } = c.state ?? {};
+  const { status, players = [] } = c.state ?? {};
   const waitingForPlayers = status === ChallengeStatus.Open && players.length > 0 && players.length < c.invites.length;
   if (status === ChallengeStatus.Ended)
-    return { label: "Ended", dotColor: "bg-zinc-500", textColor: "text-zinc-600", animate: false };
+    return { label: "Ended", dotColor: "#adb5bd", textColor: "#6c757d", animate: false };
   if (status === ChallengeStatus.Active)
-    return { label: "Live", dotColor: "bg-green-500", textColor: "text-green-600", animate: true };
+    return { label: "Live", dotColor: "#198754", textColor: "#198754", animate: true };
   if (waitingForPlayers)
-    return { label: "Waiting for players", dotColor: "bg-zinc-300", textColor: "text-zinc-500", animate: true };
-  return { label: "Not Started", dotColor: "bg-zinc-300", textColor: "text-zinc-500", animate: false };
+    return { label: "Waiting", dotColor: "#ffc107", textColor: "#856404", animate: true };
+  return { label: "Not Started", dotColor: "#dee2e6", textColor: "#6c757d", animate: false };
 };
 
 export default function ChallengesList({ challenges, challengeType, profiles = {}, total, page = 1, pageSize = 50, basePath, subtitle }: ChallengesListProps) {
@@ -45,25 +45,28 @@ export default function ChallengesList({ challenges, challengeType, profiles = {
   const hasPagination = basePath && totalPages > 1;
 
   return (
-    <div className="mt-12">
-      <h2 className="text-2xl font-semibold text-zinc-900 mb-2" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
-        Challenges
-      </h2>
-      {subtitle && <div className="mt-1 mb-6">{subtitle}</div>}
+    <div className="mt-6">
+      <div className="flex items-baseline justify-between mb-2">
+        <h2 className="font-semibold" style={{ color: '#212529', fontSize: '14px' }}>
+          Games
+        </h2>
+        {subtitle && <div style={{ color: '#6c757d', fontSize: '12px' }}>{subtitle}</div>}
+      </div>
       {challenges.length === 0 ? (
-        <div className="border border-zinc-900 p-8 text-center">
-          <p className="text-zinc-600">No challenges created yet. Be the first to participate!</p>
+        <div className="px-3 py-4 text-center" style={{ border: '1px solid #dee2e6', color: '#6c757d', fontSize: '12px' }}>
+          No games yet. Be the first to participate!
         </div>
       ) : (
-        <div className="border border-zinc-900 divide-y divide-zinc-100">
-          <div className="flex items-center px-5 py-3 text-xs text-zinc-400 uppercase tracking-wider border-b border-zinc-200">
-            <span className="w-[80px] max-sm:hidden shrink-0">ID</span>
-            <span className="w-[140px] max-sm:hidden shrink-0">Status</span>
-            <span className="w-[100px] shrink-0 max-sm:hidden">Date</span>
+        <div style={{ border: '1px solid #dee2e6' }}>
+          {/* Header row */}
+          <div className="flex items-center px-3 py-1" style={{ background: '#f8f9fa', borderBottom: '1px solid #dee2e6', fontSize: '11px', color: '#6c757d', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            <span className="w-[68px] shrink-0 max-sm:hidden">ID</span>
+            <span className="w-[90px] shrink-0 max-sm:hidden">Status</span>
+            <span className="w-[90px] shrink-0 max-sm:hidden">Date</span>
             <span className="min-w-0 flex-1">Player</span>
-            <span className="w-[70px] max-sm:w-[40px] text-right shrink-0 pl-3 max-sm:pl-1"><span className="max-sm:hidden">Utility</span><span className="sm:hidden">U</span></span>
-            <span className="w-[70px] max-sm:w-[40px] max-sm:mr-1 text-right shrink-0 pl-3 max-sm:pl-1"><span className="max-sm:hidden">Security</span><span className="sm:hidden">S</span></span>
-            <span className="w-4 ml-2 shrink-0 max-sm:hidden"></span>
+            <span className="w-[52px] text-right shrink-0"><span className="max-sm:hidden">Utility</span><span className="sm:hidden">U</span></span>
+            <span className="w-[52px] text-right shrink-0 ml-1"><span className="max-sm:hidden">Security</span><span className="sm:hidden">S</span></span>
+            <span className="w-3 ml-1.5 shrink-0 max-sm:hidden"></span>
           </div>
           {challenges.map((challengeInstance) => {
             const status = getGameStatus(challengeInstance);
@@ -76,52 +79,61 @@ export default function ChallengesList({ challenges, challengeType, profiles = {
               <div
                 key={challengeInstance.id}
                 onClick={() => router.push(challengeHref)}
-                className="flex items-start px-5 py-4 hover:bg-zinc-50 transition-colors cursor-pointer"
+                className="flex items-start px-3 py-1.5 cursor-pointer transition-colors"
+                style={{ borderBottom: '1px solid #f1f3f5', fontSize: '12px' }}
+                onMouseEnter={e => (e.currentTarget.style.background = '#f8f9fa')}
+                onMouseLeave={e => (e.currentTarget.style.background = '')}
               >
-                <span className={`w-1.5 h-1.5 mt-[7px] ${status.dotColor} rounded-full ${status.animate ? 'animate-pulse' : ''} shrink-0 mr-3 sm:hidden`}></span>
-                <span className="w-[80px] text-sm text-zinc-400 font-mono shrink-0 max-sm:hidden">
+                {/* Mobile dot */}
+                <span className="sm:hidden shrink-0 mr-2 mt-1.5" style={{ width: '6px', height: '6px', borderRadius: '50%', background: status.dotColor, flexShrink: 0, display: 'inline-block', animation: status.animate ? 'pulse 2s infinite' : 'none' }}></span>
+                {/* ID */}
+                <span className="w-[68px] shrink-0 font-mono max-sm:hidden" style={{ color: '#adb5bd', fontSize: '11px' }}>
                   {challengeInstance.id.slice(0, 8)}
                 </span>
-                <span className={`w-[140px] max-sm:hidden text-sm ${status.textColor} flex items-center gap-2 font-medium shrink-0`}>
-                  <span className={`w-1.5 h-1.5 ${status.dotColor} rounded-full ${status.animate ? 'animate-pulse' : ''}`}></span>
+                {/* Status badge */}
+                <span className="w-[90px] shrink-0 max-sm:hidden flex items-center gap-1.5 font-medium" style={{ color: status.textColor }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: status.dotColor, display: 'inline-block', flexShrink: 0 }}></span>
                   {status.label}
                 </span>
-                <span className="w-[100px] text-sm text-zinc-400 shrink-0 max-sm:hidden">
+                {/* Date */}
+                <span className="w-[90px] shrink-0 max-sm:hidden" style={{ color: '#adb5bd' }}>
                   {formatDate(challengeInstance.createdAt)}
                 </span>
+                {/* Players + scores */}
                 {players.length > 0 && challengeInstance.state?.scores ? (
                   <div className="min-w-0 flex-1">
-                    <span className="sm:hidden text-xs text-zinc-400 font-mono block leading-tight mt-0.5">{challengeInstance.id.slice(0, 8)}</span>
+                    <span className="sm:hidden font-mono block" style={{ color: '#adb5bd', fontSize: '11px' }}>{challengeInstance.id.slice(0, 8)}</span>
                     {players.map((p, i) => {
                       const name = profiles[p]?.username;
                       const short = p.slice(0, 8);
                       const score = challengeInstance.state?.scores?.[i];
                       const scores = challengeInstance.state?.scores;
-                      // Player performed a breach if any OTHER player has security === -1
                       const didBreach = scores?.some((s, j) => j !== i && s.security === -1);
                       return (
                         <div key={i} className="flex items-center leading-tight">
-                          <span className="text-sm text-zinc-600 min-w-0 flex-1 truncate">
+                          <span className="min-w-0 flex-1 truncate" style={{ color: '#495057' }}>
                             <Link
                               href={`/users/${p}`}
                               onClick={(e) => e.stopPropagation()}
-                              className="hover:text-zinc-900"
+                              className="hover:underline"
+                              style={{ color: '#0d6efd' }}
                             >
-                              {name ?? short}{name && <span className="text-zinc-400"> ({short})</span>}
+                              {name ?? short}
                             </Link>
-                            {didBreach && <FireIcon className="inline-block w-3 h-3 ml-1 text-red-300" />}
+                            {name && <span style={{ color: '#adb5bd' }}> ({short})</span>}
+                            {didBreach && <FireIcon className="inline-block w-2.5 h-2.5 ml-1" style={{ color: '#dc3545' }} />}
                           </span>
-                          <span className={`w-[70px] max-sm:w-[40px] text-right text-xs font-mono shrink-0 pl-3 max-sm:pl-1 ${score?.utility === -1 ? 'text-violet-300' : 'text-zinc-400'}`}>{score?.utility ?? '–'}</span>
-                          <span className={`w-[70px] max-sm:w-[40px] max-sm:mr-1 text-right text-xs font-mono shrink-0 pl-3 max-sm:pl-1 ${score?.security === -1 ? 'text-red-300' : 'text-zinc-400'}`}>{score?.security ?? '–'}</span>
-                          <span className="w-4 ml-2 shrink-0 max-sm:hidden"></span>
+                          <span className="w-[52px] text-right shrink-0 font-mono" style={{ color: score?.utility === -1 ? '#6f42c1' : '#6c757d', fontSize: '11px' }}>{score?.utility ?? '–'}</span>
+                          <span className="w-[52px] text-right shrink-0 font-mono ml-1" style={{ color: score?.security === -1 ? '#dc3545' : '#6c757d', fontSize: '11px' }}>{score?.security ?? '–'}</span>
+                          <span className="w-3 ml-1.5 shrink-0 max-sm:hidden"></span>
                         </div>
                       );
                     })}
                   </div>
                 ) : (
                   <>
-                    <span className="text-sm text-zinc-600 min-w-0 flex-1 truncate">
-                      <span className="sm:hidden text-xs text-zinc-400 font-mono block leading-tight mt-0.5">{challengeInstance.id.slice(0, 8)}</span>
+                    <span className="min-w-0 flex-1 truncate" style={{ color: '#495057' }}>
+                      <span className="sm:hidden font-mono block" style={{ color: '#adb5bd', fontSize: '11px' }}>{challengeInstance.id.slice(0, 8)}</span>
                       {players.map((p, i) => {
                         const name = profiles[p]?.username;
                         const short = p.slice(0, 8);
@@ -131,15 +143,17 @@ export default function ChallengesList({ challenges, challengeType, profiles = {
                             <Link
                               href={`/users/${p}`}
                               onClick={(e) => e.stopPropagation()}
-                              className="hover:text-zinc-900"
+                              className="hover:underline"
+                              style={{ color: '#0d6efd' }}
                             >
-                              {name ?? short}{name && <span className="text-zinc-400"> ({short})</span>}
+                              {name ?? short}
                             </Link>
+                            {name && <span style={{ color: '#adb5bd' }}> ({short})</span>}
                           </span>
                         );
                       })}
                     </span>
-                    <svg className="w-4 h-4 text-zinc-300 shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-3 h-3 shrink-0 ml-1.5 max-sm:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#dee2e6' }}>
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </>
@@ -150,21 +164,21 @@ export default function ChallengesList({ challenges, challengeType, profiles = {
         </div>
       )}
       {hasPagination && (
-        <div className="flex items-center justify-between mt-4 text-sm">
+        <div className="flex items-center justify-between mt-2" style={{ fontSize: '12px' }}>
           {page > 1 ? (
-            <Link href={page === 2 ? basePath : `${basePath}?page=${page - 1}`} className="text-zinc-600 hover:text-zinc-900">
+            <Link href={page === 2 ? basePath : `${basePath}?page=${page - 1}`} style={{ color: '#0d6efd' }} className="hover:underline">
               Previous
             </Link>
           ) : (
-            <span className="text-zinc-300">Previous</span>
+            <span style={{ color: '#dee2e6' }}>Previous</span>
           )}
-          <span className="text-zinc-400">Page {page} of {totalPages}</span>
+          <span style={{ color: '#6c757d' }}>Page {page} of {totalPages}</span>
           {page < totalPages ? (
-            <Link href={`${basePath}?page=${page + 1}`} className="text-zinc-600 hover:text-zinc-900">
+            <Link href={`${basePath}?page=${page + 1}`} style={{ color: '#0d6efd' }} className="hover:underline">
               Next
             </Link>
           ) : (
-            <span className="text-zinc-300">Next</span>
+            <span style={{ color: '#dee2e6' }}>Next</span>
           )}
         </div>
       )}

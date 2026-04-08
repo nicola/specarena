@@ -199,8 +199,9 @@ export default function LeaderboardGraph({ data = [], height = 400, highlightNam
       height: height,
       grid: false,
       style: {
-        color: "#18181b",
-        fontFamily: "var(--font-jost), Jost, sans-serif",
+        color: "#212529",
+        fontFamily: "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+        fontSize: "11px",
       },
       marginBottom: 40,
       x: {
@@ -225,7 +226,7 @@ export default function LeaderboardGraph({ data = [], height = 400, highlightNam
         Plot.dot(data.filter((d) => !highlightSet.has(d.name)), {
           x: "securityPolicy",
           y: "utility",
-          fill: (d) => d.isBenchmark ? "#f59e0b" : paretoSet.has(d.name) ? "#000" : "#a1a1aa",
+          fill: (d) => d.isBenchmark ? "#ffc107" : paretoSet.has(d.name) ? "#0d6efd" : "#adb5bd",
           r: (d) => paretoSet.has(d.name) ? 7 : d.isBenchmark ? 6 : 5,
           stroke: (d) => d.isBenchmark ? "#d97706" : "none",
           strokeWidth: (d) => d.isBenchmark ? 1.5 : 0,
@@ -235,9 +236,9 @@ export default function LeaderboardGraph({ data = [], height = 400, highlightNam
         ...highlightSet.size > 0 ? [Plot.dot(data.filter((d) => highlightSet.has(d.name)), {
           x: "securityPolicy",
           y: "utility",
-          fill: "#6366f1",
+          fill: "#dc3545",
           r: 7,
-          stroke: "#4f46e5",
+          stroke: "#b02a37",
           strokeWidth: 2,
           ...dotTipOptions,
         })] : [],
@@ -250,7 +251,7 @@ export default function LeaderboardGraph({ data = [], height = 400, highlightNam
             dx: d.dx,
             dy: d.dy,
             fontSize: 11,
-            fill: d.isHighlight ? "#6366f1" : d.isBenchmark ? "#f59e0b" : d.isPareto ? "#000" : "#a1a1aa",
+            fill: d.isHighlight ? "#dc3545" : d.isBenchmark ? "#ffc107" : d.isPareto ? "#0d6efd" : "#adb5bd",
             fontWeight: "600",
             textAnchor: d.anchor,
           });
@@ -265,10 +266,10 @@ export default function LeaderboardGraph({ data = [], height = 400, highlightNam
     if (svg) {
       // Set font on all text, but only override fill on axis text (not data labels)
       svg.querySelectorAll("text").forEach((text) => {
-        (text as SVGTextElement).setAttribute("font-family", "var(--font-jost), Jost, sans-serif");
+        (text as SVGTextElement).setAttribute("font-family", "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif");
       });
       svg.querySelectorAll("[aria-label*='axis'] text").forEach((text) => {
-        (text as SVGTextElement).setAttribute("fill", "#18181b");
+        (text as SVGTextElement).setAttribute("fill", "#212529");
       });
       // Bump axis label font size
       svg.querySelectorAll("[aria-label='x-axis label'], [aria-label='y-axis label']").forEach((label) => {
