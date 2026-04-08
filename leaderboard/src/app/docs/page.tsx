@@ -12,109 +12,174 @@ export async function generateMetadata() {
   return metadata;
 }
 
+const gradientText: React.CSSProperties = {
+  background: "linear-gradient(135deg, #667eea, #764ba2)",
+  WebkitBackgroundClip: "text",
+  WebkitTextFillColor: "transparent",
+};
+
 export default async function DocsPage() {
   const filePath = join(process.cwd(), "src/app/docs/docs.md");
   const markdown = await readFile(filePath, "utf-8");
 
   return (
-    <section className="max-w-4xl mx-auto px-6 py-16">
-        <div className="prose prose-zinc max-w-none">
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            components={{
-              h1: ({ children }) => (
-                <h1 className="text-3xl font-semibold text-zinc-900 mb-4" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
-                  {children}
-                </h1>
-              ),
-              h2: ({ children }) => (
-                <h2 className="text-2xl font-semibold text-zinc-900 mt-12 mb-4">
-                  {children}
-                </h2>
-              ),
-              h3: ({ children }) => (
-                <h3 className="text-xl font-semibold text-zinc-900 mt-8 mb-3">
-                  {children}
-                </h3>
-              ),
-              h4: ({ children }) => (
-                <h4 className="text-lg font-semibold text-zinc-900 mt-6 mb-2">
-                  {children}
-                </h4>
-              ),
-              p: ({ children }) => (
-                <p className="text-base text-zinc-900 mb-4">
-                  {children}
-                </p>
-              ),
-              ul: ({ children }) => (
-                <ul className="list-disc list-inside space-y-2 mb-4 text-base text-zinc-900">
-                  {children}
-                </ul>
-              ),
-              ol: ({ children }) => (
-                <ol className="list-decimal list-inside space-y-2 mb-4 text-base text-zinc-900">
-                  {children}
-                </ol>
-              ),
-              li: ({ children }) => (
-                <li className="mb-1">{children}</li>
-              ),
-              code: ({ children, className }) => {
-                const isInline = !className;
-                if (isInline) {
-                  return (
-                    <code className="bg-zinc-100 text-zinc-800 px-1.5 py-0.5 rounded text-sm font-mono">
-                      {children}
-                    </code>
-                  );
-                }
+    <section className="max-w-4xl mx-auto px-6 py-16" style={{ minHeight: "100vh" }}>
+      <div
+        style={{
+          background: "rgba(255,255,255,0.05)",
+          backdropFilter: "blur(20px)",
+          border: "1px solid rgba(255,255,255,0.15)",
+          borderRadius: "16px",
+          padding: "2.5rem",
+        }}
+      >
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm]}
+          components={{
+            h1: ({ children }) => (
+              <h1
+                className="text-3xl font-semibold mb-4"
+                style={{ fontFamily: 'var(--font-jost), sans-serif', ...gradientText }}
+              >
+                {children}
+              </h1>
+            ),
+            h2: ({ children }) => (
+              <h2 className="text-2xl font-semibold mt-12 mb-4" style={gradientText}>
+                {children}
+              </h2>
+            ),
+            h3: ({ children }) => (
+              <h3
+                className="text-xl font-semibold mt-8 mb-3"
+                style={{ color: "rgba(255,255,255,0.9)" }}
+              >
+                {children}
+              </h3>
+            ),
+            h4: ({ children }) => (
+              <h4
+                className="text-lg font-semibold mt-6 mb-2"
+                style={{ color: "rgba(255,255,255,0.85)" }}
+              >
+                {children}
+              </h4>
+            ),
+            p: ({ children }) => (
+              <p className="text-base mb-4" style={{ color: "rgba(255,255,255,0.65)" }}>
+                {children}
+              </p>
+            ),
+            ul: ({ children }) => (
+              <ul
+                className="list-disc list-inside space-y-2 mb-4 text-base"
+                style={{ color: "rgba(255,255,255,0.65)" }}
+              >
+                {children}
+              </ul>
+            ),
+            ol: ({ children }) => (
+              <ol
+                className="list-decimal list-inside space-y-2 mb-4 text-base"
+                style={{ color: "rgba(255,255,255,0.65)" }}
+              >
+                {children}
+              </ol>
+            ),
+            li: ({ children }) => (
+              <li className="mb-1">{children}</li>
+            ),
+            code: ({ children, className }) => {
+              const isInline = !className;
+              if (isInline) {
                 return (
-                  <code className={className}>{children}</code>
-                );
-              },
-              pre: ({ children }) => (
-                <pre className="text-sm text-zinc-800 font-mono bg-gradient-to-br from-zinc-50 to-zinc-100 border border-zinc-200 rounded-xl p-5 overflow-x-auto mb-4">
-                  {children}
-                </pre>
-              ),
-              a: ({ href, children }) => (
-                <a href={href} className="text-blue-600 hover:text-blue-800 underline">
-                  {children}
-                </a>
-              ),
-              strong: ({ children }) => (
-                <strong className="font-semibold">{children}</strong>
-              ),
-              table: ({ children }) => (
-                <div className="overflow-x-auto mb-4">
-                  <table className="min-w-full border border-zinc-200 rounded-lg text-sm">
+                  <code
+                    className="px-1.5 py-0.5 rounded text-sm font-mono"
+                    style={{
+                      background: "rgba(102,126,234,0.15)",
+                      border: "1px solid rgba(102,126,234,0.25)",
+                      color: "#a78bfa",
+                    }}
+                  >
                     {children}
-                  </table>
-                </div>
-              ),
-              thead: ({ children }) => (
-                <thead className="bg-zinc-50">{children}</thead>
-              ),
-              tbody: ({ children }) => (
-                <tbody className="divide-y divide-zinc-200">{children}</tbody>
-              ),
-              tr: ({ children }) => (
-                <tr>{children}</tr>
-              ),
-              th: ({ children }) => (
-                <th className="px-4 py-2 text-left font-semibold text-zinc-900 border-b border-zinc-200">
+                  </code>
+                );
+              }
+              return (
+                <code className={className}>{children}</code>
+              );
+            },
+            pre: ({ children }) => (
+              <pre
+                className="text-sm font-mono overflow-x-auto mb-4 p-5 rounded-xl"
+                style={{
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(102,126,234,0.25)",
+                  color: "rgba(255,255,255,0.75)",
+                  borderLeft: "3px solid #667eea",
+                }}
+              >
+                {children}
+              </pre>
+            ),
+            a: ({ href, children }) => (
+              <a
+                href={href}
+                className="underline transition-colors"
+                style={{ color: "#818cf8" }}
+                onMouseEnter={(e) => ((e.target as HTMLElement).style.color = "#a78bfa")}
+                onMouseLeave={(e) => ((e.target as HTMLElement).style.color = "#818cf8")}
+              >
+                {children}
+              </a>
+            ),
+            strong: ({ children }) => (
+              <strong style={{ color: "rgba(255,255,255,0.9)", fontWeight: 600 }}>{children}</strong>
+            ),
+            table: ({ children }) => (
+              <div className="overflow-x-auto mb-4">
+                <table
+                  className="min-w-full text-sm"
+                  style={{
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    borderRadius: "12px",
+                    overflow: "hidden",
+                  }}
+                >
                   {children}
-                </th>
-              ),
-              td: ({ children }) => (
-                <td className="px-4 py-2 text-zinc-900">{children}</td>
-              ),
-            }}
-          >
-            {markdown}
-          </ReactMarkdown>
-        </div>
-      </section>
+                </table>
+              </div>
+            ),
+            thead: ({ children }) => (
+              <thead style={{ background: "rgba(102,126,234,0.1)" }}>{children}</thead>
+            ),
+            tbody: ({ children }) => (
+              <tbody style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>{children}</tbody>
+            ),
+            tr: ({ children }) => (
+              <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>{children}</tr>
+            ),
+            th: ({ children }) => (
+              <th
+                className="px-4 py-2 text-left font-semibold"
+                style={{
+                  color: "rgba(255,255,255,0.9)",
+                  borderBottom: "1px solid rgba(255,255,255,0.1)",
+                }}
+              >
+                {children}
+              </th>
+            ),
+            td: ({ children }) => (
+              <td className="px-4 py-2" style={{ color: "rgba(255,255,255,0.65)" }}>
+                {children}
+              </td>
+            ),
+          }}
+        >
+          {markdown}
+        </ReactMarkdown>
+      </div>
+    </section>
   );
 }
