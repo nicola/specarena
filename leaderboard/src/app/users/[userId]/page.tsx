@@ -118,25 +118,25 @@ export default async function UserProfilePage({ params, searchParams }: { params
   const hasScores = scores && (scores.global || Object.keys(scores.challenges).length > 0);
 
   return (
-    <section className="max-w-4xl mx-auto px-6 py-16">
+    <section className="max-w-4xl mx-auto px-8 py-20">
       {/* Title */}
-      <div className="flex flex-col gap-2 mb-10">
-        <h1 className="text-3xl font-semibold text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
+      <div className="flex flex-col gap-2 mb-12">
+        <h1 className="text-xl font-medium" style={{ color: '#1a1a1a', fontWeight: 500 }}>
           Agent {displayName}
         </h1>
       </div>
 
       {/* Info Box */}
-      <div className="max-w-4xl mx-auto border border-zinc-900 p-8 mb-6">
-        <div className="flex flex-col gap-4">
+      <div className="px-8 py-8 mb-6" style={{ border: '1px solid #eeeeee' }}>
+        <div className="flex flex-col gap-5">
           <div>
-            <h2 className="text-lg font-semibold text-zinc-900 mb-2">User ID</h2>
-            <CopyableInvite invite={userId} className="text-sm text-zinc-400 font-mono break-all flex items-center gap-2 group cursor-pointer hover:text-zinc-600 transition-colors" showButton={false} />
+            <h2 className="text-xs font-medium uppercase tracking-widest mb-2" style={{ color: '#aaaaaa', letterSpacing: '0.2em' }}>User ID</h2>
+            <CopyableInvite invite={userId} className="text-xs font-mono break-all flex items-center gap-2 group cursor-pointer transition-colors" showButton={false} />
           </div>
           {profile?.model && (
             <div>
-              <h2 className="text-lg font-semibold text-zinc-900 mb-2">Model <span className="text-sm font-normal text-zinc-400">(self-reported, not verified)</span></h2>
-              <div className="text-sm text-zinc-600">{profile.model}</div>
+              <h2 className="text-xs font-medium uppercase tracking-widest mb-2" style={{ color: '#aaaaaa', letterSpacing: '0.2em' }}>Model <span className="normal-case" style={{ color: '#aaaaaa' }}>(self-reported)</span></h2>
+              <div className="text-xs" style={{ color: '#1a1a1a' }}>{profile.model}</div>
             </div>
           )}
         </div>
@@ -149,26 +149,26 @@ export default async function UserProfilePage({ params, searchParams }: { params
           {scores!.global && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {graphData.length > 0 && (
-                <div className="border border-zinc-900 self-start md:col-span-2 divide-y divide-zinc-100">
-                  <div className="px-4 pt-4 pb-2">
-                    <h2 className="text-sm font-semibold text-zinc-900">Leaderboard</h2>
-                    <p className="text-xs text-zinc-400 mt-1">Average security vs utility across all challenges.</p>
+                <div className="self-start md:col-span-2" style={{ border: '1px solid #eeeeee' }}>
+                  <div className="px-5 pt-5 pb-2">
+                    <h2 className="text-xs font-medium uppercase tracking-widest" style={{ color: '#aaaaaa', letterSpacing: '0.2em' }}>Leaderboard</h2>
+                    <p className="text-xs mt-1" style={{ color: '#aaaaaa' }}>Average security vs utility across all challenges.</p>
                   </div>
-                  <div className="p-4">
+                  <div className="p-4" style={{ borderTop: '1px solid #eeeeee' }}>
                     <LeaderboardGraph data={graphData} height={300} highlightName={displayName} />
                   </div>
                 </div>
               )}
-              <div className="border border-zinc-900 self-start divide-y divide-zinc-100">
-                <div className="px-4 pt-4 pb-2">
-                  <h2 className="text-sm font-semibold text-zinc-900">Overview</h2>
-                  <p className="text-xs text-zinc-400 mt-1">{scores!.global.gamesPlayed} games played</p>
+              <div className="self-start" style={{ border: '1px solid #eeeeee' }}>
+                <div className="px-5 pt-5 pb-2">
+                  <h2 className="text-xs font-medium uppercase tracking-widest" style={{ color: '#aaaaaa', letterSpacing: '0.2em' }}>Overview</h2>
+                  <p className="text-xs mt-1" style={{ color: '#aaaaaa' }}>{scores!.global.gamesPlayed} games played</p>
                 </div>
-                <div className="px-4 py-4 flex flex-col gap-4">
+                <div className="px-5 py-5 flex flex-col gap-5" style={{ borderTop: '1px solid #eeeeee' }}>
                   {Object.entries(scores!.global.metrics).map(([key, value]) => (
                     <div key={key}>
-                      <div className="text-xs text-zinc-400 mb-1 uppercase tracking-wide">{metricLabel(key)}</div>
-                      <div className={`text-2xl font-mono tabular-nums ${metricColor(key, value)}`}>
+                      <div className="text-xs mb-1 uppercase tracking-widest" style={{ color: '#aaaaaa', letterSpacing: '0.15em' }}>{metricLabel(key)}</div>
+                      <div className="text-2xl font-mono tabular-nums" style={{ color: metricColor(key, value) === 'text-violet-400' ? '#9333ea' : metricColor(key, value) === 'text-red-300' ? '#cc0000' : '#1a1a1a' }}>
                         {formatMetricValue(key, value)}
                       </div>
                     </div>
@@ -181,7 +181,6 @@ export default async function UserProfilePage({ params, searchParams }: { params
           {/* Per-challenge cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {Object.entries(scores!.challenges).map(([challengeType, strategies]) => {
-              // Merge all strategy metrics + sum games played
               const mergedMetrics: Record<string, number> = {};
               let totalGames = 0;
               Object.values(strategies).forEach((entry) => {
@@ -193,16 +192,16 @@ export default async function UserProfilePage({ params, searchParams }: { params
               const metricEntries = Object.entries(mergedMetrics);
 
               return (
-                <div key={challengeType} className="border border-zinc-900 p-6">
-                  <div className="flex items-baseline justify-between mb-4">
-                    <h2 className="text-sm font-semibold text-zinc-900">{challengeType}</h2>
-                    <span className="text-xs text-zinc-400 tabular-nums">{totalGames} games</span>
+                <div key={challengeType} className="px-6 py-6" style={{ border: '1px solid #eeeeee' }}>
+                  <div className="flex items-baseline justify-between mb-5">
+                    <h2 className="text-xs font-medium" style={{ color: '#1a1a1a' }}>{challengeType}</h2>
+                    <span className="text-xs tabular-nums" style={{ color: '#aaaaaa' }}>{totalGames} games</span>
                   </div>
-                  <div className="flex flex-col gap-2">
+                  <div className="flex flex-col gap-3">
                     {metricEntries.map(([key, value]) => (
                       <div key={key} className="flex items-baseline justify-between">
-                        <span className="text-xs text-zinc-500">{metricLabel(key)}</span>
-                        <span className={`text-sm font-mono tabular-nums ${metricColor(key, value)}`}>
+                        <span className="text-xs" style={{ color: '#aaaaaa' }}>{metricLabel(key)}</span>
+                        <span className="text-sm font-mono tabular-nums" style={{ color: metricColor(key, value) === 'text-violet-400' ? '#9333ea' : metricColor(key, value) === 'text-red-300' ? '#cc0000' : '#1a1a1a' }}>
                           {formatMetricValue(key, value)}
                         </span>
                       </div>
@@ -227,8 +226,8 @@ export default async function UserProfilePage({ params, searchParams }: { params
           basePath={`/users/${userId}`}
         />
       ) : (
-        <div className="border border-zinc-900 p-8 text-center">
-          <p className="text-zinc-600">No challenges found for this user.</p>
+        <div className="p-12 text-center" style={{ border: '1px solid #eeeeee' }}>
+          <p className="text-xs" style={{ color: '#aaaaaa' }}>No challenges found for this user.</p>
         </div>
       )}
     </section>

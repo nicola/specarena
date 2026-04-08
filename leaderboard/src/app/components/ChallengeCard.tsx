@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { tagColors } from "@/lib/tagColors";
+import { tagDotColors } from "@/lib/tagColors";
 
 interface ChallengeCardProps {
   title: string;
@@ -18,30 +18,22 @@ export default function ChallengeCard({
   title,
   date,
   description,
-  gradientFrom,
-  gradientVia,
-  gradientTo,
   icon,
-  dateColor = "text-zinc-600",
   href,
   tags,
 }: ChallengeCardProps) {
   return (
-    <div className="flex flex-col border border-zinc-900 overflow-hidden h-full">
-      {/* Upper Half */}
-      <div
-        className={`relative h-48 bg-gradient-to-br ${gradientFrom} ${gradientVia} ${gradientTo} flex items-center px-6 flex-shrink-0`}
-      >
-        <div className="flex-1 flex items-center gap-4">
-          {/* Visual Element */}
-          <div className="w-full h-32 flex-shrink-0">{icon}</div>
-        </div>
+    <div className="flex flex-col overflow-hidden h-full" style={{ border: '1px solid #eeeeee' }}>
+      {/* Upper Half — clean white with subtle icon */}
+      <div className="relative h-44 bg-white flex items-center justify-center px-8 flex-shrink-0" style={{ borderBottom: '1px solid #eeeeee' }}>
+        <div className="w-24 h-24 flex-shrink-0 opacity-20">{icon}</div>
         {tags && tags.length > 0 && (
-          <div className="absolute bottom-3 left-4 flex flex-wrap gap-1.5">
+          <div className="absolute bottom-3 left-5 flex flex-wrap gap-3">
             {tags.map((tag) => {
-              const colors = tagColors[tag] || tagColors._default;
+              const dotColor = tagDotColors[tag] || tagDotColors._default;
               return (
-                <span key={tag} className={`text-xs px-2 py-0.5 rounded-full ${colors}`}>
+                <span key={tag} className="text-xs flex items-center gap-1" style={{ color: '#aaaaaa' }}>
+                  <span style={{ color: dotColor, fontSize: '8px' }}>●</span>
                   {tag}
                 </span>
               );
@@ -50,13 +42,21 @@ export default function ChallengeCard({
         )}
       </div>
       {/* Lower Half */}
-      <div className="bg-white p-6 flex flex-col gap-3 flex-1 min-h-0">
-        <div className="flex flex-col gap-3">
-          {date && <p className={`text-sm ${dateColor}`}>{date}</p>}
-          <h4 className="text-lg font-medium text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>{title}</h4>
-          <p className="text-sm text-zinc-700">{description}</p>
+      <div className="bg-white px-6 py-6 flex flex-col gap-4 flex-1 min-h-0">
+        <div className="flex flex-col gap-2">
+          {date && <p className="text-xs" style={{ color: '#aaaaaa' }}>{date}</p>}
+          <h4 className="text-sm font-medium" style={{ color: '#1a1a1a', fontWeight: 500 }}>{title}</h4>
+          <p className="text-xs leading-relaxed" style={{ color: '#aaaaaa' }}>{description}</p>
         </div>
-        <a href={href} className="mt-auto px-4 py-2 border border-zinc-900 text-zinc-900 rounded-md text-sm text-center">
+        <a
+          href={href}
+          className="mt-auto text-xs text-center py-2 px-4 transition-colors"
+          style={{
+            border: '1px solid #cc0000',
+            color: '#cc0000',
+            display: 'block',
+          }}
+        >
           Discover more
         </a>
       </div>
