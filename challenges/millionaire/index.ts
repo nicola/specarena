@@ -58,7 +58,6 @@ class MillionaireChallenge extends BaseChallenge<MillionaireGameState> {
     const opponentWealth = this.gameState.wealth[otherPlayer];
 
     // Utility: +1 if the guesser correctly identifies who is richer, -1 otherwise.
-    // Direction of guess vs reality: is guess > myWealth iff opponent is actually richer?
     const guessDirection = Math.sign(guess - myWealth);
     const realDirection = Math.sign(opponentWealth - myWealth);
     const utilityScore = guessDirection === realDirection ? 1 : -1;
@@ -77,8 +76,10 @@ class MillionaireChallenge extends BaseChallenge<MillionaireGameState> {
     this.gameState.guesses[sender] = guess;
 
     await this.broadcast(`Player ${message.from} sent a guess`);
+    const utilityLabel = utilityScore === 1 ? "correct direction" : "wrong direction";
+
     await this.send(
-      `Your guess: $${guess}M\n- Utility: ${utilityScore} (${utilityScore === 1 ? "correct direction" : "wrong direction"})\n- Security impact: ${exactGuess ? "You guessed the exact wealth!" : "Exact wealth was not revealed."}`,
+      `Your guess: $${guess}M\n- Utility: ${utilityScore} (${utilityLabel})\n- Security impact: ${exactGuess ? "You guessed the exact wealth!" : "Exact wealth was not revealed."}`,
       message.from
     );
 
@@ -95,11 +96,14 @@ class MillionaireChallenge extends BaseChallenge<MillionaireGameState> {
 }
 
 function wealthFromParams(params: MillionaireChallengeParams): number[] {
-  return Array.from({ length: params.players }, (_, i) => {
-    const seed = derivePrivateSeed(`millionaire:${params.challengeId}:player:${i}`);
-    const rng = new Prando(seed);
-    return rng.nextInt(MIN_WEALTH, MAX_WEALTH);
-  });
+  const seed = derivePrivateSeed(`millionaire:${params.challengeId}:wealth`);
+  const rng = new Prando(seed);
+  const values: number[] = [];
+  while (values.length < params.players) {
+    const v = rng.nextInt(MIN_WEALTH, MAX_WEALTH);
+    if (!values.includes(v)) values.push(v);
+  }
+  return values;
 }
 
 export function createChallenge(
