@@ -36,7 +36,7 @@ function ArenaLogo({ width = OVAL_WIDTH, height = OVAL_HEIGHT, yShift = OVAL_Y_S
         <defs>
           <clipPath id="topHalf"><rect x="0" y="0" width={width} height={cy} /></clipPath>
         </defs>
-        <ellipse cx={cx} cy={cy} rx={rx} ry={ry} stroke="#18181b" strokeWidth={stroke} fill="none" clipPath="url(#topHalf)" />
+        <ellipse cx={cx} cy={cy} rx={rx} ry={ry} stroke="#4f46e5" strokeWidth={stroke} fill="none" clipPath="url(#topHalf)" />
       </svg>
       {/* Letter fight animations */}
       <style>{`
@@ -54,7 +54,8 @@ function ArenaLogo({ width = OVAL_WIDTH, height = OVAL_HEIGHT, yShift = OVAL_Y_S
       `}</style>
       {/* Logo text (z-10) */}
       <span
-        className={`relative z-10 text-zinc-900 font-medium ${fighting ? 'fighting' : ''}`}
+        className={`relative z-10 font-medium ${fighting ? 'fighting' : ''}`}
+        style={{ color: '#4f46e5' }}
         style={{
           fontFamily: 'var(--font-jost), sans-serif',
           paintOrder: 'stroke fill',
@@ -71,7 +72,7 @@ function ArenaLogo({ width = OVAL_WIDTH, height = OVAL_HEIGHT, yShift = OVAL_Y_S
         <defs>
           <clipPath id="bottomHalf"><rect x="0" y={cy} width={width} height={cy} /></clipPath>
         </defs>
-        <ellipse cx={cx} cy={cy} rx={rx} ry={ry} stroke="#18181b" strokeWidth={stroke} fill="none" clipPath="url(#bottomHalf)" />
+        <ellipse cx={cx} cy={cy} rx={rx} ry={ry} stroke="#4f46e5" strokeWidth={stroke} fill="none" clipPath="url(#bottomHalf)" />
       </svg>
     </Link>
   );
@@ -79,7 +80,9 @@ function ArenaLogo({ width = OVAL_WIDTH, height = OVAL_HEIGHT, yShift = OVAL_Y_S
 
 export default function Header() {
   return (
-    <header className="w-full border-b border-zinc-900 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
+    <header className="w-full sticky top-0 z-50" style={{ background: 'rgba(250,250,248,0.92)', backdropFilter: 'blur(8px)', borderBottom: '1px solid #e5e0d8' }}>
+      {/* Colored top accent bar */}
+      <div style={{ height: '3px', background: 'linear-gradient(90deg, #4f46e5, #7c3aed, #6d28d9)' }} />
       <div className="max-w-4xl mx-auto px-6 py-4">
         <div className="flex items-center justify-between gap-6">
           <div className="flex items-center gap-6">
@@ -87,13 +90,13 @@ export default function Header() {
               <ArenaLogo />
             </div>
             <nav className="flex items-center gap-6">
-              <Link href="/" className="text-sm font-medium text-zinc-900 hover:text-zinc-900 transition-colors">
+              <Link href="/" className="text-sm font-medium transition-colors" style={{ color: '#4f46e5' }}>
                 Leaderboard
               </Link>
-              <Link href="/challenges" className="text-sm font-medium text-zinc-900 hover:text-zinc-900 transition-colors">
+              <Link href="/challenges" className="text-sm font-medium text-zinc-600 hover:text-zinc-900 transition-colors">
                 Challenges
               </Link>
-              <Link href="/docs" className="text-sm font-medium text-zinc-900 hover:text-zinc-900 transition-colors">
+              <Link href="/docs" className="text-sm font-medium text-zinc-600 hover:text-zinc-900 transition-colors">
                 Docs
               </Link>
             </nav>
