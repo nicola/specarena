@@ -32,30 +32,42 @@ export const globalAverage: GlobalScoringStrategy = {
       const current = await store.getScoreEntry(result.challengeType, challengeStrategyName, playerId);
       if (!current) continue;
 
-      const state = await store.getGlobalStrategyState<GlobalAvgState>(playerId)
+      const prev = await store.getGlobalStrategyState<GlobalAvgState>(playerId)
         ?? { metricSums: {}, challengeCount: 0, totalGames: 0, prevScores: {} };
 
-      const prev = state.prevScores[result.challengeType];
-      if (prev) {
+      const newMetricSums = { ...prev.metricSums };
+      let newTotalGames = prev.totalGames;
+      let newChallengeCount = prev.challengeCount;
+
+      const prevSnapshot = prev.prevScores[result.challengeType];
+      if (prevSnapshot) {
         // Subtract old values, add new values
         for (const [key, value] of Object.entries(current.metrics)) {
           const globalKey = remapKey(challengeStrategyName, key);
-          state.metricSums[globalKey] = (state.metricSums[globalKey] ?? 0) + value - (prev.metrics[key] ?? 0);
+          newMetricSums[globalKey] = (newMetricSums[globalKey] ?? 0) + value - (prevSnapshot.metrics[key] ?? 0);
         }
-        state.totalGames += current.gamesPlayed - prev.gamesPlayed;
+        newTotalGames += current.gamesPlayed - prevSnapshot.gamesPlayed;
       } else {
         // First time seeing this challenge for this player
         for (const [key, value] of Object.entries(current.metrics)) {
           const globalKey = remapKey(challengeStrategyName, key);
-          state.metricSums[globalKey] = (state.metricSums[globalKey] ?? 0) + value;
+          newMetricSums[globalKey] = (newMetricSums[globalKey] ?? 0) + value;
         }
-        state.totalGames += current.gamesPlayed;
-        state.challengeCount += 1;
+        newTotalGames += current.gamesPlayed;
+        newChallengeCount += 1;
       }
 
-      state.prevScores[result.challengeType] = {
-        metrics: { ...current.metrics },
+      const newPrevScores: Record<string, ChallengeSnapshot> = { ...prev.prevScores };
+      newPrevScores[result.challengeType] = {
+        metrics: structuredClone(current.metrics),
         gamesPlayed: current.gamesPlayed,
+      };
+
+      const state: GlobalAvgState = {
+        metricSums: newMetricSums,
+        challengeCount: newChallengeCount,
+        totalGames: newTotalGames,
+        prevScores: newPrevScores,
       };
 
       await store.setGlobalStrategyState(playerId, state);
