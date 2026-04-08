@@ -46,7 +46,7 @@ export default function ChallengesList({ challenges, challengeType, profiles = {
 
   return (
     <div className="mt-12">
-      <h2 className="text-2xl font-semibold text-zinc-900 mb-2" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
+      <h2 className="text-5xl font-black text-zinc-900 tracking-tighter leading-none mb-2" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
         Challenges
       </h2>
       {subtitle && <div className="mt-1 mb-6">{subtitle}</div>}
