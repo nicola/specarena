@@ -22,12 +22,12 @@ export default function ChallengeCard({
   gradientVia,
   gradientTo,
   icon,
-  dateColor = "text-zinc-600",
+  dateColor = "text-zinc-400",
   href,
   tags,
 }: ChallengeCardProps) {
   return (
-    <div className="flex flex-col border border-zinc-900 overflow-hidden h-full">
+    <div className="flex flex-col overflow-hidden h-full" style={{ border: '1px solid #30363d', background: '#161b22' }}>
       {/* Upper Half */}
       <div
         className={`relative h-48 bg-gradient-to-br ${gradientFrom} ${gradientVia} ${gradientTo} flex items-center px-6 flex-shrink-0`}
@@ -50,13 +50,13 @@ export default function ChallengeCard({
         )}
       </div>
       {/* Lower Half */}
-      <div className="bg-white p-6 flex flex-col gap-3 flex-1 min-h-0">
+      <div className="p-6 flex flex-col gap-3 flex-1 min-h-0" style={{ background: '#161b22' }}>
         <div className="flex flex-col gap-3">
           {date && <p className={`text-sm ${dateColor}`}>{date}</p>}
-          <h4 className="text-lg font-medium text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>{title}</h4>
-          <p className="text-sm text-zinc-700">{description}</p>
+          <h4 className="text-lg font-medium" style={{ fontFamily: 'var(--font-jost), sans-serif', color: '#e6edf3' }}>{title}</h4>
+          <p className="text-sm" style={{ color: '#7d8590' }}>{description}</p>
         </div>
-        <a href={href} className="mt-auto px-4 py-2 border border-zinc-900 text-zinc-900 rounded-md text-sm text-center">
+        <a href={href} className="mt-auto px-4 py-2 rounded-md text-sm text-center transition-colors" style={{ border: '1px solid #30363d', color: '#58a6ff', background: 'transparent' }}>
           Discover more
         </a>
       </div>
