@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: { params: Promise<{ name: str
   }
 
   const metadata: Metadata = {
-    title: `ARENA - Challenge (${name}) ${uuid}`,
+    title: `Academic Oracle — ${name} (${uuid})`,
     description: challenge.description,
   };
   return metadata;
@@ -43,7 +43,6 @@ export default async function UUIDPage({
   const { name, uuid } = await params;
   const { invites = [], invite } = await searchParams;
 
-  // Get the origin from headers for client-side URLs
   const headersList = await headers();
   const host = headersList.get("host") || "";
   const protocol = headersList.get("x-forwarded-proto") || "http";
@@ -51,77 +50,119 @@ export default async function UUIDPage({
 
   const challenge = await fetchMetadata(name);
   if (!challenge) {
-    return <div>Challenge {name} not found</div>;
+    return (
+      <div style={{ fontFamily: 'var(--font-ibm-plex-sans), sans-serif', color: '#1a3a5c', padding: '4rem 2rem' }}>
+        Challenge <em>{name}</em> not found.
+      </div>
+    );
   }
 
   return (
     <section className="max-w-4xl mx-auto px-6 py-16">
-        <div className="flex flex-col gap-6 mb-10">
-          <div className="flex flex-col gap-2">
-            <h1 className="text-3xl font-semibold text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
-              {challenge.name}
-            </h1>
-            {challenge.tags && challenge.tags.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {challenge.tags.map((tag) => (
-                  <span key={tag} className={`text-xs px-2 py-0.5 rounded-full ${tagColors[tag] || tagColors._default}`}>
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            )}
-            <p className="text-base text-zinc-900">
-              {challenge.description}
-            </p>
-          </div>
-        </div>
 
-        <div className="max-w-4xl mx-auto border border-zinc-900 p-8 mb-6">
-          <div className="flex flex-col gap-6">
-            <div>
-              <h2 className="text-lg font-semibold text-zinc-900 mb-2">Session ID</h2>
-              <div className="text-sm text-zinc-600 font-mono">
-                <CopyableInvite invite={uuid} copyText={`${origin}/challenges/${name}/${uuid}`} className="text-sm text-zinc-600 font-mono flex items-center gap-2 group cursor-pointer hover:text-zinc-900 transition-colors" showButton={false} />
-              </div>
-              {invites && invites.length > 0 && (
-                <div className="mt-4">
-                  <h2 className="text-lg font-semibold text-zinc-900 mb-2">Invites <Link href="/docs" className="text-sm text-zinc-600">(how to join?)</Link></h2>
-                  <div className="list-none space-y-1">
-                    {invites.map((invite, index) => (
-                      <div key={index} className="flex items-center gap-2">
-                        <CopyableInvite invite={invite} copyText={`${origin}/challenges/${name}/${uuid}?invite=${invite}`} className="text-sm text-zinc-600 font-mono flex items-center gap-2 group cursor-pointer hover:text-zinc-900 transition-colors" />
-                        <AdvertiseButton inviteId={invite} />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-            </div>
-          </div>
-        </div>
-
-        {invite && (
-          <div className="max-w-4xl mx-auto border border-zinc-900 p-8 mb-6">
-            <h2 className="text-lg font-semibold text-zinc-900 mb-2">You have been invited</h2>
-            <p className="text-sm text-zinc-600 mb-2">
-              Your invite code is: <code className="bg-zinc-100 px-1 py-0.5 rounded font-mono">{invite}</code>
-            </p>
-            <ol className="list-decimal list-inside space-y-1 text-sm text-zinc-600">
-              <li>Read the instructions at <a href="/SKILL.md" className="underline font-mono">/SKILL.md</a></li>
-              <li>Join the game using your invite code</li>
-            </ol>
+      {/* Experiment header */}
+      <div style={{ borderLeft: '4px solid #1a3a5c', paddingLeft: '1.5rem', marginBottom: '2.5rem' }}>
+        <p style={{ fontFamily: 'var(--font-ibm-plex-sans), sans-serif', fontSize: '0.7rem', letterSpacing: '0.15em', textTransform: 'uppercase', color: '#b8860b', marginBottom: '0.5rem' }}>
+          Experiment Record
+        </p>
+        <h1 style={{ fontFamily: 'var(--font-eb-garamond), Georgia, serif', fontSize: '2rem', fontWeight: 600, color: '#1a3a5c', lineHeight: 1.25, marginBottom: '0.6rem' }}>
+          {challenge.name}
+        </h1>
+        {challenge.tags && challenge.tags.length > 0 && (
+          <div className="flex flex-wrap gap-2" style={{ marginBottom: '0.75rem' }}>
+            {challenge.tags.map((tag) => (
+              <span key={tag} className={`text-xs px-2 py-0.5 rounded-full ${tagColors[tag] || tagColors._default}`}>
+                {tag}
+              </span>
+            ))}
           </div>
         )}
+        <p style={{ fontFamily: 'var(--font-eb-garamond), Georgia, serif', fontSize: '1.0625rem', lineHeight: 1.75, color: '#3c3c3c' }}>
+          {challenge.description}
+        </p>
+      </div>
 
-        <div className="mb-8">
-          <ChallengePrompt prompt={challenge.prompt} />
+      {/* Session identifiers panel */}
+      <div style={{ background: '#fff', border: '1px solid #d4c9b0', borderLeft: '4px solid #1a3a5c', padding: '1.75rem 2rem', marginBottom: '1.5rem' }}>
+        <p style={{ fontFamily: 'var(--font-ibm-plex-sans), sans-serif', fontSize: '0.65rem', letterSpacing: '0.15em', textTransform: 'uppercase', color: '#b8860b', marginBottom: '1.25rem' }}>
+          Session Identifiers
+        </p>
+
+        <div style={{ marginBottom: invites && invites.length > 0 ? '1.5rem' : 0 }}>
+          <p style={{ fontFamily: 'var(--font-ibm-plex-sans), sans-serif', fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#6b5a44', marginBottom: '0.5rem' }}>
+            Session ID
+          </p>
+          <div style={{ background: '#faf7f0', border: '1px solid #d4c9b0', padding: '0.6rem 0.85rem', display: 'inline-block' }}>
+            <CopyableInvite
+              invite={uuid}
+              copyText={`${origin}/challenges/${name}/${uuid}`}
+              className="text-sm font-mono flex items-center gap-2 group cursor-pointer transition-colors"
+              style={{ fontFamily: 'var(--font-ibm-plex-sans), monospace', fontSize: '0.8125rem', color: '#1a3a5c' }}
+              showButton={false}
+            />
+          </div>
         </div>
 
-        <div className="max-w-4xl mx-auto border border-zinc-900 p-8">
-          <ConversationsList uuid={uuid} engineUrl={PUBLIC_ENGINE_URL} />
-        </div>
+        {invites && invites.length > 0 && (
+          <div>
+            <p style={{ fontFamily: 'var(--font-ibm-plex-sans), sans-serif', fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#6b5a44', marginBottom: '0.5rem' }}>
+              Participant Invites{' '}
+              <Link href="/docs" style={{ color: '#b8860b', textDecoration: 'underline', fontVariant: 'normal', textTransform: 'none', letterSpacing: 0, fontSize: '0.75rem' }}>
+                (how to join?)
+              </Link>
+            </p>
+            <div className="space-y-2">
+              {invites.map((inv, index) => (
+                <div key={index} style={{ background: '#faf7f0', border: '1px solid #d4c9b0', padding: '0.6rem 0.85rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <CopyableInvite
+                    invite={inv}
+                    copyText={`${origin}/challenges/${name}/${uuid}?invite=${inv}`}
+                    className="text-sm font-mono flex items-center gap-2 group cursor-pointer transition-colors"
+                    style={{ fontFamily: 'var(--font-ibm-plex-sans), monospace', fontSize: '0.8125rem', color: '#1a3a5c' }}
+                  />
+                  <AdvertiseButton inviteId={inv} />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
 
-      </section>
+      {/* Invitation notice */}
+      {invite && (
+        <div style={{ background: '#fffdf5', border: '1px solid #d4c9b0', borderLeft: '4px solid #b8860b', padding: '1.75rem 2rem', marginBottom: '1.5rem' }}>
+          <p style={{ fontFamily: 'var(--font-ibm-plex-sans), sans-serif', fontSize: '0.65rem', letterSpacing: '0.15em', textTransform: 'uppercase', color: '#b8860b', marginBottom: '1rem' }}>
+            Invitation Notice
+          </p>
+          <p style={{ fontFamily: 'var(--font-eb-garamond), Georgia, serif', fontSize: '1rem', lineHeight: 1.75, color: '#2c2c2c', marginBottom: '1rem' }}>
+            Your invite code:{' '}
+            <code style={{ fontFamily: 'var(--font-ibm-plex-sans), monospace', fontSize: '0.875em', background: '#f0ebe0', color: '#1a3a5c', padding: '0.1em 0.4em', border: '1px solid #d4c9b0' }}>
+              {invite}
+            </code>
+          </p>
+          <ol style={{ fontFamily: 'var(--font-eb-garamond), Georgia, serif', fontSize: '1rem', lineHeight: 1.75, color: '#2c2c2c', paddingLeft: '1.5rem', listStyleType: 'decimal' }}>
+            <li style={{ marginBottom: '0.25rem' }}>
+              Read the instructions at{' '}
+              <a href="/SKILL.md" style={{ color: '#1a3a5c', textDecoration: 'underline', fontFamily: 'var(--font-ibm-plex-sans), monospace', fontSize: '0.9em' }}>/SKILL.md</a>
+            </li>
+            <li>Join the game using your invite code.</li>
+          </ol>
+        </div>
+      )}
+
+      {/* Challenge specification */}
+      <div style={{ marginBottom: '2rem' }}>
+        <ChallengePrompt prompt={challenge.prompt} />
+      </div>
+
+      {/* Transcript log */}
+      <div style={{ background: '#fff', border: '1px solid #d4c9b0', borderLeft: '4px solid #1a3a5c', padding: '1.75rem 2rem' }}>
+        <p style={{ fontFamily: 'var(--font-ibm-plex-sans), sans-serif', fontSize: '0.65rem', letterSpacing: '0.15em', textTransform: 'uppercase', color: '#b8860b', marginBottom: '1.25rem' }}>
+          Session Transcript
+        </p>
+        <ConversationsList uuid={uuid} engineUrl={PUBLIC_ENGINE_URL} />
+      </div>
+
+    </section>
   );
 }
