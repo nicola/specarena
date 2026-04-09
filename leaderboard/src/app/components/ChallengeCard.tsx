@@ -1,5 +1,4 @@
 import { ReactNode } from "react";
-import { tagColors } from "@/lib/tagColors";
 
 interface ChallengeCardProps {
   title: string;
@@ -12,54 +11,92 @@ interface ChallengeCardProps {
   dateColor?: string;
   href: string;
   tags?: string[];
+  rank?: number;
 }
 
 export default function ChallengeCard({
   title,
-  date,
   description,
-  gradientFrom,
-  gradientVia,
-  gradientTo,
-  icon,
-  dateColor = "text-zinc-600",
   href,
   tags,
+  rank,
 }: ChallengeCardProps) {
   return (
-    <div className="flex flex-col border border-zinc-900 overflow-hidden h-full">
-      {/* Upper Half */}
-      <div
-        className={`relative h-48 bg-gradient-to-br ${gradientFrom} ${gradientVia} ${gradientTo} flex items-center px-6 flex-shrink-0`}
-      >
-        <div className="flex-1 flex items-center gap-4">
-          {/* Visual Element */}
-          <div className="w-full h-32 flex-shrink-0">{icon}</div>
+    <div style={{ borderTop: '3px solid #111111', paddingTop: '1rem', display: 'flex', flexDirection: 'column', height: '100%', transition: 'border-color 0.2s' }}
+      onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = '#8b0000'; }}
+      onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = '#111111'; }}>
+
+      {/* Rank number behind the card */}
+      {rank !== undefined && (
+        <div style={{
+          fontFamily: 'var(--font-playfair), serif',
+          fontWeight: 900,
+          fontSize: '3rem',
+          color: '#e8e4dc',
+          lineHeight: 1,
+          letterSpacing: '-0.04em',
+          marginBottom: '-0.5rem',
+          userSelect: 'none',
+        }}>
+          {String(rank).padStart(2, '0')}
         </div>
-        {tags && tags.length > 0 && (
-          <div className="absolute bottom-3 left-4 flex flex-wrap gap-1.5">
-            {tags.map((tag) => {
-              const colors = tagColors[tag] || tagColors._default;
-              return (
-                <span key={tag} className={`text-xs px-2 py-0.5 rounded-full ${colors}`}>
-                  {tag}
-                </span>
-              );
-            })}
-          </div>
-        )}
-      </div>
-      {/* Lower Half */}
-      <div className="bg-white p-6 flex flex-col gap-3 flex-1 min-h-0">
-        <div className="flex flex-col gap-3">
-          {date && <p className={`text-sm ${dateColor}`}>{date}</p>}
-          <h4 className="text-lg font-medium text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>{title}</h4>
-          <p className="text-sm text-zinc-700">{description}</p>
-        </div>
-        <a href={href} className="mt-auto px-4 py-2 border border-zinc-900 text-zinc-900 rounded-md text-sm text-center">
-          Discover more
-        </a>
-      </div>
+      )}
+
+      {/* Tags / category dateline */}
+      {tags && tags.length > 0 && (
+        <p style={{
+          fontVariant: 'small-caps',
+          letterSpacing: '0.1em',
+          fontSize: '0.62rem',
+          color: '#8b0000',
+          fontFamily: 'var(--font-lora), serif',
+          fontWeight: 700,
+          marginBottom: '0.4rem',
+        }}>
+          {tags.join(' · ')}
+        </p>
+      )}
+
+      {/* Headline */}
+      <h4 style={{
+        fontFamily: 'var(--font-playfair), serif',
+        fontSize: '1.15rem',
+        fontWeight: 700,
+        lineHeight: 1.2,
+        color: '#111111',
+        marginBottom: '0.5rem',
+        letterSpacing: '-0.01em',
+      }}>
+        {title}
+      </h4>
+
+      {/* Body copy */}
+      <p style={{
+        fontFamily: 'var(--font-lora), serif',
+        fontSize: '0.82rem',
+        lineHeight: 1.6,
+        color: '#444444',
+        flexGrow: 1,
+      }}>
+        {description}
+      </p>
+
+      {/* Read more link */}
+      <a href={href} style={{
+        display: 'inline-block',
+        marginTop: '0.75rem',
+        fontVariant: 'small-caps',
+        letterSpacing: '0.08em',
+        fontSize: '0.65rem',
+        color: '#8b0000',
+        fontFamily: 'var(--font-lora), serif',
+        fontWeight: 700,
+        textDecoration: 'none',
+        borderBottom: '1px solid #8b0000',
+        paddingBottom: '1px',
+      }}>
+        Read Story →
+      </a>
     </div>
   );
 }
