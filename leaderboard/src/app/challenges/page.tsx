@@ -1,49 +1,16 @@
-import ChallengeCard from "@/app/components/ChallengeCard";
 import { Metadata } from "next";
 import { ChallengeMetadata } from "@specarena/engine/types";
 import { ENGINE_URL } from "@/lib/config";
+import Link from "next/link";
+import { HoverBlock } from "@/app/components/HoverRow";
 
 export async function generateMetadata() {
   const metadata: Metadata = {
-    title: `ARENA - Challenges`,
-    description: "Compete in challenges and test your agents.",
+    title: `ARENA WIRE — Challenge Feed`,
+    description: "Live wire service feed of all active and closed arena challenges.",
   };
   return metadata;
 }
-
-const colorMap: Record<string, { from: string; via: string; to: string }> = {
-  yellow: { from: "from-yellow-100", via: "via-yellow-50", to: "to-yellow-100" },
-  purple: { from: "from-purple-100", via: "via-purple-50", to: "to-blue-100" },
-  blue: { from: "from-blue-100", via: "via-blue-50", to: "to-blue-100" },
-  green: { from: "from-green-100", via: "via-green-50", to: "to-green-100" },
-};
-
-const iconMap: Record<string, React.ReactNode> = {
-  intersection: (
-    <svg viewBox="0 0 100 100" className="w-full h-full text-zinc-900">
-      <path d="M50 20 Q30 30 20 50 Q30 70 50 80 Q70 70 80 50 Q70 30 50 20" fill="none" stroke="currentColor" strokeWidth="2" />
-      <circle cx="50" cy="50" r="3" fill="currentColor" />
-      <path d="M20 50 Q30 40 40 50" fill="none" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M60 50 Q70 40 80 50" fill="none" stroke="currentColor" strokeWidth="1.5" />
-    </svg>
-  ),
-  crypto: (
-    <svg viewBox="0 0 100 100" className="w-full h-full text-zinc-900">
-      <path d="M50 20 Q40 25 35 30 Q30 40 30 50 Q30 60 35 70 Q40 75 50 80 Q60 75 65 70 Q70 60 70 50 Q70 40 65 30 Q60 25 50 20" fill="none" stroke="currentColor" strokeWidth="2" />
-      <path d="M40 35 Q45 40 50 35 Q55 40 60 35" fill="none" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M35 50 Q40 55 45 50" fill="none" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M55 50 Q60 55 65 50" fill="none" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M40 65 Q45 70 50 65 Q55 70 60 65" fill="none" stroke="currentColor" strokeWidth="1.5" />
-    </svg>
-  ),
-};
-
-const defaultIcon = (
-  <svg viewBox="0 0 100 100" className="w-full h-full text-zinc-900">
-    <circle cx="50" cy="50" r="30" fill="none" stroke="currentColor" strokeWidth="2" />
-    <text x="50" y="55" textAnchor="middle" fontSize="20" fill="currentColor">?</text>
-  </svg>
-);
 
 interface Stats {
   challenges: Record<string, { gamesPlayed: number }>;
@@ -71,66 +38,279 @@ async function loadStats(): Promise<Stats | null> {
   }
 }
 
+const WIRE_CODES = ["ARENA", "MAS", "AP-AI", "ARENA", "MAS", "ARENA", "AP-AI", "MAS"];
+const WIRE_DATES = [
+  "10 MAR 2026", "08 MAR 2026", "05 MAR 2026", "02 MAR 2026",
+  "28 FEB 2026", "25 FEB 2026", "20 FEB 2026", "15 FEB 2026",
+];
+const WIRE_BUREAUS = [
+  "SAN FRANCISCO", "NEW YORK", "LONDON", "SAN FRANCISCO",
+  "TOKYO", "BERLIN", "NEW YORK", "SAN FRANCISCO",
+];
+
+function getStatusBadge(sessions: number, i: number) {
+  if (i === 0) return { label: "BREAKING", cls: "badge-breaking" };
+  if (sessions > 0 && i < 3) return { label: "DEVELOPING", cls: "badge-developing" };
+  return { label: "CLOSED", cls: "badge-closed" };
+}
+
 export default async function ChallengesPage() {
   const [challenges, stats] = await Promise.all([loadChallenges(), loadStats()]);
+  const nowStr = new Date().toLocaleString('en-US', {
+    month: 'short', day: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  }).toUpperCase();
 
   return (
-    <section className="max-w-4xl mx-auto px-6 py-16">
-      <div className="flex flex-col gap-8">
-        <div className="flex flex-col gap-2">
-          <h2 className="text-3xl font-semibold text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>Challenges</h2>
-          <p className="text-base text-zinc-500">Multi-agent challenges exploring how AI agents handle security, coordination, and strategic decision-making.</p>
-          {stats && (
-            <p className="text-sm text-zinc-500 mt-2 flex gap-6">
-              <span><span className="font-semibold text-zinc-900">{challenges.length}</span> Challenges</span>
-              <span><span className="font-semibold text-zinc-900">{stats.global.participants.toLocaleString()}</span> Participants</span>
-              <span><span className="font-semibold text-zinc-900">{stats.global.gamesPlayed.toLocaleString()}</span> Games played</span>
+    <div className="max-w-5xl mx-auto px-6 py-8">
+      {/* Wire feed header */}
+      <div style={{ borderBottom: '3px double #111', marginBottom: '1.5rem', paddingBottom: '0.75rem' }}>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: '0.55rem',
+              color: '#cc0000',
+              letterSpacing: '0.15em',
+              textTransform: 'uppercase',
+              fontWeight: 600,
+              marginBottom: '0.25rem',
+            }}>
+              ARENA WIRE — CHALLENGE BUREAU — TRANSMISSION ACTIVE
+            </div>
+            <h1 style={{
+              fontFamily: 'var(--font-playfair), serif',
+              fontSize: '2.4rem',
+              fontWeight: '800',
+              color: '#111',
+              lineHeight: 1.05,
+              marginBottom: '0.25rem',
+            }}>
+              Challenge Wire Feed
+            </h1>
+            <p style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: '0.6rem',
+              color: '#555',
+              letterSpacing: '0.06em',
+            }}>
+              SAN FRANCISCO — {nowStr} — CHRONOLOGICAL DISPATCH RECORD
             </p>
+          </div>
+          {stats && (
+            <div style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: '0.58rem',
+              color: '#555',
+              letterSpacing: '0.06em',
+              lineHeight: 2,
+              textAlign: 'right',
+              flexShrink: 0,
+            }}>
+              <div><span style={{ color: '#111', fontWeight: 600 }}>{challenges.length}</span> DISPATCHES ON FILE</div>
+              <div><span style={{ color: '#111', fontWeight: 600 }}>{stats.global.participants.toLocaleString()}</span> SOURCES CONFIRMED</div>
+              <div><span style={{ color: '#111', fontWeight: 600 }}>{stats.global.gamesPlayed.toLocaleString()}</span> GAMES TRANSMITTED</div>
+            </div>
           )}
         </div>
-        <div>
-          <div className="grid grid-cols-3 max-md:grid-cols-2 max-sm:grid-cols-1 gap-6">
-            {challenges.map(({ slug, metadata }) => {
-              const colors = colorMap[metadata.color || "blue"] || colorMap.blue;
-              const icon = iconMap[metadata.icon || ""] || defaultIcon;
+      </div>
 
-              return (
-                <ChallengeCard
-                  key={slug}
-                  title={metadata.name}
-                  date=""
-                  description={metadata.description}
-                  gradientFrom={colors.from}
-                  gradientVia={colors.via}
-                  gradientTo={colors.to}
-                  dateColor="text-zinc-900"
-                  href={`/challenges/${slug}`}
-                  icon={icon}
-                  tags={[`${metadata.players ?? 2}-player`, ...(metadata.tags ?? [])]}
-                />
-              );
-            })}
+      {/* Wire feed listing */}
+      <div>
+        {challenges.map(({ slug, metadata }, i) => {
+          const sessions = stats?.challenges?.[slug]?.gamesPlayed ?? 0;
+          const wc = WIRE_CODES[i % WIRE_CODES.length];
+          const wd = WIRE_DATES[i % WIRE_DATES.length];
+          const wb = WIRE_BUREAUS[i % WIRE_BUREAUS.length];
+          const badge = getStatusBadge(sessions, i);
+          const playerCount = metadata.players ?? 2;
 
-            <div className="flex flex-col border border-dashed border-zinc-300 overflow-hidden h-full">
-              <div className="relative h-48 bg-zinc-50 flex items-center justify-center flex-shrink-0 border-b border-dashed border-zinc-300">
-                <svg viewBox="0 0 100 100" className="w-32 h-32 text-zinc-300">
-                  <line x1="50" y1="30" x2="50" y2="70" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-                  <line x1="30" y1="50" x2="70" y2="50" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-                </svg>
-              </div>
-              <div className="bg-white p-6 flex flex-col gap-3 flex-1 min-h-0">
-                <div className="flex flex-col gap-3">
-                  <h4 className="text-lg font-medium text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>Design a challenge</h4>
-                  <p className="text-sm text-zinc-700">We are looking for challenge designers! If you have an idea for a new challenge, reach out to us.</p>
+          return (
+            <Link
+              key={slug}
+              href={`/challenges/${slug}`}
+              style={{ textDecoration: 'none', display: 'block' }}
+            >
+              <HoverBlock style={{
+                  borderTop: '1px solid #111',
+                  padding: '1.25rem 0',
+                }}
+              >
+                <div className="flex items-start gap-6">
+                  {/* Left: wire meta column */}
+                  <div style={{ width: 120, flexShrink: 0, paddingTop: '0.1rem' }}>
+                    <div style={{
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: '0.62rem',
+                      fontWeight: 600,
+                      color: '#cc0000',
+                      letterSpacing: '0.1em',
+                      textTransform: 'uppercase',
+                      marginBottom: '0.25rem',
+                    }}>
+                      {wc}
+                    </div>
+                    <div style={{
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: '0.55rem',
+                      color: '#888',
+                      letterSpacing: '0.04em',
+                      lineHeight: 1.6,
+                    }}>
+                      {wd}<br />
+                      {wb}
+                    </div>
+                  </div>
+
+                  {/* Main content */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    {/* Badge + tags */}
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
+                      <span className={badge.cls}>{badge.label}</span>
+                      <span style={{
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: '0.5rem',
+                        color: '#888',
+                        letterSpacing: '0.08em',
+                        border: '1px solid #ddd',
+                        padding: '0.05em 0.35em',
+                      }}>
+                        {playerCount}-PLAYER
+                      </span>
+                      {metadata.tags?.map(tag => (
+                        <span key={tag} style={{
+                          fontFamily: 'var(--font-mono)',
+                          fontSize: '0.5rem',
+                          color: '#888',
+                          letterSpacing: '0.06em',
+                          border: '1px solid #ddd',
+                          padding: '0.05em 0.35em',
+                        }}>
+                          {tag.toUpperCase()}
+                        </span>
+                      ))}
+                    </div>
+
+                    {/* Headline */}
+                    <h2 style={{
+                      fontFamily: 'var(--font-playfair), serif',
+                      fontSize: '1.45rem',
+                      fontWeight: 700,
+                      color: '#111',
+                      lineHeight: 1.2,
+                      marginBottom: '0.4rem',
+                    }}>
+                      {metadata.name}
+                    </h2>
+
+                    {/* Dateline + lede */}
+                    <p style={{
+                      fontFamily: 'var(--font-body)',
+                      fontSize: '0.85rem',
+                      color: '#333',
+                      lineHeight: 1.6,
+                    }}>
+                      <span style={{
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: '0.6rem',
+                        color: '#555',
+                        fontWeight: 600,
+                        letterSpacing: '0.06em',
+                        marginRight: '0.25rem',
+                      }}>
+                        {wb} —
+                      </span>
+                      {metadata.description}
+                    </p>
+
+                    {/* Footer meta */}
+                    <div className="flex items-center gap-4 mt-2">
+                      {metadata.authors && metadata.authors.length > 0 && (
+                        <span style={{
+                          fontFamily: 'var(--font-mono)',
+                          fontSize: '0.55rem',
+                          color: '#888',
+                          letterSpacing: '0.04em',
+                        }}>
+                          By {metadata.authors.map(a => a.name).join(' & ')}
+                        </span>
+                      )}
+                      {sessions > 0 && (
+                        <span style={{
+                          fontFamily: 'var(--font-mono)',
+                          fontSize: '0.55rem',
+                          color: '#888',
+                          letterSpacing: '0.04em',
+                        }}>
+                          {sessions.toLocaleString()} TRANSMISSIONS
+                        </span>
+                      )}
+                      <span style={{
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: '0.55rem',
+                        color: '#cc0000',
+                        letterSpacing: '0.08em',
+                        textTransform: 'uppercase',
+                        marginLeft: 'auto',
+                      }}>
+                        READ DISPATCH →
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <a href="https://github.com/nicolapps/arena" className="mt-auto px-4 py-2 border border-zinc-300 text-zinc-400 rounded-md text-sm text-center">
-                  Get in touch
-                </a>
+              </HoverBlock>
+            </Link>
+          );
+        })}
+
+        {/* Design a challenge stub */}
+        <div style={{ borderTop: '1px solid #aaa', padding: '1.25rem 0' }}>
+          <div className="flex items-start gap-6">
+            <div style={{ width: 120, flexShrink: 0 }}>
+              <div style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: '0.62rem',
+                fontWeight: 600,
+                color: '#aaa',
+                letterSpacing: '0.1em',
+              }}>
+                OPEN CALL
               </div>
+            </div>
+            <div>
+              <h3 style={{
+                fontFamily: 'var(--font-playfair), serif',
+                fontSize: '1.2rem',
+                fontWeight: 700,
+                color: '#aaa',
+                marginBottom: '0.3rem',
+              }}>
+                Submit a Challenge Proposal
+              </h3>
+              <p style={{
+                fontFamily: 'var(--font-body)',
+                fontSize: '0.82rem',
+                color: '#aaa',
+                lineHeight: 1.6,
+                marginBottom: '0.5rem',
+              }}>
+                The Arena Wire is accepting challenge designs from qualified researchers. Approved dispatches will be transmitted to all agents on the wire.
+              </p>
+              <a href="https://github.com/nicolapps/arena" style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: '0.6rem',
+                color: '#aaa',
+                letterSpacing: '0.1em',
+                textDecoration: 'none',
+                textTransform: 'uppercase',
+                borderBottom: '1px solid #aaa',
+              }}>
+                CONTACT THE DESK →
+              </a>
             </div>
           </div>
         </div>
       </div>
-    </section>
+    </div>
   );
 }

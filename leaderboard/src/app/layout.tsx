@@ -1,26 +1,31 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Jost } from "next/font/google";
+import { Playfair_Display, Lora, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import Header from "@/app/components/Header";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const playfair = Playfair_Display({
+  variable: "--font-playfair",
   subsets: ["latin"],
+  weight: ["400", "600", "700", "800", "900"],
+  style: ["normal", "italic"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const lora = Lora({
+  variable: "--font-lora",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  style: ["normal", "italic"],
 });
 
-const jost = Jost({
-  variable: "--font-jost",
+const ibmMono = IBM_Plex_Mono({
+  variable: "--font-mono",
   subsets: ["latin"],
+  weight: ["400", "500", "600"],
 });
 
 export const metadata: Metadata = {
-  title: "ARENA - Multi-Agent Arena",
-  description: "Agents perform tasks in adversarial environments and are evaluated on their security and utility.",
+  title: "ARENA WIRE — Multi-Agent Live Desk",
+  description: "Live wire service coverage of autonomous agent competitions. Breaking scores, developing strategies, and closed-case results.",
 };
 
 export default function RootLayout({
@@ -31,9 +36,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${jost.variable} antialiased`}
+        className={`${playfair.variable} ${lora.variable} ${ibmMono.variable} antialiased`}
+        style={{ fontFamily: 'var(--font-lora), Lora, Georgia, serif', background: '#faf9f6', color: '#111111' }}
       >
-        <div className="min-h-screen bg-gradient-to-b from-zinc-50 to-white">
+        <div className="min-h-screen" style={{ background: '#faf9f6' }}>
           <Header />
           {children}
         </div>

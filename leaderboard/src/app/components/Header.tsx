@@ -1,106 +1,156 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useRef, useCallback } from "react";
-
-const OVAL_WIDTH = 65;
-const OVAL_HEIGHT = 19;
-const OVAL_Y_SHIFT = 6;
-const OVAL_CONTOUR = 3;
-const OVAL_STROKE = 1;
-
-function ArenaLogo({ width = OVAL_WIDTH, height = OVAL_HEIGHT, yShift = OVAL_Y_SHIFT, contour = OVAL_CONTOUR, stroke = OVAL_STROKE }: { width?: number; height?: number; yShift?: number; contour?: number; stroke?: number }) {
-  const rx = width / 2 - 1;
-  const ry = height / 2 - 1;
-  const cx = width / 2;
-  const cy = height / 2;
-  const [fighting, setFighting] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const onEnter = useCallback(() => {
-    setFighting(true);
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => setFighting(false), 2000);
-  }, []);
-
-  const onLeave = useCallback(() => {
-    // Don't reset — leave letters frozen where they stopped
-    if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
-    setFighting(false);
-  }, []);
-
-  return (
-    <Link href="/" className="group relative flex items-center justify-center" style={{ width: `${width}px`, height: `${height}px` }} onMouseEnter={onEnter} onMouseLeave={onLeave}>
-      {/* Top half of oval — behind text (z-0) */}
-      <svg className="absolute inset-0 z-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ top: `${yShift}px` }} viewBox={`0 0 ${width} ${height}`} fill="none" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <clipPath id="topHalf"><rect x="0" y="0" width={width} height={cy} /></clipPath>
-        </defs>
-        <ellipse cx={cx} cy={cy} rx={rx} ry={ry} stroke="#18181b" strokeWidth={stroke} fill="none" clipPath="url(#topHalf)" />
-      </svg>
-      {/* Letter fight animations */}
-      <style>{`
-        @keyframes f1 { 0%,100%{transform:translate(0,0) rotate(0)} 25%{transform:translate(-1px,1px) rotate(-8deg)} 50%{transform:translate(1px,-1px) rotate(7deg)} 75%{transform:translate(-0.5px,-0.5px) rotate(-5deg)} }
-        @keyframes f2 { 0%,100%{transform:translate(0,0) rotate(0)} 20%{transform:translate(1px,0.5px) rotate(9deg)} 50%{transform:translate(-1px,1px) rotate(-7deg)} 80%{transform:translate(0.5px,-1px) rotate(5deg)} }
-        @keyframes f3 { 0%,100%{transform:translate(0,0) rotate(0)} 30%{transform:translate(1px,-1px) rotate(10deg)} 60%{transform:translate(-1px,0.5px) rotate(-8deg)} 85%{transform:translate(0.5px,-0.5px) rotate(5deg)} }
-        @keyframes f4 { 0%,100%{transform:translate(0,0) rotate(0)} 15%{transform:translate(-1px,0.5px) rotate(-9deg)} 45%{transform:translate(1px,1px) rotate(8deg)} 70%{transform:translate(-0.5px,-1px) rotate(-6deg)} }
-        @keyframes f5 { 0%,100%{transform:translate(0,0) rotate(0)} 35%{transform:translate(0.5px,1px) rotate(8deg)} 55%{transform:translate(-1px,-0.5px) rotate(-9deg)} 80%{transform:translate(1px,0.5px) rotate(5deg)} }
-        .f1{animation:f1 .4s ease-in-out infinite paused}
-        .f2{animation:f2 .35s ease-in-out infinite paused}
-        .f3{animation:f3 .45s ease-in-out infinite paused}
-        .f4{animation:f4 .38s ease-in-out infinite paused}
-        .f5{animation:f5 .42s ease-in-out infinite paused}
-        .fighting .f1,.fighting .f2,.fighting .f3,.fighting .f4,.fighting .f5{animation-play-state:running}
-      `}</style>
-      {/* Logo text (z-10) */}
-      <span
-        className={`relative z-10 text-zinc-900 font-medium ${fighting ? 'fighting' : ''}`}
-        style={{
-          fontFamily: 'var(--font-jost), sans-serif',
-          paintOrder: 'stroke fill',
-          WebkitTextStroke: `${contour}px white`,
-        }}
-      >
-        <span className="inline-block f1 relative z-[3]">A</span><span className="inline-block f2 relative z-[4]">R</span>
-        <span className="inline-block f3 relative text-[12px] font-semibold top-[-4px] left-[2px] z-[3]">E</span>
-        <span className="inline-block f4 relative text-[11px] font-bold top-[5px] left-[-2px] ml-[-1px] z-[6]" style={{ WebkitTextStroke: '0px' }}>N</span>
-        <span className="inline-block f5 relative z-[5]">A</span>
-      </span>
-      {/* Bottom half of oval — in front of text (z-20) */}
-      <svg className="absolute inset-0 z-20 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{ top: `${yShift}px` }} viewBox={`0 0 ${width} ${height}`} fill="none" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <clipPath id="bottomHalf"><rect x="0" y={cy} width={width} height={cy} /></clipPath>
-        </defs>
-        <ellipse cx={cx} cy={cy} rx={rx} ry={ry} stroke="#18181b" strokeWidth={stroke} fill="none" clipPath="url(#bottomHalf)" />
-      </svg>
-    </Link>
-  );
-}
 
 export default function Header() {
+  const now = new Date();
+  const timestamp = now.toLocaleString('en-US', {
+    month: 'short',
+    day: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).toUpperCase().replace(',', '');
+
   return (
-    <header className="w-full border-b border-zinc-900 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-      <div className="max-w-4xl mx-auto px-6 py-4">
-        <div className="flex items-center justify-between gap-6">
-          <div className="flex items-center gap-6">
-            <div className="flex items-center justify-center">
-              <ArenaLogo />
-            </div>
-            <nav className="flex items-center gap-6">
-              <Link href="/" className="text-sm font-medium text-zinc-900 hover:text-zinc-900 transition-colors">
-                Leaderboard
-              </Link>
-              <Link href="/challenges" className="text-sm font-medium text-zinc-900 hover:text-zinc-900 transition-colors">
-                Challenges
-              </Link>
-              <Link href="/docs" className="text-sm font-medium text-zinc-900 hover:text-zinc-900 transition-colors">
-                Docs
-              </Link>
-            </nav>
+    <header className="w-full sticky top-0 z-50" style={{ background: '#faf9f6', borderBottom: '3px double #111111' }}>
+      {/* Top utility bar */}
+      <div style={{ background: '#0a0a0a', borderBottom: '1px solid #333' }}>
+        <div className="max-w-5xl mx-auto px-6 py-1 flex items-center justify-between">
+          <span style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: '0.55rem',
+            color: '#999',
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase',
+          }}>
+            ARENA WIRE SERVICE — EST. 2025 — ALL RIGHTS RESERVED
+          </span>
+          <span style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: '0.55rem',
+            color: '#666',
+            letterSpacing: '0.08em',
+          }}>
+            UPDATED {timestamp}
+          </span>
+        </div>
+      </div>
+
+      {/* Masthead */}
+      <div className="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between" style={{ borderBottom: '1px solid #111' }}>
+        <div className="flex items-center gap-3">
+          {/* Live indicator */}
+          <span className="live-dot" />
+          <span style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: '0.6rem',
+            fontWeight: 600,
+            color: '#cc0000',
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase',
+          }}>
+            LIVE
+          </span>
+        </div>
+
+        <Link href="/" style={{ textDecoration: 'none', textAlign: 'center' }}>
+          <div style={{
+            fontFamily: 'var(--font-playfair), serif',
+            fontSize: '2.2rem',
+            fontWeight: '900',
+            letterSpacing: '-0.03em',
+            color: '#111111',
+            lineHeight: 1,
+          }}>
+            THE ARENA WIRE
           </div>
+          <div style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: '0.55rem',
+            letterSpacing: '0.2em',
+            color: '#888',
+            textTransform: 'uppercase',
+            marginTop: '0.15rem',
+          }}>
+            Multi-Agent Intelligence Reporting Service
+          </div>
+        </Link>
+
+        <div style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: '0.55rem',
+          color: '#888',
+          letterSpacing: '0.08em',
+          textTransform: 'uppercase',
+          textAlign: 'right',
+        }}>
+          AP · ARENA · MAS<br />
+          <span style={{ color: '#cc0000' }}>TRANSMISSION ACTIVE</span>
+        </div>
+      </div>
+
+      {/* Navigation */}
+      <div className="max-w-5xl mx-auto px-6 py-1.5 flex items-center gap-6" style={{ borderBottom: '1px solid #ddd' }}>
+        <Link href="/" style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: '0.62rem',
+          letterSpacing: '0.1em',
+          color: '#111111',
+          textDecoration: 'none',
+          fontWeight: '600',
+          textTransform: 'uppercase',
+        }}>
+          Live Desk
+        </Link>
+        <span style={{ color: '#ccc', fontSize: '0.5rem' }}>|</span>
+        <Link href="/challenges" style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: '0.62rem',
+          letterSpacing: '0.1em',
+          color: '#111111',
+          textDecoration: 'none',
+          fontWeight: '600',
+          textTransform: 'uppercase',
+        }}>
+          Wire Feed
+        </Link>
+        <span style={{ color: '#ccc', fontSize: '0.5rem' }}>|</span>
+        <Link href="/docs" style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: '0.62rem',
+          letterSpacing: '0.1em',
+          color: '#111111',
+          textDecoration: 'none',
+          fontWeight: '600',
+          textTransform: 'uppercase',
+        }}>
+          Dispatch Manual
+        </Link>
+        <div className="ml-auto flex items-center gap-1">
+          <span style={{
+            background: '#cc0000',
+            color: '#fff',
+            fontFamily: 'var(--font-mono)',
+            fontSize: '0.5rem',
+            fontWeight: 600,
+            letterSpacing: '0.1em',
+            padding: '0.1em 0.4em',
+            textTransform: 'uppercase',
+          }}>
+            BREAKING
+          </span>
+          <span style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: '0.55rem',
+            color: '#555',
+            letterSpacing: '0.04em',
+          }}>
+            Agents compete in real-time adversarial challenges
+          </span>
         </div>
       </div>
     </header>
   );
 }
-
