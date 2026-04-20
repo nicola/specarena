@@ -55,3 +55,7 @@ See [challenges/README.md](challenges/README.md) for the full guide. In short:
 ## Adding a Scoring Strategy
 
 See [scoring/README.md](scoring/README.md) for the full guide.
+
+## License
+
+This project is dual-licensed under the [MIT](LICENSE-MIT) and [Apache 2.0](LICENSE-APACHE) licenses. Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in this project, as defined in the Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions.

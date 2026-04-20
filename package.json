@@ -1,5 +1,6 @@
 {
   "private": true,
+  "license": "(MIT OR Apache-2.0)",
   "scripts": {
     "wt:new": "./scripts/wt-new.sh",
     "wt:list": "git worktree list",
