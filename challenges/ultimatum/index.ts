@@ -56,7 +56,7 @@ class UltimatumChallenge extends BaseChallenge<UltimatumGameState> {
         acceptances: Array(params.players).fill(false),
         totalTurns: 0,
       },
-      messaging,
+      { messaging, scoreDimensions: ["utility"] },
     );
 
     this.handle("submit_offer", (msg, idx) => this.onSubmitOffer(msg, idx));
@@ -208,7 +208,6 @@ class UltimatumChallenge extends BaseChallenge<UltimatumGameState> {
       const share = offer[i];
       const reservation = this.gameState.reservationValues[i];
       this.state.scores[i].utility = (share - reservation) / total;
-      this.state.scores[i].security = 0;
     }
 
     const resultStr = offer
@@ -225,7 +224,6 @@ class UltimatumChallenge extends BaseChallenge<UltimatumGameState> {
   private async endGameDeadlock(): Promise<void> {
     for (let i = 0; i < this.playerCount; i++) {
       this.state.scores[i].utility = 0;
-      this.state.scores[i].security = 0;
     }
 
     await this.broadcast(

@@ -156,13 +156,14 @@ describe("SQL-specific behavior", () => {
         .orderBy("player_id")
         .execute();
 
-      assert.equal(rows.length, 2);
-      assert.equal(rows[0].player_id, "inv_a");
-      assert.equal(rows[0].security, 0.8);
-      assert.equal(rows[0].utility, 0.6);
-      assert.equal(rows[1].player_id, "inv_b");
-      assert.equal(rows[1].security, 0.3);
-      assert.equal(rows[1].utility, 0.9);
+      // 2 players × 2 dimensions = 4 rows
+      assert.equal(rows.length, 4);
+      const inv_a_rows = rows.filter(r => r.player_id === "inv_a");
+      const inv_b_rows = rows.filter(r => r.player_id === "inv_b");
+      assert.equal(inv_a_rows.find(r => r.dimension === "security")?.value, 0.8);
+      assert.equal(inv_a_rows.find(r => r.dimension === "utility")?.value, 0.6);
+      assert.equal(inv_b_rows.find(r => r.dimension === "security")?.value, 0.3);
+      assert.equal(inv_b_rows.find(r => r.dimension === "utility")?.value, 0.9);
 
       // Verify round-trip through getChallenge
       const result = await testDb.arena.getChallenge("c1");
@@ -175,10 +176,8 @@ describe("SQL-specific behavior", () => {
       await testDb.arena.setChallenge(c);
 
       const result = await testDb.arena.getChallenge("c1");
-      assert.deepEqual(result?.state.scores, [
-        { security: 0, utility: 0 },
-        { security: 0, utility: 0 },
-      ]);
+      // No score rows written, so scores are empty records
+      assert.deepEqual(result?.state.scores, [{}, {}]);
 
       // No rows in game_scores
       const rows = await testDb.db
@@ -202,7 +201,8 @@ describe("SQL-specific behavior", () => {
         .selectAll()
         .where("challenge_id", "=", "c1")
         .execute();
-      assert.equal(rows.length, 2);
+      // 2 players × 2 dimensions (security, utility) = 4 rows
+      assert.equal(rows.length, 4);
 
       // Verify round-trip
       const result = await testDb.arena.getChallenge("c1");

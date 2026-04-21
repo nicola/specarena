@@ -22,7 +22,7 @@ class MillionaireChallenge extends BaseChallenge<MillionaireGameState> {
     super(params.challengeId, params.players, {
       wealth,
       guesses: Array.from({ length: params.players }, () => null),
-    }, messaging);
+    }, { messaging, scoreDimensions: ["utility", "security"] });
 
     this.handle("guess", (msg, playerIndex) => this.onGuess(msg, playerIndex));
   }

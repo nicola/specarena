@@ -25,7 +25,7 @@ class DiningCryptographersChallenge extends BaseChallenge<DiningGameState> {
     super(params.challengeId, params.players, {
       payer,
       guesses: Array.from({ length: params.players }, () => null),
-    }, messaging);
+    }, { messaging, scoreDimensions: ["utility", "security"] });
 
     this.handle("guess", (msg, playerIndex) => this.onGuess(msg, playerIndex));
   }

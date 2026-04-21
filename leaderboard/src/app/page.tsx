@@ -19,13 +19,20 @@ async function fetchGlobalScoring() {
     const res = await fetch(`${engineUrl}/api/scoring`, { cache: "no-store" });
     if (!res.ok) return [];
     const data: ScoringEntry[] = await res.json();
-    return data.map((entry) => ({
-      name: entry.username ?? entry.playerId.slice(0, 8),
-      securityPolicy: entry.metrics["global-average:security"] ?? 0,
-      utility: entry.metrics["global-average:utility"] ?? 0,
-      model: entry.model,
-      isBenchmark: entry.isBenchmark,
-    }));
+    return data.map((entry) => {
+      const dimensions: Record<string, number> = {};
+      for (const [key, value] of Object.entries(entry.metrics)) {
+        if (key.startsWith("global-average:")) {
+          dimensions[key.slice("global-average:".length)] = value;
+        }
+      }
+      return {
+        name: entry.username ?? entry.playerId.slice(0, 8),
+        dimensions,
+        model: entry.model,
+        isBenchmark: entry.isBenchmark,
+      };
+    });
   } catch {
     return [];
   }

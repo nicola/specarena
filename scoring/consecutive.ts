@@ -4,7 +4,6 @@ import type { ScoringStrategy, GameResult, ScoringStorageAdapter } from "./types
 export const consecutive: ScoringStrategy = {
   name: "consecutive",
   metrics: [
-    { key: "consecutive:security", label: "Security Streak" },
     { key: "consecutive:utility", label: "Utility Streak" },
     { key: "consecutive:attack", label: "Attack Streak" },
   ],
@@ -40,18 +39,22 @@ export const consecutive: ScoringStrategy = {
       const prev = await store.getScoreEntry(result.challengeType, this.name, playerId);
       const prevMetrics = prev?.metrics ?? {};
 
-      const security = score.security >= 1 ? (prevMetrics["consecutive:security"] ?? 0) + 1 : 0;
-      const utility = score.utility >= 1 ? (prevMetrics["consecutive:utility"] ?? 0) + 1 : 0;
-      const attack = (breachesBy.get(playerId) ?? 0) > 0 ? (prevMetrics["consecutive:attack"] ?? 0) + 1 : 0;
+      // Build streaks for each score dimension
+      const metrics: Record<string, number> = {};
+      for (const [dim, val] of Object.entries(score)) {
+        const key = `consecutive:${dim}`;
+        metrics[key] = val >= 1 ? (prevMetrics[key] ?? 0) + 1 : 0;
+      }
+
+      // Attack streak (attribution-based, always present)
+      metrics["consecutive:attack"] = (breachesBy.get(playerId) ?? 0) > 0
+        ? (prevMetrics["consecutive:attack"] ?? 0) + 1
+        : 0;
 
       await store.setScoreEntry(result.challengeType, this.name, {
         playerId,
         gamesPlayed: (prev?.gamesPlayed ?? 0) + 1,
-        metrics: {
-          "consecutive:security": security,
-          "consecutive:utility": utility,
-          "consecutive:attack": attack,
-        },
+        metrics,
       });
     }
   },

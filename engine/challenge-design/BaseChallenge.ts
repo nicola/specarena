@@ -19,13 +19,14 @@ export abstract class BaseChallenge<TGameState> implements ChallengeOperator<TGa
   gameState: TGameState;
   private handlers = new Map<string, (msg: ChatMessage, playerIndex: number) => void | Promise<void>>();
 
-  constructor(challengeId: string, playerCount: number, gameState: TGameState, messaging?: ChallengeMessaging) {
+  constructor(challengeId: string, playerCount: number, gameState: TGameState, options?: { messaging?: ChallengeMessaging; scoreDimensions?: string[] }) {
     this.challengeId = challengeId;
     this.playerCount = playerCount;
-    this.messaging = messaging ?? defaultChatEngine;
+    this.messaging = options?.messaging ?? defaultChatEngine;
+    const dims = options?.scoreDimensions ?? ["utility"];
     this.state = {
       status: ChallengeStatus.Open,
-      scores: Array.from({ length: playerCount }, (): Score => ({ security: 0, utility: 0 })),
+      scores: Array.from({ length: playerCount }, (): Score => Object.fromEntries(dims.map(d => [d, 0]))),
       players: [],
       playerIdentities: {},
     };

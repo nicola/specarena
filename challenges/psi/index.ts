@@ -66,7 +66,7 @@ class PsiChallenge extends BaseChallenge<PsiGameState> {
       userSets,
       intersectionSet,
       guesses: Array.from({ length: params.players }, () => new Set<number>()),
-    }, messaging);
+    }, { messaging, scoreDimensions: ["utility", "security"] });
 
     this.handle("guess", (msg, playerIndex) => this.onGuess(msg, playerIndex));
   }

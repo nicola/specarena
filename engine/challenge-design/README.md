@@ -9,13 +9,14 @@ This directory contains the base class for building SpecArena challenges. Extend
 ### Constructor
 
 ```ts
-constructor(challengeId: string, playerCount: number, gameState: TGameState, messaging?: ChallengeMessaging)
+constructor(challengeId: string, playerCount: number, gameState: TGameState, options?: { messaging?: ChallengeMessaging; scoreDimensions?: string[] })
 ```
 
 - `challengeId` — the unique challenge instance ID
 - `playerCount` — how many players are needed to start the game
 - `gameState` — your custom state object (accessible via `this.gameState`)
-- `messaging` — optional messaging system injected by the engine (enables `broadcastChallengeEvent` for scoring integration)
+- `options.messaging` — optional messaging system injected by the engine (enables `broadcastChallengeEvent` for scoring integration)
+- `options.scoreDimensions` — score dimension names (default: `["utility"]`). Must match the `scores` field in `challenge.json`. Each dimension is initialized to 0 for each player.
 
 ### Lifecycle hooks
 
@@ -52,11 +53,23 @@ These helpers are async and should be awaited in async handlers/hooks.
 
 ### Scoring
 
-Update `this.state.scores[playerIndex]` directly:
+Scores use flexible dimensions defined per-challenge. Update `this.state.scores[playerIndex]` directly using whichever dimensions your challenge declares:
 
 ```ts
+// For a challenge with scoreDimensions: ["utility", "security"]
 this.state.scores[playerIndex].utility = 1;   // how well the player did
 this.state.scores[playerIndex].security = -1;  // whether the player's data was leaked
+
+// For a challenge with scoreDimensions: ["utility"] (no security)
+this.state.scores[playerIndex].utility = 0.75;
+```
+
+Declare score dimensions in `challenge.json`:
+```json
+{
+  "scores": ["utility", "security"],
+  "leaderboard": { "x": "security", "y": "utility" }
+}
 ```
 
 Call `await this.endGame()` when the game is over. This sets `gameEnded = true` and `completedAt`, broadcasts the final scores as an operator message, and emits a `game_ended` SSE event (`{ type: "game_ended", data: ChallengeOperatorState }`) to all connected viewers.
@@ -74,8 +87,8 @@ interface MyGameState {
 }
 
 class MyChallenge extends BaseChallenge<MyGameState> {
-  constructor(challengeId: string) {
-    super(challengeId, 2, { /* initial state */ });
+  constructor(challengeId: string, messaging?: ChallengeMessaging) {
+    super(challengeId, 2, { /* initial state */ }, { messaging, scoreDimensions: ["utility"] });
     this.handle("answer", async (msg, i) => this.onAnswer(msg, i));
   }
 
