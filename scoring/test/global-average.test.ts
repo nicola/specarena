@@ -5,6 +5,13 @@ import { average } from "../average";
 import { InMemoryScoringStore } from "../store";
 import type { GameResult } from "../types";
 
+interface GlobalAvgState {
+  metricSums: Record<string, number>;
+  challengeCount: number;
+  totalGames: number;
+  prevScores: Record<string, { metrics: Record<string, number>; gamesPlayed: number }>;
+}
+
 function makeGame(
   p0: { security: number; utility: number },
   p1: { security: number; utility: number },
@@ -118,6 +125,52 @@ describe("global-average strategy", () => {
     assert.equal(charlie.metrics["global-average:security"], 0.5);
     assert.equal(charlie.metrics["global-average:utility"], 0.5);
     assert.equal(charlie.gamesPlayed, 1);
+  });
+
+  it("does not mutate previously stored state objects", async () => {
+    const game1 = makeGame({ security: 1, utility: 1 }, { security: -1, utility: -1 });
+
+    // Process first game to seed state
+    await average.update(game1, store);
+    await globalAverage.update(game1, store, "average");
+
+    // Capture the state object stored after the first update
+    const stateAfterFirst = await store.getGlobalStrategyState<GlobalAvgState>("alice");
+    assert.ok(stateAfterFirst);
+
+    // Deep-copy it so we can compare later
+    const snapshot = structuredClone(stateAfterFirst);
+
+    // Process a second game — this must NOT mutate stateAfterFirst
+    const game2 = makeGame({ security: 0.5, utility: 0.5 }, { security: -0.5, utility: -0.5 });
+    await average.update(game2, store);
+    await globalAverage.update(game2, store, "average");
+
+    // The object we captured earlier must be unchanged
+    assert.deepStrictEqual(stateAfterFirst, snapshot, "stored state object was mutated in place");
+  });
+
+  it("does not mutate nested metrics in prevScores snapshots", async () => {
+    const game1 = makeGame({ security: 1, utility: 0 }, { security: 0, utility: 1 });
+
+    await average.update(game1, store);
+    await globalAverage.update(game1, store, "average");
+
+    const stateAfterFirst = await store.getGlobalStrategyState<GlobalAvgState>("alice");
+    assert.ok(stateAfterFirst);
+    const prevMetricsSnapshot = structuredClone(stateAfterFirst.prevScores["psi"].metrics);
+
+    // Second game with different scores
+    const game2 = makeGame({ security: 0, utility: 1 }, { security: 1, utility: 0 });
+    await average.update(game2, store);
+    await globalAverage.update(game2, store, "average");
+
+    // The nested metrics object from the first state must be unchanged
+    assert.deepStrictEqual(
+      stateAfterFirst.prevScores["psi"].metrics,
+      prevMetricsSnapshot,
+      "nested prevScores metrics were mutated in place",
+    );
   });
 
   it("asymmetric per-challenge scores average correctly", async () => {
