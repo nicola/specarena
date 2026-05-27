@@ -179,18 +179,16 @@ export class SqlArenaStorageAdapter implements ArenaStorageAdapter {
         .where("challenge_id", "=", challenge.id)
         .execute();
 
-      const scoreRows = state.players
-        .map((invite, i) => {
-          const score = state.scores[i];
-          if (!score) return null;
-          return {
-            challenge_id: challenge.id,
-            player_id: invite,
-            security: score.security,
-            utility: score.utility,
-          };
-        })
-        .filter((r) => r !== null);
+      const defaultScore: Score = { security: 0, utility: 0 };
+      const scoreRows = state.players.map((invite, i) => {
+        const score = state.scores[i] ?? defaultScore;
+        return {
+          challenge_id: challenge.id,
+          player_id: invite,
+          security: score.security,
+          utility: score.utility,
+        };
+      });
 
       if (scoreRows.length > 0) {
         await tx.insertInto("game_scores").values(scoreRows).execute();

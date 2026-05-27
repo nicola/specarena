@@ -209,6 +209,38 @@ describe("SQL-specific behavior", () => {
       assert.deepEqual(result?.state.scores, c.state.scores);
     });
 
+    it("defaults to zero scores for players with missing score entries", async () => {
+      const c = mockChallenge("c1", ["inv_a", "inv_b"]);
+      c.state.players = ["inv_a", "inv_b"];
+      // Only first player has a score; second player's score is missing
+      c.state.scores = [{ security: 0.7, utility: 0.4 }];
+      c.state.status = "active";
+      await testDb.arena.setChallenge(c);
+
+      // Both players should have rows in game_scores
+      const rows = await testDb.db
+        .selectFrom("game_scores")
+        .selectAll()
+        .where("challenge_id", "=", "c1")
+        .orderBy("player_id")
+        .execute();
+
+      assert.equal(rows.length, 2, "should persist a score row for every player");
+      assert.equal(rows[0].player_id, "inv_a");
+      assert.equal(rows[0].security, 0.7);
+      assert.equal(rows[0].utility, 0.4);
+      assert.equal(rows[1].player_id, "inv_b");
+      assert.equal(rows[1].security, 0, "missing score should default to 0");
+      assert.equal(rows[1].utility, 0, "missing score should default to 0");
+
+      // Round-trip should also reflect the default
+      const result = await testDb.arena.getChallenge("c1");
+      assert.deepEqual(result?.state.scores, [
+        { security: 0.7, utility: 0.4 },
+        { security: 0, utility: 0 },
+      ]);
+    });
+
     it("cascade-deletes game_scores when challenge is deleted", async () => {
       const c = mockChallenge("c1", ["inv_a", "inv_b"]);
       c.state.players = ["inv_a", "inv_b"];
