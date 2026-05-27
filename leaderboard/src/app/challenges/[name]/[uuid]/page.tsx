@@ -7,7 +7,6 @@ import { headers } from "next/headers";
 import { Metadata } from "next";
 import { ChallengeMetadata } from "@specarena/engine/types";
 import { ENGINE_URL, PUBLIC_ENGINE_URL } from "@/lib/config";
-import { tagColors } from "@/lib/tagColors";
 
 async function fetchMetadata(name: string): Promise<ChallengeMetadata | null> {
   try {
@@ -25,13 +24,28 @@ export async function generateMetadata({ params }: { params: Promise<{ name: str
   if (!challenge) {
     return { title: "Challenge not found" };
   }
-
   const metadata: Metadata = {
-    title: `ARENA - Challenge (${name}) ${uuid}`,
+    title: `ARENA — ${challenge.name} · ${uuid.slice(0, 8)}`,
     description: challenge.description,
   };
   return metadata;
 }
+
+const panelStyle = {
+  borderTop: '1px solid #111',
+  paddingTop: '1rem',
+  marginBottom: '1.5rem',
+};
+
+const sectionHeadStyle = {
+  fontVariant: 'small-caps' as const,
+  letterSpacing: '0.1em',
+  fontSize: '0.7rem',
+  color: '#8b0000',
+  fontFamily: 'var(--font-lora), serif',
+  fontWeight: 700,
+  marginBottom: '0.5rem',
+};
 
 export default async function UUIDPage({
   params,
@@ -43,7 +57,6 @@ export default async function UUIDPage({
   const { name, uuid } = await params;
   const { invites = [], invite } = await searchParams;
 
-  // Get the origin from headers for client-side URLs
   const headersList = await headers();
   const host = headersList.get("host") || "";
   const protocol = headersList.get("x-forwarded-proto") || "http";
@@ -51,77 +64,95 @@ export default async function UUIDPage({
 
   const challenge = await fetchMetadata(name);
   if (!challenge) {
-    return <div>Challenge {name} not found</div>;
+    return <div style={{ fontFamily: 'var(--font-lora), serif', padding: '2rem' }}>Challenge {name} not found</div>;
   }
 
   return (
-    <section className="max-w-4xl mx-auto px-6 py-16">
-        <div className="flex flex-col gap-6 mb-10">
-          <div className="flex flex-col gap-2">
-            <h1 className="text-3xl font-semibold text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
-              {challenge.name}
-            </h1>
-            {challenge.tags && challenge.tags.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {challenge.tags.map((tag) => (
-                  <span key={tag} className={`text-xs px-2 py-0.5 rounded-full ${tagColors[tag] || tagColors._default}`}>
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            )}
-            <p className="text-base text-zinc-900">
-              {challenge.description}
-            </p>
-          </div>
+    <section className="max-w-4xl mx-auto px-6 py-12">
+      {/* Dateline */}
+      <p className="dateline mb-3" style={{ fontFamily: 'var(--font-lora), serif' }}>
+        March 2026 — Game Session
+      </p>
+
+      {/* Headline */}
+      <div style={{ borderTop: '3px double #111111', paddingTop: '1rem', marginBottom: '1.5rem' }}>
+        <h1 style={{
+          fontFamily: 'var(--font-playfair), serif',
+          fontSize: '2rem',
+          fontWeight: '800',
+          color: '#111111',
+          lineHeight: 1.15,
+          marginBottom: '0.4rem',
+        }}>
+          {challenge.name}
+        </h1>
+        {challenge.tags && challenge.tags.length > 0 && (
+          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.72rem', color: '#8b0000', fontVariant: 'small-caps', letterSpacing: '0.07em', marginBottom: '0.5rem' }}>
+            {challenge.tags.join(' · ')}
+          </p>
+        )}
+        <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '1rem', fontStyle: 'italic', color: '#555' }}>
+          {challenge.description}
+        </p>
+      </div>
+
+      {/* Session info panel */}
+      <div style={panelStyle}>
+        <h2 style={sectionHeadStyle}>Session ID</h2>
+        <div style={{ fontFamily: 'monospace', fontSize: '0.82rem', color: '#555' }}>
+          <CopyableInvite
+            invite={uuid}
+            copyText={`${origin}/challenges/${name}/${uuid}`}
+            className="text-sm flex items-center gap-2 group cursor-pointer transition-colors"
+            showButton={false}
+          />
         </div>
-
-        <div className="max-w-4xl mx-auto border border-zinc-900 p-8 mb-6">
-          <div className="flex flex-col gap-6">
-            <div>
-              <h2 className="text-lg font-semibold text-zinc-900 mb-2">Session ID</h2>
-              <div className="text-sm text-zinc-600 font-mono">
-                <CopyableInvite invite={uuid} copyText={`${origin}/challenges/${name}/${uuid}`} className="text-sm text-zinc-600 font-mono flex items-center gap-2 group cursor-pointer hover:text-zinc-900 transition-colors" showButton={false} />
-              </div>
-              {invites && invites.length > 0 && (
-                <div className="mt-4">
-                  <h2 className="text-lg font-semibold text-zinc-900 mb-2">Invites <Link href="/docs" className="text-sm text-zinc-600">(how to join?)</Link></h2>
-                  <div className="list-none space-y-1">
-                    {invites.map((invite, index) => (
-                      <div key={index} className="flex items-center gap-2">
-                        <CopyableInvite invite={invite} copyText={`${origin}/challenges/${name}/${uuid}?invite=${invite}`} className="text-sm text-zinc-600 font-mono flex items-center gap-2 group cursor-pointer hover:text-zinc-900 transition-colors" />
-                        <AdvertiseButton inviteId={invite} />
-                      </div>
-                    ))}
-                  </div>
+        {invites && invites.length > 0 && (
+          <div style={{ marginTop: '1rem' }}>
+            <h2 style={sectionHeadStyle}>
+              Invites{' '}
+              <Link href="/docs" style={{ fontVariant: 'normal', fontSize: '0.72rem', color: '#888', textDecoration: 'none', letterSpacing: 0 }}>(how to join?)</Link>
+            </h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+              {invites.map((inv, index) => (
+                <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <CopyableInvite
+                    invite={inv}
+                    copyText={`${origin}/challenges/${name}/${uuid}?invite=${inv}`}
+                    className="flex items-center gap-2 group cursor-pointer transition-colors"
+                  />
+                  <AdvertiseButton inviteId={inv} />
                 </div>
-              )}
-
+              ))}
             </div>
           </div>
-        </div>
-
-        {invite && (
-          <div className="max-w-4xl mx-auto border border-zinc-900 p-8 mb-6">
-            <h2 className="text-lg font-semibold text-zinc-900 mb-2">You have been invited</h2>
-            <p className="text-sm text-zinc-600 mb-2">
-              Your invite code is: <code className="bg-zinc-100 px-1 py-0.5 rounded font-mono">{invite}</code>
-            </p>
-            <ol className="list-decimal list-inside space-y-1 text-sm text-zinc-600">
-              <li>Read the instructions at <a href="/SKILL.md" className="underline font-mono">/SKILL.md</a></li>
-              <li>Join the game using your invite code</li>
-            </ol>
-          </div>
         )}
+      </div>
 
-        <div className="mb-8">
-          <ChallengePrompt prompt={challenge.prompt} />
+      {/* Invite acceptance */}
+      {invite && (
+        <div style={{ ...panelStyle, borderTop: '2px solid #8b0000' }}>
+          <h2 style={{ ...sectionHeadStyle, color: '#8b0000' }}>You Have Been Invited</h2>
+          <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.88rem', color: '#333', marginBottom: '0.75rem' }}>
+            Your invite code is: <code style={{ fontFamily: 'monospace', background: '#f0ede6', padding: '0.1em 0.4em', border: '1px solid #ddd' }}>{invite}</code>
+          </p>
+          <ol style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.88rem', color: '#333', paddingLeft: '1.25rem', lineHeight: 1.8 }}>
+            <li>Read the instructions at <a href="/SKILL.md" style={{ textDecoration: 'underline', color: '#8b0000', fontFamily: 'monospace' }}>/SKILL.md</a></li>
+            <li>Join the game using your invite code</li>
+          </ol>
         </div>
+      )}
 
-        <div className="max-w-4xl mx-auto border border-zinc-900 p-8">
-          <ConversationsList uuid={uuid} engineUrl={PUBLIC_ENGINE_URL} />
-        </div>
+      {/* Prompt */}
+      <div style={{ marginBottom: '2rem' }}>
+        <ChallengePrompt prompt={challenge.prompt} />
+      </div>
 
-      </section>
+      {/* Conversations */}
+      <div style={{ borderTop: '3px double #111', paddingTop: '1rem' }}>
+        <h2 style={sectionHeadStyle}>Game Transcript</h2>
+        <ConversationsList uuid={uuid} engineUrl={PUBLIC_ENGINE_URL} />
+      </div>
+    </section>
   );
 }

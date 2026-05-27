@@ -65,7 +65,6 @@ function metricLabel(key: string): string {
     "consecutive:utility": "Util. Streak",
   };
   if (labels[key]) return labels[key];
-  // fallback: strip prefix, title-case
   const suffix = key.includes(":") ? key.split(":").pop()! : key;
   return suffix.charAt(0).toUpperCase() + suffix.slice(1);
 }
@@ -82,11 +81,20 @@ function formatMetricValue(key: string, value: number): string {
 
 function metricColor(key: string, value: number): string {
   if (value === -1) {
-    if (key.includes("utility")) return "text-violet-400";
-    return "text-red-300";
+    if (key.includes("utility")) return "#8b0000";
+    return "#8b0000";
   }
-  return "text-zinc-900";
+  return "#111111";
 }
+
+const sectionLabel = {
+  fontVariant: 'small-caps' as const,
+  letterSpacing: '0.12em',
+  fontSize: '0.65rem',
+  color: '#8b0000' as const,
+  fontFamily: 'var(--font-lora), serif',
+  fontWeight: 700 as const,
+};
 
 export default async function UserProfilePage({ params, searchParams }: { params: Promise<{ userId: string }>; searchParams: Promise<{ page?: string }> }) {
   const { userId } = await params;
@@ -103,7 +111,6 @@ export default async function UserProfilePage({ params, searchParams }: { params
 
   const displayName = profile?.username ?? userId.slice(0, 8);
 
-  // Transform global scoring into graph data
   const graphData = globalScoring.map((entry) => ({
     name: entry.username ?? entry.playerId.slice(0, 8),
     securityPolicy: entry.metrics["global-average:security"] ?? 0,
@@ -117,105 +124,191 @@ export default async function UserProfilePage({ params, searchParams }: { params
 
   const hasScores = scores && (scores.global || Object.keys(scores.challenges).length > 0);
 
-  return (
-    <section className="max-w-4xl mx-auto px-6 py-16">
-      {/* Title */}
-      <div className="flex flex-col gap-2 mb-10">
-        <h1 className="text-3xl font-semibold text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
-          Agent {displayName}
-        </h1>
-      </div>
+  // Get global security/utility from scores
+  const globalSec = scores?.global?.metrics?.["global-average:security"] ?? null;
+  const globalUtil = scores?.global?.metrics?.["global-average:utility"] ?? null;
+  const gamesPlayed = scores?.global?.gamesPlayed ?? 0;
+  const challengesCovered = Object.keys(scores?.challenges ?? {});
 
-      {/* Info Box */}
-      <div className="max-w-4xl mx-auto border border-zinc-900 p-8 mb-6">
-        <div className="flex flex-col gap-4">
-          <div>
-            <h2 className="text-lg font-semibold text-zinc-900 mb-2">User ID</h2>
-            <CopyableInvite invite={userId} className="text-sm text-zinc-400 font-mono break-all flex items-center gap-2 group cursor-pointer hover:text-zinc-600 transition-colors" showButton={false} />
+  const today = new Date();
+  const dateline = today.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).toUpperCase();
+
+  return (
+    <section className="max-w-6xl mx-auto px-6 py-8">
+      {/* Journalist Profile Header */}
+      <div style={{ borderTop: '4px solid #111111', paddingTop: '1rem', marginBottom: '1.5rem', display: 'grid', gridTemplateColumns: '120px 1fr', gap: '1.5rem', alignItems: 'start' }}>
+        {/* Headshot placeholder */}
+        <div>
+          <div style={{
+            width: '100px',
+            height: '100px',
+            background: '#e8e4dc',
+            border: '1px solid #bbb',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: '0.5rem',
+          }}>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" style={{ width: '48px', height: '48px', color: '#aaa' }}>
+              <path fillRule="evenodd" d="M7.5 6a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM3.751 20.105a8.25 8.25 0 0 1 16.498 0 .75.75 0 0 1-.437.695A18.683 18.683 0 0 1 12 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 0 1-.437-.695Z" clipRule="evenodd" />
+            </svg>
           </div>
+          <p style={{
+            fontVariant: 'small-caps',
+            fontSize: '0.55rem',
+            color: '#aaa',
+            fontFamily: 'var(--font-lora), serif',
+            letterSpacing: '0.07em',
+            textAlign: 'center',
+          }}>
+            Agent Photo
+          </p>
+        </div>
+
+        {/* Byline section */}
+        <div>
+          <p style={{
+            fontVariant: 'small-caps',
+            letterSpacing: '0.15em',
+            fontSize: '0.62rem',
+            color: '#8b0000',
+            fontFamily: 'var(--font-lora), serif',
+            fontWeight: 700,
+            marginBottom: '0.3rem',
+          }}>
+            Agent Profile
+          </p>
+          <h1 style={{
+            fontFamily: 'var(--font-playfair), serif',
+            fontSize: '2.8rem',
+            fontWeight: 900,
+            color: '#111111',
+            lineHeight: 1.05,
+            marginBottom: '0.4rem',
+            letterSpacing: '-0.02em',
+          }}>
+            {displayName}
+          </h1>
           {profile?.model && (
-            <div>
-              <h2 className="text-lg font-semibold text-zinc-900 mb-2">Model <span className="text-sm font-normal text-zinc-400">(self-reported, not verified)</span></h2>
-              <div className="text-sm text-zinc-600">{profile.model}</div>
-            </div>
+            <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', fontSize: '0.88rem', color: '#555', marginBottom: '0.5rem' }}>
+              {profile.model} <span style={{ fontStyle: 'normal', color: '#aaa', fontSize: '0.72rem' }}>(self-reported model)</span>
+            </p>
           )}
+          {/* Editorial credentials bar */}
+          <div style={{ borderTop: '1px solid #111', borderBottom: '1px solid #111', paddingTop: '0.4rem', paddingBottom: '0.4rem', display: 'flex', flexWrap: 'wrap', gap: '1.5rem' }}>
+            <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.72rem', color: '#555' }}>
+              <span style={{ fontVariant: 'small-caps', letterSpacing: '0.07em', color: '#888' }}>Dateline </span>
+              {dateline}
+            </span>
+            <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.72rem', color: '#555' }}>
+              <span style={{ fontVariant: 'small-caps', letterSpacing: '0.07em', color: '#888' }}>Games Played </span>
+              <strong>{gamesPlayed}</strong>
+            </span>
+            {challengesCovered.length > 0 && (
+              <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.72rem', color: '#555' }}>
+                <span style={{ fontVariant: 'small-caps', letterSpacing: '0.07em', color: '#888' }}>Covers </span>
+                {challengesCovered.join(', ')}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Scoring */}
-      {hasScores && (
-        <div className="flex flex-col gap-4 mb-6">
-          {/* Leaderboard graph + Overview sidebar */}
-          {scores!.global && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {graphData.length > 0 && (
-                <div className="border border-zinc-900 self-start md:col-span-2 divide-y divide-zinc-100">
-                  <div className="px-4 pt-4 pb-2">
-                    <h2 className="text-sm font-semibold text-zinc-900">Leaderboard</h2>
-                    <p className="text-xs text-zinc-400 mt-1">Average security vs utility across all challenges.</p>
-                  </div>
-                  <div className="p-4">
-                    <LeaderboardGraph data={graphData} height={300} highlightName={displayName} />
-                  </div>
+      {/* Editorial Credentials / Stats */}
+      {hasScores && scores!.global && (
+        <div style={{ marginBottom: '2rem' }}>
+          {/* Big credential stats */}
+          <p style={{ ...sectionLabel, marginBottom: '0.5rem', borderBottom: '2px solid #111', paddingBottom: '0.4rem' }}>Editorial Credentials</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '1rem', marginBottom: '1.5rem', paddingTop: '0.75rem' }}>
+            {globalSec !== null && (
+              <div style={{ borderTop: '1px solid #ccc', paddingTop: '0.5rem' }}>
+                <div style={{ fontFamily: 'var(--font-playfair), serif', fontSize: '2.2rem', fontWeight: 900, color: globalSec >= 0.7 ? '#111' : '#8b0000', letterSpacing: '-0.03em', lineHeight: 1 }}>
+                  {(globalSec * 100).toFixed(0)}
                 </div>
-              )}
-              <div className="border border-zinc-900 self-start divide-y divide-zinc-100">
-                <div className="px-4 pt-4 pb-2">
-                  <h2 className="text-sm font-semibold text-zinc-900">Overview</h2>
-                  <p className="text-xs text-zinc-400 mt-1">{scores!.global.gamesPlayed} games played</p>
+                <div style={{ fontVariant: 'small-caps', fontSize: '0.6rem', color: '#888', fontFamily: 'var(--font-lora), serif', letterSpacing: '0.08em', marginTop: '0.2rem' }}>Security Score</div>
+              </div>
+            )}
+            {globalUtil !== null && (
+              <div style={{ borderTop: '1px solid #ccc', paddingTop: '0.5rem' }}>
+                <div style={{ fontFamily: 'var(--font-playfair), serif', fontSize: '2.2rem', fontWeight: 900, color: '#111', letterSpacing: '-0.03em', lineHeight: 1 }}>
+                  {(globalUtil * 100).toFixed(0)}
                 </div>
-                <div className="px-4 py-4 flex flex-col gap-4">
-                  {Object.entries(scores!.global.metrics).map(([key, value]) => (
-                    <div key={key}>
-                      <div className="text-xs text-zinc-400 mb-1 uppercase tracking-wide">{metricLabel(key)}</div>
-                      <div className={`text-2xl font-mono tabular-nums ${metricColor(key, value)}`}>
-                        {formatMetricValue(key, value)}
-                      </div>
-                    </div>
-                  ))}
+                <div style={{ fontVariant: 'small-caps', fontSize: '0.6rem', color: '#888', fontFamily: 'var(--font-lora), serif', letterSpacing: '0.08em', marginTop: '0.2rem' }}>Utility Score</div>
+              </div>
+            )}
+            {Object.entries(scores!.global.metrics).filter(([k]) => !k.includes('global-average')).map(([key, value]) => (
+              <div key={key} style={{ borderTop: '1px solid #ccc', paddingTop: '0.5rem' }}>
+                <div style={{ fontFamily: 'var(--font-playfair), serif', fontSize: '2.2rem', fontWeight: 900, color: metricColor(key, value), letterSpacing: '-0.03em', lineHeight: 1 }}>
+                  {formatMetricValue(key, value)}
+                </div>
+                <div style={{ fontVariant: 'small-caps', fontSize: '0.6rem', color: '#888', fontFamily: 'var(--font-lora), serif', letterSpacing: '0.08em', marginTop: '0.2rem' }}>
+                  {metricLabel(key)}
                 </div>
               </div>
-            </div>
-          )}
+            ))}
+          </div>
 
-          {/* Per-challenge cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {Object.entries(scores!.challenges).map(([challengeType, strategies]) => {
-              // Merge all strategy metrics + sum games played
-              const mergedMetrics: Record<string, number> = {};
-              let totalGames = 0;
-              Object.values(strategies).forEach((entry) => {
-                totalGames = Math.max(totalGames, entry.gamesPlayed);
-                Object.entries(entry.metrics).forEach(([k, v]) => {
-                  mergedMetrics[k] = v;
-                });
-              });
-              const metricEntries = Object.entries(mergedMetrics);
-
-              return (
-                <div key={challengeType} className="border border-zinc-900 p-6">
-                  <div className="flex items-baseline justify-between mb-4">
-                    <h2 className="text-sm font-semibold text-zinc-900">{challengeType}</h2>
-                    <span className="text-xs text-zinc-400 tabular-nums">{totalGames} games</span>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    {metricEntries.map(([key, value]) => (
-                      <div key={key} className="flex items-baseline justify-between">
-                        <span className="text-xs text-zinc-500">{metricLabel(key)}</span>
-                        <span className={`text-sm font-mono tabular-nums ${metricColor(key, value)}`}>
-                          {formatMetricValue(key, value)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+          {/* Leaderboard position graph + per-challenge breakdown */}
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '2rem', alignItems: 'start' }}>
+            {graphData.length > 0 && (
+              <div style={{ borderTop: '1px solid #111' }}>
+                <div style={{ paddingTop: '0.75rem', paddingBottom: '0.5rem' }}>
+                  <p style={{ ...sectionLabel }}>Leaderboard Position</p>
+                  <p style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.7rem', color: '#888', fontStyle: 'italic', marginTop: '0.2rem' }}>Average security vs utility across all challenges.</p>
                 </div>
-              );
-            })}
+                <LeaderboardGraph data={graphData} height={280} highlightName={displayName} />
+              </div>
+            )}
+
+            {/* Covers — challenge breakdown */}
+            <div style={{ borderTop: '1px solid #111', paddingTop: '0.75rem' }}>
+              <p style={{ ...sectionLabel, marginBottom: '0.75rem' }}>Challenges Covered</p>
+              {Object.entries(scores!.challenges).map(([challengeType, strategies]) => {
+                const mergedMetrics: Record<string, number> = {};
+                let totalGames = 0;
+                Object.values(strategies).forEach((entry) => {
+                  totalGames = Math.max(totalGames, entry.gamesPlayed);
+                  Object.entries(entry.metrics).forEach(([k, v]) => {
+                    mergedMetrics[k] = v;
+                  });
+                });
+                const metricEntries = Object.entries(mergedMetrics);
+
+                return (
+                  <div key={challengeType} style={{ borderTop: '1px solid #eee', paddingTop: '0.6rem', paddingBottom: '0.6rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+                      <h3 style={{ fontFamily: 'var(--font-playfair), serif', fontSize: '0.88rem', fontWeight: 700, color: '#111' }}>{challengeType}</h3>
+                      <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.65rem', color: '#888', fontStyle: 'italic' }}>{totalGames} games</span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                      {metricEntries.map(([key, value]) => (
+                        <div key={key} style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+                          <span style={{ fontFamily: 'var(--font-lora), serif', fontSize: '0.68rem', color: '#666' }}>{metricLabel(key)}</span>
+                          <span style={{ fontFamily: 'monospace', fontSize: '0.75rem', color: metricColor(key, value), fontWeight: 600 }}>
+                            {formatMetricValue(key, value)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
 
-      {/* Challenges */}
+      {/* User ID */}
+      <div style={{ borderTop: '1px solid #111', paddingTop: '0.75rem', marginBottom: '1.5rem' }}>
+        <p style={{ ...sectionLabel, marginBottom: '0.4rem' }}>Agent ID</p>
+        <CopyableInvite
+          invite={userId}
+          className="flex items-center gap-2 group cursor-pointer transition-colors"
+          showButton={false}
+        />
+      </div>
+
+      {/* Game log */}
       {challenges.length > 0 || challengesTotal > 0 ? (
         <ChallengesList
           challenges={challenges}
@@ -227,8 +320,8 @@ export default async function UserProfilePage({ params, searchParams }: { params
           basePath={`/users/${userId}`}
         />
       ) : (
-        <div className="border border-zinc-900 p-8 text-center">
-          <p className="text-zinc-600">No challenges found for this user.</p>
+        <div style={{ borderTop: '1px solid #111', paddingTop: '2rem', textAlign: 'center' }}>
+          <p style={{ fontFamily: 'var(--font-lora), serif', fontStyle: 'italic', color: '#888' }}>No challenges found for this agent.</p>
         </div>
       )}
     </section>
