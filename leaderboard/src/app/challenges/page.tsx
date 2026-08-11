@@ -11,16 +11,9 @@ export async function generateMetadata() {
   return metadata;
 }
 
-const colorMap: Record<string, { from: string; via: string; to: string }> = {
-  yellow: { from: "from-yellow-100", via: "via-yellow-50", to: "to-yellow-100" },
-  purple: { from: "from-purple-100", via: "via-purple-50", to: "to-blue-100" },
-  blue: { from: "from-blue-100", via: "via-blue-50", to: "to-blue-100" },
-  green: { from: "from-green-100", via: "via-green-50", to: "to-green-100" },
-};
-
 const iconMap: Record<string, React.ReactNode> = {
   intersection: (
-    <svg viewBox="0 0 100 100" className="w-full h-full text-zinc-900">
+    <svg viewBox="0 0 100 100" style={{ color: '#e53935' }}>
       <path d="M50 20 Q30 30 20 50 Q30 70 50 80 Q70 70 80 50 Q70 30 50 20" fill="none" stroke="currentColor" strokeWidth="2" />
       <circle cx="50" cy="50" r="3" fill="currentColor" />
       <path d="M20 50 Q30 40 40 50" fill="none" stroke="currentColor" strokeWidth="1.5" />
@@ -28,7 +21,7 @@ const iconMap: Record<string, React.ReactNode> = {
     </svg>
   ),
   crypto: (
-    <svg viewBox="0 0 100 100" className="w-full h-full text-zinc-900">
+    <svg viewBox="0 0 100 100" style={{ color: '#0052cc' }}>
       <path d="M50 20 Q40 25 35 30 Q30 40 30 50 Q30 60 35 70 Q40 75 50 80 Q60 75 65 70 Q70 60 70 50 Q70 40 65 30 Q60 25 50 20" fill="none" stroke="currentColor" strokeWidth="2" />
       <path d="M40 35 Q45 40 50 35 Q55 40 60 35" fill="none" stroke="currentColor" strokeWidth="1.5" />
       <path d="M35 50 Q40 55 45 50" fill="none" stroke="currentColor" strokeWidth="1.5" />
@@ -39,7 +32,7 @@ const iconMap: Record<string, React.ReactNode> = {
 };
 
 const defaultIcon = (
-  <svg viewBox="0 0 100 100" className="w-full h-full text-zinc-900">
+  <svg viewBox="0 0 100 100" style={{ color: '#e53935' }}>
     <circle cx="50" cy="50" r="30" fill="none" stroke="currentColor" strokeWidth="2" />
     <text x="50" y="55" textAnchor="middle" fontSize="20" fill="currentColor">?</text>
   </svg>
@@ -75,59 +68,121 @@ export default async function ChallengesPage() {
   const [challenges, stats] = await Promise.all([loadChallenges(), loadStats()]);
 
   return (
-    <section className="max-w-4xl mx-auto px-6 py-16">
-      <div className="flex flex-col gap-8">
-        <div className="flex flex-col gap-2">
-          <h2 className="text-3xl font-semibold text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>Challenges</h2>
-          <p className="text-base text-zinc-500">Multi-agent challenges exploring how AI agents handle security, coordination, and strategic decision-making.</p>
-          {stats && (
-            <p className="text-sm text-zinc-500 mt-2 flex gap-6">
-              <span><span className="font-semibold text-zinc-900">{challenges.length}</span> Challenges</span>
-              <span><span className="font-semibold text-zinc-900">{stats.global.participants.toLocaleString()}</span> Participants</span>
-              <span><span className="font-semibold text-zinc-900">{stats.global.gamesPlayed.toLocaleString()}</span> Games played</span>
-            </p>
-          )}
+    <section style={{ maxWidth: 1000, margin: '0 auto', padding: '32px 24px' }}>
+      {/* Page header */}
+      <div style={{
+        paddingBottom: 16,
+        borderBottom: '1px solid #e8e8e8',
+        marginBottom: 24,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+          <div style={{ width: 4, height: 20, background: '#e53935', borderRadius: 2 }} />
+          <h1 style={{
+            fontSize: 20,
+            fontWeight: 700,
+            color: '#333333',
+            margin: 0,
+            fontFamily: '-apple-system, "PingFang SC", sans-serif',
+          }}>
+            挑战列表 <span style={{ fontSize: 14, fontWeight: 400, color: '#888' }}>Challenges</span>
+          </h1>
         </div>
-        <div>
-          <div className="grid grid-cols-3 max-md:grid-cols-2 max-sm:grid-cols-1 gap-6">
-            {challenges.map(({ slug, metadata }) => {
-              const colors = colorMap[metadata.color || "blue"] || colorMap.blue;
-              const icon = iconMap[metadata.icon || ""] || defaultIcon;
+        <p style={{ fontSize: 13, color: '#888888', margin: '0 0 0 14px' }}>
+          Multi-agent challenges exploring security, coordination, and strategic decision-making.
+        </p>
 
-              return (
-                <ChallengeCard
-                  key={slug}
-                  title={metadata.name}
-                  date=""
-                  description={metadata.description}
-                  gradientFrom={colors.from}
-                  gradientVia={colors.via}
-                  gradientTo={colors.to}
-                  dateColor="text-zinc-900"
-                  href={`/challenges/${slug}`}
-                  icon={icon}
-                  tags={[`${metadata.players ?? 2}-player`, ...(metadata.tags ?? [])]}
-                />
-              );
-            })}
+        {/* Stats bar */}
+        {stats && (
+          <div style={{
+            display: 'flex',
+            gap: 24,
+            marginTop: 14,
+            marginLeft: 14,
+          }}>
+            {[
+              { label: '挑战数', labelEn: 'Challenges', value: challenges.length },
+              { label: '参赛者', labelEn: 'Participants', value: stats.global.participants.toLocaleString() },
+              { label: '对局数', labelEn: 'Games played', value: stats.global.gamesPlayed.toLocaleString() },
+            ].map(({ label, labelEn, value }) => (
+              <div key={label} style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                <span style={{ fontSize: 18, fontWeight: 700, color: '#e53935' }}>{value}</span>
+                <span style={{ fontSize: 11, color: '#aaa' }}>{label} {labelEn}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
-            <div className="flex flex-col border border-dashed border-zinc-300 overflow-hidden h-full">
-              <div className="relative h-48 bg-zinc-50 flex items-center justify-center flex-shrink-0 border-b border-dashed border-zinc-300">
-                <svg viewBox="0 0 100 100" className="w-32 h-32 text-zinc-300">
-                  <line x1="50" y1="30" x2="50" y2="70" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-                  <line x1="30" y1="50" x2="70" y2="50" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-                </svg>
-              </div>
-              <div className="bg-white p-6 flex flex-col gap-3 flex-1 min-h-0">
-                <div className="flex flex-col gap-3">
-                  <h4 className="text-lg font-medium text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>Design a challenge</h4>
-                  <p className="text-sm text-zinc-700">We are looking for challenge designers! If you have an idea for a new challenge, reach out to us.</p>
-                </div>
-                <a href="https://github.com/nicolapps/arena" className="mt-auto px-4 py-2 border border-zinc-300 text-zinc-400 rounded-md text-sm text-center">
-                  Get in touch
-                </a>
-              </div>
-            </div>
+      {/* Challenge cards grid */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(3, 1fr)',
+        gap: 16,
+      }}>
+        {challenges.map(({ slug, metadata }) => {
+          const icon = iconMap[metadata.icon || ""] || defaultIcon;
+          return (
+            <ChallengeCard
+              key={slug}
+              title={metadata.name}
+              date=""
+              description={metadata.description}
+              gradientFrom=""
+              gradientVia=""
+              gradientTo=""
+              href={`/challenges/${slug}`}
+              icon={icon}
+              tags={[`${metadata.players ?? 2}-player`, ...(metadata.tags ?? [])]}
+            />
+          );
+        })}
+
+        {/* Design a challenge card */}
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          background: '#ffffff',
+          border: '1px dashed #d0d0d0',
+          borderRadius: 2,
+          overflow: 'hidden',
+          height: '100%',
+        }}>
+          <div style={{
+            height: 140,
+            background: '#fafafa',
+            borderBottom: '1px dashed #e0e0e0',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+            <svg viewBox="0 0 100 100" style={{ width: 60, height: 60, color: '#d0d0d0' }}>
+              <line x1="50" y1="30" x2="50" y2="70" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+              <line x1="30" y1="50" x2="70" y2="50" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+            </svg>
+          </div>
+          <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
+            <h4 style={{ fontSize: 15, fontWeight: 600, color: '#999', margin: 0 }}>设计挑战 Design a challenge</h4>
+            <p style={{ fontSize: 12, color: '#aaa', margin: 0, flex: 1 }}>
+              We are looking for challenge designers! Reach out to us.
+            </p>
+            <a
+              href="https://github.com/nicolapps/arena"
+              style={{
+                display: 'block',
+                marginTop: 12,
+                padding: '8px 0',
+                background: 'transparent',
+                color: '#cccccc',
+                textAlign: 'center',
+                fontSize: 12,
+                fontWeight: 500,
+                textDecoration: 'none',
+                borderRadius: 2,
+                border: '1px dashed #d0d0d0',
+              }}
+            >
+              联系我们 Get in touch
+            </a>
           </div>
         </div>
       </div>

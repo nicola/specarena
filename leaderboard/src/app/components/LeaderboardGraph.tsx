@@ -199,8 +199,9 @@ export default function LeaderboardGraph({ data = [], height = 400, highlightNam
       height: height,
       grid: false,
       style: {
-        color: "#18181b",
-        fontFamily: "var(--font-jost), Jost, sans-serif",
+        color: "#333333",
+        fontFamily: '-apple-system, "PingFang SC", "Helvetica Neue", Arial, sans-serif',
+        background: "transparent",
       },
       marginBottom: 40,
       x: {
@@ -225,19 +226,19 @@ export default function LeaderboardGraph({ data = [], height = 400, highlightNam
         Plot.dot(data.filter((d) => !highlightSet.has(d.name)), {
           x: "securityPolicy",
           y: "utility",
-          fill: (d) => d.isBenchmark ? "#f59e0b" : paretoSet.has(d.name) ? "#000" : "#a1a1aa",
+          fill: (d) => d.isBenchmark ? "#ff9800" : paretoSet.has(d.name) ? "#e53935" : "#bbbbbb",
           r: (d) => paretoSet.has(d.name) ? 7 : d.isBenchmark ? 6 : 5,
-          stroke: (d) => d.isBenchmark ? "#d97706" : "none",
-          strokeWidth: (d) => d.isBenchmark ? 1.5 : 0,
+          stroke: (d) => d.isBenchmark ? "#e65100" : paretoSet.has(d.name) ? "#c62828" : "none",
+          strokeWidth: (d) => (d.isBenchmark || paretoSet.has(d.name)) ? 1.5 : 0,
           ...dotTipOptions,
         }),
         // Highlighted point (rendered last, on top)
         ...highlightSet.size > 0 ? [Plot.dot(data.filter((d) => highlightSet.has(d.name)), {
           x: "securityPolicy",
           y: "utility",
-          fill: "#6366f1",
-          r: 7,
-          stroke: "#4f46e5",
+          fill: "#0052cc",
+          r: 8,
+          stroke: "#1a237e",
           strokeWidth: 2,
           ...dotTipOptions,
         })] : [],
@@ -250,7 +251,7 @@ export default function LeaderboardGraph({ data = [], height = 400, highlightNam
             dx: d.dx,
             dy: d.dy,
             fontSize: 11,
-            fill: d.isHighlight ? "#6366f1" : d.isBenchmark ? "#f59e0b" : d.isPareto ? "#000" : "#a1a1aa",
+            fill: d.isHighlight ? "#0052cc" : d.isBenchmark ? "#e65100" : d.isPareto ? "#e53935" : "#aaaaaa",
             fontWeight: "600",
             textAnchor: d.anchor,
           });
@@ -265,10 +266,10 @@ export default function LeaderboardGraph({ data = [], height = 400, highlightNam
     if (svg) {
       // Set font on all text, but only override fill on axis text (not data labels)
       svg.querySelectorAll("text").forEach((text) => {
-        (text as SVGTextElement).setAttribute("font-family", "var(--font-jost), Jost, sans-serif");
+        (text as SVGTextElement).setAttribute("font-family", '-apple-system, "PingFang SC", "Helvetica Neue", Arial, sans-serif');
       });
       svg.querySelectorAll("[aria-label*='axis'] text").forEach((text) => {
-        (text as SVGTextElement).setAttribute("fill", "#18181b");
+        (text as SVGTextElement).setAttribute("fill", "#555555");
       });
       // Bump axis label font size
       svg.querySelectorAll("[aria-label='x-axis label'], [aria-label='y-axis label']").forEach((label) => {

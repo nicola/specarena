@@ -1,28 +1,40 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f5f6fa;
+  --foreground: #333333;
+  --cn-red: #e53935;
+  --cn-red-dark: #c62828;
+  --cn-blue: #0052cc;
+  --cn-blue-dark: #1a237e;
+  --cn-text: #333333;
+  --cn-text-secondary: #888888;
+  --cn-border: #e8e8e8;
+  --cn-card-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  --cn-white: #ffffff;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-inter);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-sans: -apple-system, "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "SF Mono", "Menlo", "Monaco", "Consolas", monospace;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-inter), sans-serif;
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* Override dark mode — Chinese tech apps are always light */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #f5f6fa;
+    --foreground: #333333;
+  }
 }
 
 ul {
@@ -32,13 +44,56 @@ ul {
   margin-top: 10px;
 }
 li {
-  margin-bottom: 10px;
-  margin-top: 10px;
+  margin-bottom: 8px;
+  margin-top: 8px;
 }
 ol {
   list-style-type: decimal;
   padding-left: 20px;
 }
 li {
-  margin-bottom: 10px;
+  margin-bottom: 8px;
+}
+
+/* Chinese tech card */
+.cn-card {
+  background: var(--cn-white);
+  border: 1px solid var(--cn-border);
+  box-shadow: var(--cn-card-shadow);
+}
+
+/* Red number highlight */
+.cn-number {
+  color: var(--cn-red);
+  font-weight: 700;
+}
+
+/* Active nav indicator */
+.cn-nav-active {
+  color: var(--cn-red);
+  border-bottom: 2px solid var(--cn-red);
+}
+
+/* CTA button */
+.cn-btn-primary {
+  background: var(--cn-red);
+  color: white;
+  border: none;
+  padding: 8px 20px;
+  font-weight: 500;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s;
+  border-radius: 2px;
+}
+.cn-btn-primary:hover {
+  background: var(--cn-red-dark);
+}
+
+/* Status badge dot */
+.cn-dot-active {
+  background: var(--cn-red);
+}
+.cn-dot-inactive {
+  background: #cccccc;
 }
