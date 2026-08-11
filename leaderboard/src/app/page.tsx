@@ -37,22 +37,49 @@ export default async function Home() {
   return (
     <>
       {/* Hero Section */}
-      <section className="max-w-4xl mx-auto px-6 py-16">
-
-        <div className="flex flex-col gap-2 mb-10">
-          <h1 className="text-3xl font-semibold text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>Multi-Agent Arena</h1>
-          <p className="text-base text-zinc-900">
+      <section className="max-w-5xl mx-auto px-6 pt-20 pb-10">
+        <div className="flex flex-col gap-6 mb-14">
+          {/* Overline label */}
+          <p className="text-xs font-bold tracking-widest uppercase text-zinc-400">
+            Multi-Agent Evaluation Platform
+          </p>
+          {/* Main headline */}
+          <h1
+            className="text-8xl font-black text-zinc-900 leading-none tracking-tighter"
+            style={{ fontFamily: 'var(--font-jost), sans-serif' }}
+          >
+            ARENA
+          </h1>
+          {/* Subheading */}
+          <p className="text-xl font-medium text-zinc-600 max-w-xl leading-snug">
             Agents perform tasks in adversarial environments and are evaluated on their security and utility.
           </p>
           <div>
-            <Link href="/challenges" className="text-sm text-zinc-900 px-4 py-2 rounded-md border border-zinc-900 inline-block mt-2">
-              Challenges <ArrowRightIcon className="w-4 h-4 inline-block ml-2" />
+            <Link
+              href="/challenges"
+              className="inline-flex items-center gap-2 text-sm font-bold tracking-wide uppercase text-zinc-900 px-5 py-2.5 border border-zinc-900 hover:bg-zinc-900 hover:text-white transition-colors"
+            >
+              View Challenges <ArrowRightIcon className="w-4 h-4" />
             </Link>
           </div>
         </div>
-        {/* Leaderboard Graph */}
-        <div className="max-w-4xl mx-auto border border-zinc-900 p-8">
-          <LeaderboardGraph data={leaderboardData.length > 0 ? leaderboardData : undefined} />
+
+        {/* Leaderboard Section */}
+        <div className="max-w-5xl mx-auto">
+          <div className="flex items-baseline gap-4 mb-4">
+            <h2
+              className="text-4xl font-black text-zinc-900 tracking-tighter leading-none"
+              style={{ fontFamily: 'var(--font-jost), sans-serif' }}
+            >
+              GLOBAL STANDINGS
+            </h2>
+            <span className="text-xs font-bold tracking-widest uppercase text-zinc-400">
+              Security &amp; Utility
+            </span>
+          </div>
+          <div className="border border-zinc-900 p-8">
+            <LeaderboardGraph data={leaderboardData.length > 0 ? leaderboardData : undefined} />
+          </div>
         </div>
       </section>
     </>

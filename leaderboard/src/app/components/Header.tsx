@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { useState, useRef, useCallback } from "react";
 
-const OVAL_WIDTH = 65;
-const OVAL_HEIGHT = 19;
-const OVAL_Y_SHIFT = 6;
+const OVAL_WIDTH = 80;
+const OVAL_HEIGHT = 24;
+const OVAL_Y_SHIFT = 7;
 const OVAL_CONTOUR = 3;
-const OVAL_STROKE = 1;
+const OVAL_STROKE = 1.5;
 
 function ArenaLogo({ width = OVAL_WIDTH, height = OVAL_HEIGHT, yShift = OVAL_Y_SHIFT, contour = OVAL_CONTOUR, stroke = OVAL_STROKE }: { width?: number; height?: number; yShift?: number; contour?: number; stroke?: number }) {
   const rx = width / 2 - 1;
@@ -24,7 +24,6 @@ function ArenaLogo({ width = OVAL_WIDTH, height = OVAL_HEIGHT, yShift = OVAL_Y_S
   }, []);
 
   const onLeave = useCallback(() => {
-    // Don't reset — leave letters frozen where they stopped
     if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
     setFighting(false);
   }, []);
@@ -54,16 +53,18 @@ function ArenaLogo({ width = OVAL_WIDTH, height = OVAL_HEIGHT, yShift = OVAL_Y_S
       `}</style>
       {/* Logo text (z-10) */}
       <span
-        className={`relative z-10 text-zinc-900 font-medium ${fighting ? 'fighting' : ''}`}
+        className={`relative z-10 text-zinc-900 font-black tracking-widest text-base ${fighting ? 'fighting' : ''}`}
         style={{
           fontFamily: 'var(--font-jost), sans-serif',
           paintOrder: 'stroke fill',
           WebkitTextStroke: `${contour}px white`,
+          letterSpacing: '0.18em',
         }}
       >
-        <span className="inline-block f1 relative z-[3]">A</span><span className="inline-block f2 relative z-[4]">R</span>
-        <span className="inline-block f3 relative text-[12px] font-semibold top-[-4px] left-[2px] z-[3]">E</span>
-        <span className="inline-block f4 relative text-[11px] font-bold top-[5px] left-[-2px] ml-[-1px] z-[6]" style={{ WebkitTextStroke: '0px' }}>N</span>
+        <span className="inline-block f1 relative z-[3]">A</span>
+        <span className="inline-block f2 relative z-[4]">R</span>
+        <span className="inline-block f3 relative z-[3]">E</span>
+        <span className="inline-block f4 relative z-[6]" style={{ WebkitTextStroke: '0px' }}>N</span>
         <span className="inline-block f5 relative z-[5]">A</span>
       </span>
       {/* Bottom half of oval — in front of text (z-20) */}
@@ -79,21 +80,21 @@ function ArenaLogo({ width = OVAL_WIDTH, height = OVAL_HEIGHT, yShift = OVAL_Y_S
 
 export default function Header() {
   return (
-    <header className="w-full border-b border-zinc-900 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-      <div className="max-w-4xl mx-auto px-6 py-4">
-        <div className="flex items-center justify-between gap-6">
-          <div className="flex items-center gap-6">
+    <header className="w-full border-b border-zinc-900 bg-white/90 backdrop-blur-sm sticky top-0 z-50">
+      <div className="max-w-5xl mx-auto px-6 py-5">
+        <div className="flex items-center justify-between gap-8">
+          <div className="flex items-center gap-10">
             <div className="flex items-center justify-center">
               <ArenaLogo />
             </div>
-            <nav className="flex items-center gap-6">
-              <Link href="/" className="text-sm font-medium text-zinc-900 hover:text-zinc-900 transition-colors">
+            <nav className="flex items-center gap-8">
+              <Link href="/" className="text-sm font-semibold text-zinc-900 tracking-wide uppercase hover:text-zinc-600 transition-colors">
                 Leaderboard
               </Link>
-              <Link href="/challenges" className="text-sm font-medium text-zinc-900 hover:text-zinc-900 transition-colors">
+              <Link href="/challenges" className="text-sm font-semibold text-zinc-900 tracking-wide uppercase hover:text-zinc-600 transition-colors">
                 Challenges
               </Link>
-              <Link href="/docs" className="text-sm font-medium text-zinc-900 hover:text-zinc-900 transition-colors">
+              <Link href="/docs" className="text-sm font-semibold text-zinc-900 tracking-wide uppercase hover:text-zinc-600 transition-colors">
                 Docs
               </Link>
             </nav>
@@ -103,4 +104,3 @@ export default function Header() {
     </header>
   );
 }
-

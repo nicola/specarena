@@ -107,7 +107,7 @@ export default async function ChallengePage({ params, searchParams }: { params: 
 
         <div className="flex items-top justify-between gap-6">
           <div className="flex flex-col gap-2 mb-4 sm:w-1/2">
-            <h1 className="text-3xl font-semibold text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
+            <h1 className="text-6xl font-black text-zinc-900 tracking-tighter leading-none" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
               {challenge.name}
               {challenge.url && (
                 <a href={challenge.url} target="_blank" rel="noopener noreferrer" className="ml-2 text-zinc-400 hover:text-zinc-600 inline-block align-middle">
@@ -118,7 +118,7 @@ export default async function ChallengePage({ params, searchParams }: { params: 
                 </a>
               )}
             </h1>
-            <p className="text-base text-zinc-900">
+            <p className="text-xl text-zinc-600 mt-2">
               {challenge.description}
             </p>
           </div>
@@ -169,8 +169,8 @@ export default async function ChallengePage({ params, searchParams }: { params: 
               {hasGraph && (
                 <div className="border border-zinc-900 self-start md:col-span-2 divide-y divide-zinc-100">
                   <div className="px-4 pt-4 pb-2">
-                    <h2 className="text-sm font-semibold text-zinc-900">Leaderboard</h2>
-                    <p className="text-xs text-zinc-400 mt-1">Average security vs utility scores for this challenge.</p>
+                    <h2 className="text-xl font-black text-zinc-900 tracking-tight">Leaderboard</h2>
+                    <p className="text-xs text-zinc-400 mt-1 uppercase tracking-widest">Average security vs utility scores for this challenge.</p>
                   </div>
                   <div className="p-4">
                     <LeaderboardGraph data={scoringData} height={300} />
@@ -181,8 +181,8 @@ export default async function ChallengePage({ params, searchParams }: { params: 
                 {unbeaten.length > 0 && (
                   <div className="border border-zinc-900 self-start w-full divide-y divide-zinc-100">
                     <div className="px-4 pt-4 pb-2">
-                      <h2 className="text-sm font-semibold text-zinc-900 flex items-center gap-1.5">Unbeaten <ShieldCheckIcon className="w-3.5 h-3.5 text-blue-300" /></h2>
-                      <p className="text-xs text-zinc-400 mt-1">Never breached, ranked by utility.</p>
+                      <h2 className="text-xl font-black text-zinc-900 tracking-tight flex items-center gap-1.5">Unbeaten <ShieldCheckIcon className="w-4 h-4 text-blue-300" /></h2>
+                      <p className="text-xs text-zinc-400 mt-1 uppercase tracking-widest">Never breached, ranked by utility.</p>
                     </div>
                     <div className="divide-y divide-zinc-100">
                       {unbeaten.map((player, i) => (
@@ -198,8 +198,8 @@ export default async function ChallengePage({ params, searchParams }: { params: 
                 {redTeamData.length > 0 && (
                   <div className="border border-zinc-900 self-start w-full divide-y divide-zinc-100">
                     <div className="px-4 pt-4 pb-2">
-                      <h2 className="text-sm font-semibold text-zinc-900 flex items-center gap-1.5">Top Attackers <FireIcon className="w-3.5 h-3.5 text-red-300" /></h2>
-                      <p className="text-xs text-zinc-400 mt-1">Percentage of successful attacks.</p>
+                      <h2 className="text-xl font-black text-zinc-900 tracking-tight flex items-center gap-1.5">Top Attackers <FireIcon className="w-4 h-4 text-red-300" /></h2>
+                      <p className="text-xs text-zinc-400 mt-1 uppercase tracking-widest">Percentage of successful attacks.</p>
                     </div>
                     <div className="divide-y divide-zinc-100">
                       {redTeamData.map((player, i) => (
@@ -227,11 +227,24 @@ export default async function ChallengePage({ params, searchParams }: { params: 
           pageSize={pageSize}
           basePath={`/challenges/${name}`}
           subtitle={
-            <p className="text-sm text-zinc-500 flex gap-4">
-              <span><span className="font-semibold text-zinc-900">{challengesTotal.toLocaleString()}</span> Games</span>
-              {scoringData.length > 0 && <span><span className="font-semibold text-zinc-900">{scoringData.length}</span> Participants</span>}
-              {stats?.challenges?.[name]?.gamesPlayed > 0 && <span><span className="font-semibold text-zinc-900">{stats.challenges[name].gamesPlayed.toLocaleString()}</span> Completed</span>}
-            </p>
+            <div className="flex gap-8 mt-2">
+              <div>
+                <div className="text-xs uppercase tracking-widest text-zinc-500">Games</div>
+                <div className="text-3xl font-black font-mono text-zinc-900 tabular-nums">{challengesTotal.toLocaleString()}</div>
+              </div>
+              {scoringData.length > 0 && (
+                <div>
+                  <div className="text-xs uppercase tracking-widest text-zinc-500">Participants</div>
+                  <div className="text-3xl font-black font-mono text-zinc-900 tabular-nums">{scoringData.length}</div>
+                </div>
+              )}
+              {stats?.challenges?.[name]?.gamesPlayed > 0 && (
+                <div>
+                  <div className="text-xs uppercase tracking-widest text-zinc-500">Completed</div>
+                  <div className="text-3xl font-black font-mono text-zinc-900 tabular-nums">{stats.challenges[name].gamesPlayed.toLocaleString()}</div>
+                </div>
+              )}
+            </div>
           }
         />
       </section>
