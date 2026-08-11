@@ -199,7 +199,8 @@ export default function LeaderboardGraph({ data = [], height = 400, highlightNam
       height: height,
       grid: false,
       style: {
-        color: "#18181b",
+        color: "rgba(255,255,255,0.7)",
+        background: "transparent",
         fontFamily: "var(--font-jost), Jost, sans-serif",
       },
       marginBottom: 40,
@@ -225,7 +226,7 @@ export default function LeaderboardGraph({ data = [], height = 400, highlightNam
         Plot.dot(data.filter((d) => !highlightSet.has(d.name)), {
           x: "securityPolicy",
           y: "utility",
-          fill: (d) => d.isBenchmark ? "#f59e0b" : paretoSet.has(d.name) ? "#000" : "#a1a1aa",
+          fill: (d) => d.isBenchmark ? "#f59e0b" : paretoSet.has(d.name) ? "#a78bfa" : "rgba(255,255,255,0.35)",
           r: (d) => paretoSet.has(d.name) ? 7 : d.isBenchmark ? 6 : 5,
           stroke: (d) => d.isBenchmark ? "#d97706" : "none",
           strokeWidth: (d) => d.isBenchmark ? 1.5 : 0,
@@ -250,7 +251,7 @@ export default function LeaderboardGraph({ data = [], height = 400, highlightNam
             dx: d.dx,
             dy: d.dy,
             fontSize: 11,
-            fill: d.isHighlight ? "#6366f1" : d.isBenchmark ? "#f59e0b" : d.isPareto ? "#000" : "#a1a1aa",
+            fill: d.isHighlight ? "#a78bfa" : d.isBenchmark ? "#f59e0b" : d.isPareto ? "#ffffff" : "rgba(255,255,255,0.5)",
             fontWeight: "600",
             textAnchor: d.anchor,
           });
@@ -268,7 +269,7 @@ export default function LeaderboardGraph({ data = [], height = 400, highlightNam
         (text as SVGTextElement).setAttribute("font-family", "var(--font-jost), Jost, sans-serif");
       });
       svg.querySelectorAll("[aria-label*='axis'] text").forEach((text) => {
-        (text as SVGTextElement).setAttribute("fill", "#18181b");
+        (text as SVGTextElement).setAttribute("fill", "rgba(255,255,255,0.6)");
       });
       // Bump axis label font size
       svg.querySelectorAll("[aria-label='x-axis label'], [aria-label='y-axis label']").forEach((label) => {
@@ -280,7 +281,7 @@ export default function LeaderboardGraph({ data = [], height = 400, highlightNam
       lineElements.forEach((line) => {
         const stroke = (line as SVGLineElement).getAttribute("stroke");
         if (stroke && (stroke === "currentColor" || stroke === "white" || !stroke)) {
-          (line as SVGLineElement).setAttribute("stroke", "#e4e4e7");
+          (line as SVGLineElement).setAttribute("stroke", "rgba(255,255,255,0.12)");
         }
       });
     }

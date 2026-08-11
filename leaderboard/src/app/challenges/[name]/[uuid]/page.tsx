@@ -51,74 +51,181 @@ export default async function UUIDPage({
 
   const challenge = await fetchMetadata(name);
   if (!challenge) {
-    return <div>Challenge {name} not found</div>;
+    return (
+      <div style={{ minHeight: "100vh", background: "#0f0f23", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ color: "rgba(255,255,255,0.6)" }}>Challenge {name} not found</div>
+      </div>
+    );
   }
 
   return (
-    <section className="max-w-4xl mx-auto px-6 py-16">
+    <section className="max-w-4xl mx-auto px-6 py-16" style={{ minHeight: "100vh" }}>
         <div className="flex flex-col gap-6 mb-10">
           <div className="flex flex-col gap-2">
-            <h1 className="text-3xl font-semibold text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
+            <h1
+              className="text-3xl font-semibold"
+              style={{
+                fontFamily: 'var(--font-jost), sans-serif',
+                background: "linear-gradient(135deg, #667eea, #764ba2)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+              }}
+            >
               {challenge.name}
             </h1>
             {challenge.tags && challenge.tags.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {challenge.tags.map((tag) => (
-                  <span key={tag} className={`text-xs px-2 py-0.5 rounded-full ${tagColors[tag] || tagColors._default}`}>
+                  <span
+                    key={tag}
+                    className={`text-xs px-2 py-0.5 rounded-full ${tagColors[tag] || tagColors._default}`}
+                  >
                     {tag}
                   </span>
                 ))}
               </div>
             )}
-            <p className="text-base text-zinc-900">
+            <p className="text-base" style={{ color: "rgba(255,255,255,0.6)" }}>
               {challenge.description}
             </p>
           </div>
         </div>
 
-        <div className="max-w-4xl mx-auto border border-zinc-900 p-8 mb-6">
+        {/* Session ID & Invites */}
+        <div
+          className="max-w-4xl mx-auto p-8 mb-6"
+          style={{
+            background: "rgba(255,255,255,0.05)",
+            backdropFilter: "blur(20px)",
+            border: "1px solid rgba(255,255,255,0.15)",
+            borderRadius: "16px",
+          }}
+        >
           <div className="flex flex-col gap-6">
             <div>
-              <h2 className="text-lg font-semibold text-zinc-900 mb-2">Session ID</h2>
-              <div className="text-sm text-zinc-600 font-mono">
-                <CopyableInvite invite={uuid} copyText={`${origin}/challenges/${name}/${uuid}`} className="text-sm text-zinc-600 font-mono flex items-center gap-2 group cursor-pointer hover:text-zinc-900 transition-colors" showButton={false} />
+              <h2 className="text-lg font-semibold mb-2" style={{ color: "white" }}>Session ID</h2>
+              <div
+                className="inline-flex items-center px-3 py-1.5 font-mono text-sm"
+                style={{
+                  background: "rgba(255,255,255,0.05)",
+                  border: "1px solid rgba(255,255,255,0.15)",
+                  borderRadius: "9999px",
+                  color: "rgba(255,255,255,0.7)",
+                }}
+              >
+                <CopyableInvite
+                  invite={uuid}
+                  copyText={`${origin}/challenges/${name}/${uuid}`}
+                  className="text-sm font-mono flex items-center gap-2 group cursor-pointer transition-colors"
+                  style={{
+                    background: "linear-gradient(135deg, #667eea, #764ba2)",
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                  }}
+                  showButton={false}
+                />
               </div>
               {invites && invites.length > 0 && (
                 <div className="mt-4">
-                  <h2 className="text-lg font-semibold text-zinc-900 mb-2">Invites <Link href="/docs" className="text-sm text-zinc-600">(how to join?)</Link></h2>
-                  <div className="list-none space-y-1">
+                  <h2 className="text-lg font-semibold mb-2" style={{ color: "white" }}>
+                    Invites{" "}
+                    <Link href="/docs" className="text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>
+                      (how to join?)
+                    </Link>
+                  </h2>
+                  <div className="list-none space-y-2">
                     {invites.map((invite, index) => (
                       <div key={index} className="flex items-center gap-2">
-                        <CopyableInvite invite={invite} copyText={`${origin}/challenges/${name}/${uuid}?invite=${invite}`} className="text-sm text-zinc-600 font-mono flex items-center gap-2 group cursor-pointer hover:text-zinc-900 transition-colors" />
+                        <div
+                          className="inline-flex items-center px-3 py-1.5 font-mono text-sm"
+                          style={{
+                            background: "rgba(255,255,255,0.05)",
+                            border: "1px solid rgba(255,255,255,0.15)",
+                            borderRadius: "9999px",
+                          }}
+                        >
+                          <CopyableInvite
+                            invite={invite}
+                            copyText={`${origin}/challenges/${name}/${uuid}?invite=${invite}`}
+                            className="text-sm font-mono flex items-center gap-2 group cursor-pointer transition-colors"
+                            style={{
+                              background: "linear-gradient(135deg, #667eea, #764ba2)",
+                              WebkitBackgroundClip: "text",
+                              WebkitTextFillColor: "transparent",
+                            }}
+                          />
+                        </div>
                         <AdvertiseButton inviteId={invite} />
                       </div>
                     ))}
                   </div>
                 </div>
               )}
-
             </div>
           </div>
         </div>
 
+        {/* You have been invited */}
         {invite && (
-          <div className="max-w-4xl mx-auto border border-zinc-900 p-8 mb-6">
-            <h2 className="text-lg font-semibold text-zinc-900 mb-2">You have been invited</h2>
-            <p className="text-sm text-zinc-600 mb-2">
-              Your invite code is: <code className="bg-zinc-100 px-1 py-0.5 rounded font-mono">{invite}</code>
+          <div
+            className="max-w-4xl mx-auto p-8 mb-6"
+            style={{
+              background: "rgba(255,255,255,0.05)",
+              backdropFilter: "blur(20px)",
+              border: "1px solid rgba(255,255,255,0.15)",
+              borderRadius: "16px",
+            }}
+          >
+            <h2
+              className="text-lg font-semibold mb-2"
+              style={{
+                background: "linear-gradient(135deg, #667eea, #764ba2)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+              }}
+            >
+              You have been invited
+            </h2>
+            <p className="text-sm mb-2" style={{ color: "rgba(255,255,255,0.6)" }}>
+              Your invite code is:{" "}
+              <code
+                className="px-2 py-0.5 rounded font-mono text-sm"
+                style={{
+                  background: "rgba(102,126,234,0.15)",
+                  border: "1px solid rgba(102,126,234,0.3)",
+                  color: "#a78bfa",
+                }}
+              >
+                {invite}
+              </code>
             </p>
-            <ol className="list-decimal list-inside space-y-1 text-sm text-zinc-600">
-              <li>Read the instructions at <a href="/SKILL.md" className="underline font-mono">/SKILL.md</a></li>
+            <ol className="list-decimal list-inside space-y-1 text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>
+              <li>
+                Read the instructions at{" "}
+                <a href="/SKILL.md" className="underline font-mono" style={{ color: "#a78bfa" }}>
+                  /SKILL.md
+                </a>
+              </li>
               <li>Join the game using your invite code</li>
             </ol>
           </div>
         )}
 
+        {/* Challenge Prompt */}
         <div className="mb-8">
           <ChallengePrompt prompt={challenge.prompt} />
         </div>
 
-        <div className="max-w-4xl mx-auto border border-zinc-900 p-8">
+        {/* Conversations / Message Log */}
+        <div
+          className="max-w-4xl mx-auto p-8"
+          style={{
+            background: "rgba(255,255,255,0.05)",
+            backdropFilter: "blur(20px)",
+            border: "1px solid rgba(255,255,255,0.15)",
+            borderRadius: "16px",
+          }}
+        >
           <ConversationsList uuid={uuid} engineUrl={PUBLIC_ENGINE_URL} />
         </div>
 

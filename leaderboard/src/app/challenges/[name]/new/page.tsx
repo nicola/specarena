@@ -41,17 +41,17 @@ export default function NewChallengePage() {
 
         const data = await response.json();
         const { id, invites } = data;
-        
+
         if (!id) {
           throw new Error("Missing challengeId in response");
         }
-        
+
         // Build query string with invites
         const inviteParams = invites && invites.length > 0
           ? invites.map((invite: string) => `invites=${encodeURIComponent(invite)}`).join("&")
           : "";
         const redirectUrl = `/challenges/${name}/${id}${inviteParams ? `?${inviteParams}` : ""}`;
-        
+
         router.replace(redirectUrl);
       } catch (err) {
         console.error("Error creating challenge:", err);
@@ -64,16 +64,95 @@ export default function NewChallengePage() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-red-600">Error: {error}</div>
+      <div
+        style={{
+          minHeight: "100vh",
+          background: "#0f0f23",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <div
+          style={{
+            background: "rgba(255,255,255,0.05)",
+            backdropFilter: "blur(20px)",
+            border: "1px solid rgba(239,68,68,0.3)",
+            borderRadius: "16px",
+            padding: "2rem 2.5rem",
+            maxWidth: "480px",
+            width: "100%",
+            textAlign: "center",
+          }}
+        >
+          <p
+            style={{
+              fontSize: "0.875rem",
+              fontWeight: 600,
+              color: "#f87171",
+              marginBottom: "0.5rem",
+            }}
+          >
+            Error
+          </p>
+          <p style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.875rem" }}>{error}</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="text-zinc-900">Creating challenge...</div>
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "#0f0f23",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <div
+        style={{
+          background: "rgba(255,255,255,0.05)",
+          backdropFilter: "blur(20px)",
+          border: "1px solid rgba(255,255,255,0.15)",
+          borderRadius: "16px",
+          padding: "2.5rem 3rem",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: "1.25rem",
+          minWidth: "280px",
+        }}
+      >
+        {/* Spinner */}
+        <div
+          style={{
+            width: "40px",
+            height: "40px",
+            borderRadius: "50%",
+            border: "3px solid rgba(255,255,255,0.1)",
+            borderTopColor: "#667eea",
+            animation: "spin 0.8s linear infinite",
+          }}
+        />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+
+        <p
+          style={{
+            background: "linear-gradient(135deg, #667eea, #764ba2)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            fontWeight: 600,
+            fontSize: "1rem",
+          }}
+        >
+          Creating challenge...
+        </p>
+        <p style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.8rem" }}>
+          Setting up your game session
+        </p>
+      </div>
     </div>
   );
 }
-
