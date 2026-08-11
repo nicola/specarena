@@ -25,7 +25,6 @@ export async function generateMetadata({ params }: { params: Promise<{ name: str
   if (!challenge) {
     return { title: "Challenge not found" };
   }
-
   const metadata: Metadata = {
     title: `ARENA - Challenge (${name}) ${uuid}`,
     description: challenge.description,
@@ -43,7 +42,6 @@ export default async function UUIDPage({
   const { name, uuid } = await params;
   const { invites = [], invite } = await searchParams;
 
-  // Get the origin from headers for client-side URLs
   const headersList = await headers();
   const host = headersList.get("host") || "";
   const protocol = headersList.get("x-forwarded-proto") || "http";
@@ -55,73 +53,80 @@ export default async function UUIDPage({
   }
 
   return (
-    <section className="max-w-4xl mx-auto px-6 py-16">
-        <div className="flex flex-col gap-6 mb-10">
-          <div className="flex flex-col gap-2">
-            <h1 className="text-3xl font-semibold text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
-              {challenge.name}
-            </h1>
-            {challenge.tags && challenge.tags.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {challenge.tags.map((tag) => (
-                  <span key={tag} className={`text-xs px-2 py-0.5 rounded-full ${tagColors[tag] || tagColors._default}`}>
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            )}
-            <p className="text-base text-zinc-900">
-              {challenge.description}
-            </p>
+    <section className="max-w-7xl mx-auto px-4 py-6">
+      {/* Header */}
+      <div className="flex items-center gap-2 mb-3">
+        <h1 className="font-semibold" style={{ color: '#212529', fontSize: '18px' }}>
+          {challenge.name}
+        </h1>
+        {challenge.tags && challenge.tags.length > 0 && challenge.tags.map((tag) => (
+          <span key={tag} className={`px-1.5 py-0 rounded font-medium ${tagColors[tag] || tagColors._default}`} style={{ fontSize: '11px' }}>
+            {tag}
+          </span>
+        ))}
+        <Link href={`/challenges/${name}`} className="ml-auto hover:underline" style={{ color: '#0d6efd', fontSize: '12px' }}>
+          ← All games
+        </Link>
+      </div>
+      <p className="mb-4" style={{ color: '#6c757d', fontSize: '13px' }}>{challenge.description}</p>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+        {/* Session ID box */}
+        <div style={{ border: '1px solid #dee2e6', background: '#fff' }}>
+          <div className="px-3 py-2" style={{ borderBottom: '1px solid #dee2e6' }}>
+            <span className="font-semibold" style={{ fontSize: '13px', color: '#212529' }}>Session ID</span>
           </div>
-        </div>
-
-        <div className="max-w-4xl mx-auto border border-zinc-900 p-8 mb-6">
-          <div className="flex flex-col gap-6">
-            <div>
-              <h2 className="text-lg font-semibold text-zinc-900 mb-2">Session ID</h2>
-              <div className="text-sm text-zinc-600 font-mono">
-                <CopyableInvite invite={uuid} copyText={`${origin}/challenges/${name}/${uuid}`} className="text-sm text-zinc-600 font-mono flex items-center gap-2 group cursor-pointer hover:text-zinc-900 transition-colors" showButton={false} />
-              </div>
-              {invites && invites.length > 0 && (
-                <div className="mt-4">
-                  <h2 className="text-lg font-semibold text-zinc-900 mb-2">Invites <Link href="/docs" className="text-sm text-zinc-600">(how to join?)</Link></h2>
-                  <div className="list-none space-y-1">
-                    {invites.map((invite, index) => (
-                      <div key={index} className="flex items-center gap-2">
-                        <CopyableInvite invite={invite} copyText={`${origin}/challenges/${name}/${uuid}?invite=${invite}`} className="text-sm text-zinc-600 font-mono flex items-center gap-2 group cursor-pointer hover:text-zinc-900 transition-colors" />
-                        <AdvertiseButton inviteId={invite} />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
+          <div className="px-3 py-2">
+            <div style={{ fontSize: '12px', color: '#6c757d' }}>
+              <CopyableInvite invite={uuid} copyText={`${origin}/challenges/${name}/${uuid}`} className="font-mono flex items-center gap-2 group cursor-pointer hover:text-zinc-900 transition-colors" showButton={false} />
             </div>
           </div>
         </div>
 
-        {invite && (
-          <div className="max-w-4xl mx-auto border border-zinc-900 p-8 mb-6">
-            <h2 className="text-lg font-semibold text-zinc-900 mb-2">You have been invited</h2>
-            <p className="text-sm text-zinc-600 mb-2">
-              Your invite code is: <code className="bg-zinc-100 px-1 py-0.5 rounded font-mono">{invite}</code>
-            </p>
-            <ol className="list-decimal list-inside space-y-1 text-sm text-zinc-600">
-              <li>Read the instructions at <a href="/SKILL.md" className="underline font-mono">/SKILL.md</a></li>
-              <li>Join the game using your invite code</li>
-            </ol>
+        {/* Invites box */}
+        {invites && invites.length > 0 && (
+          <div style={{ border: '1px solid #dee2e6', background: '#fff' }}>
+            <div className="px-3 py-2" style={{ borderBottom: '1px solid #dee2e6' }}>
+              <span className="font-semibold" style={{ fontSize: '13px', color: '#212529' }}>Invites</span>
+              <Link href="/docs" className="ml-2 hover:underline" style={{ fontSize: '12px', color: '#0d6efd' }}>(how to join?)</Link>
+            </div>
+            <div className="px-3 py-2 flex flex-col gap-1">
+              {invites.map((inv, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <CopyableInvite invite={inv} copyText={`${origin}/challenges/${name}/${uuid}?invite=${inv}`} className="font-mono flex items-center gap-2 group cursor-pointer transition-colors" style={{ fontSize: '12px', color: '#6c757d' }} />
+                  <AdvertiseButton inviteId={inv} />
+                </div>
+              ))}
+            </div>
           </div>
         )}
+      </div>
 
-        <div className="mb-8">
-          <ChallengePrompt prompt={challenge.prompt} />
+      {invite && (
+        <div className="mb-4 px-3 py-2" style={{ border: '1px solid #ffc107', background: '#fff9e6' }}>
+          <h2 className="font-semibold mb-1" style={{ fontSize: '13px', color: '#212529' }}>You have been invited</h2>
+          <p className="mb-1" style={{ fontSize: '12px', color: '#6c757d' }}>
+            Your invite code: <code className="px-1 py-0.5 rounded font-mono" style={{ background: '#e9ecef', fontSize: '11px' }}>{invite}</code>
+          </p>
+          <ol className="list-decimal list-inside" style={{ fontSize: '12px', color: '#6c757d' }}>
+            <li>Read the instructions at <a href="/SKILL.md" className="underline font-mono">/SKILL.md</a></li>
+            <li>Join the game using your invite code</li>
+          </ol>
         </div>
+      )}
 
-        <div className="max-w-4xl mx-auto border border-zinc-900 p-8">
+      <div className="mb-4">
+        <ChallengePrompt prompt={challenge.prompt} />
+      </div>
+
+      <div style={{ border: '1px solid #dee2e6', background: '#fff' }}>
+        <div className="px-3 py-2" style={{ borderBottom: '1px solid #dee2e6' }}>
+          <span className="font-semibold" style={{ fontSize: '13px', color: '#212529' }}>Conversations</span>
+        </div>
+        <div className="px-3 py-2">
           <ConversationsList uuid={uuid} engineUrl={PUBLIC_ENGINE_URL} />
         </div>
-
-      </section>
+      </div>
+    </section>
   );
 }

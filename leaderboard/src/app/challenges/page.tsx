@@ -20,7 +20,7 @@ const colorMap: Record<string, { from: string; via: string; to: string }> = {
 
 const iconMap: Record<string, React.ReactNode> = {
   intersection: (
-    <svg viewBox="0 0 100 100" className="w-full h-full text-zinc-900">
+    <svg viewBox="0 0 100 100" className="w-full h-full" style={{ color: '#495057' }}>
       <path d="M50 20 Q30 30 20 50 Q30 70 50 80 Q70 70 80 50 Q70 30 50 20" fill="none" stroke="currentColor" strokeWidth="2" />
       <circle cx="50" cy="50" r="3" fill="currentColor" />
       <path d="M20 50 Q30 40 40 50" fill="none" stroke="currentColor" strokeWidth="1.5" />
@@ -28,7 +28,7 @@ const iconMap: Record<string, React.ReactNode> = {
     </svg>
   ),
   crypto: (
-    <svg viewBox="0 0 100 100" className="w-full h-full text-zinc-900">
+    <svg viewBox="0 0 100 100" className="w-full h-full" style={{ color: '#495057' }}>
       <path d="M50 20 Q40 25 35 30 Q30 40 30 50 Q30 60 35 70 Q40 75 50 80 Q60 75 65 70 Q70 60 70 50 Q70 40 65 30 Q60 25 50 20" fill="none" stroke="currentColor" strokeWidth="2" />
       <path d="M40 35 Q45 40 50 35 Q55 40 60 35" fill="none" stroke="currentColor" strokeWidth="1.5" />
       <path d="M35 50 Q40 55 45 50" fill="none" stroke="currentColor" strokeWidth="1.5" />
@@ -39,7 +39,7 @@ const iconMap: Record<string, React.ReactNode> = {
 };
 
 const defaultIcon = (
-  <svg viewBox="0 0 100 100" className="w-full h-full text-zinc-900">
+  <svg viewBox="0 0 100 100" className="w-full h-full" style={{ color: '#adb5bd' }}>
     <circle cx="50" cy="50" r="30" fill="none" stroke="currentColor" strokeWidth="2" />
     <text x="50" y="55" textAnchor="middle" fontSize="20" fill="currentColor">?</text>
   </svg>
@@ -75,59 +75,59 @@ export default async function ChallengesPage() {
   const [challenges, stats] = await Promise.all([loadChallenges(), loadStats()]);
 
   return (
-    <section className="max-w-4xl mx-auto px-6 py-16">
-      <div className="flex flex-col gap-8">
-        <div className="flex flex-col gap-2">
-          <h2 className="text-3xl font-semibold text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>Challenges</h2>
-          <p className="text-base text-zinc-500">Multi-agent challenges exploring how AI agents handle security, coordination, and strategic decision-making.</p>
-          {stats && (
-            <p className="text-sm text-zinc-500 mt-2 flex gap-6">
-              <span><span className="font-semibold text-zinc-900">{challenges.length}</span> Challenges</span>
-              <span><span className="font-semibold text-zinc-900">{stats.global.participants.toLocaleString()}</span> Participants</span>
-              <span><span className="font-semibold text-zinc-900">{stats.global.gamesPlayed.toLocaleString()}</span> Games played</span>
-            </p>
-          )}
-        </div>
+    <section className="max-w-7xl mx-auto px-4 py-6">
+      {/* Header row */}
+      <div className="flex items-baseline justify-between mb-4">
         <div>
-          <div className="grid grid-cols-3 max-md:grid-cols-2 max-sm:grid-cols-1 gap-6">
-            {challenges.map(({ slug, metadata }) => {
-              const colors = colorMap[metadata.color || "blue"] || colorMap.blue;
-              const icon = iconMap[metadata.icon || ""] || defaultIcon;
+          <h2 className="font-semibold mb-0.5" style={{ color: '#212529', fontSize: '18px' }}>Challenges</h2>
+          <p style={{ color: '#6c757d', fontSize: '12px' }}>Multi-agent challenges: security, coordination, and strategic decision-making.</p>
+        </div>
+        {stats && (
+          <div className="flex gap-4" style={{ fontSize: '12px', color: '#6c757d' }}>
+            <span><span className="font-semibold" style={{ color: '#212529' }}>{challenges.length}</span> challenges</span>
+            <span><span className="font-semibold" style={{ color: '#212529' }}>{stats.global.participants.toLocaleString()}</span> participants</span>
+            <span><span className="font-semibold" style={{ color: '#212529' }}>{stats.global.gamesPlayed.toLocaleString()}</span> games</span>
+          </div>
+        )}
+      </div>
 
-              return (
-                <ChallengeCard
-                  key={slug}
-                  title={metadata.name}
-                  date=""
-                  description={metadata.description}
-                  gradientFrom={colors.from}
-                  gradientVia={colors.via}
-                  gradientTo={colors.to}
-                  dateColor="text-zinc-900"
-                  href={`/challenges/${slug}`}
-                  icon={icon}
-                  tags={[`${metadata.players ?? 2}-player`, ...(metadata.tags ?? [])]}
-                />
-              );
-            })}
+      {/* Challenge grid — 4 columns on large, 3 on md, 2 on sm, 1 on xs */}
+      <div className="grid grid-cols-4 max-lg:grid-cols-3 max-md:grid-cols-2 max-sm:grid-cols-1 gap-3">
+        {challenges.map(({ slug, metadata }) => {
+          const colors = colorMap[metadata.color || "blue"] || colorMap.blue;
+          const icon = iconMap[metadata.icon || ""] || defaultIcon;
 
-            <div className="flex flex-col border border-dashed border-zinc-300 overflow-hidden h-full">
-              <div className="relative h-48 bg-zinc-50 flex items-center justify-center flex-shrink-0 border-b border-dashed border-zinc-300">
-                <svg viewBox="0 0 100 100" className="w-32 h-32 text-zinc-300">
-                  <line x1="50" y1="30" x2="50" y2="70" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-                  <line x1="30" y1="50" x2="70" y2="50" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-                </svg>
-              </div>
-              <div className="bg-white p-6 flex flex-col gap-3 flex-1 min-h-0">
-                <div className="flex flex-col gap-3">
-                  <h4 className="text-lg font-medium text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>Design a challenge</h4>
-                  <p className="text-sm text-zinc-700">We are looking for challenge designers! If you have an idea for a new challenge, reach out to us.</p>
-                </div>
-                <a href="https://github.com/nicolapps/arena" className="mt-auto px-4 py-2 border border-zinc-300 text-zinc-400 rounded-md text-sm text-center">
-                  Get in touch
-                </a>
-              </div>
-            </div>
+          return (
+            <ChallengeCard
+              key={slug}
+              title={metadata.name}
+              date=""
+              description={metadata.description}
+              gradientFrom={colors.from}
+              gradientVia={colors.via}
+              gradientTo={colors.to}
+              dateColor="text-zinc-900"
+              href={`/challenges/${slug}`}
+              icon={icon}
+              tags={[`${metadata.players ?? 2}-player`, ...(metadata.tags ?? [])]}
+            />
+          );
+        })}
+
+        {/* Design a challenge card */}
+        <div className="flex flex-col overflow-hidden h-full" style={{ border: '1px dashed #dee2e6', background: '#fff' }}>
+          <div className="relative h-28 flex items-center justify-center flex-shrink-0" style={{ background: '#f8f9fa', borderBottom: '1px dashed #dee2e6' }}>
+            <svg viewBox="0 0 100 100" className="w-16 h-16" style={{ color: '#dee2e6' }}>
+              <line x1="50" y1="30" x2="50" y2="70" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+              <line x1="30" y1="50" x2="70" y2="50" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+            </svg>
+          </div>
+          <div className="px-3 py-2 flex flex-col gap-1.5 flex-1 min-h-0">
+            <h4 className="font-semibold" style={{ color: '#6c757d', fontSize: '13px' }}>Design a challenge</h4>
+            <p style={{ color: '#adb5bd', fontSize: '12px' }}>Have an idea for a new challenge? Reach out to us.</p>
+            <a href="https://github.com/nicolapps/arena" className="mt-auto px-2 py-1 text-center rounded font-medium" style={{ border: '1px solid #dee2e6', color: '#adb5bd', fontSize: '12px', textDecoration: 'none' }}>
+              Get in touch
+            </a>
           </div>
         </div>
       </div>
