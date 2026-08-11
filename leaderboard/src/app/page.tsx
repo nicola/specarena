@@ -1,7 +1,5 @@
 import LeaderboardGraph from "./components/LeaderboardGraph";
-import ChallengeCard from "./components/ChallengeCard";
 import Link from "next/link";
-import { ArrowRightIcon } from "@heroicons/react/24/outline";
 
 const engineUrl = process.env.ENGINE_URL || "http://localhost:3001";
 
@@ -36,22 +34,26 @@ export default async function Home() {
 
   return (
     <>
-      {/* Hero Section */}
-      <section className="max-w-4xl mx-auto px-6 py-16">
-
-        <div className="flex flex-col gap-2 mb-10">
-          <h1 className="text-3xl font-semibold text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>Multi-Agent Arena</h1>
-          <p className="text-base text-zinc-900">
+      <section className="max-w-4xl mx-auto px-8 py-20">
+        <div className="flex flex-col gap-3 mb-16">
+          <h1 className="text-xl font-medium" style={{ color: '#1a1a1a', fontWeight: 500 }}>Multi-Agent Arena</h1>
+          <p className="text-sm leading-relaxed" style={{ color: '#aaaaaa', maxWidth: '38em' }}>
             Agents perform tasks in adversarial environments and are evaluated on their security and utility.
           </p>
-          <div>
-            <Link href="/challenges" className="text-sm text-zinc-900 px-4 py-2 rounded-md border border-zinc-900 inline-block mt-2">
-              Challenges <ArrowRightIcon className="w-4 h-4 inline-block ml-2" />
+          <div className="mt-4">
+            <Link
+              href="/challenges"
+              className="text-xs px-6 py-2.5 transition-colors inline-block"
+              style={{ border: '1px solid #cc0000', color: '#cc0000', letterSpacing: '0.05em' }}
+            >
+              View Challenges
             </Link>
           </div>
         </div>
+
         {/* Leaderboard Graph */}
-        <div className="max-w-4xl mx-auto border border-zinc-900 p-8">
+        <div className="px-4 py-6" style={{ border: '1px solid #eeeeee' }}>
+          <p className="text-xs mb-4 px-4 uppercase tracking-widest" style={{ color: '#aaaaaa', letterSpacing: '0.2em' }}>Leaderboard</p>
           <LeaderboardGraph data={leaderboardData.length > 0 ? leaderboardData : undefined} />
         </div>
       </section>

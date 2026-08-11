@@ -199,8 +199,9 @@ export default function LeaderboardGraph({ data = [], height = 400, highlightNam
       height: height,
       grid: false,
       style: {
-        color: "#18181b",
-        fontFamily: "var(--font-jost), Jost, sans-serif",
+        color: "#1a1a1a",
+        fontFamily: "var(--font-noto), 'Noto Sans JP', system-ui, sans-serif",
+        background: "transparent",
       },
       marginBottom: 40,
       x: {
@@ -225,20 +226,20 @@ export default function LeaderboardGraph({ data = [], height = 400, highlightNam
         Plot.dot(data.filter((d) => !highlightSet.has(d.name)), {
           x: "securityPolicy",
           y: "utility",
-          fill: (d) => d.isBenchmark ? "#f59e0b" : paretoSet.has(d.name) ? "#000" : "#a1a1aa",
-          r: (d) => paretoSet.has(d.name) ? 7 : d.isBenchmark ? 6 : 5,
-          stroke: (d) => d.isBenchmark ? "#d97706" : "none",
-          strokeWidth: (d) => d.isBenchmark ? 1.5 : 0,
+          fill: (d) => d.isBenchmark ? "#d97706" : paretoSet.has(d.name) ? "#1a1a1a" : "#cccccc",
+          r: (d) => paretoSet.has(d.name) ? 5 : d.isBenchmark ? 5 : 4,
+          stroke: "none",
+          strokeWidth: 0,
           ...dotTipOptions,
         }),
         // Highlighted point (rendered last, on top)
         ...highlightSet.size > 0 ? [Plot.dot(data.filter((d) => highlightSet.has(d.name)), {
           x: "securityPolicy",
           y: "utility",
-          fill: "#6366f1",
-          r: 7,
-          stroke: "#4f46e5",
-          strokeWidth: 2,
+          fill: "#cc0000",
+          r: 6,
+          stroke: "none",
+          strokeWidth: 0,
           ...dotTipOptions,
         })] : [],
         // Labels (clustered, with non-pareto hidden if overlapping pareto)
@@ -249,9 +250,9 @@ export default function LeaderboardGraph({ data = [], height = 400, highlightNam
             text: "text",
             dx: d.dx,
             dy: d.dy,
-            fontSize: 11,
-            fill: d.isHighlight ? "#6366f1" : d.isBenchmark ? "#f59e0b" : d.isPareto ? "#000" : "#a1a1aa",
-            fontWeight: "600",
+            fontSize: 10,
+            fill: d.isHighlight ? "#cc0000" : d.isBenchmark ? "#d97706" : d.isPareto ? "#1a1a1a" : "#aaaaaa",
+            fontWeight: "400",
             textAnchor: d.anchor,
           });
         }),
@@ -268,7 +269,7 @@ export default function LeaderboardGraph({ data = [], height = 400, highlightNam
         (text as SVGTextElement).setAttribute("font-family", "var(--font-jost), Jost, sans-serif");
       });
       svg.querySelectorAll("[aria-label*='axis'] text").forEach((text) => {
-        (text as SVGTextElement).setAttribute("fill", "#18181b");
+        (text as SVGTextElement).setAttribute("fill", "#aaaaaa");
       });
       // Bump axis label font size
       svg.querySelectorAll("[aria-label='x-axis label'], [aria-label='y-axis label']").forEach((label) => {
@@ -280,7 +281,7 @@ export default function LeaderboardGraph({ data = [], height = 400, highlightNam
       lineElements.forEach((line) => {
         const stroke = (line as SVGLineElement).getAttribute("stroke");
         if (stroke && (stroke === "currentColor" || stroke === "white" || !stroke)) {
-          (line as SVGLineElement).setAttribute("stroke", "#e4e4e7");
+          (line as SVGLineElement).setAttribute("stroke", "#eeeeee");
         }
       });
     }
