@@ -1,5 +1,4 @@
 import { ReactNode } from "react";
-import { tagColors } from "@/lib/tagColors";
 
 interface ChallengeCardProps {
   title: string;
@@ -12,52 +11,149 @@ interface ChallengeCardProps {
   dateColor?: string;
   href: string;
   tags?: string[];
+  author?: string;
+  sessions?: number;
+  category?: string;
 }
+
+const WIRE_CODES = ["ARENA", "MAS", "AP-AI"];
 
 export default function ChallengeCard({
   title,
-  date,
   description,
-  gradientFrom,
-  gradientVia,
-  gradientTo,
-  icon,
-  dateColor = "text-zinc-600",
   href,
   tags,
+  author,
+  sessions,
+  category,
 }: ChallengeCardProps) {
+  const playerTag = tags?.find(t => t.includes('-player')) ?? null;
+  const categoryTag = category ?? tags?.find(t => !t.includes('-player')) ?? null;
+
+  // Pick a deterministic wire code based on title
+  const wc = WIRE_CODES[title.charCodeAt(0) % WIRE_CODES.length];
+
+  const isBreaking = sessions === 0;
+  const isDeveloping = sessions != null && sessions > 0 && sessions < 10;
+
   return (
-    <div className="flex flex-col border border-zinc-900 overflow-hidden h-full">
-      {/* Upper Half */}
-      <div
-        className={`relative h-48 bg-gradient-to-br ${gradientFrom} ${gradientVia} ${gradientTo} flex items-center px-6 flex-shrink-0`}
-      >
-        <div className="flex-1 flex items-center gap-4">
-          {/* Visual Element */}
-          <div className="w-full h-32 flex-shrink-0">{icon}</div>
+    <div style={{
+      borderTop: '2px solid #111',
+      paddingTop: '0.75rem',
+      display: 'flex',
+      flexDirection: 'column',
+      height: '100%',
+    }}>
+      {/* Wire meta row */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem', flexWrap: 'wrap' }}>
+        <span style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: '0.55rem',
+          fontWeight: 600,
+          color: '#cc0000',
+          letterSpacing: '0.1em',
+          textTransform: 'uppercase',
+        }}>
+          {wc}
+        </span>
+        <span style={{ color: '#ddd', fontSize: '0.5rem' }}>|</span>
+        <span style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: '0.5rem',
+          color: '#888',
+          letterSpacing: '0.04em',
+        }}>
+          {new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }).toUpperCase()}
+        </span>
+        <div style={{ marginLeft: 'auto' }}>
+          {isBreaking ? (
+            <span style={{
+              background: '#cc0000', color: '#fff',
+              fontFamily: 'var(--font-mono)', fontSize: '0.48rem', fontWeight: 600,
+              letterSpacing: '0.1em', padding: '0.1em 0.35em', textTransform: 'uppercase',
+            }}>BREAKING</span>
+          ) : isDeveloping ? (
+            <span style={{
+              background: '#111', color: '#fff',
+              fontFamily: 'var(--font-mono)', fontSize: '0.48rem', fontWeight: 600,
+              letterSpacing: '0.1em', padding: '0.1em 0.35em', textTransform: 'uppercase',
+            }}>DEVELOPING</span>
+          ) : (
+            <span style={{
+              border: '1px solid #aaa', color: '#888',
+              fontFamily: 'var(--font-mono)', fontSize: '0.48rem', fontWeight: 600,
+              letterSpacing: '0.1em', padding: '0.1em 0.35em', textTransform: 'uppercase',
+            }}>CLOSED</span>
+          )}
         </div>
-        {tags && tags.length > 0 && (
-          <div className="absolute bottom-3 left-4 flex flex-wrap gap-1.5">
-            {tags.map((tag) => {
-              const colors = tagColors[tag] || tagColors._default;
-              return (
-                <span key={tag} className={`text-xs px-2 py-0.5 rounded-full ${colors}`}>
-                  {tag}
-                </span>
-              );
-            })}
-          </div>
-        )}
       </div>
-      {/* Lower Half */}
-      <div className="bg-white p-6 flex flex-col gap-3 flex-1 min-h-0">
-        <div className="flex flex-col gap-3">
-          {date && <p className={`text-sm ${dateColor}`}>{date}</p>}
-          <h4 className="text-lg font-medium text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>{title}</h4>
-          <p className="text-sm text-zinc-700">{description}</p>
-        </div>
-        <a href={href} className="mt-auto px-4 py-2 border border-zinc-900 text-zinc-900 rounded-md text-sm text-center">
-          Discover more
+
+      {/* Category tag */}
+      {categoryTag && (
+        <p style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: '0.5rem',
+          color: '#888',
+          letterSpacing: '0.1em',
+          textTransform: 'uppercase',
+          marginBottom: '0.3rem',
+        }}>
+          {categoryTag}{playerTag && ` · ${playerTag}`}
+        </p>
+      )}
+
+      {/* Headline */}
+      <h4 style={{
+        fontFamily: 'var(--font-playfair), serif',
+        fontSize: '1.15rem',
+        fontWeight: '700',
+        lineHeight: 1.2,
+        color: '#111111',
+        marginBottom: '0.4rem',
+      }}>
+        {title}
+      </h4>
+
+      <div style={{ borderBottom: '1px solid #e8e4dc', marginBottom: '0.4rem' }} />
+
+      {/* Byline */}
+      {author && (
+        <p style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: '0.52rem',
+          color: '#888',
+          letterSpacing: '0.04em',
+          marginBottom: '0.4rem',
+        }}>
+          BY {author.toUpperCase()}{sessions != null && ` — ${sessions} SESSIONS`}
+        </p>
+      )}
+
+      {/* Lede */}
+      <p style={{
+        fontFamily: 'var(--font-body)',
+        fontSize: '0.82rem',
+        lineHeight: 1.6,
+        color: '#333333',
+        flexGrow: 1,
+      }}>
+        {description}
+      </p>
+
+      {/* Read more */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.75rem' }}>
+        <a href={href} style={{
+          fontFamily: 'var(--font-mono)',
+          letterSpacing: '0.1em',
+          fontSize: '0.58rem',
+          color: '#cc0000',
+          fontWeight: 600,
+          textDecoration: 'none',
+          borderBottom: '1px solid #cc0000',
+          paddingBottom: '1px',
+          textTransform: 'uppercase',
+        }}>
+          READ DISPATCH →
         </a>
       </div>
     </div>
