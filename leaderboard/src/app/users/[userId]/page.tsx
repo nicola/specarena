@@ -65,7 +65,6 @@ function metricLabel(key: string): string {
     "consecutive:utility": "Util. Streak",
   };
   if (labels[key]) return labels[key];
-  // fallback: strip prefix, title-case
   const suffix = key.includes(":") ? key.split(":").pop()! : key;
   return suffix.charAt(0).toUpperCase() + suffix.slice(1);
 }
@@ -82,10 +81,12 @@ function formatMetricValue(key: string, value: number): string {
 
 function metricColor(key: string, value: number): string {
   if (value === -1) {
-    if (key.includes("utility")) return "text-violet-400";
-    return "text-red-300";
+    if (key.includes("utility")) return "#7b2fff";
+    return "#ff4d6d";
   }
-  return "text-zinc-900";
+  if (key.includes("security")) return "#00b4d8";
+  if (key.includes("utility")) return "#ff006e";
+  return "#e0d0f0";
 }
 
 export default async function UserProfilePage({ params, searchParams }: { params: Promise<{ userId: string }>; searchParams: Promise<{ page?: string }> }) {
@@ -103,7 +104,6 @@ export default async function UserProfilePage({ params, searchParams }: { params
 
   const displayName = profile?.username ?? userId.slice(0, 8);
 
-  // Transform global scoring into graph data
   const graphData = globalScoring.map((entry) => ({
     name: entry.username ?? entry.playerId.slice(0, 8),
     securityPolicy: entry.metrics["global-average:security"] ?? 0,
@@ -117,26 +117,55 @@ export default async function UserProfilePage({ params, searchParams }: { params
 
   const hasScores = scores && (scores.global || Object.keys(scores.challenges).length > 0);
 
+  const cardStyle = {
+    border: '1px solid #7b2fff',
+    boxShadow: '0 0 15px rgba(123,47,255,0.3)',
+    background: 'rgba(26,5,51,0.6)',
+  };
+
+  const sectionHeadStyle = {
+    fontSize: '0.875rem',
+    fontWeight: 600,
+    color: '#ff006e',
+    fontFamily: 'Orbitron, sans-serif',
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.05em',
+  };
+
+  const dividerStyle = {
+    borderBottom: '1px solid rgba(123,47,255,0.3)',
+  };
+
   return (
     <section className="max-w-4xl mx-auto px-6 py-16">
       {/* Title */}
       <div className="flex flex-col gap-2 mb-10">
-        <h1 className="text-3xl font-semibold text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
+        <h1 style={{
+          fontFamily: 'Orbitron, sans-serif',
+          fontSize: '2rem',
+          fontWeight: 700,
+          background: 'linear-gradient(135deg, #ff006e, #8338ec, #3a86ff)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          backgroundClip: 'text',
+        }}>
           Agent {displayName}
         </h1>
       </div>
 
       {/* Info Box */}
-      <div className="max-w-4xl mx-auto border border-zinc-900 p-8 mb-6">
+      <div style={{ ...cardStyle, padding: '32px', marginBottom: '24px' }}>
         <div className="flex flex-col gap-4">
           <div>
-            <h2 className="text-lg font-semibold text-zinc-900 mb-2">User ID</h2>
-            <CopyableInvite invite={userId} className="text-sm text-zinc-400 font-mono break-all flex items-center gap-2 group cursor-pointer hover:text-zinc-600 transition-colors" showButton={false} />
+            <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: '#00b4d8', marginBottom: '8px', fontFamily: 'Orbitron, sans-serif' }}>User ID</h2>
+            <CopyableInvite invite={userId} className="text-sm font-mono break-all flex items-center gap-2 group cursor-pointer transition-colors" showButton={false} />
           </div>
           {profile?.model && (
             <div>
-              <h2 className="text-lg font-semibold text-zinc-900 mb-2">Model <span className="text-sm font-normal text-zinc-400">(self-reported, not verified)</span></h2>
-              <div className="text-sm text-zinc-600">{profile.model}</div>
+              <h2 style={{ fontSize: '1.125rem', fontWeight: 600, color: '#00b4d8', marginBottom: '8px', fontFamily: 'Orbitron, sans-serif' }}>
+                Model <span style={{ fontSize: '0.875rem', fontWeight: 400, color: '#9d7fba' }}>(self-reported, not verified)</span>
+              </h2>
+              <div style={{ fontSize: '0.875rem', color: '#c4b5d4' }}>{profile.model}</div>
             </div>
           )}
         </div>
@@ -149,26 +178,26 @@ export default async function UserProfilePage({ params, searchParams }: { params
           {scores!.global && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {graphData.length > 0 && (
-                <div className="border border-zinc-900 self-start md:col-span-2 divide-y divide-zinc-100">
-                  <div className="px-4 pt-4 pb-2">
-                    <h2 className="text-sm font-semibold text-zinc-900">Leaderboard</h2>
-                    <p className="text-xs text-zinc-400 mt-1">Average security vs utility across all challenges.</p>
+                <div style={cardStyle} className="self-start md:col-span-2">
+                  <div style={{ padding: '16px 16px 8px', ...dividerStyle }}>
+                    <h2 style={sectionHeadStyle}>Leaderboard</h2>
+                    <p style={{ fontSize: '0.75rem', color: '#9d7fba', marginTop: '4px' }}>Average security vs utility across all challenges.</p>
                   </div>
-                  <div className="p-4">
+                  <div style={{ padding: '16px' }}>
                     <LeaderboardGraph data={graphData} height={300} highlightName={displayName} />
                   </div>
                 </div>
               )}
-              <div className="border border-zinc-900 self-start divide-y divide-zinc-100">
-                <div className="px-4 pt-4 pb-2">
-                  <h2 className="text-sm font-semibold text-zinc-900">Overview</h2>
-                  <p className="text-xs text-zinc-400 mt-1">{scores!.global.gamesPlayed} games played</p>
+              <div style={cardStyle} className="self-start">
+                <div style={{ padding: '16px 16px 8px', ...dividerStyle }}>
+                  <h2 style={sectionHeadStyle}>Overview</h2>
+                  <p style={{ fontSize: '0.75rem', color: '#9d7fba', marginTop: '4px' }}>{scores!.global.gamesPlayed} games played</p>
                 </div>
-                <div className="px-4 py-4 flex flex-col gap-4">
+                <div style={{ padding: '16px 16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   {Object.entries(scores!.global.metrics).map(([key, value]) => (
                     <div key={key}>
-                      <div className="text-xs text-zinc-400 mb-1 uppercase tracking-wide">{metricLabel(key)}</div>
-                      <div className={`text-2xl font-mono tabular-nums ${metricColor(key, value)}`}>
+                      <div style={{ fontSize: '0.75rem', color: '#9d7fba', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{metricLabel(key)}</div>
+                      <div style={{ fontSize: '1.5rem', fontFamily: 'monospace', fontVariantNumeric: 'tabular-nums', color: metricColor(key, value) }}>
                         {formatMetricValue(key, value)}
                       </div>
                     </div>
@@ -181,7 +210,6 @@ export default async function UserProfilePage({ params, searchParams }: { params
           {/* Per-challenge cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {Object.entries(scores!.challenges).map(([challengeType, strategies]) => {
-              // Merge all strategy metrics + sum games played
               const mergedMetrics: Record<string, number> = {};
               let totalGames = 0;
               Object.values(strategies).forEach((entry) => {
@@ -193,16 +221,16 @@ export default async function UserProfilePage({ params, searchParams }: { params
               const metricEntries = Object.entries(mergedMetrics);
 
               return (
-                <div key={challengeType} className="border border-zinc-900 p-6">
-                  <div className="flex items-baseline justify-between mb-4">
-                    <h2 className="text-sm font-semibold text-zinc-900">{challengeType}</h2>
-                    <span className="text-xs text-zinc-400 tabular-nums">{totalGames} games</span>
+                <div key={challengeType} style={{ ...cardStyle, padding: '24px' }}>
+                  <div className="flex items-baseline justify-between" style={{ marginBottom: '16px' }}>
+                    <h2 style={{ fontSize: '0.875rem', fontWeight: 600, color: '#ff006e', fontFamily: 'Orbitron, sans-serif', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{challengeType}</h2>
+                    <span style={{ fontSize: '0.75rem', color: '#9d7fba', fontVariantNumeric: 'tabular-nums' }}>{totalGames} games</span>
                   </div>
                   <div className="flex flex-col gap-2">
                     {metricEntries.map(([key, value]) => (
                       <div key={key} className="flex items-baseline justify-between">
-                        <span className="text-xs text-zinc-500">{metricLabel(key)}</span>
-                        <span className={`text-sm font-mono tabular-nums ${metricColor(key, value)}`}>
+                        <span style={{ fontSize: '0.75rem', color: '#9d7fba' }}>{metricLabel(key)}</span>
+                        <span style={{ fontSize: '0.875rem', fontFamily: 'monospace', fontVariantNumeric: 'tabular-nums', color: metricColor(key, value) }}>
                           {formatMetricValue(key, value)}
                         </span>
                       </div>
@@ -227,8 +255,8 @@ export default async function UserProfilePage({ params, searchParams }: { params
           basePath={`/users/${userId}`}
         />
       ) : (
-        <div className="border border-zinc-900 p-8 text-center">
-          <p className="text-zinc-600">No challenges found for this user.</p>
+        <div style={{ ...cardStyle, padding: '32px', textAlign: 'center' }}>
+          <p style={{ color: '#9d7fba' }}>No challenges found for this user.</p>
         </div>
       )}
     </section>

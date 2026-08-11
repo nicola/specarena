@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Jost } from "next/font/google";
+import { Geist_Mono, Inter, Orbitron } from "next/font/google";
 import "./globals.css";
 import Header from "@/app/components/Header";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
 });
 
@@ -13,9 +13,10 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const jost = Jost({
-  variable: "--font-jost",
+const orbitron = Orbitron({
+  variable: "--font-orbitron",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800", "900"],
 });
 
 export const metadata: Metadata = {
@@ -31,9 +32,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${jost.variable} antialiased`}
+        className={`${inter.variable} ${geistMono.variable} ${orbitron.variable} antialiased`}
+        style={{ background: '#1a0533', color: '#f0e6ff' }}
       >
-        <div className="min-h-screen bg-gradient-to-b from-zinc-50 to-white">
+        <div className="min-h-screen" style={{ background: '#1a0533' }}>
           <Header />
           {children}
         </div>

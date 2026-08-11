@@ -30,12 +30,12 @@ const getGameStatus = (c: Challenge) => {
   const { status, players = [], playerIdentities } = c.state ?? {};
   const waitingForPlayers = status === ChallengeStatus.Open && players.length > 0 && players.length < c.invites.length;
   if (status === ChallengeStatus.Ended)
-    return { label: "Ended", dotColor: "bg-zinc-500", textColor: "text-zinc-600", animate: false };
+    return { label: "Ended", dotColor: "#9d7fba", textColor: "#9d7fba", animate: false };
   if (status === ChallengeStatus.Active)
-    return { label: "Live", dotColor: "bg-green-500", textColor: "text-green-600", animate: true };
+    return { label: "Live", dotColor: "#00ff88", textColor: "#00ff88", animate: true };
   if (waitingForPlayers)
-    return { label: "Waiting for players", dotColor: "bg-zinc-300", textColor: "text-zinc-500", animate: true };
-  return { label: "Not Started", dotColor: "bg-zinc-300", textColor: "text-zinc-500", animate: false };
+    return { label: "Waiting for players", dotColor: "#00b4d8", textColor: "#00b4d8", animate: true };
+  return { label: "Not Started", dotColor: "#7b2fff", textColor: "#7b2fff", animate: false };
 };
 
 export default function ChallengesList({ challenges, challengeType, profiles = {}, total, page = 1, pageSize = 50, basePath, subtitle }: ChallengesListProps) {
@@ -44,26 +44,65 @@ export default function ChallengesList({ challenges, challengeType, profiles = {
   const totalPages = pageSize > 0 ? Math.ceil(displayTotal / pageSize) : 1;
   const hasPagination = basePath && totalPages > 1;
 
+  const tableStyle = {
+    border: '1px solid #7b2fff',
+    boxShadow: '0 0 15px rgba(123,47,255,0.25)',
+  };
+
+  const headerStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    padding: '12px 20px',
+    fontSize: '0.75rem',
+    color: '#9d7fba',
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.08em',
+    borderBottom: '1px solid rgba(123,47,255,0.4)',
+    background: 'rgba(123,47,255,0.1)',
+  };
+
+  const rowStyle = {
+    display: 'flex',
+    alignItems: 'flex-start',
+    padding: '16px 20px',
+    borderBottom: '1px solid rgba(123,47,255,0.15)',
+    cursor: 'pointer',
+    transition: 'background 0.15s',
+  };
+
   return (
-    <div className="mt-12">
-      <h2 className="text-2xl font-semibold text-zinc-900 mb-2" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
+    <div style={{ marginTop: '48px' }}>
+      <h2 style={{
+        fontFamily: 'Orbitron, sans-serif',
+        fontSize: '1.5rem',
+        fontWeight: 700,
+        background: 'linear-gradient(135deg, #ff006e, #8338ec, #3a86ff)',
+        WebkitBackgroundClip: 'text',
+        WebkitTextFillColor: 'transparent',
+        backgroundClip: 'text',
+        marginBottom: '8px',
+      }}>
         Challenges
       </h2>
-      {subtitle && <div className="mt-1 mb-6">{subtitle}</div>}
+      {subtitle && <div style={{ marginTop: '4px', marginBottom: '24px' }}>{subtitle}</div>}
       {challenges.length === 0 ? (
-        <div className="border border-zinc-900 p-8 text-center">
-          <p className="text-zinc-600">No challenges created yet. Be the first to participate!</p>
+        <div style={{ ...tableStyle, padding: '32px', textAlign: 'center' }}>
+          <p style={{ color: '#9d7fba' }}>No challenges created yet. Be the first to participate!</p>
         </div>
       ) : (
-        <div className="border border-zinc-900 divide-y divide-zinc-100">
-          <div className="flex items-center px-5 py-3 text-xs text-zinc-400 uppercase tracking-wider border-b border-zinc-200">
-            <span className="w-[80px] max-sm:hidden shrink-0">ID</span>
-            <span className="w-[140px] max-sm:hidden shrink-0">Status</span>
-            <span className="w-[100px] shrink-0 max-sm:hidden">Date</span>
-            <span className="min-w-0 flex-1">Player</span>
-            <span className="w-[70px] max-sm:w-[40px] text-right shrink-0 pl-3 max-sm:pl-1"><span className="max-sm:hidden">Utility</span><span className="sm:hidden">U</span></span>
-            <span className="w-[70px] max-sm:w-[40px] max-sm:mr-1 text-right shrink-0 pl-3 max-sm:pl-1"><span className="max-sm:hidden">Security</span><span className="sm:hidden">S</span></span>
-            <span className="w-4 ml-2 shrink-0 max-sm:hidden"></span>
+        <div style={tableStyle}>
+          <div style={headerStyle}>
+            <span style={{ width: '80px', flexShrink: 0 }} className="max-sm:hidden">ID</span>
+            <span style={{ width: '140px', flexShrink: 0 }} className="max-sm:hidden">Status</span>
+            <span style={{ width: '100px', flexShrink: 0 }} className="max-sm:hidden">Date</span>
+            <span style={{ minWidth: 0, flex: 1 }}>Player</span>
+            <span style={{ width: '70px', textAlign: 'right', flexShrink: 0, paddingLeft: '12px' }} className="max-sm:w-10 max-sm:pl-1">
+              <span className="max-sm:hidden">Utility</span><span className="sm:hidden">U</span>
+            </span>
+            <span style={{ width: '70px', textAlign: 'right', flexShrink: 0, paddingLeft: '12px' }} className="max-sm:w-10 max-sm:mr-1 max-sm:pl-1">
+              <span className="max-sm:hidden">Security</span><span className="sm:hidden">S</span>
+            </span>
+            <span style={{ width: '16px', marginLeft: '8px', flexShrink: 0 }} className="max-sm:hidden"></span>
           </div>
           {challenges.map((challengeInstance) => {
             const status = getGameStatus(challengeInstance);
@@ -76,52 +115,67 @@ export default function ChallengesList({ challenges, challengeType, profiles = {
               <div
                 key={challengeInstance.id}
                 onClick={() => router.push(challengeHref)}
-                className="flex items-start px-5 py-4 hover:bg-zinc-50 transition-colors cursor-pointer"
+                style={rowStyle}
+                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(123,47,255,0.1)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
               >
-                <span className={`w-1.5 h-1.5 mt-[7px] ${status.dotColor} rounded-full ${status.animate ? 'animate-pulse' : ''} shrink-0 mr-3 sm:hidden`}></span>
-                <span className="w-[80px] text-sm text-zinc-400 font-mono shrink-0 max-sm:hidden">
+                <span
+                  className="sm:hidden"
+                  style={{
+                    width: '6px', height: '6px', marginTop: '7px', borderRadius: '50%',
+                    background: status.dotColor, flexShrink: 0, marginRight: '12px',
+                    ...(status.animate ? { animation: 'pulse 1.5s ease-in-out infinite' } : {}),
+                  }}
+                ></span>
+                <span style={{ width: '80px', fontSize: '0.875rem', color: '#9d7fba', fontFamily: 'monospace', flexShrink: 0 }} className="max-sm:hidden">
                   {challengeInstance.id.slice(0, 8)}
                 </span>
-                <span className={`w-[140px] max-sm:hidden text-sm ${status.textColor} flex items-center gap-2 font-medium shrink-0`}>
-                  <span className={`w-1.5 h-1.5 ${status.dotColor} rounded-full ${status.animate ? 'animate-pulse' : ''}`}></span>
+                <span style={{ width: '140px', fontSize: '0.875rem', color: status.textColor, display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 500, flexShrink: 0 }} className="max-sm:hidden">
+                  <span
+                    style={{
+                      width: '6px', height: '6px', borderRadius: '50%', background: status.dotColor, flexShrink: 0,
+                      ...(status.animate ? { animation: 'pulse 1.5s ease-in-out infinite' } : {}),
+                    }}
+                  ></span>
                   {status.label}
                 </span>
-                <span className="w-[100px] text-sm text-zinc-400 shrink-0 max-sm:hidden">
+                <span style={{ width: '100px', fontSize: '0.875rem', color: '#9d7fba', flexShrink: 0 }} className="max-sm:hidden">
                   {formatDate(challengeInstance.createdAt)}
                 </span>
                 {players.length > 0 && challengeInstance.state?.scores ? (
-                  <div className="min-w-0 flex-1">
-                    <span className="sm:hidden text-xs text-zinc-400 font-mono block leading-tight mt-0.5">{challengeInstance.id.slice(0, 8)}</span>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <span className="sm:hidden" style={{ fontSize: '0.75rem', color: '#9d7fba', fontFamily: 'monospace', display: 'block', lineHeight: 1.2, marginTop: '2px' }}>{challengeInstance.id.slice(0, 8)}</span>
                     {players.map((p, i) => {
                       const name = profiles[p]?.username;
                       const short = p.slice(0, 8);
                       const score = challengeInstance.state?.scores?.[i];
                       const scores = challengeInstance.state?.scores;
-                      // Player performed a breach if any OTHER player has security === -1
                       const didBreach = scores?.some((s, j) => j !== i && s.security === -1);
                       return (
-                        <div key={i} className="flex items-center leading-tight">
-                          <span className="text-sm text-zinc-600 min-w-0 flex-1 truncate">
+                        <div key={i} className="flex items-center" style={{ lineHeight: 1.4 }}>
+                          <span style={{ fontSize: '0.875rem', color: '#c4b5d4', minWidth: 0, flex: 1 }} className="truncate">
                             <Link
                               href={`/users/${p}`}
                               onClick={(e) => e.stopPropagation()}
-                              className="hover:text-zinc-900"
+                              style={{ color: '#c4b5d4', textDecoration: 'none' }}
+                              onMouseEnter={e => ((e.target as HTMLElement).style.color = '#ff006e')}
+                              onMouseLeave={e => ((e.target as HTMLElement).style.color = '#c4b5d4')}
                             >
-                              {name ?? short}{name && <span className="text-zinc-400"> ({short})</span>}
+                              {name ?? short}{name && <span style={{ color: '#9d7fba' }}> ({short})</span>}
                             </Link>
-                            {didBreach && <FireIcon className="inline-block w-3 h-3 ml-1 text-red-300" />}
+                            {didBreach && <FireIcon style={{ display: 'inline', width: '12px', height: '12px', marginLeft: '4px', color: '#ff006e' }} />}
                           </span>
-                          <span className={`w-[70px] max-sm:w-[40px] text-right text-xs font-mono shrink-0 pl-3 max-sm:pl-1 ${score?.utility === -1 ? 'text-violet-300' : 'text-zinc-400'}`}>{score?.utility ?? '–'}</span>
-                          <span className={`w-[70px] max-sm:w-[40px] max-sm:mr-1 text-right text-xs font-mono shrink-0 pl-3 max-sm:pl-1 ${score?.security === -1 ? 'text-red-300' : 'text-zinc-400'}`}>{score?.security ?? '–'}</span>
-                          <span className="w-4 ml-2 shrink-0 max-sm:hidden"></span>
+                          <span style={{ width: '70px', textAlign: 'right', fontSize: '0.75rem', fontFamily: 'monospace', flexShrink: 0, paddingLeft: '12px', color: score?.utility === -1 ? '#7b2fff' : '#9d7fba' }} className="max-sm:w-10 max-sm:pl-1">{score?.utility ?? '–'}</span>
+                          <span style={{ width: '70px', textAlign: 'right', fontSize: '0.75rem', fontFamily: 'monospace', flexShrink: 0, paddingLeft: '12px', color: score?.security === -1 ? '#ff4d6d' : '#9d7fba' }} className="max-sm:w-10 max-sm:mr-1 max-sm:pl-1">{score?.security ?? '–'}</span>
+                          <span style={{ width: '16px', marginLeft: '8px', flexShrink: 0 }} className="max-sm:hidden"></span>
                         </div>
                       );
                     })}
                   </div>
                 ) : (
                   <>
-                    <span className="text-sm text-zinc-600 min-w-0 flex-1 truncate">
-                      <span className="sm:hidden text-xs text-zinc-400 font-mono block leading-tight mt-0.5">{challengeInstance.id.slice(0, 8)}</span>
+                    <span style={{ fontSize: '0.875rem', color: '#c4b5d4', minWidth: 0, flex: 1 }} className="truncate">
+                      <span className="sm:hidden" style={{ fontSize: '0.75rem', color: '#9d7fba', fontFamily: 'monospace', display: 'block', lineHeight: 1.2, marginTop: '2px' }}>{challengeInstance.id.slice(0, 8)}</span>
                       {players.map((p, i) => {
                         const name = profiles[p]?.username;
                         const short = p.slice(0, 8);
@@ -131,15 +185,15 @@ export default function ChallengesList({ challenges, challengeType, profiles = {
                             <Link
                               href={`/users/${p}`}
                               onClick={(e) => e.stopPropagation()}
-                              className="hover:text-zinc-900"
+                              style={{ color: '#c4b5d4', textDecoration: 'none' }}
                             >
-                              {name ?? short}{name && <span className="text-zinc-400"> ({short})</span>}
+                              {name ?? short}{name && <span style={{ color: '#9d7fba' }}> ({short})</span>}
                             </Link>
                           </span>
                         );
                       })}
                     </span>
-                    <svg className="w-4 h-4 text-zinc-300 shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg style={{ width: '16px', height: '16px', color: '#7b2fff', flexShrink: 0, marginLeft: '8px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </>
@@ -150,21 +204,21 @@ export default function ChallengesList({ challenges, challengeType, profiles = {
         </div>
       )}
       {hasPagination && (
-        <div className="flex items-center justify-between mt-4 text-sm">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '16px', fontSize: '0.875rem' }}>
           {page > 1 ? (
-            <Link href={page === 2 ? basePath : `${basePath}?page=${page - 1}`} className="text-zinc-600 hover:text-zinc-900">
+            <Link href={page === 2 ? basePath : `${basePath}?page=${page - 1}`} style={{ color: '#00b4d8', textDecoration: 'none', fontFamily: 'Orbitron, sans-serif', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               Previous
             </Link>
           ) : (
-            <span className="text-zinc-300">Previous</span>
+            <span style={{ color: '#4a3060', fontFamily: 'Orbitron, sans-serif', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Previous</span>
           )}
-          <span className="text-zinc-400">Page {page} of {totalPages}</span>
+          <span style={{ color: '#9d7fba' }}>Page {page} of {totalPages}</span>
           {page < totalPages ? (
-            <Link href={`${basePath}?page=${page + 1}`} className="text-zinc-600 hover:text-zinc-900">
+            <Link href={`${basePath}?page=${page + 1}`} style={{ color: '#00b4d8', textDecoration: 'none', fontFamily: 'Orbitron, sans-serif', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               Next
             </Link>
           ) : (
-            <span className="text-zinc-300">Next</span>
+            <span style={{ color: '#4a3060', fontFamily: 'Orbitron, sans-serif', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Next</span>
           )}
         </div>
       )}

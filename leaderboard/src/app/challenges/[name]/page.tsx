@@ -69,7 +69,11 @@ export default async function ChallengePage({ params, searchParams }: { params: 
 
   const challenge = await fetchMetadata(name);
   if (!challenge) {
-    return <div>Challenge {name} not found</div>;
+    return (
+      <div style={{ minHeight: '100vh', background: '#1a0533', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p style={{ color: '#ff006e', fontFamily: 'Orbitron, sans-serif' }}>Challenge {name} not found</p>
+      </div>
+    );
   }
 
   // Fetch challenges and scoring in parallel
@@ -107,34 +111,55 @@ export default async function ChallengePage({ params, searchParams }: { params: 
 
         <div className="flex items-top justify-between gap-6">
           <div className="flex flex-col gap-2 mb-4 sm:w-1/2">
-            <h1 className="text-3xl font-semibold text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
+            <h1 style={{
+              fontFamily: 'Orbitron, sans-serif',
+              fontSize: '2rem',
+              fontWeight: 700,
+              background: 'linear-gradient(135deg, #ff006e, #8338ec, #3a86ff)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            }}>
               {challenge.name}
               {challenge.url && (
-                <a href={challenge.url} target="_blank" rel="noopener noreferrer" className="ml-2 text-zinc-400 hover:text-zinc-600 inline-block align-middle">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+                <a href={challenge.url} target="_blank" rel="noopener noreferrer" style={{ marginLeft: '8px', verticalAlign: 'middle', display: 'inline-block' }}>
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="#00b4d8" style={{ width: '20px', height: '20px' }}>
                     <path d="M12.232 4.232a2.5 2.5 0 0 1 3.536 3.536l-1.225 1.224a.75.75 0 0 0 1.061 1.06l1.224-1.224a4 4 0 0 0-5.656-5.656l-3 3a4 4 0 0 0 .225 5.865.75.75 0 0 0 .977-1.138 2.5 2.5 0 0 1-.142-3.667l3-3Z" />
                     <path d="M11.603 7.963a.75.75 0 0 0-.977 1.138 2.5 2.5 0 0 1 .142 3.667l-3 3a2.5 2.5 0 0 1-3.536-3.536l1.225-1.224a.75.75 0 0 0-1.061-1.06l-1.224 1.224a4 4 0 1 0 5.656 5.656l3-3a4 4 0 0 0-.225-5.865Z" />
                   </svg>
                 </a>
               )}
             </h1>
-            <p className="text-base text-zinc-900">
+            <p style={{ color: '#c4b5d4', fontSize: '1rem' }}>
               {challenge.description}
             </p>
           </div>
           <div className="hidden sm:flex flex-col gap-2 mb-4 items-end">
-            <Link href={`/challenges/${name}/new`} className="text-sm bg-zinc-900 text-white px-4 py-2 rounded-md border border-zinc-900 hover:bg-zinc-900 hover:text-white transition-colors text-center">
+            <Link href={`/challenges/${name}/new`} style={{
+              fontSize: '0.875rem',
+              background: 'transparent',
+              color: '#ff006e',
+              padding: '8px 16px',
+              border: '1px solid #ff006e',
+              boxShadow: '0 0 10px rgba(255,0,110,0.4), 4px 4px 0 #ff006e',
+              fontFamily: 'Orbitron, sans-serif',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+              textDecoration: 'none',
+              display: 'inline-block',
+              transition: 'all 0.2s',
+            }}>
               Participate
             </Link>
           </div>
         </div>
         {challenge.authors && challenge.authors.length > 0 && (
-          <p className="text-sm text-zinc-500 mb-4">
+          <p style={{ fontSize: '0.875rem', color: '#9d7fba', marginBottom: '16px' }}>
             By{" "}
             {challenge.authors.map((author, i) => (
               <span key={author.name}>
                 {i > 0 && (i === challenge.authors!.length - 1 ? " and " : ", ")}
-                <a href={author.url} target="_blank" rel="noopener noreferrer" className="underline hover:text-zinc-700">{author.name}</a>
+                <a href={author.url} target="_blank" rel="noopener noreferrer" style={{ color: '#00b4d8', textDecoration: 'underline' }}>{author.name}</a>
               </span>
             ))}
           </p>
@@ -152,7 +177,19 @@ export default async function ChallengePage({ params, searchParams }: { params: 
           </div>
         )}
         <div className="sm:hidden mb-10">
-          <Link href={`/challenges/${name}/new`} className="text-sm bg-zinc-900 text-white px-4 py-2 rounded-md border border-zinc-900 hover:bg-zinc-900 hover:text-white transition-colors text-center inline-block">
+          <Link href={`/challenges/${name}/new`} style={{
+            fontSize: '0.875rem',
+            background: 'transparent',
+            color: '#ff006e',
+            padding: '8px 16px',
+            border: '1px solid #ff006e',
+            boxShadow: '0 0 10px rgba(255,0,110,0.4), 4px 4px 0 #ff006e',
+            fontFamily: 'Orbitron, sans-serif',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+            textDecoration: 'none',
+            display: 'inline-block',
+          }}>
             Participate
           </Link>
         </div>
@@ -167,46 +204,46 @@ export default async function ChallengePage({ params, searchParams }: { params: 
           return (
             <div className="mt-6 mb-10 grid grid-cols-1 md:grid-cols-3 gap-6">
               {hasGraph && (
-                <div className="border border-zinc-900 self-start md:col-span-2 divide-y divide-zinc-100">
-                  <div className="px-4 pt-4 pb-2">
-                    <h2 className="text-sm font-semibold text-zinc-900">Leaderboard</h2>
-                    <p className="text-xs text-zinc-400 mt-1">Average security vs utility scores for this challenge.</p>
+                <div style={{ border: '1px solid #7b2fff', boxShadow: '0 0 10px rgba(123,47,255,0.3)' }} className="self-start md:col-span-2">
+                  <div style={{ padding: '16px 16px 8px', borderBottom: '1px solid rgba(123,47,255,0.3)' }}>
+                    <h2 style={{ fontSize: '0.875rem', fontWeight: 600, color: '#ff006e', fontFamily: 'Orbitron, sans-serif', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Leaderboard</h2>
+                    <p style={{ fontSize: '0.75rem', color: '#9d7fba', marginTop: '4px' }}>Average security vs utility scores for this challenge.</p>
                   </div>
-                  <div className="p-4">
+                  <div style={{ padding: '16px' }}>
                     <LeaderboardGraph data={scoringData} height={300} />
                   </div>
                 </div>
               )}
               <div className="flex flex-col gap-6">
                 {unbeaten.length > 0 && (
-                  <div className="border border-zinc-900 self-start w-full divide-y divide-zinc-100">
-                    <div className="px-4 pt-4 pb-2">
-                      <h2 className="text-sm font-semibold text-zinc-900 flex items-center gap-1.5">Unbeaten <ShieldCheckIcon className="w-3.5 h-3.5 text-blue-300" /></h2>
-                      <p className="text-xs text-zinc-400 mt-1">Never breached, ranked by utility.</p>
+                  <div style={{ border: '1px solid #7b2fff', boxShadow: '0 0 10px rgba(123,47,255,0.3)' }} className="self-start w-full">
+                    <div style={{ padding: '16px 16px 8px', borderBottom: '1px solid rgba(123,47,255,0.3)' }}>
+                      <h2 style={{ fontSize: '0.875rem', fontWeight: 600, color: '#00b4d8', fontFamily: 'Orbitron, sans-serif', textTransform: 'uppercase', letterSpacing: '0.05em' }} className="flex items-center gap-1.5">Unbeaten <ShieldCheckIcon className="w-3.5 h-3.5" style={{ color: '#00b4d8' }} /></h2>
+                      <p style={{ fontSize: '0.75rem', color: '#9d7fba', marginTop: '4px' }}>Never breached, ranked by utility.</p>
                     </div>
-                    <div className="divide-y divide-zinc-100">
+                    <div>
                       {unbeaten.map((player, i) => (
-                        <div key={player.name} className="flex items-center px-4 py-1.5">
-                          <span className="w-[20px] text-xs text-zinc-400 shrink-0">{i + 1}</span>
-                          <span className="text-xs text-zinc-900 min-w-0 flex-1 truncate"><Link href={`/users/${player.playerId}`} className="hover:text-zinc-600">{player.name}</Link>{player.model && <span className="text-zinc-400 text-xs ml-1">({player.model})</span>}</span>
-                          <span className="text-xs font-mono text-zinc-400 shrink-0 pl-3">{player.utility.toFixed(2)}</span>
+                        <div key={player.name} className="flex items-center" style={{ padding: '6px 16px', borderBottom: '1px solid rgba(123,47,255,0.15)' }}>
+                          <span style={{ width: '20px', fontSize: '0.75rem', color: '#9d7fba', flexShrink: 0 }}>{i + 1}</span>
+                          <span style={{ fontSize: '0.75rem', color: '#e0d0f0', minWidth: 0, flex: 1 }} className="truncate"><Link href={`/users/${player.playerId}`} style={{ color: '#e0d0f0' }} className="hover:text-pink-400">{player.name}</Link>{player.model && <span style={{ color: '#9d7fba', fontSize: '0.75rem', marginLeft: '4px' }}>({player.model})</span>}</span>
+                          <span style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: '#00b4d8', flexShrink: 0, paddingLeft: '12px' }}>{player.utility.toFixed(2)}</span>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
                 {redTeamData.length > 0 && (
-                  <div className="border border-zinc-900 self-start w-full divide-y divide-zinc-100">
-                    <div className="px-4 pt-4 pb-2">
-                      <h2 className="text-sm font-semibold text-zinc-900 flex items-center gap-1.5">Top Attackers <FireIcon className="w-3.5 h-3.5 text-red-300" /></h2>
-                      <p className="text-xs text-zinc-400 mt-1">Percentage of successful attacks.</p>
+                  <div style={{ border: '1px solid #7b2fff', boxShadow: '0 0 10px rgba(123,47,255,0.3)' }} className="self-start w-full">
+                    <div style={{ padding: '16px 16px 8px', borderBottom: '1px solid rgba(123,47,255,0.3)' }}>
+                      <h2 style={{ fontSize: '0.875rem', fontWeight: 600, color: '#ff006e', fontFamily: 'Orbitron, sans-serif', textTransform: 'uppercase', letterSpacing: '0.05em' }} className="flex items-center gap-1.5">Top Attackers <FireIcon className="w-3.5 h-3.5" style={{ color: '#ff006e' }} /></h2>
+                      <p style={{ fontSize: '0.75rem', color: '#9d7fba', marginTop: '4px' }}>Percentage of successful attacks.</p>
                     </div>
-                    <div className="divide-y divide-zinc-100">
+                    <div>
                       {redTeamData.map((player, i) => (
-                        <div key={player.name} className="flex items-center px-4 py-1.5">
-                          <span className="w-[20px] text-xs text-zinc-400 shrink-0">{i + 1}</span>
-                          <span className="text-xs text-zinc-900 min-w-0 flex-1 truncate"><Link href={`/users/${player.playerId}`} className="hover:text-zinc-600">{player.name}</Link>{player.model && <span className="text-zinc-400 text-xs ml-1">({player.model})</span>}</span>
-                          <span className="text-xs font-mono text-zinc-400 shrink-0 pl-3">{(player.attack * 100).toFixed(0)}%</span>
+                        <div key={player.name} className="flex items-center" style={{ padding: '6px 16px', borderBottom: '1px solid rgba(123,47,255,0.15)' }}>
+                          <span style={{ width: '20px', fontSize: '0.75rem', color: '#9d7fba', flexShrink: 0 }}>{i + 1}</span>
+                          <span style={{ fontSize: '0.75rem', color: '#e0d0f0', minWidth: 0, flex: 1 }} className="truncate"><Link href={`/users/${player.playerId}`} style={{ color: '#e0d0f0' }} className="hover:text-pink-400">{player.name}</Link>{player.model && <span style={{ color: '#9d7fba', fontSize: '0.75rem', marginLeft: '4px' }}>({player.model})</span>}</span>
+                          <span style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: '#ff006e', flexShrink: 0, paddingLeft: '12px' }}>{(player.attack * 100).toFixed(0)}%</span>
                         </div>
                       ))}
                     </div>
@@ -227,10 +264,10 @@ export default async function ChallengePage({ params, searchParams }: { params: 
           pageSize={pageSize}
           basePath={`/challenges/${name}`}
           subtitle={
-            <p className="text-sm text-zinc-500 flex gap-4">
-              <span><span className="font-semibold text-zinc-900">{challengesTotal.toLocaleString()}</span> Games</span>
-              {scoringData.length > 0 && <span><span className="font-semibold text-zinc-900">{scoringData.length}</span> Participants</span>}
-              {stats?.challenges?.[name]?.gamesPlayed > 0 && <span><span className="font-semibold text-zinc-900">{stats.challenges[name].gamesPlayed.toLocaleString()}</span> Completed</span>}
+            <p style={{ fontSize: '0.875rem', color: '#9d7fba', display: 'flex', gap: '16px' }}>
+              <span><span style={{ fontWeight: 600, color: '#ff006e' }}>{challengesTotal.toLocaleString()}</span> Games</span>
+              {scoringData.length > 0 && <span><span style={{ fontWeight: 600, color: '#ff006e' }}>{scoringData.length}</span> Participants</span>}
+              {stats?.challenges?.[name]?.gamesPlayed > 0 && <span><span style={{ fontWeight: 600, color: '#ff006e' }}>{stats.challenges[name].gamesPlayed.toLocaleString()}</span> Completed</span>}
             </p>
           }
         />

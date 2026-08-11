@@ -11,37 +11,58 @@ export async function generateMetadata() {
   return metadata;
 }
 
-const colorMap: Record<string, { from: string; via: string; to: string }> = {
-  yellow: { from: "from-yellow-100", via: "via-yellow-50", to: "to-yellow-100" },
-  purple: { from: "from-purple-100", via: "via-purple-50", to: "to-blue-100" },
-  blue: { from: "from-blue-100", via: "via-blue-50", to: "to-blue-100" },
-  green: { from: "from-green-100", via: "via-green-50", to: "to-green-100" },
+const accentColors: Record<string, string> = {
+  yellow: '#ffd93d',
+  purple: '#8338ec',
+  blue: '#00d4ff',
+  green: '#6bcb77',
+  pink: '#ff006e',
 };
 
 const iconMap: Record<string, React.ReactNode> = {
   intersection: (
-    <svg viewBox="0 0 100 100" className="w-full h-full text-zinc-900">
-      <path d="M50 20 Q30 30 20 50 Q30 70 50 80 Q70 70 80 50 Q70 30 50 20" fill="none" stroke="currentColor" strokeWidth="2" />
-      <circle cx="50" cy="50" r="3" fill="currentColor" />
-      <path d="M20 50 Q30 40 40 50" fill="none" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M60 50 Q70 40 80 50" fill="none" stroke="currentColor" strokeWidth="1.5" />
+    <svg viewBox="0 0 100 100" className="w-full h-full" style={{ filter: 'drop-shadow(0 0 8px #00d4ff)' }}>
+      <defs>
+        <linearGradient id="ig1" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#ff006e" />
+          <stop offset="100%" stopColor="#00d4ff" />
+        </linearGradient>
+      </defs>
+      <circle cx="38" cy="50" r="22" fill="none" stroke="url(#ig1)" strokeWidth="2" opacity="0.8" />
+      <circle cx="62" cy="50" r="22" fill="none" stroke="url(#ig1)" strokeWidth="2" opacity="0.8" />
+      <path d="M50 32 Q60 50 50 68 Q40 50 50 32" fill="rgba(0, 212, 255, 0.2)" stroke="#00d4ff" strokeWidth="1.5" />
+      <circle cx="50" cy="50" r="3" fill="#00d4ff" style={{ filter: 'drop-shadow(0 0 4px #00d4ff)' }} />
     </svg>
   ),
   crypto: (
-    <svg viewBox="0 0 100 100" className="w-full h-full text-zinc-900">
-      <path d="M50 20 Q40 25 35 30 Q30 40 30 50 Q30 60 35 70 Q40 75 50 80 Q60 75 65 70 Q70 60 70 50 Q70 40 65 30 Q60 25 50 20" fill="none" stroke="currentColor" strokeWidth="2" />
-      <path d="M40 35 Q45 40 50 35 Q55 40 60 35" fill="none" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M35 50 Q40 55 45 50" fill="none" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M55 50 Q60 55 65 50" fill="none" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M40 65 Q45 70 50 65 Q55 70 60 65" fill="none" stroke="currentColor" strokeWidth="1.5" />
+    <svg viewBox="0 0 100 100" className="w-full h-full" style={{ filter: 'drop-shadow(0 0 8px #8338ec)' }}>
+      <defs>
+        <linearGradient id="cg1" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#ff006e" />
+          <stop offset="100%" stopColor="#8338ec" />
+        </linearGradient>
+      </defs>
+      <polygon points="50,15 82,32 82,68 50,85 18,68 18,32" fill="none" stroke="url(#cg1)" strokeWidth="2" />
+      <polygon points="50,28 70,38 70,62 50,72 30,62 30,38" fill="rgba(131,56,236,0.15)" stroke="#8338ec" strokeWidth="1.5" />
+      <circle cx="50" cy="50" r="8" fill="none" stroke="#ff006e" strokeWidth="1.5" />
+      <line x1="50" y1="30" x2="50" y2="42" stroke="#8338ec" strokeWidth="1.5" />
+      <line x1="50" y1="58" x2="50" y2="70" stroke="#8338ec" strokeWidth="1.5" />
+      <line x1="30" y1="50" x2="42" y2="50" stroke="#8338ec" strokeWidth="1.5" />
+      <line x1="58" y1="50" x2="70" y2="50" stroke="#8338ec" strokeWidth="1.5" />
     </svg>
   ),
 };
 
 const defaultIcon = (
-  <svg viewBox="0 0 100 100" className="w-full h-full text-zinc-900">
-    <circle cx="50" cy="50" r="30" fill="none" stroke="currentColor" strokeWidth="2" />
-    <text x="50" y="55" textAnchor="middle" fontSize="20" fill="currentColor">?</text>
+  <svg viewBox="0 0 100 100" className="w-full h-full" style={{ filter: 'drop-shadow(0 0 8px #ff006e)' }}>
+    <defs>
+      <linearGradient id="dg1" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#ff006e" />
+        <stop offset="100%" stopColor="#8338ec" />
+      </linearGradient>
+    </defs>
+    <polygon points="50,15 85,35 85,65 50,85 15,65 15,35" fill="none" stroke="url(#dg1)" strokeWidth="2" />
+    <text x="50" y="57" textAnchor="middle" fontSize="22" fill="#ff006e" fontFamily="monospace" style={{ filter: 'drop-shadow(0 0 4px #ff006e)' }}>?</text>
   </svg>
 );
 
@@ -75,58 +96,138 @@ export default async function ChallengesPage() {
   const [challenges, stats] = await Promise.all([loadChallenges(), loadStats()]);
 
   return (
-    <section className="max-w-4xl mx-auto px-6 py-16">
+    <section className="max-w-4xl mx-auto px-6 py-12">
       <div className="flex flex-col gap-8">
-        <div className="flex flex-col gap-2">
-          <h2 className="text-3xl font-semibold text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>Challenges</h2>
-          <p className="text-base text-zinc-500">Multi-agent challenges exploring how AI agents handle security, coordination, and strategic decision-making.</p>
+        {/* Header */}
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-3">
+            <span style={{ color: '#ff006e', fontSize: '0.65rem', fontFamily: 'var(--font-orbitron)', letterSpacing: '0.2em' }}>
+              ◆ SELECT YOUR BATTLE ◆
+            </span>
+          </div>
+          <h2
+            className="text-4xl font-black"
+            style={{
+              fontFamily: 'var(--font-orbitron), sans-serif',
+              background: 'linear-gradient(135deg, #ff006e, #8338ec, #00d4ff)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              letterSpacing: '0.05em',
+            }}
+          >
+            CHALLENGES
+          </h2>
+          <p className="text-sm max-w-lg" style={{ color: '#9d7ab8', lineHeight: 1.7 }}>
+            Multi-agent arenas exploring how AI handles security, coordination, and strategic combat.
+          </p>
           {stats && (
-            <p className="text-sm text-zinc-500 mt-2 flex gap-6">
-              <span><span className="font-semibold text-zinc-900">{challenges.length}</span> Challenges</span>
-              <span><span className="font-semibold text-zinc-900">{stats.global.participants.toLocaleString()}</span> Participants</span>
-              <span><span className="font-semibold text-zinc-900">{stats.global.gamesPlayed.toLocaleString()}</span> Games played</span>
-            </p>
+            <div className="flex gap-6 mt-1">
+              {[
+                { label: 'ARENAS', value: challenges.length.toString() },
+                { label: 'COMBATANTS', value: stats.global.participants.toLocaleString() },
+                { label: 'BATTLES', value: stats.global.gamesPlayed.toLocaleString() },
+              ].map(({ label, value }) => (
+                <div key={label} className="flex flex-col gap-0.5">
+                  <span
+                    className="text-xl font-black"
+                    style={{
+                      fontFamily: 'var(--font-orbitron), sans-serif',
+                      background: 'linear-gradient(135deg, #ff006e, #8338ec)',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      backgroundClip: 'text',
+                    }}
+                  >
+                    {value}
+                  </span>
+                  <span style={{ color: '#6b4f8a', fontSize: '0.6rem', fontFamily: 'var(--font-orbitron)', letterSpacing: '0.15em' }}>
+                    {label}
+                  </span>
+                </div>
+              ))}
+            </div>
           )}
         </div>
-        <div>
-          <div className="grid grid-cols-3 max-md:grid-cols-2 max-sm:grid-cols-1 gap-6">
-            {challenges.map(({ slug, metadata }) => {
-              const colors = colorMap[metadata.color || "blue"] || colorMap.blue;
-              const icon = iconMap[metadata.icon || ""] || defaultIcon;
 
-              return (
-                <ChallengeCard
-                  key={slug}
-                  title={metadata.name}
-                  date=""
-                  description={metadata.description}
-                  gradientFrom={colors.from}
-                  gradientVia={colors.via}
-                  gradientTo={colors.to}
-                  dateColor="text-zinc-900"
-                  href={`/challenges/${slug}`}
-                  icon={icon}
-                  tags={[`${metadata.players ?? 2}-player`, ...(metadata.tags ?? [])]}
-                />
-              );
-            })}
+        {/* Divider */}
+        <div style={{ height: '1px', background: 'linear-gradient(90deg, #ff006e, #8338ec44, transparent)' }} />
 
-            <div className="flex flex-col border border-dashed border-zinc-300 overflow-hidden h-full">
-              <div className="relative h-48 bg-zinc-50 flex items-center justify-center flex-shrink-0 border-b border-dashed border-zinc-300">
-                <svg viewBox="0 0 100 100" className="w-32 h-32 text-zinc-300">
-                  <line x1="50" y1="30" x2="50" y2="70" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-                  <line x1="30" y1="50" x2="70" y2="50" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-                </svg>
+        {/* Grid */}
+        <div className="grid grid-cols-3 max-md:grid-cols-2 max-sm:grid-cols-1 gap-6">
+          {challenges.map(({ slug, metadata }, i) => {
+            const colors = ['yellow', 'purple', 'blue', 'green', 'pink'];
+            const colorKey = metadata.color || colors[i % colors.length];
+            const accent = accentColors[colorKey] || '#ff006e';
+            const icon = iconMap[metadata.icon || ''] || defaultIcon;
+
+            return (
+              <ChallengeCard
+                key={slug}
+                title={metadata.name}
+                date=""
+                description={metadata.description}
+                gradientFrom=""
+                gradientVia=""
+                gradientTo=""
+                dateColor=""
+                href={`/challenges/${slug}`}
+                icon={icon}
+                tags={[`${metadata.players ?? 2}-player`, ...(metadata.tags ?? [])]}
+                accentColor={accent}
+              />
+            );
+          })}
+
+          {/* "Design a challenge" card */}
+          <div
+            className="flex flex-col overflow-hidden h-full"
+            style={{
+              border: '1px dashed rgba(131, 56, 236, 0.4)',
+              background: 'rgba(22, 4, 40, 0.4)',
+            }}
+          >
+            <div
+              className="relative h-44 flex items-center justify-center flex-shrink-0"
+              style={{
+                background: 'rgba(22, 4, 40, 0.3)',
+                borderBottom: '1px dashed rgba(131, 56, 236, 0.3)',
+              }}
+            >
+              <svg viewBox="0 0 100 100" className="w-20 h-20" style={{ opacity: 0.4 }}>
+                <line x1="50" y1="25" x2="50" y2="75" stroke="#8338ec" strokeWidth="3" strokeLinecap="round" />
+                <line x1="25" y1="50" x2="75" y2="50" stroke="#8338ec" strokeWidth="3" strokeLinecap="round" />
+              </svg>
+            </div>
+            <div className="p-5 flex flex-col gap-3 flex-1 min-h-0">
+              <div className="flex flex-col gap-2">
+                <h4
+                  className="text-base font-bold"
+                  style={{
+                    fontFamily: 'var(--font-orbitron), sans-serif',
+                    color: 'rgba(196, 168, 224, 0.6)',
+                    letterSpacing: '0.03em',
+                  }}
+                >
+                  DESIGN A CHALLENGE
+                </h4>
+                <p className="text-xs leading-relaxed" style={{ color: '#4a3560' }}>
+                  We are looking for arena designers. If you have an idea for a new challenge, reach out to us.
+                </p>
               </div>
-              <div className="bg-white p-6 flex flex-col gap-3 flex-1 min-h-0">
-                <div className="flex flex-col gap-3">
-                  <h4 className="text-lg font-medium text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>Design a challenge</h4>
-                  <p className="text-sm text-zinc-700">We are looking for challenge designers! If you have an idea for a new challenge, reach out to us.</p>
-                </div>
-                <a href="https://github.com/nicolapps/arena" className="mt-auto px-4 py-2 border border-zinc-300 text-zinc-400 rounded-md text-sm text-center">
-                  Get in touch
-                </a>
-              </div>
+              <a
+                href="https://github.com/nicolapps/arena"
+                className="mt-auto text-center py-2 px-4 text-xs transition-all duration-200"
+                style={{
+                  fontFamily: 'var(--font-orbitron), sans-serif',
+                  letterSpacing: '0.08em',
+                  border: '1px dashed rgba(131, 56, 236, 0.4)',
+                  color: 'rgba(131, 56, 236, 0.6)',
+                  background: 'transparent',
+                }}
+              >
+                GET IN TOUCH
+              </a>
             </div>
           </div>
         </div>
