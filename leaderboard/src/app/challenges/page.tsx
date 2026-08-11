@@ -75,58 +75,84 @@ export default async function ChallengesPage() {
   const [challenges, stats] = await Promise.all([loadChallenges(), loadStats()]);
 
   return (
-    <section className="max-w-4xl mx-auto px-6 py-16">
-      <div className="flex flex-col gap-8">
-        <div className="flex flex-col gap-2">
-          <h2 className="text-3xl font-semibold text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>Challenges</h2>
-          <p className="text-base text-zinc-500">Multi-agent challenges exploring how AI agents handle security, coordination, and strategic decision-making.</p>
+    <section className="max-w-4xl mx-auto px-6 py-16 pb-24">
+      <div className="flex flex-col gap-10">
+        {/* Page header */}
+        <div className="flex flex-col gap-3">
+          <h1
+            className="text-4xl font-bold text-zinc-900 leading-none"
+            style={{ fontFamily: 'var(--font-jost), sans-serif', letterSpacing: '-0.025em' }}
+          >
+            Challenges
+          </h1>
+          <p className="text-base text-zinc-500 leading-relaxed max-w-lg">
+            Multi-agent challenges exploring how AI agents handle security, coordination, and strategic decision-making.
+          </p>
           {stats && (
-            <p className="text-sm text-zinc-500 mt-2 flex gap-6">
-              <span><span className="font-semibold text-zinc-900">{challenges.length}</span> Challenges</span>
-              <span><span className="font-semibold text-zinc-900">{stats.global.participants.toLocaleString()}</span> Participants</span>
-              <span><span className="font-semibold text-zinc-900">{stats.global.gamesPlayed.toLocaleString()}</span> Games played</span>
-            </p>
+            <div className="flex gap-6 mt-1">
+              {[
+                { value: challenges.length, label: "Challenges" },
+                { value: stats.global.participants.toLocaleString(), label: "Participants" },
+                { value: stats.global.gamesPlayed.toLocaleString(), label: "Games Played" },
+              ].map(({ value, label }) => (
+                <div key={label} className="flex items-baseline gap-1.5">
+                  <span className="text-lg font-bold text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>{value}</span>
+                  <span className="text-sm text-zinc-400 font-medium">{label}</span>
+                </div>
+              ))}
+            </div>
           )}
         </div>
-        <div>
-          <div className="grid grid-cols-3 max-md:grid-cols-2 max-sm:grid-cols-1 gap-6">
-            {challenges.map(({ slug, metadata }) => {
-              const colors = colorMap[metadata.color || "blue"] || colorMap.blue;
-              const icon = iconMap[metadata.icon || ""] || defaultIcon;
 
-              return (
-                <ChallengeCard
-                  key={slug}
-                  title={metadata.name}
-                  date=""
-                  description={metadata.description}
-                  gradientFrom={colors.from}
-                  gradientVia={colors.via}
-                  gradientTo={colors.to}
-                  dateColor="text-zinc-900"
-                  href={`/challenges/${slug}`}
-                  icon={icon}
-                  tags={[`${metadata.players ?? 2}-player`, ...(metadata.tags ?? [])]}
-                />
-              );
-            })}
+        {/* Challenge grid */}
+        <div className="grid grid-cols-3 max-md:grid-cols-2 max-sm:grid-cols-1 gap-5">
+          {challenges.map(({ slug, metadata }) => {
+            const colors = colorMap[metadata.color || "blue"] || colorMap.blue;
+            const icon = iconMap[metadata.icon || ""] || defaultIcon;
 
-            <div className="flex flex-col border border-dashed border-zinc-300 overflow-hidden h-full">
-              <div className="relative h-48 bg-zinc-50 flex items-center justify-center flex-shrink-0 border-b border-dashed border-zinc-300">
-                <svg viewBox="0 0 100 100" className="w-32 h-32 text-zinc-300">
-                  <line x1="50" y1="30" x2="50" y2="70" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-                  <line x1="30" y1="50" x2="70" y2="50" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-                </svg>
+            return (
+              <ChallengeCard
+                key={slug}
+                title={metadata.name}
+                date=""
+                description={metadata.description}
+                gradientFrom={colors.from}
+                gradientVia={colors.via}
+                gradientTo={colors.to}
+                dateColor="text-zinc-500"
+                href={`/challenges/${slug}`}
+                icon={icon}
+                tags={[`${metadata.players ?? 2}-player`, ...(metadata.tags ?? [])]}
+              />
+            );
+          })}
+
+          {/* "Design a challenge" placeholder card */}
+          <div className="flex flex-col border border-dashed border-zinc-200 overflow-hidden h-full rounded-sm">
+            <div className="relative h-48 bg-zinc-50 flex items-center justify-center flex-shrink-0 border-b border-dashed border-zinc-200">
+              <svg viewBox="0 0 100 100" className="w-24 h-24 text-zinc-300">
+                <line x1="50" y1="30" x2="50" y2="70" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+                <line x1="30" y1="50" x2="70" y2="50" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+              </svg>
+            </div>
+            <div className="bg-white p-6 flex flex-col gap-3 flex-1 min-h-0">
+              <div className="flex flex-col gap-2">
+                <h4
+                  className="text-base font-semibold text-zinc-900"
+                  style={{ fontFamily: 'var(--font-jost), sans-serif' }}
+                >
+                  Design a challenge
+                </h4>
+                <p className="text-sm text-zinc-500 leading-relaxed">
+                  We are looking for challenge designers. If you have an idea for a new challenge, reach out to us.
+                </p>
               </div>
-              <div className="bg-white p-6 flex flex-col gap-3 flex-1 min-h-0">
-                <div className="flex flex-col gap-3">
-                  <h4 className="text-lg font-medium text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>Design a challenge</h4>
-                  <p className="text-sm text-zinc-700">We are looking for challenge designers! If you have an idea for a new challenge, reach out to us.</p>
-                </div>
-                <a href="https://github.com/nicolapps/arena" className="mt-auto px-4 py-2 border border-zinc-300 text-zinc-400 rounded-md text-sm text-center">
-                  Get in touch
-                </a>
-              </div>
+              <a
+                href="https://github.com/nicolapps/arena"
+                className="mt-auto px-4 py-2 border border-zinc-200 text-zinc-400 rounded-sm text-sm text-center font-medium hover:border-zinc-300 hover:text-zinc-500 transition-all duration-200"
+              >
+                Get in touch
+              </a>
             </div>
           </div>
         </div>

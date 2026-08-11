@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
+import { usePathname } from "next/navigation";
 
-const OVAL_WIDTH = 65;
-const OVAL_HEIGHT = 19;
-const OVAL_Y_SHIFT = 6;
+const OVAL_WIDTH = 72;
+const OVAL_HEIGHT = 22;
+const OVAL_Y_SHIFT = 7;
 const OVAL_CONTOUR = 3;
 const OVAL_STROKE = 1;
 
@@ -24,7 +25,6 @@ function ArenaLogo({ width = OVAL_WIDTH, height = OVAL_HEIGHT, yShift = OVAL_Y_S
   }, []);
 
   const onLeave = useCallback(() => {
-    // Don't reset — leave letters frozen where they stopped
     if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
     setFighting(false);
   }, []);
@@ -54,9 +54,11 @@ function ArenaLogo({ width = OVAL_WIDTH, height = OVAL_HEIGHT, yShift = OVAL_Y_S
       `}</style>
       {/* Logo text (z-10) */}
       <span
-        className={`relative z-10 text-zinc-900 font-medium ${fighting ? 'fighting' : ''}`}
+        className={`relative z-10 text-zinc-900 font-semibold tracking-wide ${fighting ? 'fighting' : ''}`}
         style={{
           fontFamily: 'var(--font-jost), sans-serif',
+          fontSize: '15px',
+          letterSpacing: '0.04em',
           paintOrder: 'stroke fill',
           WebkitTextStroke: `${contour}px white`,
         }}
@@ -78,24 +80,52 @@ function ArenaLogo({ width = OVAL_WIDTH, height = OVAL_HEIGHT, yShift = OVAL_Y_S
 }
 
 export default function Header() {
+  const pathname = usePathname();
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 8);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const isActive = (href: string) => {
+    if (href === "/") return pathname === "/";
+    return pathname.startsWith(href);
+  };
+
   return (
-    <header className="w-full border-b border-zinc-900 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
+    <header
+      className={`w-full bg-white/90 backdrop-blur-md sticky top-0 z-50 transition-all duration-200 ${
+        scrolled
+          ? "border-b border-zinc-200 shadow-[0_1px_12px_0_rgba(0,0,0,0.06)]"
+          : "border-b border-zinc-100"
+      }`}
+    >
       <div className="max-w-4xl mx-auto px-6 py-4">
         <div className="flex items-center justify-between gap-6">
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-7">
             <div className="flex items-center justify-center">
               <ArenaLogo />
             </div>
-            <nav className="flex items-center gap-6">
-              <Link href="/" className="text-sm font-medium text-zinc-900 hover:text-zinc-900 transition-colors">
-                Leaderboard
-              </Link>
-              <Link href="/challenges" className="text-sm font-medium text-zinc-900 hover:text-zinc-900 transition-colors">
-                Challenges
-              </Link>
-              <Link href="/docs" className="text-sm font-medium text-zinc-900 hover:text-zinc-900 transition-colors">
-                Docs
-              </Link>
+            <nav className="flex items-center gap-7">
+              {[
+                { href: "/", label: "Leaderboard" },
+                { href: "/challenges", label: "Challenges" },
+                { href: "/docs", label: "Docs" },
+              ].map(({ href, label }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  className={`nav-link text-sm font-medium transition-colors duration-150 pb-0.5 ${
+                    isActive(href)
+                      ? "active text-zinc-900"
+                      : "text-zinc-500 hover:text-zinc-900"
+                  }`}
+                >
+                  {label}
+                </Link>
+              ))}
             </nav>
           </div>
         </div>
@@ -103,4 +133,3 @@ export default function Header() {
     </header>
   );
 }
-
