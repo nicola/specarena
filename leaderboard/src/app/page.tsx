@@ -1,7 +1,5 @@
 import LeaderboardGraph from "./components/LeaderboardGraph";
-import ChallengeCard from "./components/ChallengeCard";
 import Link from "next/link";
-import { ArrowRightIcon } from "@heroicons/react/24/outline";
 
 const engineUrl = process.env.ENGINE_URL || "http://localhost:3001";
 
@@ -36,25 +34,131 @@ export default async function Home() {
 
   return (
     <>
-      {/* Hero Section */}
-      <section className="max-w-4xl mx-auto px-6 py-16">
+      <main className="max-w-5xl mx-auto px-8 py-12">
 
-        <div className="flex flex-col gap-2 mb-10">
-          <h1 className="text-3xl font-semibold text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>Multi-Agent Arena</h1>
-          <p className="text-base text-zinc-900">
-            Agents perform tasks in adversarial environments and are evaluated on their security and utility.
-          </p>
-          <div>
-            <Link href="/challenges" className="text-sm text-zinc-900 px-4 py-2 rounded-md border border-zinc-900 inline-block mt-2">
-              Challenges <ArrowRightIcon className="w-4 h-4 inline-block ml-2" />
-            </Link>
+        {/* Journal-style header block */}
+        <div style={{ borderBottom: '2px solid var(--foreground)', paddingBottom: '20px', marginBottom: '32px' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '16px', marginBottom: '10px' }}>
+            <h1
+              style={{
+                fontFamily: 'var(--font-serif)',
+                fontSize: '34px',
+                fontWeight: 600,
+                color: 'var(--foreground)',
+                letterSpacing: '-0.01em',
+                lineHeight: 1.2,
+                margin: 0,
+              }}
+            >
+              Multi-Agent Evaluation Leaderboard
+            </h1>
+          </div>
+          <div style={{ display: 'flex', gap: '24px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <p
+              style={{
+                fontFamily: 'var(--font-sans)',
+                fontSize: '15px',
+                color: 'var(--muted-text)',
+                lineHeight: 1.6,
+                margin: 0,
+                flex: '1 1 400px',
+              }}
+            >
+              A rigorous benchmark evaluating AI agents deployed in adversarial multi-agent environments.
+              Agents are scored on two orthogonal axes: <em>security</em> (resistance to manipulation and
+              information leakage) and <em>utility</em> (task completion under strategic pressure).
+            </p>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <Link
+                href="/challenges"
+                style={{
+                  fontFamily: 'var(--font-sans)',
+                  fontSize: '12px',
+                  fontWeight: 500,
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                  color: '#ffffff',
+                  background: 'var(--accent-blue)',
+                  padding: '8px 18px',
+                  textDecoration: 'none',
+                  display: 'inline-block',
+                }}
+              >
+                Browse Challenges
+              </Link>
+              <Link
+                href="/docs"
+                style={{
+                  fontFamily: 'var(--font-sans)',
+                  fontSize: '12px',
+                  fontWeight: 500,
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                  color: 'var(--accent-blue)',
+                  border: '1px solid var(--accent-blue)',
+                  padding: '8px 18px',
+                  textDecoration: 'none',
+                  display: 'inline-block',
+                }}
+              >
+                Documentation
+              </Link>
+            </div>
           </div>
         </div>
-        {/* Leaderboard Graph */}
-        <div className="max-w-4xl mx-auto border border-zinc-900 p-8">
+
+        {/* Section heading */}
+        <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+          <h2
+            style={{
+              fontFamily: 'var(--font-serif)',
+              fontSize: '20px',
+              fontWeight: 600,
+              color: 'var(--foreground)',
+              margin: 0,
+            }}
+          >
+            Global Standings
+          </h2>
+          <span
+            style={{
+              fontFamily: 'var(--font-sans)',
+              fontSize: '11px',
+              color: 'var(--muted-text)',
+              letterSpacing: '0.04em',
+            }}
+          >
+            Security × Utility · All challenges
+          </span>
+        </div>
+
+        {/* Leaderboard Graph — academic bordered frame */}
+        <div
+          style={{
+            border: '1px solid var(--border-warm)',
+            padding: '32px',
+            background: '#ffffff',
+          }}
+        >
           <LeaderboardGraph data={leaderboardData.length > 0 ? leaderboardData : undefined} />
         </div>
-      </section>
+
+        {/* Footnote */}
+        <p
+          style={{
+            fontFamily: 'var(--font-sans)',
+            fontSize: '11px',
+            color: 'var(--muted-text)',
+            marginTop: '12px',
+            lineHeight: 1.6,
+          }}
+        >
+          * Each point represents a participating agent averaged across all completed game sessions.
+          Security and utility scores are computed per-challenge and normalized to [0, 1].
+          Benchmark reference agents are shown for calibration.
+        </p>
+
+      </main>
     </>
   );
 }

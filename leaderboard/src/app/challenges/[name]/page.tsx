@@ -54,7 +54,7 @@ export async function generateMetadata({ params }: { params: Promise<{ name: str
   const challenge = await fetchMetadata(name);
 
   const metadata: Metadata = {
-    title: challenge ? `ARENA - ${challenge.name}` : "ARENA - Challenge Not Found",
+    title: challenge ? `Academic Oracle — ${challenge.name}` : "Academic Oracle — Challenge Not Found",
     description: challenge?.description || "",
   };
   return metadata;
@@ -69,10 +69,15 @@ export default async function ChallengePage({ params, searchParams }: { params: 
 
   const challenge = await fetchMetadata(name);
   if (!challenge) {
-    return <div>Challenge {name} not found</div>;
+    return (
+      <section className="max-w-4xl mx-auto px-6 py-16">
+        <p style={{ fontFamily: 'var(--font-eb-garamond), Georgia, serif', color: '#6b5a44', fontStyle: 'italic' }}>
+          Challenge <em>{name}</em> not found in the archive.
+        </p>
+      </section>
+    );
   }
 
-  // Fetch challenges and scoring in parallel
   let challengesList: Challenge[] = [];
   let profiles: Record<string, UserProfile> = {};
   let challengesTotal = 0;
@@ -103,14 +108,16 @@ export default async function ChallengePage({ params, searchParams }: { params: 
     .sort((a, b) => b.attack - a.attack);
 
   return (
-      <section className="max-w-4xl mx-auto px-6 py-16">
+    <section className="max-w-4xl mx-auto px-6 py-16">
 
-        <div className="flex items-top justify-between gap-6">
-          <div className="flex flex-col gap-2 mb-4 sm:w-1/2">
-            <h1 className="text-3xl font-semibold text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
+      {/* Paper header */}
+      <div className="mb-8 pb-6" style={{ borderBottom: '2px solid #1a3a5c' }}>
+        <div className="flex items-start justify-between gap-6">
+          <div className="flex flex-col gap-3 sm:w-3/4">
+            <h1 className="text-4xl text-[#1a3a5c]" style={{ fontFamily: 'var(--font-eb-garamond), Georgia, serif', fontWeight: 400, lineHeight: 1.25 }}>
               {challenge.name}
               {challenge.url && (
-                <a href={challenge.url} target="_blank" rel="noopener noreferrer" className="ml-2 text-zinc-400 hover:text-zinc-600 inline-block align-middle">
+                <a href={challenge.url} target="_blank" rel="noopener noreferrer" className="ml-3 inline-block align-middle" style={{ color: '#b8860b' }}>
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
                     <path d="M12.232 4.232a2.5 2.5 0 0 1 3.536 3.536l-1.225 1.224a.75.75 0 0 0 1.061 1.06l1.224-1.224a4 4 0 0 0-5.656-5.656l-3 3a4 4 0 0 0 .225 5.865.75.75 0 0 0 .977-1.138 2.5 2.5 0 0 1-.142-3.667l3-3Z" />
                     <path d="M11.603 7.963a.75.75 0 0 0-.977 1.138 2.5 2.5 0 0 1 .142 3.667l-3 3a2.5 2.5 0 0 1-3.536-3.536l1.225-1.224a.75.75 0 0 0-1.061-1.06l-1.224 1.224a4 4 0 1 0 5.656 5.656l3-3a4 4 0 0 0-.225-5.865Z" />
@@ -118,122 +125,144 @@ export default async function ChallengePage({ params, searchParams }: { params: 
                 </a>
               )}
             </h1>
-            <p className="text-base text-zinc-900">
+            <p className="text-base text-[#2c2c2c]" style={{ fontFamily: 'var(--font-eb-garamond), Georgia, serif', lineHeight: 1.75, fontStyle: 'italic' }}>
               {challenge.description}
             </p>
           </div>
-          <div className="hidden sm:flex flex-col gap-2 mb-4 items-end">
-            <Link href={`/challenges/${name}/new`} className="text-sm bg-zinc-900 text-white px-4 py-2 rounded-md border border-zinc-900 hover:bg-zinc-900 hover:text-white transition-colors text-center">
+          <div className="hidden sm:flex flex-col gap-2 items-end shrink-0">
+            <Link href={`/challenges/${name}/new`}
+              className="text-sm px-5 py-2 transition-colors"
+              style={{ fontFamily: 'var(--font-ibm-plex-sans), sans-serif', background: '#1a3a5c', color: '#fafaf7', border: '1px solid #1a3a5c' }}
+            >
               Participate
             </Link>
           </div>
         </div>
+
         {challenge.authors && challenge.authors.length > 0 && (
-          <p className="text-sm text-zinc-500 mb-4">
-            By{" "}
+          <p className="mt-4 text-sm text-[#6b5a44]" style={{ fontFamily: 'var(--font-ibm-plex-sans), sans-serif' }}>
+            <span style={{ fontVariant: 'small-caps' }}>Authors: </span>
             {challenge.authors.map((author, i) => (
               <span key={author.name}>
                 {i > 0 && (i === challenge.authors!.length - 1 ? " and " : ", ")}
-                <a href={author.url} target="_blank" rel="noopener noreferrer" className="underline hover:text-zinc-700">{author.name}</a>
+                <a href={author.url} target="_blank" rel="noopener noreferrer" className="underline hover:text-[#1a3a5c]">{author.name}</a>
               </span>
             ))}
           </p>
         )}
+
         {challenge.tags && challenge.tags.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-10">
+          <div className="flex flex-wrap gap-2 mt-4">
             {challenge.tags.map((tag) => {
               const colors = tagColors[tag] || tagColors._default;
               return (
-                <span key={tag} className={`text-xs px-2 py-1 rounded-full ${colors}`}>
+                <span key={tag} className={`text-xs px-2 py-0.5 rounded-full ${colors}`}>
                   {tag}
                 </span>
               );
             })}
           </div>
         )}
-        <div className="sm:hidden mb-10">
-          <Link href={`/challenges/${name}/new`} className="text-sm bg-zinc-900 text-white px-4 py-2 rounded-md border border-zinc-900 hover:bg-zinc-900 hover:text-white transition-colors text-center inline-block">
+
+        <div className="sm:hidden mt-4">
+          <Link href={`/challenges/${name}/new`}
+            className="text-sm px-5 py-2 inline-block"
+            style={{ fontFamily: 'var(--font-ibm-plex-sans), sans-serif', background: '#1a3a5c', color: '#fafaf7' }}
+          >
             Participate
           </Link>
         </div>
-        <ChallengePrompt prompt={challenge.prompt} />
+      </div>
 
-        {/* Graph + Stats */}
-        {(() => {
-          const unbeaten = scoringData.filter((d) => d.securityPolicy === 1).sort((a, b) => b.utility - a.utility);
-          const hasGraph = scoringData.length > 0;
-          const hasTables = unbeaten.length > 0 || redTeamData.length > 0;
-          if (!hasGraph && !hasTables) return null;
-          return (
-            <div className="mt-6 mb-10 grid grid-cols-1 md:grid-cols-3 gap-6">
-              {hasGraph && (
-                <div className="border border-zinc-900 self-start md:col-span-2 divide-y divide-zinc-100">
-                  <div className="px-4 pt-4 pb-2">
-                    <h2 className="text-sm font-semibold text-zinc-900">Leaderboard</h2>
-                    <p className="text-xs text-zinc-400 mt-1">Average security vs utility scores for this challenge.</p>
+      {/* Challenge specification */}
+      <ChallengePrompt prompt={challenge.prompt} />
+
+      {/* Graph + Stats */}
+      {(() => {
+        const unbeaten = scoringData.filter((d) => d.securityPolicy === 1).sort((a, b) => b.utility - a.utility);
+        const hasGraph = scoringData.length > 0;
+        const hasTables = unbeaten.length > 0 || redTeamData.length > 0;
+        if (!hasGraph && !hasTables) return null;
+        return (
+          <div className="mt-8 mb-10 grid grid-cols-1 md:grid-cols-3 gap-6">
+            {hasGraph && (
+              <div className="bg-white self-start md:col-span-2" style={{ border: '1px solid #d4c9b0', borderLeft: '3px solid #1a3a5c' }}>
+                <div className="px-4 pt-4 pb-2" style={{ borderBottom: '1px solid #d4c9b0' }}>
+                  <h2 className="text-xs text-[#1a3a5c]" style={{ fontFamily: 'var(--font-ibm-plex-sans), sans-serif', fontVariant: 'small-caps', letterSpacing: '0.08em' }}>Performance Landscape</h2>
+                  <p className="text-xs text-[#8c7a5e] mt-1" style={{ fontFamily: 'var(--font-ibm-plex-sans), sans-serif' }}>Average security vs utility scores for this challenge.</p>
+                </div>
+                <div className="p-4">
+                  <LeaderboardGraph data={scoringData} height={300} />
+                </div>
+              </div>
+            )}
+            <div className="flex flex-col gap-6">
+              {unbeaten.length > 0 && (
+                <div className="bg-white self-start w-full" style={{ border: '1px solid #d4c9b0', borderLeft: '3px solid #1a3a5c' }}>
+                  <div className="px-4 pt-4 pb-2" style={{ borderBottom: '1px solid #d4c9b0' }}>
+                    <h2 className="text-xs text-[#1a3a5c] flex items-center gap-1.5" style={{ fontFamily: 'var(--font-ibm-plex-sans), sans-serif', fontVariant: 'small-caps', letterSpacing: '0.08em' }}>
+                      Unbeaten <ShieldCheckIcon className="w-3.5 h-3.5" style={{ color: '#1a3a5c' }} />
+                    </h2>
+                    <p className="text-xs text-[#8c7a5e] mt-1" style={{ fontFamily: 'var(--font-ibm-plex-sans), sans-serif' }}>Never breached, ranked by utility.</p>
                   </div>
-                  <div className="p-4">
-                    <LeaderboardGraph data={scoringData} height={300} />
+                  <div>
+                    {unbeaten.map((player, i) => (
+                      <div key={player.name} className="flex items-center px-4 py-1.5" style={{ borderBottom: '1px solid #ede8de' }}>
+                        <span className="w-[20px] text-xs text-[#8c7a5e] shrink-0" style={{ fontFamily: 'var(--font-ibm-plex-sans), sans-serif' }}>{i + 1}</span>
+                        <span className="text-xs text-[#2c2c2c] min-w-0 flex-1 truncate" style={{ fontFamily: 'var(--font-ibm-plex-sans), sans-serif' }}>
+                          <Link href={`/users/${player.playerId}`} className="hover:text-[#1a3a5c] hover:underline">{player.name}</Link>
+                          {player.model && <span className="text-[#8c7a5e] text-xs ml-1">({player.model})</span>}
+                        </span>
+                        <span className="text-xs font-mono text-[#6b5a44] shrink-0 pl-3">{player.utility.toFixed(2)}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
-              <div className="flex flex-col gap-6">
-                {unbeaten.length > 0 && (
-                  <div className="border border-zinc-900 self-start w-full divide-y divide-zinc-100">
-                    <div className="px-4 pt-4 pb-2">
-                      <h2 className="text-sm font-semibold text-zinc-900 flex items-center gap-1.5">Unbeaten <ShieldCheckIcon className="w-3.5 h-3.5 text-blue-300" /></h2>
-                      <p className="text-xs text-zinc-400 mt-1">Never breached, ranked by utility.</p>
-                    </div>
-                    <div className="divide-y divide-zinc-100">
-                      {unbeaten.map((player, i) => (
-                        <div key={player.name} className="flex items-center px-4 py-1.5">
-                          <span className="w-[20px] text-xs text-zinc-400 shrink-0">{i + 1}</span>
-                          <span className="text-xs text-zinc-900 min-w-0 flex-1 truncate"><Link href={`/users/${player.playerId}`} className="hover:text-zinc-600">{player.name}</Link>{player.model && <span className="text-zinc-400 text-xs ml-1">({player.model})</span>}</span>
-                          <span className="text-xs font-mono text-zinc-400 shrink-0 pl-3">{player.utility.toFixed(2)}</span>
-                        </div>
-                      ))}
-                    </div>
+              {redTeamData.length > 0 && (
+                <div className="bg-white self-start w-full" style={{ border: '1px solid #d4c9b0', borderLeft: '3px solid #b8860b' }}>
+                  <div className="px-4 pt-4 pb-2" style={{ borderBottom: '1px solid #d4c9b0' }}>
+                    <h2 className="text-xs text-[#b8860b] flex items-center gap-1.5" style={{ fontFamily: 'var(--font-ibm-plex-sans), sans-serif', fontVariant: 'small-caps', letterSpacing: '0.08em' }}>
+                      Top Attackers <FireIcon className="w-3.5 h-3.5 text-red-400" />
+                    </h2>
+                    <p className="text-xs text-[#8c7a5e] mt-1" style={{ fontFamily: 'var(--font-ibm-plex-sans), sans-serif' }}>Percentage of successful attacks.</p>
                   </div>
-                )}
-                {redTeamData.length > 0 && (
-                  <div className="border border-zinc-900 self-start w-full divide-y divide-zinc-100">
-                    <div className="px-4 pt-4 pb-2">
-                      <h2 className="text-sm font-semibold text-zinc-900 flex items-center gap-1.5">Top Attackers <FireIcon className="w-3.5 h-3.5 text-red-300" /></h2>
-                      <p className="text-xs text-zinc-400 mt-1">Percentage of successful attacks.</p>
-                    </div>
-                    <div className="divide-y divide-zinc-100">
-                      {redTeamData.map((player, i) => (
-                        <div key={player.name} className="flex items-center px-4 py-1.5">
-                          <span className="w-[20px] text-xs text-zinc-400 shrink-0">{i + 1}</span>
-                          <span className="text-xs text-zinc-900 min-w-0 flex-1 truncate"><Link href={`/users/${player.playerId}`} className="hover:text-zinc-600">{player.name}</Link>{player.model && <span className="text-zinc-400 text-xs ml-1">({player.model})</span>}</span>
-                          <span className="text-xs font-mono text-zinc-400 shrink-0 pl-3">{(player.attack * 100).toFixed(0)}%</span>
-                        </div>
-                      ))}
-                    </div>
+                  <div>
+                    {redTeamData.map((player, i) => (
+                      <div key={player.name} className="flex items-center px-4 py-1.5" style={{ borderBottom: '1px solid #ede8de' }}>
+                        <span className="w-[20px] text-xs text-[#8c7a5e] shrink-0" style={{ fontFamily: 'var(--font-ibm-plex-sans), sans-serif' }}>{i + 1}</span>
+                        <span className="text-xs text-[#2c2c2c] min-w-0 flex-1 truncate" style={{ fontFamily: 'var(--font-ibm-plex-sans), sans-serif' }}>
+                          <Link href={`/users/${player.playerId}`} className="hover:text-[#1a3a5c] hover:underline">{player.name}</Link>
+                          {player.model && <span className="text-[#8c7a5e] text-xs ml-1">({player.model})</span>}
+                        </span>
+                        <span className="text-xs font-mono text-[#6b5a44] shrink-0 pl-3">{(player.attack * 100).toFixed(0)}%</span>
+                      </div>
+                    ))}
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
-          );
-        })()}
+          </div>
+        );
+      })()}
 
-        {/* Challenges List */}
-        <ChallengesList
-          challenges={challengesList}
-          challengeType={name}
-          profiles={profiles}
-          total={challengesTotal}
-          page={page}
-          pageSize={pageSize}
-          basePath={`/challenges/${name}`}
-          subtitle={
-            <p className="text-sm text-zinc-500 flex gap-4">
-              <span><span className="font-semibold text-zinc-900">{challengesTotal.toLocaleString()}</span> Games</span>
-              {scoringData.length > 0 && <span><span className="font-semibold text-zinc-900">{scoringData.length}</span> Participants</span>}
-              {stats?.challenges?.[name]?.gamesPlayed > 0 && <span><span className="font-semibold text-zinc-900">{stats.challenges[name].gamesPlayed.toLocaleString()}</span> Completed</span>}
-            </p>
-          }
-        />
-      </section>
+      {/* Challenges List */}
+      <ChallengesList
+        challenges={challengesList}
+        challengeType={name}
+        profiles={profiles}
+        total={challengesTotal}
+        page={page}
+        pageSize={pageSize}
+        basePath={`/challenges/${name}`}
+        subtitle={
+          <p className="text-sm text-[#6b5a44] flex gap-4" style={{ fontFamily: 'var(--font-ibm-plex-sans), sans-serif' }}>
+            <span><span className="font-semibold text-[#1a3a5c]">{challengesTotal.toLocaleString()}</span> Sessions</span>
+            {scoringData.length > 0 && <span><span className="font-semibold text-[#1a3a5c]">{scoringData.length}</span> Participants</span>}
+            {stats?.challenges?.[name]?.gamesPlayed > 0 && <span><span className="font-semibold text-[#1a3a5c]">{stats.challenges[name].gamesPlayed.toLocaleString()}</span> Completed</span>}
+          </p>
+        }
+      />
+    </section>
   );
 }

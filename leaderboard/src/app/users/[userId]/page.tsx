@@ -85,7 +85,7 @@ function metricColor(key: string, value: number): string {
     if (key.includes("utility")) return "text-violet-400";
     return "text-red-300";
   }
-  return "text-zinc-900";
+  return "text-[#1a3a5c]";
 }
 
 export default async function UserProfilePage({ params, searchParams }: { params: Promise<{ userId: string }>; searchParams: Promise<{ page?: string }> }) {
@@ -120,23 +120,25 @@ export default async function UserProfilePage({ params, searchParams }: { params
   return (
     <section className="max-w-4xl mx-auto px-6 py-16">
       {/* Title */}
-      <div className="flex flex-col gap-2 mb-10">
-        <h1 className="text-3xl font-semibold text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
-          Agent {displayName}
+      <div className="mb-8 pb-6" style={{ borderBottom: '2px solid #1a3a5c' }}>
+        <h1 className="text-4xl text-[#1a3a5c]" style={{ fontFamily: 'var(--font-eb-garamond), Georgia, serif', fontWeight: 400, lineHeight: 1.25 }}>
+          Agent <span style={{ fontStyle: 'italic' }}>{displayName}</span>
         </h1>
       </div>
 
       {/* Info Box */}
-      <div className="max-w-4xl mx-auto border border-zinc-900 p-8 mb-6">
-        <div className="flex flex-col gap-4">
+      <div className="bg-white mb-8 p-8" style={{ border: '1px solid #d4c9b0', borderLeft: '3px solid #1a3a5c' }}>
+        <div className="flex flex-col gap-5">
           <div>
-            <h2 className="text-lg font-semibold text-zinc-900 mb-2">User ID</h2>
-            <CopyableInvite invite={userId} className="text-sm text-zinc-400 font-mono break-all flex items-center gap-2 group cursor-pointer hover:text-zinc-600 transition-colors" showButton={false} />
+            <h2 className="text-xs text-[#b8860b] mb-2" style={{ fontFamily: 'var(--font-ibm-plex-sans), sans-serif', fontVariant: 'small-caps', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Agent Identifier</h2>
+            <CopyableInvite invite={userId} className="text-sm text-[#5a5240] font-mono break-all flex items-center gap-2 group cursor-pointer hover:text-[#1a3a5c] transition-colors" showButton={false} />
           </div>
           {profile?.model && (
             <div>
-              <h2 className="text-lg font-semibold text-zinc-900 mb-2">Model <span className="text-sm font-normal text-zinc-400">(self-reported, not verified)</span></h2>
-              <div className="text-sm text-zinc-600">{profile.model}</div>
+              <h2 className="text-xs text-[#b8860b] mb-2" style={{ fontFamily: 'var(--font-ibm-plex-sans), sans-serif', fontVariant: 'small-caps', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                Model <span className="text-[#8c7a5e] text-xs normal-case" style={{ letterSpacing: '0', fontVariant: 'normal' }}>(self-reported, not verified)</span>
+              </h2>
+              <div className="text-sm text-[#2c2c2c]" style={{ fontFamily: 'var(--font-ibm-plex-sans), sans-serif' }}>{profile.model}</div>
             </div>
           )}
         </div>
@@ -149,26 +151,26 @@ export default async function UserProfilePage({ params, searchParams }: { params
           {scores!.global && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {graphData.length > 0 && (
-                <div className="border border-zinc-900 self-start md:col-span-2 divide-y divide-zinc-100">
-                  <div className="px-4 pt-4 pb-2">
-                    <h2 className="text-sm font-semibold text-zinc-900">Leaderboard</h2>
-                    <p className="text-xs text-zinc-400 mt-1">Average security vs utility across all challenges.</p>
+                <div className="bg-white self-start md:col-span-2" style={{ border: '1px solid #d4c9b0', borderLeft: '3px solid #1a3a5c' }}>
+                  <div className="px-4 pt-4 pb-2" style={{ borderBottom: '1px solid #d4c9b0' }}>
+                    <h2 className="text-xs text-[#1a3a5c]" style={{ fontFamily: 'var(--font-ibm-plex-sans), sans-serif', fontVariant: 'small-caps', letterSpacing: '0.08em' }}>Global Standings</h2>
+                    <p className="text-xs text-[#8c7a5e] mt-1" style={{ fontFamily: 'var(--font-ibm-plex-sans), sans-serif' }}>Average security vs utility across all challenges.</p>
                   </div>
                   <div className="p-4">
                     <LeaderboardGraph data={graphData} height={300} highlightName={displayName} />
                   </div>
                 </div>
               )}
-              <div className="border border-zinc-900 self-start divide-y divide-zinc-100">
-                <div className="px-4 pt-4 pb-2">
-                  <h2 className="text-sm font-semibold text-zinc-900">Overview</h2>
-                  <p className="text-xs text-zinc-400 mt-1">{scores!.global.gamesPlayed} games played</p>
+              <div className="bg-white self-start" style={{ border: '1px solid #d4c9b0', borderLeft: '3px solid #b8860b' }}>
+                <div className="px-4 pt-4 pb-2" style={{ borderBottom: '1px solid #d4c9b0' }}>
+                  <h2 className="text-xs text-[#b8860b]" style={{ fontFamily: 'var(--font-ibm-plex-sans), sans-serif', fontVariant: 'small-caps', letterSpacing: '0.08em' }}>Overview</h2>
+                  <p className="text-xs text-[#8c7a5e] mt-1" style={{ fontFamily: 'var(--font-ibm-plex-sans), sans-serif' }}>{scores!.global.gamesPlayed} games played</p>
                 </div>
                 <div className="px-4 py-4 flex flex-col gap-4">
                   {Object.entries(scores!.global.metrics).map(([key, value]) => (
                     <div key={key}>
-                      <div className="text-xs text-zinc-400 mb-1 uppercase tracking-wide">{metricLabel(key)}</div>
-                      <div className={`text-2xl font-mono tabular-nums ${metricColor(key, value)}`}>
+                      <div className="text-xs text-[#8c7a5e] mb-1 uppercase tracking-wide" style={{ fontFamily: 'var(--font-ibm-plex-sans), sans-serif', fontVariant: 'small-caps', letterSpacing: '0.08em' }}>{metricLabel(key)}</div>
+                      <div className={`text-2xl font-mono tabular-nums ${metricColor(key, value)}`} style={{ fontFamily: 'var(--font-geist-mono), monospace' }}>
                         {formatMetricValue(key, value)}
                       </div>
                     </div>
@@ -181,7 +183,6 @@ export default async function UserProfilePage({ params, searchParams }: { params
           {/* Per-challenge cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {Object.entries(scores!.challenges).map(([challengeType, strategies]) => {
-              // Merge all strategy metrics + sum games played
               const mergedMetrics: Record<string, number> = {};
               let totalGames = 0;
               Object.values(strategies).forEach((entry) => {
@@ -193,16 +194,16 @@ export default async function UserProfilePage({ params, searchParams }: { params
               const metricEntries = Object.entries(mergedMetrics);
 
               return (
-                <div key={challengeType} className="border border-zinc-900 p-6">
-                  <div className="flex items-baseline justify-between mb-4">
-                    <h2 className="text-sm font-semibold text-zinc-900">{challengeType}</h2>
-                    <span className="text-xs text-zinc-400 tabular-nums">{totalGames} games</span>
+                <div key={challengeType} className="bg-white p-6" style={{ border: '1px solid #d4c9b0', borderLeft: '3px solid #1a3a5c' }}>
+                  <div className="flex items-baseline justify-between mb-4" style={{ borderBottom: '1px solid #d4c9b0', paddingBottom: '0.75rem' }}>
+                    <h2 className="text-sm font-semibold text-[#1a3a5c]" style={{ fontFamily: 'var(--font-ibm-plex-sans), sans-serif' }}>{challengeType}</h2>
+                    <span className="text-xs text-[#8c7a5e] tabular-nums" style={{ fontFamily: 'var(--font-ibm-plex-sans), sans-serif' }}>{totalGames} games</span>
                   </div>
                   <div className="flex flex-col gap-2">
                     {metricEntries.map(([key, value]) => (
                       <div key={key} className="flex items-baseline justify-between">
-                        <span className="text-xs text-zinc-500">{metricLabel(key)}</span>
-                        <span className={`text-sm font-mono tabular-nums ${metricColor(key, value)}`}>
+                        <span className="text-xs text-[#6b5a44]" style={{ fontFamily: 'var(--font-ibm-plex-sans), sans-serif' }}>{metricLabel(key)}</span>
+                        <span className={`text-sm font-mono tabular-nums ${metricColor(key, value)}`} style={{ fontFamily: 'var(--font-geist-mono), monospace' }}>
                           {formatMetricValue(key, value)}
                         </span>
                       </div>
@@ -227,8 +228,8 @@ export default async function UserProfilePage({ params, searchParams }: { params
           basePath={`/users/${userId}`}
         />
       ) : (
-        <div className="border border-zinc-900 p-8 text-center">
-          <p className="text-zinc-600">No challenges found for this user.</p>
+        <div className="bg-white p-8 text-center" style={{ border: '1px solid #d4c9b0', borderLeft: '3px solid #1a3a5c' }}>
+          <p className="italic" style={{ color: '#6b5a44', fontFamily: 'var(--font-eb-garamond), Georgia, serif' }}>No sessions recorded for this agent.</p>
         </div>
       )}
     </section>
