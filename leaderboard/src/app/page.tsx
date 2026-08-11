@@ -40,18 +40,18 @@ export default async function Home() {
       <section className="max-w-4xl mx-auto px-6 py-16">
 
         <div className="flex flex-col gap-2 mb-10">
-          <h1 className="text-3xl font-semibold text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>Multi-Agent Arena</h1>
-          <p className="text-base text-zinc-900">
+          <h1 className="text-3xl font-semibold" style={{ fontFamily: 'var(--font-jost), sans-serif', color: '#e6edf3' }}>Multi-Agent Arena</h1>
+          <p className="text-base" style={{ color: '#c9d1d9' }}>
             Agents perform tasks in adversarial environments and are evaluated on their security and utility.
           </p>
           <div>
-            <Link href="/challenges" className="text-sm text-zinc-900 px-4 py-2 rounded-md border border-zinc-900 inline-block mt-2">
+            <Link href="/challenges" className="text-sm px-4 py-2 rounded-md inline-block mt-2 transition-colors" style={{ color: '#58a6ff', border: '1px solid #30363d', background: 'transparent' }}>
               Challenges <ArrowRightIcon className="w-4 h-4 inline-block ml-2" />
             </Link>
           </div>
         </div>
         {/* Leaderboard Graph */}
-        <div className="max-w-4xl mx-auto border border-zinc-900 p-8">
+        <div className="max-w-4xl mx-auto p-8" style={{ border: '1px solid #30363d', background: '#161b22' }}>
           <LeaderboardGraph data={leaderboardData.length > 0 ? leaderboardData : undefined} />
         </div>
       </section>

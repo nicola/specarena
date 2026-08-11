@@ -58,7 +58,7 @@ export default async function UUIDPage({
     <section className="max-w-4xl mx-auto px-6 py-16">
         <div className="flex flex-col gap-6 mb-10">
           <div className="flex flex-col gap-2">
-            <h1 className="text-3xl font-semibold text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
+            <h1 className="text-3xl font-semibold" style={{ fontFamily: 'var(--font-jost), sans-serif', color: '#e6edf3' }}>
               {challenge.name}
             </h1>
             {challenge.tags && challenge.tags.length > 0 && (
@@ -70,26 +70,26 @@ export default async function UUIDPage({
                 ))}
               </div>
             )}
-            <p className="text-base text-zinc-900">
+            <p className="text-base" style={{ color: '#c9d1d9' }}>
               {challenge.description}
             </p>
           </div>
         </div>
 
-        <div className="max-w-4xl mx-auto border border-zinc-900 p-8 mb-6">
+        <div className="max-w-4xl mx-auto p-8 mb-6" style={{ border: '1px solid #30363d', background: '#161b22' }}>
           <div className="flex flex-col gap-6">
             <div>
-              <h2 className="text-lg font-semibold text-zinc-900 mb-2">Session ID</h2>
-              <div className="text-sm text-zinc-600 font-mono">
-                <CopyableInvite invite={uuid} copyText={`${origin}/challenges/${name}/${uuid}`} className="text-sm text-zinc-600 font-mono flex items-center gap-2 group cursor-pointer hover:text-zinc-900 transition-colors" showButton={false} />
+              <h2 className="text-lg font-semibold mb-2" style={{ color: '#e6edf3' }}>Session ID</h2>
+              <div className="text-sm font-mono" style={{ color: '#7d8590' }}>
+                <CopyableInvite invite={uuid} copyText={`${origin}/challenges/${name}/${uuid}`} className="text-sm font-mono flex items-center gap-2 group cursor-pointer transition-colors" showButton={false} />
               </div>
               {invites && invites.length > 0 && (
                 <div className="mt-4">
-                  <h2 className="text-lg font-semibold text-zinc-900 mb-2">Invites <Link href="/docs" className="text-sm text-zinc-600">(how to join?)</Link></h2>
+                  <h2 className="text-lg font-semibold mb-2" style={{ color: '#e6edf3' }}>Invites <Link href="/docs" className="text-sm" style={{ color: '#7d8590' }}>(how to join?)</Link></h2>
                   <div className="list-none space-y-1">
                     {invites.map((invite, index) => (
                       <div key={index} className="flex items-center gap-2">
-                        <CopyableInvite invite={invite} copyText={`${origin}/challenges/${name}/${uuid}?invite=${invite}`} className="text-sm text-zinc-600 font-mono flex items-center gap-2 group cursor-pointer hover:text-zinc-900 transition-colors" />
+                        <CopyableInvite invite={invite} copyText={`${origin}/challenges/${name}/${uuid}?invite=${invite}`} className="text-sm font-mono flex items-center gap-2 group cursor-pointer transition-colors" />
                         <AdvertiseButton inviteId={invite} />
                       </div>
                     ))}
@@ -102,13 +102,13 @@ export default async function UUIDPage({
         </div>
 
         {invite && (
-          <div className="max-w-4xl mx-auto border border-zinc-900 p-8 mb-6">
-            <h2 className="text-lg font-semibold text-zinc-900 mb-2">You have been invited</h2>
-            <p className="text-sm text-zinc-600 mb-2">
-              Your invite code is: <code className="bg-zinc-100 px-1 py-0.5 rounded font-mono">{invite}</code>
+          <div className="max-w-4xl mx-auto p-8 mb-6" style={{ border: '1px solid #30363d', background: '#161b22' }}>
+            <h2 className="text-lg font-semibold mb-2" style={{ color: '#e6edf3' }}>You have been invited</h2>
+            <p className="text-sm mb-2" style={{ color: '#7d8590' }}>
+              Your invite code is: <code className="px-1 py-0.5 rounded font-mono" style={{ background: '#21262d', color: '#e6edf3' }}>{invite}</code>
             </p>
-            <ol className="list-decimal list-inside space-y-1 text-sm text-zinc-600">
-              <li>Read the instructions at <a href="/SKILL.md" className="underline font-mono">/SKILL.md</a></li>
+            <ol className="list-decimal list-inside space-y-1 text-sm" style={{ color: '#7d8590' }}>
+              <li>Read the instructions at <a href="/SKILL.md" className="underline font-mono" style={{ color: '#58a6ff' }}>/SKILL.md</a></li>
               <li>Join the game using your invite code</li>
             </ol>
           </div>
@@ -118,7 +118,7 @@ export default async function UUIDPage({
           <ChallengePrompt prompt={challenge.prompt} />
         </div>
 
-        <div className="max-w-4xl mx-auto border border-zinc-900 p-8">
+        <div className="max-w-4xl mx-auto p-8" style={{ border: '1px solid #30363d', background: '#161b22' }}>
           <ConversationsList uuid={uuid} engineUrl={PUBLIC_ENGINE_URL} />
         </div>
 
