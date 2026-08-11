@@ -27,15 +27,24 @@ const formatDate = (timestamp: number) => {
 };
 
 const getGameStatus = (c: Challenge) => {
-  const { status, players = [], playerIdentities } = c.state ?? {};
+  const { status, players = [] } = c.state ?? {};
   const waitingForPlayers = status === ChallengeStatus.Open && players.length > 0 && players.length < c.invites.length;
   if (status === ChallengeStatus.Ended)
-    return { label: "Ended", dotColor: "bg-zinc-500", textColor: "text-zinc-600", animate: false };
+    return { label: "Ended", color: "#767676", dotColor: "#767676", animate: false };
   if (status === ChallengeStatus.Active)
-    return { label: "Live", dotColor: "bg-green-500", textColor: "text-green-600", animate: true };
+    return { label: "Live", color: "#000000", dotColor: "#e30613", animate: true };
   if (waitingForPlayers)
-    return { label: "Waiting for players", dotColor: "bg-zinc-300", textColor: "text-zinc-500", animate: true };
-  return { label: "Not Started", dotColor: "bg-zinc-300", textColor: "text-zinc-500", animate: false };
+    return { label: "Waiting", color: "#767676", dotColor: "#767676", animate: true };
+  return { label: "Not Started", color: "#767676", dotColor: "#767676", animate: false };
+};
+
+const colStyle = {
+  fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+  fontSize: "10px",
+  fontWeight: 700,
+  letterSpacing: "0.1em",
+  textTransform: "uppercase" as const,
+  color: "#767676",
 };
 
 export default function ChallengesList({ challenges, challengeType, profiles = {}, total, page = 1, pageSize = 50, basePath, subtitle }: ChallengesListProps) {
@@ -45,101 +54,200 @@ export default function ChallengesList({ challenges, challengeType, profiles = {
   const hasPagination = basePath && totalPages > 1;
 
   return (
-    <div className="mt-12">
-      <h2 className="text-2xl font-semibold text-zinc-900 mb-2" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
-        Challenges
-      </h2>
-      {subtitle && <div className="mt-1 mb-6">{subtitle}</div>}
+    <div style={{ marginTop: "48px" }}>
+      {/* Section header */}
+      <div style={{ marginBottom: "16px" }}>
+        <span className="swiss-rule" style={{ display: "block", marginBottom: "12px" }} />
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+          <h2 style={{
+            fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+            fontSize: "20px",
+            fontWeight: 700,
+            color: "#000000",
+            margin: 0,
+            letterSpacing: "-0.01em",
+          }}>
+            Games
+          </h2>
+          {subtitle && <div style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif', fontSize: "12px", color: "#767676" }}>{subtitle}</div>}
+        </div>
+      </div>
+
       {challenges.length === 0 ? (
-        <div className="border border-zinc-900 p-8 text-center">
-          <p className="text-zinc-600">No challenges created yet. Be the first to participate!</p>
+        <div style={{ border: "2px solid #000000", padding: "32px", textAlign: "center" }}>
+          <p style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif', fontSize: "13px", color: "#767676" }}>
+            No games yet.
+          </p>
         </div>
       ) : (
-        <div className="border border-zinc-900 divide-y divide-zinc-100">
-          <div className="flex items-center px-5 py-3 text-xs text-zinc-400 uppercase tracking-wider border-b border-zinc-200">
-            <span className="w-[80px] max-sm:hidden shrink-0">ID</span>
-            <span className="w-[140px] max-sm:hidden shrink-0">Status</span>
-            <span className="w-[100px] shrink-0 max-sm:hidden">Date</span>
-            <span className="min-w-0 flex-1">Player</span>
-            <span className="w-[70px] max-sm:w-[40px] text-right shrink-0 pl-3 max-sm:pl-1"><span className="max-sm:hidden">Utility</span><span className="sm:hidden">U</span></span>
-            <span className="w-[70px] max-sm:w-[40px] max-sm:mr-1 text-right shrink-0 pl-3 max-sm:pl-1"><span className="max-sm:hidden">Security</span><span className="sm:hidden">S</span></span>
-            <span className="w-4 ml-2 shrink-0 max-sm:hidden"></span>
+        <div style={{ border: "2px solid #000000" }}>
+          {/* Column headers */}
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            padding: "8px 16px",
+            borderBottom: "1px solid #000000",
+            background: "#f8f8f8",
+          }}>
+            <span style={{ ...colStyle, width: "80px", flexShrink: 0 }} className="max-sm:hidden">ID</span>
+            <span style={{ ...colStyle, width: "120px", flexShrink: 0 }} className="max-sm:hidden">Status</span>
+            <span style={{ ...colStyle, width: "96px", flexShrink: 0 }} className="max-sm:hidden">Date</span>
+            <span style={{ ...colStyle, flex: 1, minWidth: 0 }}>Player</span>
+            <span style={{ ...colStyle, width: "64px", flexShrink: 0, textAlign: "right" }}>Utility</span>
+            <span style={{ ...colStyle, width: "64px", flexShrink: 0, textAlign: "right", paddingLeft: "8px" }}>Security</span>
           </div>
-          {challenges.map((challengeInstance) => {
+
+          {challenges.map((challengeInstance, rowIndex) => {
             const status = getGameStatus(challengeInstance);
             const players = challengeInstance.state?.status === ChallengeStatus.Ended
               && challengeInstance.state.playerIdentities
               ? Object.values(challengeInstance.state.playerIdentities)
               : [];
             const challengeHref = `/challenges/${challengeType || challengeInstance.challengeType}/${challengeInstance.id}`;
+
             return (
               <div
                 key={challengeInstance.id}
                 onClick={() => router.push(challengeHref)}
-                className="flex items-start px-5 py-4 hover:bg-zinc-50 transition-colors cursor-pointer"
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  padding: "10px 16px",
+                  borderBottom: rowIndex < challenges.length - 1 ? "1px solid #e8e8e8" : "none",
+                  cursor: "pointer",
+                  transition: "background 0.1s",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "#f8f8f8")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
               >
-                <span className={`w-1.5 h-1.5 mt-[7px] ${status.dotColor} rounded-full ${status.animate ? 'animate-pulse' : ''} shrink-0 mr-3 sm:hidden`}></span>
-                <span className="w-[80px] text-sm text-zinc-400 font-mono shrink-0 max-sm:hidden">
+                {/* ID */}
+                <span style={{
+                  width: "80px",
+                  fontFamily: '"Courier New", Courier, monospace',
+                  fontSize: "11px",
+                  color: "#767676",
+                  flexShrink: 0,
+                }} className="max-sm:hidden">
                   {challengeInstance.id.slice(0, 8)}
                 </span>
-                <span className={`w-[140px] max-sm:hidden text-sm ${status.textColor} flex items-center gap-2 font-medium shrink-0`}>
-                  <span className={`w-1.5 h-1.5 ${status.dotColor} rounded-full ${status.animate ? 'animate-pulse' : ''}`}></span>
+
+                {/* Status */}
+                <span style={{
+                  width: "120px",
+                  fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+                  fontSize: "11px",
+                  fontWeight: 700,
+                  color: status.color,
+                  flexShrink: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                }} className="max-sm:hidden">
+                  <span style={{
+                    width: "6px",
+                    height: "6px",
+                    background: status.dotColor,
+                    display: "inline-block",
+                    flexShrink: 0,
+                  }} />
                   {status.label}
                 </span>
-                <span className="w-[100px] text-sm text-zinc-400 shrink-0 max-sm:hidden">
+
+                {/* Date */}
+                <span style={{
+                  width: "96px",
+                  fontFamily: '"Courier New", Courier, monospace',
+                  fontSize: "11px",
+                  color: "#767676",
+                  flexShrink: 0,
+                }} className="max-sm:hidden">
                   {formatDate(challengeInstance.createdAt)}
                 </span>
+
+                {/* Players + scores */}
                 {players.length > 0 && challengeInstance.state?.scores ? (
-                  <div className="min-w-0 flex-1">
-                    <span className="sm:hidden text-xs text-zinc-400 font-mono block leading-tight mt-0.5">{challengeInstance.id.slice(0, 8)}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
                     {players.map((p, i) => {
                       const name = profiles[p]?.username;
                       const short = p.slice(0, 8);
                       const score = challengeInstance.state?.scores?.[i];
                       const scores = challengeInstance.state?.scores;
-                      // Player performed a breach if any OTHER player has security === -1
                       const didBreach = scores?.some((s, j) => j !== i && s.security === -1);
                       return (
-                        <div key={i} className="flex items-center leading-tight">
-                          <span className="text-sm text-zinc-600 min-w-0 flex-1 truncate">
+                        <div key={i} style={{ display: "flex", alignItems: "center", lineHeight: "1.4" }}>
+                          <span style={{
+                            fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+                            fontSize: "12px",
+                            color: "#000000",
+                            flex: 1,
+                            minWidth: 0,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}>
                             <Link
                               href={`/users/${p}`}
                               onClick={(e) => e.stopPropagation()}
-                              className="hover:text-zinc-900"
+                              style={{ color: "#000000", textDecoration: "none" }}
+                              onMouseEnter={(e) => (e.currentTarget.style.color = "#e30613")}
+                              onMouseLeave={(e) => (e.currentTarget.style.color = "#000000")}
                             >
-                              {name ?? short}{name && <span className="text-zinc-400"> ({short})</span>}
+                              {name ?? short}
+                              {name && <span style={{ color: "#767676" }}> ({short})</span>}
                             </Link>
-                            {didBreach && <FireIcon className="inline-block w-3 h-3 ml-1 text-red-300" />}
+                            {didBreach && <FireIcon style={{ display: "inline", width: "12px", height: "12px", marginLeft: "4px", color: "#e30613" }} />}
                           </span>
-                          <span className={`w-[70px] max-sm:w-[40px] text-right text-xs font-mono shrink-0 pl-3 max-sm:pl-1 ${score?.utility === -1 ? 'text-violet-300' : 'text-zinc-400'}`}>{score?.utility ?? '–'}</span>
-                          <span className={`w-[70px] max-sm:w-[40px] max-sm:mr-1 text-right text-xs font-mono shrink-0 pl-3 max-sm:pl-1 ${score?.security === -1 ? 'text-red-300' : 'text-zinc-400'}`}>{score?.security ?? '–'}</span>
-                          <span className="w-4 ml-2 shrink-0 max-sm:hidden"></span>
+                          <span style={{
+                            width: "64px",
+                            textAlign: "right",
+                            fontFamily: '"Courier New", Courier, monospace',
+                            fontSize: "11px",
+                            color: score?.utility === -1 ? "#767676" : "#000000",
+                            flexShrink: 0,
+                          }}>{score?.utility ?? "–"}</span>
+                          <span style={{
+                            width: "64px",
+                            textAlign: "right",
+                            fontFamily: '"Courier New", Courier, monospace',
+                            fontSize: "11px",
+                            color: score?.security === -1 ? "#e30613" : "#000000",
+                            flexShrink: 0,
+                            paddingLeft: "8px",
+                          }}>{score?.security ?? "–"}</span>
                         </div>
                       );
                     })}
                   </div>
                 ) : (
                   <>
-                    <span className="text-sm text-zinc-600 min-w-0 flex-1 truncate">
-                      <span className="sm:hidden text-xs text-zinc-400 font-mono block leading-tight mt-0.5">{challengeInstance.id.slice(0, 8)}</span>
+                    <span style={{
+                      fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+                      fontSize: "12px",
+                      color: "#767676",
+                      flex: 1,
+                      minWidth: 0,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}>
                       {players.map((p, i) => {
                         const name = profiles[p]?.username;
                         const short = p.slice(0, 8);
                         return (
                           <span key={i}>
-                            {i > 0 && ', '}
+                            {i > 0 && ", "}
                             <Link
                               href={`/users/${p}`}
                               onClick={(e) => e.stopPropagation()}
-                              className="hover:text-zinc-900"
+                              style={{ color: "#767676", textDecoration: "none" }}
                             >
-                              {name ?? short}{name && <span className="text-zinc-400"> ({short})</span>}
+                              {name ?? short}
                             </Link>
                           </span>
                         );
                       })}
                     </span>
-                    <svg className="w-4 h-4 text-zinc-300 shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg style={{ width: "12px", height: "12px", color: "#767676", flexShrink: 0, marginLeft: "8px" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </>
@@ -149,22 +257,33 @@ export default function ChallengesList({ challenges, challengeType, profiles = {
           })}
         </div>
       )}
+
       {hasPagination && (
-        <div className="flex items-center justify-between mt-4 text-sm">
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginTop: "16px",
+          fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+          fontSize: "11px",
+          fontWeight: 700,
+          letterSpacing: "0.08em",
+          textTransform: "uppercase",
+        }}>
           {page > 1 ? (
-            <Link href={page === 2 ? basePath : `${basePath}?page=${page - 1}`} className="text-zinc-600 hover:text-zinc-900">
-              Previous
+            <Link href={page === 2 ? basePath : `${basePath}?page=${page - 1}`} style={{ color: "#000000", textDecoration: "none" }}>
+              ← Previous
             </Link>
           ) : (
-            <span className="text-zinc-300">Previous</span>
+            <span style={{ color: "#d0d0d0" }}>← Previous</span>
           )}
-          <span className="text-zinc-400">Page {page} of {totalPages}</span>
+          <span style={{ color: "#767676" }}>Page {page} / {totalPages}</span>
           {page < totalPages ? (
-            <Link href={`${basePath}?page=${page + 1}`} className="text-zinc-600 hover:text-zinc-900">
-              Next
+            <Link href={`${basePath}?page=${page + 1}`} style={{ color: "#000000", textDecoration: "none" }}>
+              Next →
             </Link>
           ) : (
-            <span className="text-zinc-300">Next</span>
+            <span style={{ color: "#d0d0d0" }}>Next →</span>
           )}
         </div>
       )}

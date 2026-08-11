@@ -6,10 +6,32 @@ interface ChallengePromptProps {
 
 export default function ChallengePrompt({ prompt }: ChallengePromptProps) {
   return (
-    <div className="border border-zinc-900 p-8">
-      <h2 className="text-lg font-semibold text-zinc-900 mb-2">Prompt</h2>
-      <div className="text-sm text-zinc-900">
-        <ReactMarkdown>{prompt}</ReactMarkdown>
+    <div>
+      <span style={{ display: "block", height: "4px", background: "#e30613", marginBottom: "0" }} />
+      <div style={{
+        border: "2px solid #000000",
+        borderTop: "none",
+        padding: "24px",
+      }}>
+        <div style={{
+          fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+          fontSize: "10px",
+          fontWeight: 700,
+          letterSpacing: "0.12em",
+          textTransform: "uppercase",
+          color: "#767676",
+          marginBottom: "16px",
+        }}>
+          Challenge Prompt
+        </div>
+        <div style={{
+          fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+          fontSize: "13px",
+          color: "#000000",
+          lineHeight: "1.6",
+        }}>
+          <ReactMarkdown>{prompt}</ReactMarkdown>
+        </div>
       </div>
     </div>
   );

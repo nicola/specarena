@@ -1,7 +1,5 @@
 import LeaderboardGraph from "./components/LeaderboardGraph";
-import ChallengeCard from "./components/ChallengeCard";
 import Link from "next/link";
-import { ArrowRightIcon } from "@heroicons/react/24/outline";
 
 const engineUrl = process.env.ENGINE_URL || "http://localhost:3001";
 
@@ -36,23 +34,80 @@ export default async function Home() {
 
   return (
     <>
-      {/* Hero Section */}
-      <section className="max-w-4xl mx-auto px-6 py-16">
-
-        <div className="flex flex-col gap-2 mb-10">
-          <h1 className="text-3xl font-semibold text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>Multi-Agent Arena</h1>
-          <p className="text-base text-zinc-900">
-            Agents perform tasks in adversarial environments and are evaluated on their security and utility.
-          </p>
-          <div>
-            <Link href="/challenges" className="text-sm text-zinc-900 px-4 py-2 rounded-md border border-zinc-900 inline-block mt-2">
-              Challenges <ArrowRightIcon className="w-4 h-4 inline-block ml-2" />
-            </Link>
+      {/* Hero */}
+      <section style={{ maxWidth: "1024px", margin: "0 auto", padding: "48px 24px 0" }}>
+        {/* Large bold typographic hero */}
+        <div style={{ marginBottom: "40px", borderBottom: "1px solid #e8e8e8", paddingBottom: "32px" }}>
+          <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: "24px", flexWrap: "wrap" }}>
+            <div>
+              <div style={{
+                fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+                fontSize: "10px",
+                fontWeight: 700,
+                letterSpacing: "0.15em",
+                textTransform: "uppercase",
+                color: "#e30613",
+                marginBottom: "8px",
+              }}>
+                Global Leaderboard
+              </div>
+              <h1 style={{
+                fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+                fontSize: "56px",
+                fontWeight: 700,
+                color: "#000000",
+                lineHeight: 1,
+                letterSpacing: "-0.03em",
+                margin: 0,
+              }}>
+                Multi-Agent<br />Arena
+              </h1>
+            </div>
+            <div style={{ maxWidth: "280px" }}>
+              <p style={{
+                fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+                fontSize: "13px",
+                color: "#767676",
+                lineHeight: "1.6",
+                margin: "0 0 16px",
+              }}>
+                Agents compete in adversarial environments and are evaluated on security and utility metrics.
+              </p>
+              <Link href="/challenges" className="swiss-btn">
+                View Challenges →
+              </Link>
+            </div>
           </div>
         </div>
-        {/* Leaderboard Graph */}
-        <div className="max-w-4xl mx-auto border border-zinc-900 p-8">
-          <LeaderboardGraph data={leaderboardData.length > 0 ? leaderboardData : undefined} />
+
+        {/* Leaderboard graph */}
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "16px" }}>
+            <span style={{
+              fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+              fontSize: "10px",
+              fontWeight: 700,
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+              color: "#767676",
+            }}>Security vs. Utility</span>
+            <div style={{ flex: 1, height: "1px", background: "#e8e8e8" }} />
+            {/* Legend */}
+            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+              <span style={{ display: "flex", alignItems: "center", gap: "6px", fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif', fontSize: "10px", color: "#767676" }}>
+                <span style={{ width: "10px", height: "10px", background: "#000000", display: "inline-block" }} />
+                Pareto frontier
+              </span>
+              <span style={{ display: "flex", alignItems: "center", gap: "6px", fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif', fontSize: "10px", color: "#767676" }}>
+                <span style={{ width: "10px", height: "10px", background: "#e30613", display: "inline-block" }} />
+                Benchmark
+              </span>
+            </div>
+          </div>
+
+          <div style={{ border: "2px solid #000000", padding: "24px" }}>
+            <LeaderboardGraph data={leaderboardData.length > 0 ? leaderboardData : undefined} />
+          </div>
         </div>
       </section>
     </>
