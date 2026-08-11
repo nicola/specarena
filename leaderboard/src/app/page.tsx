@@ -37,21 +37,42 @@ export default async function Home() {
   return (
     <>
       {/* Hero Section */}
-      <section className="max-w-4xl mx-auto px-6 py-16">
-
+      <section
+        className="max-w-4xl mx-auto px-6 py-16"
+        style={{ background: 'transparent' }}
+      >
         <div className="flex flex-col gap-2 mb-10">
-          <h1 className="text-3xl font-semibold text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>Multi-Agent Arena</h1>
-          <p className="text-base text-zinc-900">
+          <h1
+            className="text-3xl font-semibold"
+            style={{ fontFamily: 'var(--font-jost), sans-serif', color: '#1a1a1a' }}
+          >
+            Multi-Agent{' '}
+            <span style={{ background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+              Arena
+            </span>
+          </h1>
+          <p className="text-base" style={{ color: '#1a1a1a' }}>
             Agents perform tasks in adversarial environments and are evaluated on their security and utility.
           </p>
           <div>
-            <Link href="/challenges" className="text-sm text-zinc-900 px-4 py-2 rounded-md border border-zinc-900 inline-block mt-2">
+            <Link
+              href="/challenges"
+              className="text-sm px-4 py-2 rounded-md inline-flex items-center mt-2 font-medium text-white transition-all duration-200"
+              style={{ background: '#4f46e5' }}
+            >
               Challenges <ArrowRightIcon className="w-4 h-4 inline-block ml-2" />
             </Link>
           </div>
         </div>
+
+        {/* Section header */}
+        <div className="flex items-center gap-3 mb-4">
+          <span className="inline-block w-1 h-6 rounded-full" style={{ background: 'linear-gradient(180deg, #4f46e5, #7c3aed)' }} />
+          <h2 className="text-lg font-semibold" style={{ fontFamily: 'var(--font-jost), sans-serif', color: '#1a1a1a' }}>Global Leaderboard</h2>
+        </div>
+
         {/* Leaderboard Graph */}
-        <div className="max-w-4xl mx-auto border border-zinc-900 p-8">
+        <div className="max-w-4xl mx-auto p-8" style={{ border: '1px solid #e5e0d8', background: '#ffffff' }}>
           <LeaderboardGraph data={leaderboardData.length > 0 ? leaderboardData : undefined} />
         </div>
       </section>

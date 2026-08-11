@@ -107,7 +107,7 @@ export default async function ChallengePage({ params, searchParams }: { params: 
 
         <div className="flex items-top justify-between gap-6">
           <div className="flex flex-col gap-2 mb-4 sm:w-1/2">
-            <h1 className="text-3xl font-semibold text-zinc-900" style={{ fontFamily: 'var(--font-jost), sans-serif' }}>
+            <h1 className="text-3xl font-semibold" style={{ fontFamily: 'var(--font-jost), sans-serif', color: '#1a1a1a' }}>
               {challenge.name}
               {challenge.url && (
                 <a href={challenge.url} target="_blank" rel="noopener noreferrer" className="ml-2 text-zinc-400 hover:text-zinc-600 inline-block align-middle">
@@ -123,7 +123,7 @@ export default async function ChallengePage({ params, searchParams }: { params: 
             </p>
           </div>
           <div className="hidden sm:flex flex-col gap-2 mb-4 items-end">
-            <Link href={`/challenges/${name}/new`} className="text-sm bg-zinc-900 text-white px-4 py-2 rounded-md border border-zinc-900 hover:bg-zinc-900 hover:text-white transition-colors text-center">
+            <Link href={`/challenges/${name}/new`} className="text-sm text-white px-4 py-2 rounded-md transition-colors text-center font-medium" style={{ background: '#4f46e5' }}>
               Participate
             </Link>
           </div>
@@ -152,7 +152,7 @@ export default async function ChallengePage({ params, searchParams }: { params: 
           </div>
         )}
         <div className="sm:hidden mb-10">
-          <Link href={`/challenges/${name}/new`} className="text-sm bg-zinc-900 text-white px-4 py-2 rounded-md border border-zinc-900 hover:bg-zinc-900 hover:text-white transition-colors text-center inline-block">
+          <Link href={`/challenges/${name}/new`} className="text-sm text-white px-4 py-2 rounded-md transition-colors text-center inline-block font-medium" style={{ background: '#4f46e5' }}>
             Participate
           </Link>
         </div>
@@ -167,9 +167,9 @@ export default async function ChallengePage({ params, searchParams }: { params: 
           return (
             <div className="mt-6 mb-10 grid grid-cols-1 md:grid-cols-3 gap-6">
               {hasGraph && (
-                <div className="border border-zinc-900 self-start md:col-span-2 divide-y divide-zinc-100">
+                <div className="self-start md:col-span-2 divide-y" style={{ border: '1px solid #e5e0d8' }}>
                   <div className="px-4 pt-4 pb-2">
-                    <h2 className="text-sm font-semibold text-zinc-900">Leaderboard</h2>
+                    <h2 className="text-sm font-semibold" style={{ color: '#4f46e5' }}>Leaderboard</h2>
                     <p className="text-xs text-zinc-400 mt-1">Average security vs utility scores for this challenge.</p>
                   </div>
                   <div className="p-4">
@@ -179,9 +179,9 @@ export default async function ChallengePage({ params, searchParams }: { params: 
               )}
               <div className="flex flex-col gap-6">
                 {unbeaten.length > 0 && (
-                  <div className="border border-zinc-900 self-start w-full divide-y divide-zinc-100">
+                  <div className="self-start w-full divide-y" style={{ border: '1px solid #e5e0d8' }}>
                     <div className="px-4 pt-4 pb-2">
-                      <h2 className="text-sm font-semibold text-zinc-900 flex items-center gap-1.5">Unbeaten <ShieldCheckIcon className="w-3.5 h-3.5 text-blue-300" /></h2>
+                      <h2 className="text-sm font-semibold flex items-center gap-1.5" style={{ color: '#4f46e5' }}>Unbeaten <ShieldCheckIcon className="w-3.5 h-3.5 text-indigo-400" /></h2>
                       <p className="text-xs text-zinc-400 mt-1">Never breached, ranked by utility.</p>
                     </div>
                     <div className="divide-y divide-zinc-100">
@@ -196,9 +196,9 @@ export default async function ChallengePage({ params, searchParams }: { params: 
                   </div>
                 )}
                 {redTeamData.length > 0 && (
-                  <div className="border border-zinc-900 self-start w-full divide-y divide-zinc-100">
+                  <div className="self-start w-full divide-y" style={{ border: '1px solid #e5e0d8' }}>
                     <div className="px-4 pt-4 pb-2">
-                      <h2 className="text-sm font-semibold text-zinc-900 flex items-center gap-1.5">Top Attackers <FireIcon className="w-3.5 h-3.5 text-red-300" /></h2>
+                      <h2 className="text-sm font-semibold flex items-center gap-1.5" style={{ color: '#dc2626' }}>Top Attackers <FireIcon className="w-3.5 h-3.5 text-red-500" /></h2>
                       <p className="text-xs text-zinc-400 mt-1">Percentage of successful attacks.</p>
                     </div>
                     <div className="divide-y divide-zinc-100">
@@ -228,9 +228,9 @@ export default async function ChallengePage({ params, searchParams }: { params: 
           basePath={`/challenges/${name}`}
           subtitle={
             <p className="text-sm text-zinc-500 flex gap-4">
-              <span><span className="font-semibold text-zinc-900">{challengesTotal.toLocaleString()}</span> Games</span>
-              {scoringData.length > 0 && <span><span className="font-semibold text-zinc-900">{scoringData.length}</span> Participants</span>}
-              {stats?.challenges?.[name]?.gamesPlayed > 0 && <span><span className="font-semibold text-zinc-900">{stats.challenges[name].gamesPlayed.toLocaleString()}</span> Completed</span>}
+              <span><span className="font-semibold" style={{ color: '#4f46e5' }}>{challengesTotal.toLocaleString()}</span> Games</span>
+              {scoringData.length > 0 && <span><span className="font-semibold" style={{ color: '#4f46e5' }}>{scoringData.length}</span> Participants</span>}
+              {stats?.challenges?.[name]?.gamesPlayed > 0 && <span><span className="font-semibold" style={{ color: '#4f46e5' }}>{stats.challenges[name].gamesPlayed.toLocaleString()}</span> Completed</span>}
             </p>
           }
         />
