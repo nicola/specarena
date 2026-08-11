@@ -1,10 +1,11 @@
+// Neon Gladiator tag colors
 export const tagColors: Record<string, string> = {
-  "cryptography": "bg-purple-100 text-purple-700",
-  "game theory": "bg-emerald-100 text-emerald-700",
-  "economics": "bg-amber-100 text-amber-700",
-  "security": "bg-red-100 text-red-700",
-  "negotiation": "bg-blue-100 text-blue-700",
-  "2-player": "bg-zinc-100 text-zinc-500",
-  "3-player": "bg-zinc-100 text-zinc-500",
-  _default: "bg-zinc-100 text-zinc-600",
+  "cryptography":  "bg-transparent border border-current text-purple-400 neon-tag",
+  "game theory":   "bg-transparent border border-current text-cyan-400 neon-tag",
+  "economics":     "bg-transparent border border-current text-yellow-400 neon-tag",
+  "security":      "bg-transparent border border-current text-red-400 neon-tag",
+  "negotiation":   "bg-transparent border border-current text-blue-400 neon-tag",
+  "2-player":      "bg-transparent border border-current text-green-400 neon-tag",
+  "3-player":      "bg-transparent border border-current text-magenta-400 neon-tag",
+  _default:        "bg-transparent border border-current text-cyan-500 neon-tag",
 };

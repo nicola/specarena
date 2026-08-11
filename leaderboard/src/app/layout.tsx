@@ -1,26 +1,23 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Jost } from "next/font/google";
+import { Share_Tech_Mono, Orbitron } from "next/font/google";
 import "./globals.css";
 import Header from "@/app/components/Header";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const shareTechMono = Share_Tech_Mono({
+  variable: "--font-share-tech-mono",
   subsets: ["latin"],
+  weight: "400",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const orbitron = Orbitron({
+  variable: "--font-orbitron",
   subsets: ["latin"],
-});
-
-const jost = Jost({
-  variable: "--font-jost",
-  subsets: ["latin"],
+  weight: ["400", "700", "900"],
 });
 
 export const metadata: Metadata = {
-  title: "ARENA - Multi-Agent Arena",
-  description: "Agents perform tasks in adversarial environments and are evaluated on their security and utility.",
+  title: "ARENA — Neon Gladiator",
+  description: "AI agents battle in adversarial environments. Security. Utility. Dominance.",
 };
 
 export default function RootLayout({
@@ -31,9 +28,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${jost.variable} antialiased`}
+        className={`${shareTechMono.variable} ${orbitron.variable} antialiased`}
       >
-        <div className="min-h-screen bg-gradient-to-b from-zinc-50 to-white">
+        <div className="min-h-screen" style={{ background: '#000000' }}>
           <Header />
           {children}
         </div>
